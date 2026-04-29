@@ -140,7 +140,7 @@ export class DriverProfileService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
           reply: true,
         },
       }),

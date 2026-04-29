@@ -30,7 +30,6 @@ export function getRentalConfig(
         { key: 'carData.fuelType', label: t('specEngine'), icon: 'Cog', format: 'enum', enumKey: 'fuelType', hideIfEmpty: true },
         { key: 'carData.seats', label: t('specSeats'), icon: 'Users', format: 'number', hideIfEmpty: true },
         { key: 'carData.horsepower', label: t('specPower'), icon: 'Zap', format: 'number', unit: t('unitHp'), hideIfEmpty: true },
-        { key: 'carData.doors', label: t('specDoors'), icon: 'DoorOpen', format: 'number', hideIfEmpty: true },
       ],
       tableFields: [
         { key: 'carData.fuelType', label: t('specFuelType'), icon: 'Fuel', format: 'enum', enumKey: 'fuelType', hideIfEmpty: true },
@@ -38,6 +37,7 @@ export function getRentalConfig(
         { key: 'carData.bodyType', label: t('specBodyType'), icon: 'Car', format: 'enum', enumKey: 'bodyType', hideIfEmpty: true },
         { key: 'carData.engineSize', label: t('specEngineSize'), icon: 'Cog', hideIfEmpty: true },
         { key: 'carData.driveType', label: t('specDriveType'), icon: 'CircleDot', format: 'enum', enumKey: 'driveType', hideIfEmpty: true },
+        { key: 'carData.doors', label: t('specDoors'), icon: 'DoorOpen', hideIfEmpty: true },
         { key: 'carData.exteriorColor', label: t('specExteriorColor'), icon: 'Palette', hideIfEmpty: true },
         { key: 'governorate', label: t('specGovernorate'), icon: 'MapPin' },
       ],

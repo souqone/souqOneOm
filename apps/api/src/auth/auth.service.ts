@@ -41,6 +41,11 @@ export class AuthService {
     return safeUser;
   }
 
+  private safeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  }
+
   private buildPayload(user: User): JwtPayload {
     return {
       sub: user.id,
@@ -71,38 +76,36 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const username = dto.username.trim();
 
-    const existingByEmail = await this.prisma.user.findUnique({ where: { email } });
-    if (existingByEmail) {
-      throw new BadRequestException('البريد الإلكتروني مستخدم بالفعل');
-    }
-
-    const existingByUsername = await this.prisma.user.findUnique({ where: { username } });
-    if (existingByUsername) {
-      throw new BadRequestException('اسم المستخدم مستخدم بالفعل');
-    }
-
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
     const code = this.generateVerificationCode();
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email, username, displayName: dto.displayName, passwordHash, phone: dto.phone,
-        country: dto.country,
-        governorate: dto.governorate,
-        city: dto.city,
-        emailVerificationCode: code,
-        emailVerificationExpiry: expiry,
-      },
-    });
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email, username, displayName: dto.displayName, passwordHash, phone: dto.phone,
+          country: dto.country,
+          governorate: dto.governorate,
+          city: dto.city,
+          emailVerificationCode: code,
+          emailVerificationExpiry: expiry,
+        },
+      });
 
-    await this.mailService.sendVerificationEmail(email, code);
+      await this.mailService.sendVerificationEmail(email, code);
 
-    const accessToken = await this.jwtService.signAsync(this.buildPayload(user));
-    const refreshToken = await this.generateRefreshToken(user.id);
+      const accessToken = await this.jwtService.signAsync(this.buildPayload(user));
+      const refreshToken = await this.generateRefreshToken(user.id);
 
-    return { accessToken, refreshToken, user: this.sanitizeUser(user), requiresVerification: true };
+      return { accessToken, refreshToken, user: this.sanitizeUser(user), requiresVerification: true };
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        const field = err.meta?.target?.includes('email') ? 'البريد الإلكتروني' : 'اسم المستخدم';
+        throw new BadRequestException(`${field} مستخدم بالفعل`);
+      }
+      throw err;
+    }
   }
 
   private async logAudit(data: {
@@ -266,7 +269,7 @@ export class AuthService {
       throw new BadRequestException('رمز التحقق منتهي. اطلب رمز جديد.');
     }
 
-    if (user.emailVerificationCode !== code) {
+    if (!this.safeCompare(user.emailVerificationCode, code)) {
       throw new BadRequestException('رمز التحقق غير صحيح');
     }
 
@@ -320,7 +323,7 @@ export class AuthService {
     if (new Date() > user.passwordResetExpiry) {
       throw new BadRequestException('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
     }
-    if (user.passwordResetCode !== code) {
+    if (!this.safeCompare(user.passwordResetCode, code)) {
       throw new BadRequestException('رمز إعادة التعيين غير صحيح');
     }
 

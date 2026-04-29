@@ -220,6 +220,45 @@ export const FILTERS_CONFIG: Record<ListingCategory, FilterField[]> = {
     GOVERNORATE_FIELD,
   ],
 
+  'equipment-requests': [
+    {
+      key: 'equipmentType',
+      labelAr: 'نوع المعدة',
+      type: 'select',
+      primary: true,
+      options: [
+        { value: 'EXCAVATOR', labelAr: 'حفار' },
+        { value: 'CRANE', labelAr: 'رافعة' },
+        { value: 'LOADER', labelAr: 'لودر' },
+        { value: 'FORKLIFT', labelAr: 'رافعة شوكية' },
+        { value: 'OTHER_EQUIPMENT', labelAr: 'أخرى' },
+      ],
+    },
+    {
+      key: 'withOperator',
+      labelAr: 'مع مشغل',
+      type: 'toggle',
+      primary: true,
+    },
+    GOVERNORATE_FIELD,
+  ],
+
+  operators: [
+    {
+      key: 'operatorType',
+      labelAr: 'نوع المشغل',
+      type: 'select',
+      primary: true,
+      options: [
+        { value: 'DRIVER', labelAr: 'سائق' },
+        { value: 'OPERATOR', labelAr: 'مشغل' },
+        { value: 'TECHNICIAN', labelAr: 'فني' },
+        { value: 'MAINTENANCE', labelAr: 'صيانة' },
+      ],
+    },
+    GOVERNORATE_FIELD,
+  ],
+
   parts: [
     {
       key: 'partCategory',
@@ -372,6 +411,8 @@ export const SORT_CONFIG: Record<ListingCategory, SortOption[]> = {
     { value: 'price_desc', labelAr: 'السعر: الأعلى' },
   ],
   equipment: [{ value: 'createdAt_desc', labelAr: 'الأحدث' }],
+  'equipment-requests': [{ value: 'createdAt_desc', labelAr: 'الأحدث' }],
+  operators: [{ value: 'createdAt_desc', labelAr: 'الأحدث' }],
   parts: [
     { value: 'createdAt_desc', labelAr: 'الأحدث' },
     { value: 'price_asc',      labelAr: 'السعر: الأقل' },

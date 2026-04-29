@@ -3,53 +3,39 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
-import { MapPin, Heart, MessageCircle, Phone, BadgeCheck, Tag as TagIcon, Star } from 'lucide-react'
+import { MapPin, Heart, MessageCircle, Phone, Car, Bus, Wrench, Settings, Briefcase, HardHat } from 'lucide-react'
 import { clsx } from 'clsx'
-import {
-  Car, Bus, Wrench, Settings, Truck, Briefcase,
-  Calendar, Gauge, Settings2, Users, Building2,
-  CalendarDays, Route, Tag, Fuel
-} from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
-import { resolveLocationLabel } from '@/lib/location-data'
+import { getCountryLabel, resolveLocationLabel, resolveCityLabel } from '@/lib/location-data'
 import { useFavContext } from '@/providers/favorites-provider'
 import { useAuth } from '@/providers/auth-provider'
+import { RibbonBadge, StatusBadge, DetailChip, TrustBadge, type BadgeIntent } from '@/components/ui/badges'
 import type { UnifiedListingItem, BadgeColor } from '../types/unified-item.types'
 import type { ListingCategory } from '../types/category.types'
 import { formatRelativeTime } from '../utils/filter-helpers'
 
-// ─── Icon resolver ────────────────────────────────────────────────────────────
+// ─── Icon & Badge mapping ─────────────────────────────────────────────────────
 
 type LucideIcon = React.ComponentType<{ size?: number; className?: string }>
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Car, Bus, Wrench, Settings, Truck,
-  Calendar, Gauge, Settings2, Users, Building2,
-  CalendarDays, Route, Tag, Fuel, MapPin,
-}
 
 const CATEGORY_ICON: Record<ListingCategory, LucideIcon> = {
   cars:      Car,
   buses:     Bus,
   equipment: Wrench,
+  'equipment-requests': Wrench,
+  operators: HardHat,
   parts:     Settings,
   services:  Wrench,
   jobs:      Briefcase,
 }
 
-function DetailIcon({ name, size = 11 }: { name: string; size?: number }) {
-  const Comp = ICON_MAP[name]
-  if (!Comp) return null
-  return <Comp size={size} />
-}
-
-const BADGE_BG: Record<BadgeColor, string> = {
-  green:  'bg-emerald-500',
-  blue:   'bg-blue-500',
-  orange: 'bg-red-500',
-  purple: 'bg-blue-600',
-  gray:   'bg-slate-400',
-  red:    'bg-red-500',
+const BADGE_INTENT: Record<BadgeColor, BadgeIntent> = {
+  blue: 'primary',
+  green: 'success',
+  orange: 'orange',
+  purple: 'primary',
+  gray: 'neutral',
+  red: 'danger',
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -88,11 +74,26 @@ export function ListingCard({ item }: ListingCardProps) {
   const CategoryIcon = CATEGORY_ICON[item.category]
   const thumbnails = item.images.length >= 3 ? item.images.slice(1, 4) : []
 
+  // ── Premium / Elite (same logic as UnifiedCard) ──
+  const plan = typeof item.attributes?.plan === 'string' ? item.attributes.plan.toUpperCase() : null
+  const isElite = plan === 'ELITE'
+  const isPremium = isElite || plan === 'PREMIUM' || plan === 'FEATURED' || item.attributes?.isPremium === true
+  const frameClass = isElite
+    ? 'border-amber-200/60 shadow-[0_0_0_1px_rgba(245,158,11,0.10),0_6px_18px_rgba(245,158,11,0.08)] hover:border-amber-300/70 hover:shadow-[0_0_0_1px_rgba(245,158,11,0.16),0_10px_26px_rgba(245,158,11,0.12)]'
+    : isPremium
+    ? 'border-slate-200/80 shadow-[0_0_0_1px_rgba(148,163,184,0.10),0_6px_18px_rgba(148,163,184,0.08)] hover:border-slate-300/80 hover:shadow-[0_0_0_1px_rgba(148,163,184,0.16),0_10px_26px_rgba(148,163,184,0.12)]'
+    : 'border-outline-variant/30 hover:border-red-400/50 hover:shadow-[0_2px_16px_rgba(0,0,0,0.09)]'
+  const shineClass = isElite
+    ? 'before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-gradient-to-br before:from-amber-100/12 before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100'
+    : isPremium
+    ? 'before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-gradient-to-br before:from-white/18 before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100'
+    : ''
+
   // ── Mobile scale: render card at fixed desktop width, then scale to fit ──
   const CARD_FIXED_W = 600
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [mobileScale, setMobileScale] = useState(1)
-  const [cardHeight, setCardHeight] = useState(217) // Fallback estimated height
+  const [cardHeight, setCardHeight] = useState(239) // Fallback estimated height
 
   useEffect(() => {
     const update = () => {
@@ -131,16 +132,29 @@ export function ListingCard({ item }: ListingCardProps) {
         <article
           onClick={() => router.push(item.href)}
           className={clsx(
-            "flex bg-background border border-outline-variant/30 rounded-xl overflow-hidden",
-            "cursor-pointer hover:border-red-400/50 hover:shadow-[0_2px_16px_rgba(0,0,0,0.09)]",
-            "transition-all duration-200 group"
+            "relative flex bg-background border rounded-xl overflow-hidden",
+            "cursor-pointer transition-all duration-200 group",
+            frameClass,
+            shineClass
           )}
         >
+      {/* Premium / Elite badge — on card top-end */}
+      {isPremium && (
+        <RibbonBadge
+          label={isElite ? t('elite') : t('featured')}
+          intent={isElite ? 'gold' : 'silver'}
+          icon={isElite ? 'crown' : 'star'}
+          size="lg"
+          position="top-end"
+          className="absolute top-0 end-0 z-20"
+        />
+      )}
+
       {/* ── Image Section (RIGHT in RTL = first in DOM) ── */}
       <div className="relative flex-shrink-0 w-[280px] flex flex-col bg-surface-container">
 
         {/* Main image */}
-        <div className="relative flex-1 min-h-[165px] overflow-hidden">
+        <div className="relative flex-1 min-h-[210px] sm:min-h-[182px] overflow-hidden">
           {item.images[0] ? (
             <Image
               src={item.images[0]}
@@ -150,31 +164,27 @@ export function ListingCard({ item }: ListingCardProps) {
               className="object-cover group-hover:scale-[1.03] transition-transform duration-300"
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-surface-container-low to-surface-container border-e border-outline-variant/10 relative overflow-hidden group-hover:from-primary/10 transition-colors">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-[20px] -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-20 h-20 bg-secondary/10 rounded-full blur-[20px] translate-y-1/2 -translate-x-1/2" />
-              
-              <div className="w-16 h-16 rounded-[1.25rem] bg-surface-container-lowest shadow-sm flex items-center justify-center z-10 border border-outline-variant/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                <CategoryIcon size={32} className="text-primary/60" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-surface-container-high/60 via-surface-container to-surface-container-low overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+              <div className="w-14 h-14 rounded-2xl bg-surface-container-lowest/80 shadow-sm flex items-center justify-center border border-outline-variant/15 z-10 group-hover:scale-110 transition-transform duration-300">
+                <CategoryIcon size={28} className="text-on-surface-variant/30" />
               </div>
-              
-              <div className="mt-3 px-3 py-1 bg-surface-container-lowest/80 backdrop-blur-sm rounded-full border border-outline-variant/20 z-10 shadow-sm">
-                <span className="text-[10px] font-bold text-on-surface-variant tracking-wider">
-                  {item.category === 'jobs' ? 'فرصة عمل' : 'بدون صورة'}
-                </span>
-              </div>
+              <span className="mt-2 text-[10px] font-medium text-on-surface-variant/25 tracking-wide z-10">{t('noImage')}</span>
             </div>
           )}
 
           {/* Featured badge — top start (right in RTL) */}
           {item.primaryBadge && (
-            <span className="absolute top-0 start-0 flex items-center gap-1 px-2.5 py-1 bg-red-500 text-white text-[11px] font-bold rounded-ee-xl">
-              <Star size={10} className="fill-white" />
-              {item.primaryBadge.label}
-            </span>
+            <RibbonBadge
+              label={item.primaryBadge.label}
+              intent={BADGE_INTENT[item.primaryBadge.color]}
+              size="lg"
+              position="top-start"
+              className="absolute top-0 start-0"
+            />
           )}
 
-          {/* Save button — top end (left in RTL) */}
+          {/* Save button */}
           {isAuthenticated && (
             <button
               onClick={handleFav}
@@ -209,10 +219,55 @@ export function ListingCard({ item }: ListingCardProps) {
       </div>
 
       {/* ── Content Section (LEFT in RTL = second in DOM) ── */}
-      <div className="flex-1 min-w-0 flex flex-col p-3.5 gap-2 overflow-hidden">
+      <div className={clsx("flex-1 min-w-0 flex flex-col p-3.5 gap-2 overflow-hidden", isPremium && "pt-12")}>
 
-        {/* Price + condition badge */}
+        {/* 1. Title + condition badge */}
         <div className="flex items-start justify-between gap-2">
+          <h2 className="text-[15px] font-black text-on-surface line-clamp-2 leading-snug">
+            {item.title}
+          </h2>
+          {item.secondaryBadge && (
+            <StatusBadge
+              label={item.secondaryBadge.label}
+              intent={BADGE_INTENT[item.secondaryBadge.color]}
+              size="md"
+            />
+          )}
+        </div>
+
+        {/* 2. Trust capsules */}
+        {(item.sellerVerified || item.isPriceNegotiable) && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {item.sellerVerified && <TrustBadge type="verified" />}
+            {item.isPriceNegotiable && <TrustBadge type="negotiable" />}
+          </div>
+        )}
+
+        {/* 3. Detail chips — 2 lines max */}
+        {item.details.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap max-h-[52px] overflow-hidden">
+            {item.details.slice(0, 5).map((d, i) => (
+              <DetailChip key={i} icon={d.icon} value={d.value} />
+            ))}
+          </div>
+        )}
+
+        {/* 4. Location (country، governorate، city) + time */}
+        <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+          <MapPin size={11} className="text-on-surface-variant/50 flex-shrink-0" />
+          <span className="truncate">
+            {[getCountryLabel('OM', locale), resolveLocationLabel(item.governorate, locale), resolveCityLabel(item.attributes?.city as string | undefined, locale)].filter(Boolean).join('، ') || t('unknownLocation')}
+          </span>
+          <span className="mx-1 text-outline-variant/40">·</span>
+          <span className="flex-shrink-0 text-[10px] text-on-surface-variant/50">
+            {formatRelativeTime(item.createdAt)}
+          </span>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Price */}
+        <div className="flex justify-end">
           {item.price && item.price > 0 ? (
             <p className="text-[20px] font-black text-red-500 leading-none">
               {item.price.toLocaleString('en-US')}
@@ -224,67 +279,6 @@ export function ListingCard({ item }: ListingCardProps) {
           ) : (
             <p className="text-[14px] font-semibold text-on-surface-variant">{t('contactForPrice')}</p>
           )}
-          {item.secondaryBadge && (
-            <span className={clsx(
-              'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold text-white flex-shrink-0',
-              BADGE_BG[item.secondaryBadge.color]
-            )}>
-              {item.secondaryBadge.label}
-            </span>
-          )}
-        </div>
-
-        {/* Title */}
-        <h2 className="text-[13px] font-semibold text-on-surface line-clamp-1 leading-snug">
-          {item.title}
-        </h2>
-
-        {/* Detail chips — pill style */}
-        {item.details.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {item.details.slice(0, 5).map((d, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-[11px]"
-              >
-                <span className="text-on-surface-variant/60"><DetailIcon name={d.icon} size={10} /></span>
-                <span className="font-semibold text-on-surface text-[11px]">{d.value}</span>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Trust capsules */}
-        {(item.sellerVerified || item.isPriceNegotiable) && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {item.sellerVerified && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 border border-sky-200/70 text-[10px] font-semibold text-sky-700">
-                <BadgeCheck size={10} />
-                {t('verified')}
-              </span>
-            )}
-            {item.isPriceNegotiable && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/70 text-[10px] font-semibold text-amber-700">
-                <TagIcon size={10} />
-                {t('negotiable')}
-              </span>
-            )}
-          </div>
-        )}
-
-        <div className="flex-1" />
-
-        {/* Divider */}
-        <hr className="border-outline-variant/20" />
-
-        {/* Location + time */}
-        <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
-          <MapPin size={11} className="text-on-surface-variant/50 flex-shrink-0" />
-          <span className="truncate">{resolveLocationLabel(item.governorate, locale) ?? t('unknownLocation')}</span>
-          <span className="mx-1 text-outline-variant/40">·</span>
-          <span className="flex-shrink-0 text-[10px] text-on-surface-variant/50">
-            {formatRelativeTime(item.createdAt)}
-          </span>
         </div>
 
         {/* Action buttons */}

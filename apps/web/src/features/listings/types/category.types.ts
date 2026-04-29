@@ -2,6 +2,8 @@ export type ListingCategory =
   | 'cars'
   | 'buses'
   | 'equipment'
+  | 'equipment-requests'
+  | 'operators'
   | 'parts'
   | 'services'
   | 'jobs'
@@ -10,6 +12,8 @@ export const VALID_CATEGORIES: ListingCategory[] = [
   'cars',
   'buses',
   'equipment',
+  'equipment-requests',
+  'operators',
   'parts',
   'services',
   'jobs',
@@ -59,6 +63,22 @@ export const CATEGORY_META: Record<ListingCategory, CategoryMeta> = {
     icon: 'Wrench',
     color: 'teal',
     apiPath: '/equipment',
+  },
+  'equipment-requests': {
+    key: 'equipment-requests',
+    labelAr: 'طلبات معدات',
+    labelEn: 'Equipment Requests',
+    icon: 'Wrench',
+    color: 'teal',
+    apiPath: '/equipment-requests',
+  },
+  operators: {
+    key: 'operators',
+    labelAr: 'مشغلين',
+    labelEn: 'Operators',
+    icon: 'Briefcase',
+    color: 'amber',
+    apiPath: '/operators',
   },
   parts: {
     key: 'parts',

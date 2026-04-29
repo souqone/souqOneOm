@@ -47,6 +47,7 @@ export interface UnifiedRentalSeller {
   governorate: string;
   verified: boolean;
   memberSince: string;
+  listingCount?: number;
 }
 
 export interface RentalCarData {

@@ -27,7 +27,7 @@ export class JobRecommendationService {
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
-        user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        user: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
       },
     });
 
@@ -44,7 +44,7 @@ export class JobRecommendationService {
         orderBy: { createdAt: 'desc' },
         take: limit - exactMatch.length,
         include: {
-          user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          user: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
         },
       });
       return [...exactMatch, ...govJobs];

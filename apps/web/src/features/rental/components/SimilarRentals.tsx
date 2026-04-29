@@ -6,9 +6,10 @@ import { useBusListings } from '@/lib/api/buses';
 import { useEquipmentListings } from '@/lib/api/equipment';
 import { useTranslations } from 'next-intl';
 import type { RentalEntityType } from '../types/unified-rental.types';
-import { VehicleCard } from '@/features/ads/components/vehicle-card';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
+import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
+import type { ListingCategory } from '@/features/listings/types/category.types';
 import { CardSkeleton } from '@/components/loading-skeleton';
-import { getImageUrl } from '@/lib/image-utils';
 
 interface SimilarRentalsProps {
   type: RentalEntityType;
@@ -23,18 +24,25 @@ const LISTING_TYPE_PARAM: Record<RentalEntityType, Record<string, string>> = {
 };
 
 function useSimilarRentals(type: RentalEntityType, governorate: string, currentId: string) {
-  const limit = '6';
-  const params = { limit, governorate, ...LISTING_TYPE_PARAM[type] };
+  const limit = '12';
+  const params = { limit, ...LISTING_TYPE_PARAM[type] };
 
   const carQuery = useListings(type === 'car' ? params : {}, type === 'car');
   const busQuery = useBusListings(type === 'bus' ? params : {}, type === 'bus');
   const equipmentQuery = useEquipmentListings(type === 'equipment' ? params : {});
 
   const query = { car: carQuery, bus: busQuery, equipment: equipmentQuery }[type];
-  const items = query.data?.items?.filter((item) => item.id !== currentId).slice(0, 6) || [];
+  const all = query.data?.items?.filter((item) => item.id !== currentId) || [];
+  const sameGov = all.filter(i => i.governorate === governorate);
+  const otherGov = all.filter(i => i.governorate !== governorate);
+  const items = [...sameGov, ...otherGov].slice(0, 8);
 
   return { items, isLoading: query.isLoading };
 }
+
+const RENTAL_TO_CATEGORY: Record<RentalEntityType, ListingCategory> = {
+  car: 'cars', bus: 'buses', equipment: 'equipment',
+};
 
 export const SimilarRentals = memo(function SimilarRentals({
   type,
@@ -43,6 +51,8 @@ export const SimilarRentals = memo(function SimilarRentals({
 }: SimilarRentalsProps) {
   const { items, isLoading } = useSimilarRentals(type, governorate, currentId);
   const tr = useTranslations('rental');
+  const { transformByCategory } = useItemTransformers();
+  const category = RENTAL_TO_CATEGORY[type];
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -73,7 +83,7 @@ export const SimilarRentals = memo(function SimilarRentals({
         </div>
         <div className="flex gap-3 overflow-hidden">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="w-44 sm:w-56 flex-shrink-0"><CardSkeleton /></div>
+            <div key={i} className="w-[calc(50%-6px)] md:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)] flex-shrink-0"><CardSkeleton /></div>
           ))}
         </div>
       </div>
@@ -128,37 +138,11 @@ export const SimilarRentals = memo(function SimilarRentals({
         onScroll={checkScroll}
         className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide -mx-4 px-4 pb-2"
       >
-        {items.map((item) => {
-          const raw = item as unknown as Record<string, unknown>;
-          const images = raw.images as { url: string; isPrimary?: boolean }[] | undefined;
-          const img = images?.find((i) => i.isPrimary) ?? images?.[0];
-
-          return (
-            <div key={raw.id as string} className="w-44 sm:w-56 flex-shrink-0 snap-start">
-              <VehicleCard
-                id={raw.id as string}
-                title={raw.title as string}
-                make={(raw.make as string) || ''}
-                model={(raw.model as string) || ''}
-                year={(raw.year as number) || 0}
-                price={raw.dailyPrice as string | number || '0'}
-                currency={(raw.currency as string) || 'OMR'}
-                mileage={raw.mileage as number | null | undefined}
-                fuelType={raw.fuelType as string | null | undefined}
-                transmission={raw.transmission as string | null | undefined}
-                condition={raw.condition as string | null | undefined}
-                governorate={raw.governorate as string | null | undefined}
-                imageUrl={getImageUrl(img?.url)}
-                createdAt={raw.createdAt as string | undefined}
-                isVerified={(raw.seller as Record<string, unknown> | undefined)?.isVerified as boolean | undefined}
-                listingType="RENTAL"
-                dailyPrice={raw.dailyPrice as string | number | null | undefined}
-                monthlyPrice={raw.monthlyPrice as string | number | null | undefined}
-                href={`/rental/${type}/${raw.id as string}`}
-              />
-            </div>
-          );
-        })}
+        {items.map((item) => (
+          <div key={item.id} className="w-[calc(50%-6px)] md:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)] flex-shrink-0 snap-start">
+            <UnifiedCard item={transformByCategory(category, item)} className="h-full" />
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -5,13 +5,13 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 
 const CAT_META = [
-  { labelKey: 'catCars',      descKey: 'catCarsDesc',      icon: 'directions_car',   href: '/browse/cars',   color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' },
-  { labelKey: 'catBuses',     descKey: 'catBusesDesc',     icon: 'directions_bus',   href: '/browse/buses',      color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400' },
-  { labelKey: 'catParts',     descKey: 'catPartsDesc',     icon: 'settings',         href: '/browse/parts',      color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' },
-  { labelKey: 'catServices',  descKey: 'catServicesDesc',  icon: 'build',            href: '/browse/services',   color: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400' },
-  { labelKey: 'catEquipment', descKey: 'catEquipmentDesc', icon: 'construction',     href: '/browse/equipment',  color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' },
-  { labelKey: 'catJobs',      descKey: 'catJobsDesc',      icon: 'badge',            href: '/browse/jobs',       color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' },
-  { labelKey: 'catRentals',   descKey: 'catRentalsDesc',   icon: 'car_rental',       href: '/browse/cars?listingType=RENTAL',    color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' },
+  { labelKey: 'catCars',      descKey: 'catCarsDesc',      image: '/images/categories/cars.webp',   href: '/browse/cars',   color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' },
+  { labelKey: 'catBuses',     descKey: 'catBusesDesc',     image: '/images/categories/buses.webp',   href: '/browse/buses',      color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400' },
+  { labelKey: 'catParts',     descKey: 'catPartsDesc',     image: '/images/categories/parts.webp',         href: '/browse/parts',      color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' },
+  { labelKey: 'catServices',  descKey: 'catServicesDesc',  image: '/images/categories/services.webp',            href: '/browse/services',   color: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400' },
+  { labelKey: 'catEquipment', descKey: 'catEquipmentDesc', image: '/images/categories/equipment.webp',     href: '/browse/equipment',  color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' },
+  { labelKey: 'catJobs',      descKey: 'catJobsDesc',      image: '/images/categories/jobs.webp',            href: '/browse/jobs',       color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' },
+  { labelKey: 'catRentals',   descKey: 'catRentalsDesc',   image: '/images/categories/rentals.webp',       href: '/browse/cars?listingType=RENTAL',    color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' },
 ] as const;
 
 const SLIDE_INTERVAL = 3000;
@@ -58,35 +58,37 @@ export function CategoriesSection() {
             <Link
               key={cat.labelKey}
               href={cat.href}
-              className="group shrink-0 flex flex-col items-center text-center gap-1.5 py-3 rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 active:scale-[0.97] transition-all duration-300"
+              className="group relative overflow-hidden shrink-0 flex flex-col rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 active:scale-[0.97] transition-all duration-300"
               style={{ width: 'calc((100% - 24px) / 4)' }}
             >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${cat.color} shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-transform duration-300 group-hover:scale-110`}>
-                <span className="material-symbols-outlined text-base">{cat.icon}</span>
+              <div className="w-full h-16 sm:h-20 relative overflow-hidden">
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+                <img src={cat.image} alt={t(cat.labelKey)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
               </div>
-              <div className="px-0.5">
-                <h3 className="font-bold text-[9px] text-on-surface leading-tight mb-0.5">{t(cat.labelKey)}</h3>
-                <p className="text-[7px] text-on-surface-variant/60 leading-tight">{t(cat.descKey)}</p>
+              <div className="p-2 text-center relative z-20 bg-surface-container-lowest dark:bg-surface-container">
+                <h3 className="font-bold text-[10px] sm:text-xs text-on-surface leading-tight mb-0.5">{t(cat.labelKey)}</h3>
+                <p className="hidden sm:block text-[9px] text-on-surface-variant/60 leading-tight">{t(cat.descKey)}</p>
               </div>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Desktop: normal grid */}
-      <div className="hidden lg:flex gap-3 flex-wrap justify-center">
+      {/* Desktop: full-width grid */}
+      <div className="hidden lg:grid grid-cols-7 gap-4">
         {CAT_META.map((cat) => (
           <Link
             key={cat.labelKey}
             href={cat.href}
-            className="group shrink-0 w-[116px] flex flex-col items-center text-center gap-2.5 py-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:scale-[0.97] transition-all duration-300"
+            className="group relative overflow-hidden flex flex-col rounded-[20px] bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] active:scale-[0.97] transition-all duration-300"
           >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cat.color} shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md`}>
-              <span className="material-symbols-outlined text-2xl">{cat.icon}</span>
+            <div className="w-full h-28 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 opacity-60 group-hover:opacity-20 transition-opacity duration-300 z-10" />
+              <img src={cat.image} alt={t(cat.labelKey)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             </div>
-            <div className="px-0.5">
-              <h3 className="font-bold text-sm text-on-surface leading-tight mb-0.5">{t(cat.labelKey)}</h3>
-              <p className="text-[11px] text-on-surface-variant/60 leading-tight">{t(cat.descKey)}</p>
+            <div className="p-4 text-center relative z-20 bg-surface-container-lowest dark:bg-surface-container transition-colors duration-300 group-hover:bg-surface-container-low dark:group-hover:bg-surface-container-high">
+              <h3 className="font-bold text-[15px] text-on-surface leading-tight mb-1.5">{t(cat.labelKey)}</h3>
+              <p className="text-[11px] text-on-surface-variant/70 leading-relaxed line-clamp-2">{t(cat.descKey)}</p>
             </div>
           </Link>
         ))}

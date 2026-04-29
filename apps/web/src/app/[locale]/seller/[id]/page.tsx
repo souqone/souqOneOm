@@ -6,8 +6,9 @@ import { useParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { VehicleCard } from '@/features/ads/components/vehicle-card';
-import { mapSaleItemToVehicleCard, mapJobToVehicleCard, type SaleEntity } from '@/features/ads/utils/vehicle-card-adapter';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
+import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
+import type { ListingCategory } from '@/features/listings/types/category.types';
 import { ListingSkeleton } from '@/components/loading-skeleton';
 import { ErrorState } from '@/components/error-state';
 import { usePublicProfile, useListings, useCreateConversation } from '@/lib/api';
@@ -59,6 +60,7 @@ export default function SellerPage() {
   const { user } = useAuth();
   const tp = useTranslations('pages');
   const locale = useLocale();
+  const { transformByCategory } = useItemTransformers();
   const { data: reviewSummary } = useReviewSummary(seller?.id);
   const { data: reviews } = useReviews(seller ? { userId: seller.id, limit: '10' } : undefined);
 
@@ -282,15 +284,8 @@ export default function SellerPage() {
                 ) : activeItems.length > 0 ? (
                   <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-5">
                     {activeItems.map((item: any) => {
-                      if (tab === 'jobs') {
-                        return <VehicleCard key={item.id} {...mapJobToVehicleCard(item)} />;
-                      }
-                      const saleEntityMap: Record<string, SaleEntity> = {
-                        cars: 'car', buses: 'bus', equipment: 'equipment',
-                        operators: 'equipment', parts: 'part', services: 'service',
-                      };
-                      const saleEntity = saleEntityMap[tab] ?? 'car';
-                      return <VehicleCard key={item.id} {...mapSaleItemToVehicleCard(item, saleEntity)} />;
+                      const category = (tab === 'cars' ? 'cars' : tab) as ListingCategory;
+                      return <UnifiedCard key={item.id} item={transformByCategory(category, item)} className="h-full" />;
                     })}
                   </div>
                 ) : (

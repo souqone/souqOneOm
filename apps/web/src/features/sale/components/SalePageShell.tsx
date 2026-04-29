@@ -9,7 +9,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Share2, Heart, MessageCircle, Phone, Trash2, Star } from 'lucide-react';
+import { Share2, Heart, MessageCircle, Phone, Trash2, Star, ChevronDown } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { haversineDistance } from '@/lib/geo-utils';
 import { resolveLocationLabel, resolveCityLabel } from '@/lib/location-data';
@@ -72,6 +72,45 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <div className="mb-4">
       <h2 className="text-[15px] font-semibold text-on-surface tracking-tight">{children}</h2>
       <div className="mt-1 h-[3px] w-8 rounded-full bg-primary" />
+    </div>
+  );
+}
+
+/**
+ * Elegant dropdown section with collapsible content.
+ */
+function DropdownSection({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 overflow-hidden mb-1 shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 p-5 bg-gradient-to-br from-slate-50 to-blue-50 hover:from-slate-100/80 hover:to-blue-100/60 transition-colors duration-200 cursor-pointer select-none"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
+          <span className="material-symbols-outlined text-[20px] text-white">{icon || 'list_alt'}</span>
+        </div>
+        <div className="flex-1 text-start">
+          <h3 className="text-[15px] font-bold text-slate-900">{title}</h3>
+          {subtitle && <p className="text-[12px] text-slate-500">{subtitle}</p>}
+        </div>
+        <ChevronDown
+          size={20}
+          className={`text-slate-400 transition-transform duration-300 ease-out ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="p-5 pt-3 bg-gradient-to-br from-slate-50/30 to-blue-50/20">
+            {children}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -469,23 +508,16 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
               <>
                 <div>
                   <SectionTitle>{ts('descriptionTitle')}</SectionTitle>
-                  <ExpandableText text={listing.description} expandLabel={ts('expand')} collapseLabel={ts('collapse')} />
+                  <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50 p-6 shadow-sm">
+                    <div className="absolute top-4 end-4 text-on-surface-variant/10">
+                      <span className="material-symbols-outlined text-3xl">description</span>
+                    </div>
+                    <ExpandableText text={listing.description} expandLabel={ts('expand')} collapseLabel={ts('collapse')} />
+                  </div>
                 </div>
                 <Divider />
               </>
             )}
-
-            {/* Contract Details Section */}
-            <ContractDetails listing={listing} />
-
-            {/* Highlights */}
-            {config.highlightFields?.length > 0 && (
-              <>
-                <Highlights listing={listing} fields={config.highlightFields} />
-                <Divider />
-              </>
-            )}
-
 
             {/* Specs Grid */}
             {config.specsFields?.length > 0 && (
@@ -498,14 +530,29 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
               </>
             )}
 
+            {/* Contract Details Section */}
+            <ContractDetails listing={listing} />
+
+            {/* Highlights */}
+            {config.highlightFields?.length > 0 && (
+              <DropdownSection
+                title={locale === 'ar' ? 'أبرز المميزات' : 'Highlights'}
+                subtitle={`${config.highlightFields.length} ${locale === 'ar' ? 'عناصر' : 'items'}`}
+                icon="auto_awesome"
+              >
+                <Highlights listing={listing} fields={config.highlightFields} />
+              </DropdownSection>
+            )}
+
             {/* Details Table */}
             {config.tableFields?.length > 0 && (
-              <>
-                <div>
-                  <SectionTitle>{ts('detailsTitle', { type: config.displayName })}</SectionTitle>
-                  <DetailsTable listing={listing} fields={config.tableFields} />
-                </div>
-              </>
+              <DropdownSection
+                title={ts('detailsTitle', { type: config.displayName })}
+                subtitle={`${config.tableFields.length} ${ts('specsTitle')}`}
+                icon="list_alt"
+              >
+                <DetailsTable listing={listing} fields={config.tableFields} />
+              </DropdownSection>
             )}
 
             {/* Features / الكماليات */}
@@ -522,14 +569,14 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
                   <Divider />
                   <div>
                     <SectionTitle>{ts('featuresTitle')}</SectionTitle>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2.5">
                       {features.map((feat) => (
                         <span
                           key={feat}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-outline-variant/30 bg-surface-container text-[12px] text-on-surface"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 text-[12px] font-medium text-slate-700 shadow-sm hover:shadow-md hover:border-emerald-300/80 transition-all duration-200"
                         >
-                          <span className="material-symbols-outlined text-primary text-[14px] flex-shrink-0">
-                            check
+                          <span className="w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <span className="material-symbols-outlined text-white text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
                           </span>
                           {feat}
                         </span>

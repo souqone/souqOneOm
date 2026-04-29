@@ -3,9 +3,9 @@
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
-import { Search, ArrowLeft, ArrowRight, ChevronLeft, Car, Wrench, Key, Shield, Plus, Sparkles, Eye } from 'lucide-react';
-import { VehicleCard } from '@/features/ads/components/vehicle-card';
-import { getImageUrl } from '@/lib/image-utils';
+import { Search, ArrowLeft, ArrowRight, ChevronLeft, Car, Wrench, Key, Shield, Plus, Sparkles } from 'lucide-react';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
+import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import { BRAND_LOGOS } from '@/features/listings/config/brand-logos.config';
 import type { ListingItem } from '@/lib/api/listings';
 
@@ -66,35 +66,11 @@ const QUICK_LINKS = [
   { title: 'قطع غيار', desc: 'أصلية ومستعملة بضمان الجودة', icon: Shield, href: '/browse/parts', gradient: 'from-purple-600 to-pink-600', count: 'توصيل سريع' },
 ];
 
-// ── Service Type Labels ──────────────────────────────────────────────────────
-
-const SERVICE_LABELS: Record<string, string> = {
-  MAINTENANCE: 'صيانة عامة',
-  CLEANING: 'تنظيف وتلميع',
-  MODIFICATION: 'تعديل وتيونج',
-  INSPECTION: 'فحص شامل',
-  BODYWORK: 'سمكرة ودهان',
-  ACCESSORIES_INSTALL: 'تركيب إكسسوارات',
-  KEYS_LOCKS: 'مفاتيح وأقفال',
-  TOWING: 'سحب ونقل',
-  OTHER_SERVICE: 'خدمات أخرى',
-};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function getImg(item: ListingItem) {
-  const img = item.images?.find((i) => i.isPrimary) ?? item.images?.[0];
-  return getImageUrl(img?.url) ?? null;
-}
-
-function getServiceImg(item: ServiceItem) {
-  const img = item.images?.find((i) => i.isPrimary) ?? item.images?.[0];
-  return getImageUrl(img?.url) ?? null;
-}
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export function MotorsShell({ saleCars, rentalCars, services }: MotorsShellProps) {
+  const { transformCar, transformService } = useItemTransformers();
   const [searchQuery, setSearchQuery] = useState('');
   const brandsRef = useRef<HTMLDivElement>(null);
 
@@ -186,7 +162,7 @@ export function MotorsShell({ saleCars, rentalCars, services }: MotorsShellProps
           2. QUICK LINKS — Action cards
       ═══════════════════════════════════════════════════════════════════════ */}
       <section className="-mt-10 relative z-20 max-w-6xl mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {QUICK_LINKS.map((link) => (
             <Link
               key={link.title}
@@ -272,29 +248,9 @@ export function MotorsShell({ saleCars, rentalCars, services }: MotorsShellProps
           </div>
 
           {saleCars.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {saleCars.map((item) => (
-                <VehicleCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  make={item.make}
-                  model={item.model}
-                  year={item.year}
-                  price={item.price}
-                  currency={item.currency}
-                  mileage={item.mileage}
-                  fuelType={item.fuelType}
-                  transmission={item.transmission}
-                  condition={item.condition}
-                  governorate={item.governorate}
-                  imageUrl={getImg(item)}
-                  viewCount={item.viewCount}
-                  createdAt={item.createdAt}
-                  isVerified={item.seller?.isVerified}
-                  isPriceNegotiable={item.isPriceNegotiable}
-                  listingType={item.listingType}
-                />
+                <UnifiedCard key={item.id} item={transformCar(item)} className="h-full" />
               ))}
             </div>
           ) : (
@@ -326,29 +282,9 @@ export function MotorsShell({ saleCars, rentalCars, services }: MotorsShellProps
           </div>
 
           {rentalCars.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {rentalCars.map((item) => (
-                <VehicleCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  make={item.make}
-                  model={item.model}
-                  year={item.year}
-                  price={item.price}
-                  currency={item.currency}
-                  mileage={item.mileage}
-                  fuelType={item.fuelType}
-                  transmission={item.transmission}
-                  governorate={item.governorate}
-                  imageUrl={getImg(item)}
-                  viewCount={item.viewCount}
-                  createdAt={item.createdAt}
-                  isVerified={item.seller?.isVerified}
-                  listingType={item.listingType}
-                  dailyPrice={item.dailyPrice}
-                  monthlyPrice={item.monthlyPrice}
-                />
+                <UnifiedCard key={item.id} item={transformCar(item)} className="h-full" />
               ))}
             </div>
           ) : (
@@ -380,58 +316,9 @@ export function MotorsShell({ saleCars, rentalCars, services }: MotorsShellProps
           </div>
 
           {services.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               {services.map((svc) => (
-                <Link
-                  key={svc.id}
-                  href={`/sale/service/${svc.id}`}
-                  className="group relative overflow-hidden rounded-2xl bg-white dark:bg-surface-container border border-outline-variant/20 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  {/* Image */}
-                  <div className="relative h-40 bg-surface-container-high overflow-hidden">
-                    {getServiceImg(svc) ? (
-                      <Image
-                        src={getServiceImg(svc)!}
-                        alt={svc.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Wrench size={40} className="text-on-surface-variant/30" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[11px] font-bold">
-                      {SERVICE_LABELS[svc.serviceType] || svc.serviceType}
-                    </div>
-                    {svc.isHomeService && (
-                      <div className="absolute top-3 left-3 px-2 py-1 rounded-lg bg-emerald-500/90 text-white text-[10px] font-bold">
-                        خدمة منزلية
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <h3 className="text-[14px] font-bold text-on-surface line-clamp-1 mb-1">{svc.title}</h3>
-                    <p className="text-[12px] text-on-surface-variant mb-2">{svc.providerName}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
-                        <span className="material-symbols-outlined text-[14px]">location_on</span>
-                        {svc.governorate}
-                      </div>
-                      {svc.priceFrom && (
-                        <span className="text-[12px] font-bold text-primary">
-                          من {svc.priceFrom} {svc.currency}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 mt-2 text-[10px] text-on-surface-variant/70">
-                      <Eye size={12} />
-                      {svc.viewCount} مشاهدة
-                    </div>
-                  </div>
-                </Link>
+                <UnifiedCard key={svc.id} item={transformService(svc as any)} className="h-full" />
               ))}
             </div>
           ) : (

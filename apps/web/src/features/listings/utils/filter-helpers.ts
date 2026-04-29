@@ -151,6 +151,8 @@ export function getAddListingHref(category: ListingCategory): string {
     cars:      '/add-listing/car',
     buses:     '/add-listing/bus',
     equipment: '/add-listing/equipment',
+    'equipment-requests': '/equipment/requests/new',
+    operators: '/add-listing/operator',
     parts:     '/add-listing/parts',
     services:  '/add-listing/service',
     jobs:      '/jobs/new',

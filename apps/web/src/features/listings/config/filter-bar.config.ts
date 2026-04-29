@@ -164,6 +164,8 @@ export const FILTER_BAR_CONFIG: Record<ListingCategory, FilterBarConfig> = {
   cars: CARS_CONFIG,
   buses: BUSES_CONFIG,
   equipment: EQUIPMENT_CONFIG,
+  'equipment-requests': EQUIPMENT_CONFIG,
+  operators: JOBS_CONFIG,
   parts: PARTS_CONFIG,
   services: SERVICES_CONFIG,
   jobs: JOBS_CONFIG,

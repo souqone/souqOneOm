@@ -24,6 +24,8 @@ const CATEGORY_FALLBACK_ICON: Record<ListingCategory, string> = {
   cars:      'directions_car',
   buses:     'directions_bus',
   equipment: 'construction',
+  'equipment-requests': 'construction',
+  operators: 'engineering',
   parts:     'settings',
   services:  'build',
   jobs:      'work',
@@ -35,6 +37,8 @@ function defaultHref(category: ListingCategory, id: string, _slug?: string | nul
     case 'cars':      return listingType === 'RENTAL' ? `/rental/car/${id}` : `/sale/car/${id}`;
     case 'buses':     return listingType === 'BUS_RENT' ? `/rental/bus/${id}` : `/sale/bus/${id}`;
     case 'equipment': return listingType === 'EQUIPMENT_RENT' ? `/rental/equipment/${id}` : `/sale/equipment/${id}`;
+    case 'equipment-requests': return `/equipment/requests/${id}`;
+    case 'operators': return `/equipment/operators/${id}`;
     case 'parts':     return `/sale/part/${id}`;
     case 'services':  return `/sale/service/${id}`;
     case 'jobs':      return `/jobs/${id}`;
@@ -46,6 +50,8 @@ const CATEGORY_ENTITY_TYPE: Record<ListingCategory, string> = {
   cars:      'LISTING',
   buses:     'BUS_LISTING',
   equipment: 'EQUIPMENT_LISTING',
+  'equipment-requests': 'EQUIPMENT_REQUEST',
+  operators: 'OPERATOR_LISTING',
   parts:     'SPARE_PART',
   services:  'CAR_SERVICE',
   jobs:      'JOB',
@@ -248,9 +254,12 @@ export function VehicleCard(props: VehicleCardProps) {
               className="object-cover group-hover:scale-105 transition-transform duration-700"
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-on-surface-variant/30">
-              <span className="material-symbols-outlined text-3xl sm:text-4xl">{fallbackIcon}</span>
-              <span className="text-[9px] font-medium">{t('noImage')}</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-surface-container-high/60 via-surface-container to-surface-container-low overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+              <div className="w-12 h-12 rounded-2xl bg-surface-container-lowest/80 shadow-sm flex items-center justify-center border border-outline-variant/15 group-hover:scale-110 transition-transform duration-300">
+                <span className="material-symbols-outlined text-2xl text-on-surface-variant/30">{fallbackIcon}</span>
+              </div>
+              <span className="mt-2 text-[10px] font-medium text-on-surface-variant/25 tracking-wide">{t('noImage')}</span>
             </div>
           )}
 

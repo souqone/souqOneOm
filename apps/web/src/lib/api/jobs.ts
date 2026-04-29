@@ -8,6 +8,7 @@ interface JobUser {
   avatarUrl: string | null;
   phone?: string | null;
   governorate?: string | null;
+  isVerified: boolean;
   createdAt?: string;
 }
 

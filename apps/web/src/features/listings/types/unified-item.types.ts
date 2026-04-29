@@ -23,6 +23,7 @@ export interface UnifiedListingItem {
    * Examples: "/ يوم" | "/ شهر" | "/ رحلة" | null (for lump-sum sale price)
    */
   priceLabel: string | null
+  priceText?: string | null
 
   currency: string
 

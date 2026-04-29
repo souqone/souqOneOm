@@ -30,7 +30,7 @@ function useNavLinks() {
   const navLinks: NavLinkItem[] = [
     { href: '/', label: t('home') },
     {
-      href: '/browse/cars', label: t('cars'),
+      href: '/motors', label: t('cars'),
       children: [
         { href: '/browse/cars', label: t('carsForSale'), icon: 'directions_car', desc: tn('browseNewUsedCars') },
         { href: '/browse/cars?listingType=RENTAL', label: t('carsForRent'), icon: 'car_rental', desc: tn('dailyMonthlyRental') },
@@ -48,7 +48,7 @@ function useNavLinks() {
       ],
     },
     {
-      href: '/browse/equipment', label: t('equipment'),
+      href: '/equipment', label: t('equipment'),
       children: [
         { href: '/browse/equipment', label: t('allEquipment'), icon: 'construction', desc: tn('equipmentSaleRental') },
         { href: '/browse/equipment?listingType=SALE', label: t('sellEquipment'), icon: 'sell', desc: tn('equipmentForSaleDesc') },
@@ -68,11 +68,11 @@ function useNavLinks() {
 
   const flatNavLinks = [
     { href: '/', label: t('home') },
-    { href: '/browse/cars', label: t('cars') },
+    { href: '/motors', label: t('cars') },
     { href: '/browse/parts', label: t('spareParts') },
     { href: '/browse/services', label: t('carServices') },
     { href: '/browse/buses', label: t('buses') },
-    { href: '/browse/equipment', label: t('equipment') },
+    { href: '/equipment', label: t('equipment') },
     { href: '/jobs', label: t('jobs') },
   ];
 

@@ -5,9 +5,8 @@ import { useState, useMemo } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
-import { VehicleCard } from '@/features/ads/components/vehicle-card';
-import { mapSaleItemToVehicleCard } from '@/features/ads/utils/vehicle-card-adapter';
-import type { ListingCategory } from '@/features/listings/types/category.types';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
+import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import { ErrorState } from '@/components/error-state';
 import { Heart } from 'lucide-react';
 import { useFavorites, type EntityType } from '@/lib/api';
@@ -28,17 +27,6 @@ const CATEGORY_TABS: { value: EntityType; labelKey: string; icon: string }[] = [
   { value: 'OPERATOR_LISTING', labelKey: 'catOperators', icon: 'engineering' },
 ];
 
-const ENTITY_ROUTES: Record<string, string> = {
-  LISTING: '/sale/car',
-  JOB: '/jobs',
-  SPARE_PART: '/sale/part',
-  CAR_SERVICE: '/sale/service',
-  BUS_LISTING: '/sale/bus',
-  EQUIPMENT_LISTING: '/sale/equipment',
-  INSURANCE: '/insurance',
-  OPERATOR_LISTING: '/equipment/operators',
-};
-
 // ── Sort Options ──
 const SORT_KEYS: { value: SortOption; labelKey: string }[] = [
   { value: 'newest', labelKey: 'sortNewest' },
@@ -49,6 +37,7 @@ const SORT_KEYS: { value: SortOption; labelKey: string }[] = [
 // ── Main Page ──
 export default function FavoritesPage() {
   const t = useTranslations('favorites');
+  const { transformFavorite } = useItemTransformers();
   const [activeTab, setActiveTab] = useState<EntityType | 'ALL'>('ALL');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
@@ -84,7 +73,7 @@ export default function FavoritesPage() {
     }
   }, [items, sortBy]);
 
-  // Note: VehicleCard handles its own favorite toggle now (built-in heart button).
+  // Note: UnifiedCard handles its own favorite toggle now (built-in heart button).
   // Undo affordance is dropped here for simplicity.
 
   return (
@@ -180,39 +169,11 @@ export default function FavoritesPage() {
           ) : sortedItems.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {sortedItems.map((fav) => {
-                // LISTING type → use full mapping from listing payload
-                if (fav.entityType === 'LISTING' && fav.listing) {
-                  return (
-                    <VehicleCard
-                      key={fav.id}
-                      {...mapSaleItemToVehicleCard(fav.listing as any, 'car')}
-                    />
-                  );
-                }
-
-                // Other entity types: minimal VehicleCard from fav.entity
-                const entityToCategory: Record<string, ListingCategory> = {
-                  BUS_LISTING: 'buses',
-                  EQUIPMENT_LISTING: 'equipment',
-                  SPARE_PART: 'parts',
-                  CAR_SERVICE: 'services',
-                  JOB: 'jobs',
-                  OPERATOR_LISTING: 'equipment',
-                  INSURANCE: 'services',
-                };
-                const category = entityToCategory[fav.entityType] ?? 'cars';
-                const route = ENTITY_ROUTES[fav.entityType] || '/';
                 return (
-                  <VehicleCard
+                  <UnifiedCard
                     key={fav.id}
-                    id={fav.entityId}
-                    title={fav.entity?.title || t('deletedItem')}
-                    price={null}
-                    currency="OMR"
-                    imageUrl={fav.entity?.image || null}
-                    category={category}
-                    entityType={fav.entityType}
-                    href={`${route}/${fav.entityId}`}
+                    item={transformFavorite(fav as any)}
+                    className="h-full"
                   />
                 );
               })}

@@ -82,7 +82,7 @@ export class JobsService {
         whatsapp: dto.whatsapp,
         userId,
       },
-      include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true } } },
+      include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, isVerified: true } } },
     });
 
     // Sync to Meilisearch + invalidate cache
@@ -175,7 +175,7 @@ export class JobsService {
         take: limit,
         orderBy,
         include: {
-          user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          user: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
           _count: { select: { applications: true } },
         },
       }),
@@ -199,7 +199,7 @@ export class JobsService {
     const job = cached ?? await this.prisma.driverJob.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true, createdAt: true } },
+        user: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true, isVerified: true, createdAt: true } },
         _count: { select: { applications: true } },
       },
     });
@@ -244,7 +244,7 @@ export class JobsService {
     const updated = await this.prisma.driverJob.update({
       where: { id },
       data,
-      include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+      include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } } },
     });
 
     // Sync to Meilisearch + invalidate caches
@@ -316,7 +316,7 @@ export class JobsService {
         resumeUrl: dto.resumeUrl,
       },
       include: {
-        applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
       },
     });
 
@@ -343,7 +343,7 @@ export class JobsService {
       orderBy: { createdAt: 'desc' },
       include: {
         applicant: {
-          select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true },
+          select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true, isVerified: true },
         },
       },
     });
@@ -374,7 +374,7 @@ export class JobsService {
       where: { id: applicationId },
       data: { status },
       include: {
-        applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
       },
     });
 

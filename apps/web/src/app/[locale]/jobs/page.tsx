@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { VehicleCard } from '@/features/ads/components/vehicle-card';
-import { mapJobToVehicleCard } from '@/features/ads/utils/vehicle-card-adapter';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
+import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import { ListingSkeleton } from '@/components/loading-skeleton';
 import { useJobs, useRecommendedJobs } from '@/lib/api';
 import { useRequireJobProfile } from '@/hooks/use-require-job-profile';
@@ -26,6 +26,7 @@ export default function JobsPage() {
 function JobsContent() {
   const tp = useTranslations('pages');
   const tm = useTranslations('mappings');
+  const { transformJob } = useItemTransformers();
   const { profile, requireProfile } = useRequireJobProfile();
 
   const licenseOpts = [
@@ -380,7 +381,7 @@ function JobsContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
               {items.map((job) => (
-                <VehicleCard key={job.id} {...mapJobToVehicleCard(job)} />
+                <UnifiedCard key={job.id} item={transformJob(job)} className="h-full" />
               ))}
             </div>
 

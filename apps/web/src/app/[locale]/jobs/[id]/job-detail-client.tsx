@@ -101,6 +101,12 @@ export default function JobDetailClient() {
   const licenseLabels: Record<string, string> = {
     LIGHT: tp('jobDetailLicLight'), HEAVY: tp('jobDetailLicHeavy'), TRANSPORT: tp('jobDetailLicTransport'), BUS: tp('jobDetailLicBus'), MOTORCYCLE: tp('jobDetailLicMotorcycle'),
   };
+  const languageLabels: Record<string, string> = {
+    ARABIC: tp('jobDetailLangArabic'), ENGLISH: tp('jobDetailLangEnglish'), URDU: tp('jobDetailLangUrdu'), HINDI: tp('jobDetailLangHindi'), BENGALI: tp('jobDetailLangBengali'), FILIPINO: tp('jobDetailLangFilipino'),
+  };
+  const vehicleTypeLabels: Record<string, string> = {
+    SEDAN: tp('jobDetailVtSedan'), SUV: tp('jobDetailVtSUV'), LIGHT_TRUCK: tp('jobDetailVtLightTruck'), HEAVY_TRUCK: tp('jobDetailVtHeavyTruck'), BUS: tp('jobDetailVtBus'), LIMO: tp('jobDetailVtLimo'), VAN: tp('jobDetailVtVan'), PICKUP: tp('jobDetailVtPickup'),
+  };
 
   const { data: job, isLoading, isError } = useJob(id);
   const applyMutation = useApplyToJob();
@@ -154,7 +160,7 @@ export default function JobDetailClient() {
       navigator.share({ title: job?.title, url });
     } else {
       navigator.clipboard.writeText(url);
-      addToast('success', 'تم نسخ الرابط');
+      addToast('success', tp('jobDetailLinkCopied'));
     }
   }, [job?.title, addToast]);
 
@@ -311,7 +317,7 @@ export default function JobDetailClient() {
                   {tp('jobDetailDescription')}
                 </SectionTitle>
                 <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-on-surface-variant">
-                  <ExpandableText text={job.description} expandLabel="عرض المزيد" collapseLabel="عرض أقل" />
+                  <ExpandableText text={job.description} expandLabel={tp('jobDetailShowMore')} collapseLabel={tp('jobDetailShowLess')} />
                 </div>
               </div>
             )}
@@ -366,7 +372,7 @@ export default function JobDetailClient() {
                     </div>
                     <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailLanguages')}</p>
                     <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {job.languages.join('، ')}
+                      {job.languages.map(l => languageLabels[l] ?? l).join('، ')}
                     </p>
                   </div>
                 )}
@@ -390,7 +396,7 @@ export default function JobDetailClient() {
                     </div>
                     <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailVehicleTypes')}</p>
                     <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {job.vehicleTypes.join('، ')}
+                      {job.vehicleTypes.map(v => vehicleTypeLabels[v] ?? v).join('، ')}
                     </p>
                   </div>
                 )}
@@ -431,7 +437,7 @@ export default function JobDetailClient() {
                         <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                           <span className="material-symbols-outlined text-[18px]">mail</span>
                         </div>
-                        <span className="text-[14px] font-bold text-on-surface">البريد الإلكتروني</span>
+                        <span className="text-[14px] font-bold text-on-surface">{tp('jobDetailEmail')}</span>
                       </div>
                       <span className="text-[13px] font-bold text-on-surface-variant max-w-[150px] truncate">{job.contactEmail}</span>
                     </a>
@@ -450,7 +456,7 @@ export default function JobDetailClient() {
               
               {/* Salary Section (Gradient Top) */}
               <div className="p-6 md:p-8 bg-gradient-to-br from-primary/5 via-transparent to-transparent border-b border-outline-variant/10">
-                <p className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">الراتب المعروض</p>
+                <p className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">{tp('jobDetailOfferedSalary')}</p>
                 {job.salary ? (
                   <div className="flex flex-col gap-1">
                     <div className="flex items-end gap-2 flex-wrap" dir="ltr">
@@ -493,7 +499,7 @@ export default function JobDetailClient() {
                     </p>
                     <p className="text-[13px] text-on-surface-variant mt-0.5 flex items-center gap-1">
                       <MapPin size={12} />
-                      {job.user.governorate ? resolveLocationLabel(job.user.governorate, locale) : 'عمان'}
+                      {job.user.governorate ? resolveLocationLabel(job.user.governorate, locale) : tp('jobDetailDefaultLocation')}
                     </p>
                   </div>
                 </Link>
@@ -574,7 +580,7 @@ export default function JobDetailClient() {
               <div className="hidden lg:block rounded-3xl border border-outline-variant/20 bg-surface-container-lowest/80 backdrop-blur-md p-6 shadow-sm">
                 <h3 className="text-[14px] font-bold text-on-surface mb-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-[18px]">contact_support</span>
-                  معلومات التواصل المباشر
+                  {tp('jobDetailDirectContact')}
                 </h3>
                 <div className="flex flex-col gap-3">
                   {hasPhone && (

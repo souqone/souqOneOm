@@ -4,9 +4,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import {
-  Share2, Heart, ShieldCheck,
+  Share2, Heart, ShieldCheck, ChevronDown,
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { haversineDistance } from '@/lib/geo-utils';
@@ -31,6 +30,7 @@ import type { RentalSectionConfig, RentalSpecField, RentalHighlightField } from 
 import { getNestedValue } from '../config/rental.config';
 import { RentalBookingCard } from './RentalBookingCard';
 import { SimilarRentals } from './SimilarRentals';
+import { SellerRow } from '@/features/sale/components/SellerRow';
 
 const MapView = dynamic(() => import('@/components/map/map-view'), { ssr: false });
 
@@ -49,6 +49,42 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function DropdownSection({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 overflow-hidden mb-1 shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 p-5 bg-gradient-to-br from-slate-50 to-blue-50 hover:from-slate-100/80 hover:to-blue-100/60 transition-colors duration-200 cursor-pointer select-none"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
+          <span className="material-symbols-outlined text-[20px] text-white">{icon || 'list_alt'}</span>
+        </div>
+        <div className="flex-1 text-start">
+          <h3 className="text-[15px] font-bold text-slate-900">{title}</h3>
+          {subtitle && <p className="text-[12px] text-slate-500">{subtitle}</p>}
+        </div>
+        <ChevronDown
+          size={20}
+          className={`text-slate-400 transition-transform duration-300 ease-out ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="p-5 pt-3 bg-gradient-to-br from-slate-50/30 to-blue-50/20">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ExpandableText({ text, expandedLabel, collapsedLabel }: { text: string; expandedLabel: string; collapsedLabel: string }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = text.length > 260;
@@ -60,22 +96,6 @@ function ExpandableText({ text, expandedLabel, collapsedLabel }: { text: string;
           {expanded ? expandedLabel : collapsedLabel}
         </button>
       )}
-    </div>
-  );
-}
-
-function SellerAvatar({ avatarUrl, name, size = 48 }: { avatarUrl?: string | null; name: string; size?: number }) {
-  const initial = (name || '?')[0]?.toUpperCase();
-  if (avatarUrl) {
-    return (
-      <div className="relative shrink-0 rounded-full overflow-hidden" style={{ width: size, height: size }}>
-        <Image src={avatarUrl} alt={name} fill className="object-cover" sizes={`${size}px`} />
-      </div>
-    );
-  }
-  return (
-    <div className="shrink-0 rounded-full bg-primary flex items-center justify-center text-on-primary font-black" style={{ width: size, height: size, fontSize: size * 0.38 }}>
-      {initial}
     </div>
   );
 }
@@ -121,24 +141,37 @@ function RentalSpecsGrid({ listing, fields }: { listing: UnifiedRentalListing; f
   );
 }
 
-/** Config-driven details table */
+/** Config-driven details table — row layout with icons (matches sale DetailsTable) */
 function RentalDetailsTable({ listing, fields }: { listing: UnifiedRentalListing; fields: RentalSpecField[] }) {
-  const rows = fields
-    .map(f => {
-      const val = getNestedValue(listing, f.key);
-      return { ...f, value: val };
-    })
-    .filter(r => !(r.hideIfEmpty && (r.value == null || r.value === '')));
-  if (rows.length === 0) return null;
+  const visibleFields = fields.filter(f => {
+    const val = getNestedValue(listing, f.key);
+    return !(f.hideIfEmpty && (val == null || val === ''));
+  });
+  if (visibleFields.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {rows.map((row) => (
-        <div key={row.key} className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
-          <span className="text-[12px] font-semibold text-on-surface">{row.label}</span>
-          <span className="text-[12px] text-on-surface-variant">{String(row.value ?? '—')}</span>
-        </div>
-      ))}
+    <div className="border border-outline-variant/15 rounded-xl overflow-hidden text-[12px]">
+      {visibleFields.map((field, index, arr) => {
+        const value = getNestedValue(listing, field.key);
+        const formatted = value == null || value === '' ? '—' : Array.isArray(value) ? value.join('، ') : String(value);
+        const isLast = index === arr.length - 1;
+        const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[field.icon] || Icons.Circle;
+
+        return (
+          <div
+            key={field.key}
+            className={`flex items-center justify-between px-4 py-3 ${
+              index % 2 === 0 ? 'bg-surface-container-low/40' : ''
+            } ${!isLast ? 'border-b border-outline-variant/10' : ''}`}
+          >
+            <div className="flex items-center gap-2 text-on-surface-variant">
+              <IconComponent size={14} className="text-primary" />
+              <span>{field.label}</span>
+            </div>
+            <span className="font-medium text-on-surface">{formatted}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -448,25 +481,7 @@ export function RentalPageShell({ listing, config, unavailableDates, onBook, isB
           <div>
 
             {/* S1 — Seller Row */}
-            <div className="flex items-center gap-3 py-1 pb-3">
-              <div className="relative flex-shrink-0">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/20">
-                  <SellerAvatar avatarUrl={listing.seller.image} name={listing.seller.name} size={48} />
-                </div>
-                {listing.seller.verified && (
-                  <span
-                    className="absolute left-1/2 -translate-x-1/2 material-symbols-outlined text-primary text-[12px] leading-none bg-white dark:bg-surface-container rounded-full"
-                    style={{ fontVariationSettings: "'FILL' 1", bottom: '-6px' }}
-                  >verified</span>
-                )}
-              </div>
-              <div>
-                <p className="text-[14px] font-semibold text-on-surface">{tr('listedBy', { name: listing.seller.name })}</p>
-                <p className="text-[11px] text-on-surface-variant mt-0.5">
-                  {tr('memberSince', { date: new Date(listing.seller.memberSince).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { year: 'numeric', month: 'long' }) })}
-                </p>
-              </div>
-            </div>
+            <SellerRow seller={listing.seller} />
             <div className="h-[2px] w-50 rounded-full bg-primary mt-1 mx-auto" />
 
             {/* Mobile stats */}
@@ -488,80 +503,108 @@ export function RentalPageShell({ listing, config, unavailableDates, onBook, isB
               <>
                 <div>
                   <SectionTitle>{tr('descriptionTitle')}</SectionTitle>
-                  <ExpandableText text={listing.description} expandedLabel={tr('collapse')} collapsedLabel={tr('expand')} />
+                  <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50 p-6 shadow-sm">
+                    <div className="absolute top-4 end-4 text-on-surface-variant/10">
+                      <span className="material-symbols-outlined text-3xl">description</span>
+                    </div>
+                    <ExpandableText text={listing.description} expandedLabel={tr('collapse')} collapsedLabel={tr('expand')} />
+                  </div>
+                </div>
+                <Divider />
+              </>
+            )}
+
+            {/* Specs Grid */}
+            {config.specsFields?.length > 0 && (
+              <>
+                <div>
+                  <SectionTitle>{tr('specsTitle')}</SectionTitle>
+                  <RentalSpecsGrid listing={listing} fields={config.specsFields} />
                 </div>
                 <Divider />
               </>
             )}
 
             {/* S2 — Highlights */}
-            <RentalHighlights listing={listing} fields={config.highlightFields} />
+            <DropdownSection
+              title={locale === 'ar' ? 'أبرز المميزات' : 'Highlights'}
+              subtitle={`${config.highlightFields.filter(field => !field.condition || field.condition(listing)).length} ${locale === 'ar' ? 'عناصر' : 'items'}`}
+              icon="auto_awesome"
+            >
+              <RentalHighlights listing={listing} fields={config.highlightFields} />
+            </DropdownSection>
             <Divider />
 
             {/* S3 — Rental Terms */}
-            <div>
-              <SectionTitle>{tr('rentalTerms')}</SectionTitle>
+            <DropdownSection
+              title={tr('rentalTerms')}
+              subtitle={`${[
+                listing.minRentalDays != null,
+                !!listing.cancellationPolicy,
+                listing.depositAmount != null && listing.depositAmount > 0,
+                listing.kmLimitPerDay != null && listing.kmLimitPerDay > 0,
+                listing.insuranceIncluded === true,
+                listing.withDriver === true,
+                listing.deliveryAvailable === true,
+              ].filter(Boolean).length} ${locale === 'ar' ? 'عناصر' : 'items'}`}
+              icon="event_note"
+            >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {listing.minRentalDays != null && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('minDaysLabel')}</span>
                     <span className="text-[12px] text-on-surface-variant">{tr('minDaysValue', { count: listing.minRentalDays! })}</span>
                   </div>
                 )}
                 {listing.cancellationPolicy && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('cancelPolicyLabel')}</span>
                     <span className="text-[12px] text-on-surface-variant">{cancelMap[listing.cancellationPolicy] ?? listing.cancellationPolicy}</span>
                   </div>
                 )}
                 {listing.depositAmount != null && listing.depositAmount > 0 && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('depositLabel')}</span>
                     <span className="text-[12px] text-on-surface-variant">{tr('depositValue', { amount: listing.depositAmount.toLocaleString('en-US'), currency: listing.currency })}</span>
                   </div>
                 )}
                 {listing.kmLimitPerDay != null && listing.kmLimitPerDay > 0 && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('kmLimitLabel')}</span>
                     <span className="text-[12px] text-on-surface-variant">{tr('kmLimitValue', { count: listing.kmLimitPerDay.toLocaleString('en-US') })}</span>
                   </div>
                 )}
                 {listing.insuranceIncluded === true && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-emerald-200/40 bg-gradient-to-br from-emerald-50 to-emerald-100/50 hover:border-emerald-300 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-emerald-200/40 bg-gradient-to-br from-emerald-50 to-emerald-100/50 hover:border-emerald-300 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('insuranceLabel')}</span>
                     <span className="text-[12px] text-emerald-700">{tr('insuranceIncluded')} ✓</span>
                   </div>
                 )}
                 {listing.withDriver === true && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('driverLabel')}</span>
                     <span className="text-[12px] text-on-surface-variant">{tr('withDriver')}</span>
                   </div>
                 )}
                 {listing.deliveryAvailable === true && (
-                  <div className="flex flex-col gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center text-center gap-0.5 px-4 py-3 rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/30 transition-all duration-200">
                     <span className="text-[12px] font-semibold text-on-surface">{tr('deliveryLabel')}</span>
                     <span className="text-[12px] text-on-surface-variant">{tr('deliveryAvailable')}</span>
                   </div>
                 )}
               </div>
-            </div>
-
-            <Divider />
-
-            {/* S4 — Specs */}
-            <div>
-              <SectionTitle>{tr('specsTitle')}</SectionTitle>
-              <RentalSpecsGrid listing={listing} fields={config.specsFields} />
-            </div>
+            </DropdownSection>
 
             <Divider />
 
             {/* S5 — Details */}
-            <div>
-              <SectionTitle>{tr('detailsTitle', { type: config.displayName })}</SectionTitle>
+            <DropdownSection
+              title={tr('detailsTitle', { type: config.displayName })}
+              subtitle={`${config.tableFields.length} ${tr('specsTitle')}`}
+              icon="list_alt"
+            >
               <RentalDetailsTable listing={listing} fields={config.tableFields} />
-            </div>
+            </DropdownSection>
 
             {/* S6 — Features */}
             {features.length > 0 && (
@@ -569,10 +612,12 @@ export function RentalPageShell({ listing, config, unavailableDates, onBook, isB
                 <Divider />
                 <div>
                   <SectionTitle>{tr('featuresTitle')}</SectionTitle>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2.5">
                     {visibleFeatures.map(feat => (
-                      <span key={feat} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-outline-variant/30 bg-surface-container text-[12px] text-on-surface">
-                        <span className="material-symbols-outlined text-primary text-[14px] flex-shrink-0">check</span>
+                      <span key={feat} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 text-[12px] font-medium text-slate-700 shadow-sm hover:shadow-md hover:border-emerald-300/80 transition-all duration-200">
+                        <span className="w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <span className="material-symbols-outlined text-white text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                        </span>
                         {feat}
                       </span>
                     ))}

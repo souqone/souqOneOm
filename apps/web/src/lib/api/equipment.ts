@@ -232,11 +232,12 @@ export function useDeleteEquipmentListing() {
 // Equipment Requests
 // ═══════════════════════════════════════
 
-export function useEquipmentRequests(params?: Record<string, string>) {
+export function useEquipmentRequests(params?: Record<string, string>, enabled = true) {
   const qs = new URLSearchParams(params).toString();
   return useQuery<Paginated<EquipmentRequestItem>>({
     queryKey: ['equipment-requests', params],
     queryFn: () => apiRequest(`/equipment-requests${qs ? `?${qs}` : ''}`),
+    enabled,
   });
 }
 
@@ -325,11 +326,12 @@ export function useRejectBid() {
 // Operators
 // ═══════════════════════════════════════
 
-export function useOperatorListings(params?: Record<string, string>) {
+export function useOperatorListings(params?: Record<string, string>, enabled = true) {
   const qs = new URLSearchParams(params).toString();
   return useQuery<Paginated<OperatorListingItem>>({
     queryKey: ['operators', params],
     queryFn: () => apiRequest(`/operators${qs ? `?${qs}` : ''}`),
+    enabled,
   });
 }
 
