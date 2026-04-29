@@ -18,6 +18,7 @@ export const ContractDetails = memo(function ContractDetails({ listing }: Contra
   const t = useTranslations('sale');
   const tc = useTranslations('common');
   const locale = useLocale();
+  const [open, setOpen] = useState(false);
 
   // Helper to get translated contract type
   const getContractTypeLabel = (type: string | undefined): string => {
@@ -97,8 +98,6 @@ export const ContractDetails = memo(function ContractDetails({ listing }: Contra
       bgColor: 'bg-red-50',
     },
   ];
-
-  const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-2xl border border-slate-200 overflow-hidden mb-6 shadow-sm">
