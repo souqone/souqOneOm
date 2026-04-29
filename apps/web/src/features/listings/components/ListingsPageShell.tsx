@@ -6,7 +6,7 @@ import { Link } from '@/i18n/navigation'
 import { 
   SlidersHorizontal, ChevronLeft, Search, Plus, X, 
   List, LayoutGrid, Loader2, SearchX, Clock,
-  Car, Bus, Wrench, Settings, Briefcase
+  Car, Bus, Wrench, Settings, Briefcase, HardHat
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -29,8 +29,7 @@ import { FilterSheet } from './FilterSheet'
 import { ActiveFilters } from './ActiveFilters'
 import { ListingCard } from './ListingCard'
 import { ListingCardSkeleton } from './ListingCardSkeleton'
-import { VehicleCard } from '@/features/ads/components/vehicle-card'
-import { mapUnifiedToVehicleCard } from '@/features/ads/utils/vehicle-card-adapter'
+import { UnifiedCard } from './UnifiedCard'
 import { CardSkeleton } from '@/components/loading-skeleton'
 
 // ── Icons ────────────────────────────────────────────────────────────────────
@@ -38,6 +37,7 @@ import { CardSkeleton } from '@/components/loading-skeleton'
 type LucideIcon = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
 const CATEGORY_ICON: Record<ListingCategory, LucideIcon> = {
   cars: Car, buses: Bus, equipment: Wrench,
+  'equipment-requests': Wrench, operators: HardHat,
   parts: Settings, services: Briefcase, jobs: Briefcase,
 }
 
@@ -45,7 +45,7 @@ function CategoryBar({ currentCategory }: { currentCategory: ListingCategory }) 
   return (
     <div className="bg-background/80 backdrop-blur-md border-b border-outline-variant/20 sticky top-0 z-30 pt-2 pb-2 sm:pt-3 sm:pb-3">
       <div className="w-full px-2.5 sm:max-w-4xl sm:mx-auto sm:px-6">
-        {/* The Premium Capsule */}
+        {/* Full-width capsule — no icons on mobile, compact text */}
         <div className="flex items-center p-1 sm:p-1.5 bg-surface-container-lowest/80 backdrop-blur-xl border border-outline-variant/40 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300">
           {VALID_CATEGORIES.map((cat, index) => {
             const m = CATEGORY_META[cat]
@@ -54,11 +54,11 @@ function CategoryBar({ currentCategory }: { currentCategory: ListingCategory }) 
             const isLast = index === VALID_CATEGORIES.length - 1
             
             return (
-              <div key={cat} className="flex items-center flex-1">
+              <div key={cat} className="flex items-center flex-1 min-w-0">
                 <Link
                   href={`/browse/${cat}`}
                   className={clsx(
-                    'flex flex-row items-center justify-center gap-1 sm:gap-2.5 px-0.5 py-2.5 sm:px-5 sm:py-3 w-full rounded-full transition-all duration-300 group',
+                    'flex flex-row items-center justify-center gap-1.5 sm:gap-2.5 px-1 py-2 sm:px-5 sm:py-3 w-full rounded-full transition-all duration-300 group',
                     isActive 
                       ? 'bg-primary text-on-primary shadow-md shadow-primary/20 scale-[1.02]' 
                       : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
@@ -68,12 +68,12 @@ function CategoryBar({ currentCategory }: { currentCategory: ListingCategory }) 
                     size={18} 
                     strokeWidth={isActive ? 2.5 : 2} 
                     className={clsx(
-                      "w-[14px] h-[14px] sm:w-[18px] sm:h-[18px] transition-transform duration-300 group-hover:scale-110", 
+                      "hidden sm:block w-[18px] h-[18px] transition-transform duration-300 group-hover:scale-110 flex-shrink-0", 
                       isActive ? "text-on-primary" : "text-on-surface-variant group-hover:text-primary"
                     )} 
                   />
                   <span className={clsx(
-                    "text-[10px] sm:text-[13px] whitespace-nowrap tracking-tight sm:tracking-wide", 
+                    "text-[8px] sm:text-[13px] whitespace-nowrap tracking-tighter sm:tracking-wide", 
                     isActive ? 'font-bold' : 'font-semibold'
                   )}>
                     {m.labelAr}
@@ -82,7 +82,7 @@ function CategoryBar({ currentCategory }: { currentCategory: ListingCategory }) 
                 
                 {/* Vertical Divider */}
                 {!isLast && (
-                  <div className="w-[1px] h-5 sm:h-8 bg-outline-variant/30 mx-0.5 sm:mx-1 flex-shrink-0" />
+                  <div className="w-[1px] h-4 sm:h-8 bg-outline-variant/30 flex-shrink-0" />
                 )}
               </div>
             )
@@ -677,8 +677,8 @@ function ShellContent({ category }: { category: ListingCategory }) {
             </div>
           )}
           {isLoading && viewMode === 'grid' && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-              {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+              {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
           )}
 
@@ -737,9 +737,9 @@ function ShellContent({ category }: { category: ListingCategory }) {
                   {items.map(item => <ListingCard key={item.id} item={item} onSave={handleSave} />)}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
                   {items.map(item => (
-                    <VehicleCard key={item.id} {...mapUnifiedToVehicleCard(item)} />
+                    <UnifiedCard key={item.id} item={item} className="h-full" />
                   ))}
                 </div>
               )}

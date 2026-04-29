@@ -117,7 +117,7 @@ export class AdminJobsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: { select: { id: true, username: true, displayName: true, email: true, avatarUrl: true } },
+          user: { select: { id: true, username: true, displayName: true, email: true, avatarUrl: true, isVerified: true } },
         },
       }),
       this.prisma.driverProfile.count({ where }),
@@ -138,7 +138,7 @@ export class AdminJobsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: { select: { id: true, username: true, displayName: true, email: true, avatarUrl: true } },
+          user: { select: { id: true, username: true, displayName: true, email: true, avatarUrl: true, isVerified: true } },
         },
       }),
       this.prisma.employerProfile.count(),

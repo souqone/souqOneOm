@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SearchService, INDEXES } from '../search/search.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
+import { USER_SELECT } from '../common/utils/entity.utils';
 
 @Injectable()
 export class PartsService {
@@ -101,7 +102,7 @@ export class PartsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          seller: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          seller: { select: USER_SELECT },
           images: { orderBy: { order: 'asc' }, take: 1 },
         },
       }),

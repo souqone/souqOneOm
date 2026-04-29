@@ -6,7 +6,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { getGovernorates, type LocationOption } from '@/lib/location-data';
 
-const HERO_SLIDES = ['/hero-banner.png', '/hero-banner-2.png'];
+const HERO_SLIDES = ['/hero.webp', '/hero-banner-2.png'];
 const SLIDE_INTERVAL = 5000;
 
 const TRUST_BADGES = [
@@ -63,7 +63,8 @@ export function HeroSection() {
   return (
     <section>
       {/* ── Search Bar ── */}
-      <div className="px-3 sm:px-6 lg:max-w-3xl lg:mx-auto py-2">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+       <div className="lg:max-w-3xl lg:mx-auto">
         <form
           onSubmit={handleSearch}
           className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container rounded-full border border-outline-variant/20 ps-1.5 pe-1.5 py-1 shadow-sm"
@@ -120,8 +121,10 @@ export function HeroSection() {
         </form>
       </div>
 
+      </div>
+
       {/* ── Hero Banner Slider ── */}
-      <div className="px-3 sm:px-6 pb-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
         <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5] xl:aspect-[16/5] rounded-2xl sm:rounded-3xl">
           {HERO_SLIDES.map((src, i) => (
             <Image
@@ -149,37 +152,37 @@ export function HeroSection() {
           </div>
 
           <div className="absolute bottom-0 inset-x-0 px-4 sm:px-8 lg:px-12 xl:px-16 pb-3 sm:pb-6 lg:pb-10 xl:pb-12 text-white">
-            <h1 className="text-[11px] sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-0.5 sm:mb-1 lg:mb-2">
+            <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-1 lg:mb-2">
               {t('heroTitle')}
             </h1>
-            <p className="text-[8px] sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-1 sm:mb-3 lg:mb-5 max-w-lg lg:max-w-xl">
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-lg lg:max-w-xl">
               {t('heroSubtitle')}
             </p>
 
-            <div className="flex items-center gap-1 sm:gap-3 lg:gap-4 mb-1 sm:mb-3 lg:mb-5">
+            <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-5">
               <Link
                 href="/add-listing"
-                className="btn-brand shrink-0 flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-5 lg:px-7 py-0.5 sm:py-2.5 lg:py-3 text-[7px] sm:text-sm lg:text-base font-black rounded-md sm:rounded-xl hover:brightness-110 transition-all"
+                className="btn-brand shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl hover:brightness-110 transition-all"
               >
-                <span className="material-symbols-outlined text-[8px] sm:text-sm lg:text-base">add_circle</span>
+                <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none" style={{ fontVariationSettings: "'opsz' 20, 'wght' 600" }}>add_circle</span>
                 {t('heroAddCta')}
               </Link>
               <Link
                 href="/browse/cars"
-                className="shrink-0 flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-5 lg:px-7 py-0.5 sm:py-2.5 lg:py-3 text-[7px] sm:text-sm lg:text-base font-bold rounded-md sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
+                className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
               >
-                <span className="material-symbols-outlined text-[8px] sm:text-sm lg:text-base">explore</span>
+                <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none" style={{ fontVariationSettings: "'opsz' 20, 'wght' 600" }}>explore</span>
                 {t('heroExploreCta')}
               </Link>
             </div>
 
-            <div className="flex items-center gap-0.5 sm:gap-2 lg:gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 flex-wrap">
               {TRUST_BADGES.map(b => (
                 <span
                   key={b.key}
-                  className="inline-flex items-center gap-0.5 sm:gap-1 text-[5px] sm:text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-1 py-px sm:px-2.5 sm:py-1 lg:px-3 lg:py-1.5"
+                  className="inline-flex items-center gap-1 sm:gap-1 text-[9px] sm:text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2 py-1 sm:px-2.5 sm:py-1 lg:px-3 lg:py-1.5"
                 >
-                  <span className="material-symbols-outlined text-[5px] sm:text-[12px] lg:text-sm">{b.icon}</span>
+                  <span className="material-symbols-outlined !text-[11px] sm:!text-[13px] lg:!text-sm leading-none" style={{ fontVariationSettings: "'opsz' 20, 'wght' 500" }}>{b.icon}</span>
                   {t(b.key)}
                 </span>
               ))}

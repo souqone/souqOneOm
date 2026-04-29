@@ -13,11 +13,10 @@ import { clsx } from 'clsx'
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
 import { CardSkeleton } from '@/components/loading-skeleton'
-import { VehicleCard } from '@/features/ads/components/vehicle-card'
-import { mapUnifiedToVehicleCard } from '@/features/ads/utils/vehicle-card-adapter'
 
 import { useGlobalSearch } from '../hooks/useGlobalSearch'
 import { useFilterState } from '../hooks/useFilterState'
+import { UnifiedCard } from './UnifiedCard'
 import { GLOBAL_FILTERS, GLOBAL_SORT_OPTIONS, type GlobalEntityType } from '../config/global-filters.config'
 import { ActiveFilters } from './ActiveFilters'
 import { FilterSidebar } from './FilterSidebar'
@@ -313,7 +312,7 @@ function ShellContent() {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                 {items.map((item) => (
-                  <VehicleCard key={item.id} {...mapUnifiedToVehicleCard(item)} />
+                  <UnifiedCard key={item.id} item={item} className="h-full" />
                 ))}
               </div>
 

@@ -7,6 +7,7 @@ import type { BusListingItem } from '@/lib/api/buses';
 import type { SparePartItem } from '@/lib/api/parts';
 import type { EquipmentListingItem } from '@/lib/api/equipment';
 import type { JobItem } from '@/lib/api/jobs';
+import type { CarServiceItem } from '@/lib/api/services';
 
 // ── Intersection Observer wrapper ──
 function LazySection({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
@@ -56,6 +57,11 @@ const EquipmentShowcase = dynamic(
   { loading: () => <ShowcaseSkeleton /> },
 );
 
+const ServicesShowcase = dynamic(
+  () => import('./components/services-showcase').then(m => ({ default: m.ServicesShowcase })),
+  { loading: () => <ShowcaseSkeleton /> },
+);
+
 const JobsSection = dynamic(
   () => import('./components/jobs-section').then(m => ({ default: m.JobsSection })),
   { loading: () => <ShowcaseSkeleton /> },
@@ -82,6 +88,14 @@ export function LazyEquipment({ items }: { items: EquipmentListingItem[] }) {
   return (
     <LazySection fallback={<ShowcaseSkeleton />}>
       <EquipmentShowcase items={items} isLoading={false} />
+    </LazySection>
+  );
+}
+
+export function LazyServices({ items }: { items: CarServiceItem[] }) {
+  return (
+    <LazySection fallback={<ShowcaseSkeleton />}>
+      <ServicesShowcase items={items} isLoading={false} />
     </LazySection>
   );
 }

@@ -17,8 +17,8 @@ interface RouteInfo {
 
 const ROUTES: RouteInfo[] = [
   // ── Public Pages ──
-  { path: '/', label: 'الرئيسية (Home)', group: 'Public', auth: false, type: 'landing', cards: ['VehicleCard', 'JobCard (inline)', 'BusCard (inline)', 'EquipmentCard (inline)', 'PartsCard (inline)'] },
-  { path: '/motors', label: 'لاندنج السيارات', group: 'Public', auth: false, type: 'landing', cards: ['VehicleCard', 'ServiceCard (inline)'] },
+  { path: '/', label: 'الرئيسية (Home)', group: 'Public', auth: false, type: 'landing', cards: ['UnifiedCard', 'JobCard (inline)', 'BusCard (inline)', 'EquipmentCard (inline)', 'PartsCard (inline)'] },
+  { path: '/motors', label: 'لاندنج السيارات', group: 'Public', auth: false, type: 'landing', cards: ['UnifiedCard', 'ServiceCard (inline)'] },
   { path: '/equipment', label: 'لاندنج المعدات', group: 'Public', auth: false, type: 'landing', cards: ['EquipmentCard (inline)', 'RequestCard (inline)', 'OperatorCard (inline)'] },
   { path: '/coming-soon', label: 'قريباً', group: 'Public', auth: false, type: 'page', cards: [] },
   { path: '/pricing', label: 'الأسعار', group: 'Public', auth: false, type: 'page', cards: ['PriceCard'] },
@@ -35,14 +35,14 @@ const ROUTES: RouteInfo[] = [
   { path: '/browse/insurance', label: 'التأمين', group: 'Browse', auth: false, type: 'page', cards: ['ListingCard'] },
 
   // ── Detail Pages ──
-  { path: '/sale/[type]/[id]', label: 'تفاصيل (بيع/خدمة/معدة/...)', group: 'Detail', auth: false, type: 'detail', cards: ['PriceCard', 'SellerCard', 'VehicleCard (similar)'] },
-  { path: '/rental/[type]/[id]', label: 'تفاصيل إيجار', group: 'Detail', auth: false, type: 'detail', cards: ['RentalBookingCard', 'VehicleCard (similar)'] },
+  { path: '/sale/[type]/[id]', label: 'تفاصيل (بيع/خدمة/معدة/...)', group: 'Detail', auth: false, type: 'detail', cards: ['PriceCard', 'SellerCard', 'UnifiedCard (similar)'] },
+  { path: '/rental/[type]/[id]', label: 'تفاصيل إيجار', group: 'Detail', auth: false, type: 'detail', cards: ['RentalBookingCard', 'UnifiedCard (similar)'] },
   { path: '/jobs/[id]', label: 'تفاصيل وظيفة', group: 'Detail', auth: false, type: 'detail', cards: ['SellerCard'] },
   { path: '/jobs/drivers/[id]', label: 'بروفايل سائق', group: 'Detail', auth: false, type: 'detail', cards: [] },
   { path: '/equipment/operators/[id]', label: 'تفاصيل مشغل', group: 'Detail', auth: false, type: 'detail', cards: [] },
   { path: '/equipment/requests/[id]', label: 'تفاصيل طلب معدة', group: 'Detail', auth: false, type: 'detail', cards: [] },
   { path: '/bookings/[id]', label: 'تفاصيل حجز', group: 'Detail', auth: true, type: 'detail', cards: ['BookingCard', 'SellerCard', 'ReviewCard'] },
-  { path: '/seller/[id]', label: 'بروفايل بائع', group: 'Detail', auth: false, type: 'detail', cards: ['VehicleCard', 'UnifiedCard', 'GenericListingCard', 'ReviewCard'] },
+  { path: '/seller/[id]', label: 'بروفايل بائع', group: 'Detail', auth: false, type: 'detail', cards: ['UnifiedCard', 'GenericListingCard', 'ReviewCard'] },
 
   // ── Jobs ──
   { path: '/jobs', label: 'وظائف السائقين', group: 'Jobs', auth: false, type: 'page', cards: ['ListingCard'] },
@@ -74,7 +74,7 @@ const ROUTES: RouteInfo[] = [
   // ── User ──
   { path: '/profile', label: 'البروفايل', group: 'User', auth: true, type: 'page', cards: [] },
   { path: '/my-listings', label: 'إعلاناتي', group: 'User', auth: true, type: 'page', cards: [] },
-  { path: '/favorites', label: 'المفضلة', group: 'User', auth: true, type: 'page', cards: ['VehicleCard', 'UnifiedCard'] },
+  { path: '/favorites', label: 'المفضلة', group: 'User', auth: true, type: 'page', cards: ['UnifiedCard'] },
   { path: '/bookings', label: 'حجوزاتي', group: 'User', auth: true, type: 'page', cards: ['BookingCard'] },
   { path: '/notifications', label: 'الإشعارات', group: 'User', auth: true, type: 'page', cards: [] },
   { path: '/messages', label: 'المحادثات', group: 'User', auth: true, type: 'page', cards: [] },
@@ -105,7 +105,7 @@ interface CardInfo {
   name: string;
   file: string;
   type: 'reusable' | 'inline';
-  status: 'active' | 'duplicate' | 'unused';
+  status: 'active' | 'duplicate' | 'unused' | 'deprecated';
   usedInPages: string[];
   purpose: string;
   color: string;
@@ -116,7 +116,7 @@ const CARDS: CardInfo[] = [
     name: 'VehicleCard',
     file: 'features/ads/components/vehicle-card.tsx',
     type: 'reusable',
-    status: 'active',
+    status: 'deprecated',
     purpose: 'عرض السيارات (بيع + إيجار)',
     color: '#3b82f6',
     usedInPages: ['/', '/motors', '/favorites', '/seller/[id]', '/sale/[type]/[id]', '/rental/[type]/[id]'],
@@ -595,6 +595,58 @@ export default function SitemapPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ACTIVE</span>
               </div>
               <p className="text-[12px] text-gray-400 mb-4">Vertical card — صورة 16:10 مع gradient overlay، badge شرط أعلى-يمين، سعر أسفل-يمين، عنوان + metadata أسفل. مستخدم في الهوم + لاندنج السيارات + المفضلة + البائع.</p>
+
+              {/* Badge inventory */}
+              <div className="mb-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-[12px] font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-blue-400">sell</span>
+                  Badges Used in VehicleCard
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> جديدة / مستعملة / مجددة
+                    <span className="text-[9px] text-gray-400 ml-1">(condition — top-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-orange-500" /> مطلوب
+                    <span className="text-[9px] text-gray-400 ml-1">(wanted — top-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" /> مطلوب موظف / باحث عن عمل
+                    <span className="text-[9px] text-gray-400 ml-1">(jobs — top-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> أصلي
+                    <span className="text-[9px] text-gray-400 ml-1">(parts OEM — top-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> خدمة منزلية
+                    <span className="text-[9px] text-gray-400 ml-1">(services — top-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="material-symbols-outlined text-[12px] text-blue-500" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span> موثق
+                    <span className="text-[9px] text-gray-400 ml-1">(verified — bottom-left)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" /> 12,500 ر.ع
+                    <span className="text-[9px] text-gray-400 ml-1">(price — bottom-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="material-symbols-outlined text-[12px] text-white">favorite</span> مفضلة
+                    <span className="text-[9px] text-gray-400 ml-1">(Material icon — top-left)</span>
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 font-bold border border-blue-500/20">للبيع</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-teal-500/15 text-teal-400 font-bold border border-teal-500/20">إيجار</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-400 font-bold border border-orange-500/20">مطلوب</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 font-bold border border-rose-500/20">وظيفة</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 font-bold border border-purple-500/20">خدمة</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-400 font-bold border border-orange-500/20">قطعة</span>
+                  <span className="text-[9px] text-gray-500 self-center">(listing type labels — body text)</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" dir="rtl">
                 {/* Sale car */}
                 <div className="rounded-xl overflow-hidden bg-white border border-gray-200 group hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300">
@@ -733,6 +785,50 @@ export default function SitemapPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ACTIVE</span>
               </div>
               <p className="text-[12px] text-gray-400 mb-4">Horizontal card — صورة يمين 280px مع thumbnail strip + content يسار فيه سعر أحمر كبير + detail chips + أزرار (اتصال/شات/واتساب). مستخدم في كل صفحات Browse.</p>
+
+              {/* Badge inventory */}
+              <div className="mb-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-[12px] font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-purple-400">sell</span>
+                  Badges Used in ListingCard
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-white font-bold bg-red-500 border border-red-400/30">
+                    ★ للبيع
+                    <span className="text-[9px] text-red-200 ml-1">(primaryBadge — red ribbon top-start)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] text-white font-bold bg-emerald-500">
+                    مستعملة / جديدة
+                    <span className="text-[9px] text-emerald-200 ml-1">(secondaryBadge — pill top-end)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                    ✓ موثق
+                    <span className="text-[9px] text-sky-400 ml-1">(trust capsule)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    قابل للتفاوض
+                    <span className="text-[9px] text-amber-400 ml-1">(trust capsule)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-red-400 font-bold border border-white/10 bg-white/5">
+                    ♡ Lucide Heart
+                    <span className="text-[9px] text-gray-400 ml-1">(fav — white circle top-end)</span>
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-700 text-[11px] font-semibold text-gray-200">2022</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-700 text-[11px] font-semibold text-gray-200">45,000 كم</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-700 text-[11px] font-semibold text-gray-200">بنزين</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-700 text-[11px] font-semibold text-gray-200">أوتوماتيك</span>
+                  <span className="text-[9px] text-gray-500 self-center">(detail chips — pill style)</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="px-3 py-1.5 rounded-lg bg-sky-900/30 border border-sky-700/30 text-[11px] font-semibold text-sky-400">📞 اتصال</span>
+                  <span className="px-3 py-1.5 rounded-lg bg-orange-900/30 border border-orange-700/30 text-[11px] font-semibold text-orange-400">💬 محادثة</span>
+                  <span className="px-3 py-1.5 rounded-lg bg-emerald-900/30 border border-emerald-700/30 text-[11px] font-semibold text-emerald-400">واتساب</span>
+                  <span className="text-[9px] text-gray-500 self-center">(action buttons — bottom)</span>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-4" dir="rtl">
                 <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-all group max-w-[700px]">
                   {/* Image */}
@@ -805,6 +901,37 @@ export default function SitemapPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ACTIVE</span>
               </div>
               <p className="text-[12px] text-gray-400 mb-4">Vertical card — شبيه بـ VehicleCard لكن ببنية مختلفة: badges مختلفة + details chips + location + سعر أسفل. مستخدم في البحث العام + مفضلة + بائع.</p>
+
+              {/* Badge inventory */}
+              <div className="mb-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-[12px] font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-cyan-400">sell</span>
+                  Badges Used in UnifiedCard
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" /> للبيع / إيجار / مطلوب
+                    <span className="text-[9px] text-gray-400 ml-1">(primaryBadge — dot+blur top-right)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur text-[11px] text-white font-bold border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> جديدة / مستعملة
+                    <span className="text-[9px] text-gray-400 ml-1">(secondaryBadge — dot+blur top-left)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-red-400 font-bold border border-white/10 bg-white/5">
+                    ♡ Lucide Heart
+                    <span className="text-[9px] text-gray-400 ml-1">(fav — on-hover circle top-left)</span>
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="flex items-center gap-0.5 text-[11px] text-gray-300">🔧 حفار</span>
+                  <span className="text-gray-500">·</span>
+                  <span className="flex items-center gap-0.5 text-[11px] text-gray-300">⏱ 3,200 ساعة</span>
+                  <span className="text-gray-500">·</span>
+                  <span className="flex items-center gap-0.5 text-[11px] text-gray-300">👷 مع مشغل</span>
+                  <span className="text-[9px] text-gray-500 self-center ml-2">(detail chips — icon+text inline)</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" dir="rtl">
                 <div className="rounded-xl overflow-hidden bg-white border border-gray-200 hover:shadow-md hover:-translate-y-px transition-all cursor-pointer group">
                   <div className="relative bg-gray-100" style={{ aspectRatio: '16/10' }}>
@@ -871,15 +998,16 @@ export default function SitemapPage() {
 
             <hr className="border-white/5 mb-12" />
 
-            {/* ── 4. EquipmentCard (inline) ── */}
-            <section className="mb-12">
+            {/* ── 4. EquipmentCard (inline) — DELETED ── */}
+            <section className="mb-12 opacity-50">
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-3 h-3 rounded-full bg-red-500" />
-                <h3 className="text-lg font-black">EquipmentCard (inline)</h3>
-                <code className="text-[10px] text-gray-500 font-mono">equipment/equipment-shell.tsx (local fn)</code>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">DUPLICATE</span>
+                <h3 className="text-lg font-black line-through">EquipmentCard (inline)</h3>
+                <code className="text-[10px] text-gray-500 font-mono line-through">equipment/equipment-shell.tsx (local fn)</code>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">DELETED</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">→ Replaced by UnifiedCard</span>
               </div>
-              <p className="text-[12px] text-gray-400 mb-4">Vertical card — مشابه لـ VehicleCard لكن بـ amber price badge + أيقونات مختلفة. في equipment landing فقط. مكرر ومحتاج يتوحد.</p>
+              <p className="text-[12px] text-gray-400 mb-4">Vertical card — تم حذفه واستبداله بـ UnifiedCard + normalizeEquipment. كان مكرر ومختلف في التصميم (amber price، أيقونات Material مختلفة).</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" dir="rtl">
                 <div className="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-0.5 group">
                   <div className="relative" style={{ aspectRatio: '16/10' }}>
@@ -936,6 +1064,29 @@ export default function SitemapPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ACTIVE</span>
               </div>
               <p className="text-[12px] text-gray-400 mb-4">بطاقة معلومات البائع — أفاتار + اسم + نجوم + تاريخ انضمام + أزرار تواصل. مستخدم في صفحات التفاصيل والحجوزات.</p>
+
+              {/* Badge inventory */}
+              <div className="mb-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-[12px] font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-pink-400">sell</span>
+                  Badges Used in SellerCard
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-white font-bold border border-white/10 bg-white/5">
+                    <span className="material-symbols-outlined text-[12px] text-blue-500" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span> موثق
+                    <span className="text-[9px] text-gray-400 ml-1">(next to name)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-amber-400 font-bold border border-white/10 bg-white/5">
+                    ⭐ 4.8 (23 تقييم)
+                    <span className="text-[9px] text-gray-400 ml-1">(rating)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-gray-300 font-bold border border-white/10 bg-white/5">
+                    عضو منذ 2023
+                    <span className="text-[9px] text-gray-400 ml-1">(join date)</span>
+                  </span>
+                </div>
+              </div>
+
               <div className="max-w-sm" dir="rtl">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                   <div className="flex items-center gap-3 mb-3">
@@ -972,6 +1123,22 @@ export default function SitemapPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ACTIVE</span>
               </div>
               <p className="text-[12px] text-gray-400 mb-4">كارت الحجز — يعرض نوع المركبة + التواريخ + الحالة + السعر. مستخدم في صفحات الحجوزات.</p>
+
+              {/* Badge inventory */}
+              <div className="mb-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-[12px] font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-emerald-400">sell</span>
+                  Badges Used in BookingCard
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">مؤكد</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">قيد الانتظار</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700">ملغي</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700">مكتمل</span>
+                  <span className="text-[9px] text-gray-500 self-center">(status badge — top-end)</span>
+                </div>
+              </div>
+
               <div className="max-w-md" dir="rtl">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -1009,6 +1176,25 @@ export default function SitemapPage() {
                 <code className="text-[10px] text-gray-500 font-mono">components/reviews/review-card.tsx</code>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ACTIVE</span>
               </div>
+
+              {/* Badge inventory */}
+              <div className="mb-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-[12px] font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-orange-400">sell</span>
+                  Badges Used in ReviewCard
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-amber-400 font-bold border border-white/10 bg-white/5">
+                    ⭐⭐⭐⭐⭐
+                    <span className="text-[9px] text-gray-400 ml-1">(star rating — 1-5)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-gray-300 font-bold border border-white/10 bg-white/5">
+                    منذ أسبوع
+                    <span className="text-[9px] text-gray-400 ml-1">(relative time)</span>
+                  </span>
+                </div>
+              </div>
+
               <div className="max-w-md" dir="rtl">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                   <div className="flex items-center gap-3 mb-3">

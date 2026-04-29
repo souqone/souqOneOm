@@ -208,7 +208,7 @@ export class BusesService {
         take: limit,
         orderBy,
         include: {
-          user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          user: { select: USER_SELECT },
           images: { orderBy: { order: 'asc' }, take: 1 },
         },
       }),

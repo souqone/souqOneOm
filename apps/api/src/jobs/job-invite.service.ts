@@ -77,7 +77,7 @@ export class JobInviteService {
             salaryPeriod: true,
             currency: true,
             status: true,
-            user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+            user: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
           },
         },
       },

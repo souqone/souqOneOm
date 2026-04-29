@@ -10,11 +10,14 @@ export class TokenCleanupService {
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async cleanupExpiredTokens() {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     const { count } = await this.prisma.refreshToken.deleteMany({
       where: {
         OR: [
           { expiresAt: { lt: new Date() } },
-          { revokedAt: { not: null } },
+          // Keep revoked tokens for 7 days for security audit trail
+          { revokedAt: { lt: sevenDaysAgo } },
         ],
       },
     });

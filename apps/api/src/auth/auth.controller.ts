@@ -7,6 +7,8 @@ import { SignupDto } from './dto/signup.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from './auth.types';
@@ -42,6 +44,7 @@ export class AuthController {
     return this.authService.logout(dto.refreshToken);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @UseGuards(JwtAuthGuard)
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto, @CurrentUser() user: JwtPayload) {
@@ -57,18 +60,14 @@ export class AuthController {
 
   @Throttle({ default: { ttl: 60000, limit: 3 } })
   @Post('forgot-password')
-  forgotPassword(@Body('email') email: string) {
-    return this.authService.forgotPassword(email);
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('reset-password')
-  resetPassword(
-    @Body('email') email: string,
-    @Body('code') code: string,
-    @Body('newPassword') newPassword: string,
-  ) {
-    return this.authService.resetPassword(email, code, newPassword);
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
   }
 
 }

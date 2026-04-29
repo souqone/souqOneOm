@@ -11,6 +11,7 @@ import { SearchService } from '../../search/search.service';
 import { generateSlug } from '../utils/entity.utils';
 import { incrementViewCount } from '../utils/view-count.helper';
 import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
+import { USER_SELECT_PUBLIC, USER_SELECT_DETAIL } from '../constants/user-select.constant';
 
 export interface ListingConfig {
   /** Prisma model accessor name, e.g. 'carService' */
@@ -30,14 +31,7 @@ export interface ListingConfig {
 const LIST_CACHE_TTL = 300;    // 5 minutes
 const DETAIL_CACHE_TTL = 600;  // 10 minutes
 
-const USER_SELECT_LIST = {
-  id: true, username: true, displayName: true, avatarUrl: true,
-} as const;
-
-const USER_SELECT_DETAIL = {
-  id: true, username: true, displayName: true, avatarUrl: true,
-  phone: true, governorate: true, isVerified: true, createdAt: true,
-} as const;
+// Use centralised constants — see common/constants/user-select.constant.ts
 
 /**
  * Abstract base class for the 4 marketplace listing services:
@@ -84,7 +78,7 @@ export abstract class BaseListingService {
   // ──────────────────────────────────
   protected getListInclude(): any {
     return {
-      user: { select: USER_SELECT_LIST },
+      user: { select: USER_SELECT_PUBLIC },
       images: { orderBy: { order: 'asc' }, take: 1 },
     };
   }
@@ -98,7 +92,7 @@ export abstract class BaseListingService {
 
   protected getCreateInclude(): any {
     return {
-      user: { select: USER_SELECT_LIST },
+      user: { select: USER_SELECT_PUBLIC },
       images: true,
     };
   }

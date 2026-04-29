@@ -278,10 +278,50 @@ function normalizeJob(raw: any): UnifiedListingItem {
   }
 }
 
+function normalizeEquipmentRequest(raw: any): UnifiedListingItem {
+  return {
+    id: raw.id,
+    category: 'equipment-requests',
+    title: raw.title || '',
+    price: raw.budgetMax ? Number(raw.budgetMax) : raw.budgetMin ? Number(raw.budgetMin) : null,
+    priceLabel: null,
+    currency: raw.currency || 'OMR',
+    images: [],
+    governorate: raw.governorate ?? null,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    primaryBadge: { label: 'طلب معدة', color: 'orange' },
+    secondaryBadge: raw.withOperator ? { label: 'مع مشغل', color: 'green' } : null,
+    details: [],
+    href: `/equipment/requests/${raw.slug || raw.id}`,
+    favoriteEntityType: 'EQUIPMENT_REQUEST',
+  }
+}
+
+function normalizeOperator(raw: any): UnifiedListingItem {
+  return {
+    id: raw.id,
+    category: 'operators',
+    title: raw.title || '',
+    price: raw.dailyRate ? Number(raw.dailyRate) : raw.hourlyRate ? Number(raw.hourlyRate) : null,
+    priceLabel: raw.dailyRate ? 'يومياً' : raw.hourlyRate ? 'ساعة' : null,
+    currency: raw.currency || 'OMR',
+    images: [],
+    governorate: raw.governorate ?? null,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    primaryBadge: { label: raw.operatorType || 'مشغل', color: 'purple' },
+    secondaryBadge: raw.experienceYears != null ? { label: `${raw.experienceYears} سنة خبرة`, color: 'gray' } : null,
+    details: [],
+    href: `/equipment/operators/${raw.slug || raw.id}`,
+    favoriteEntityType: 'OPERATOR_LISTING',
+  }
+}
+
 export const NORMALIZERS: Record<ListingCategory, (raw: any) => UnifiedListingItem> = {
   cars: normalizeCar,
   buses: normalizeBus,
   equipment: normalizeEquipment,
+  'equipment-requests': normalizeEquipmentRequest,
+  operators: normalizeOperator,
   parts: normalizePart,
   services: normalizeService,
   jobs: normalizeJob,

@@ -195,6 +195,17 @@ export function useEnumTranslations() {
       MOTORCYCLE: t('enumLicenseMotorcycle'),
     },
 
+    vehicleType: {
+      SEDAN:       t('enumVehicleSedan'),
+      SUV:         t('enumVehicleSUV'),
+      LIGHT_TRUCK: t('enumVehicleLightTruck'),
+      HEAVY_TRUCK: t('enumVehicleHeavyTruck'),
+      BUS:         t('enumVehicleBus'),
+      LIMO:        t('enumVehicleLimo'),
+      VAN:         t('enumVehicleVan'),
+      PICKUP:      t('enumVehiclePickup'),
+    },
+
     // ─── Salary Period ────────────────────────────────────────
     salaryPeriod: {
       DAILY:      t('enumSalDaily'),

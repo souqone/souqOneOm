@@ -52,7 +52,7 @@ export class ReviewsService {
         revieweeId: dto.revieweeId,
       },
       include: {
-        reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
       },
     });
 
@@ -97,7 +97,7 @@ export class ReviewsService {
         skip,
         take: limit,
         include: {
-          reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
           reply: true,
         },
       }),

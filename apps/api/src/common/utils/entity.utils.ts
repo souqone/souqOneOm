@@ -2,10 +2,7 @@
  * Shared utilities used across multiple modules.
  */
 
-export const USER_SELECT = {
-  id: true, username: true, displayName: true,
-  avatarUrl: true, phone: true, governorate: true, isVerified: true, createdAt: true,
-} as const;
+export { USER_SELECT_DETAIL as USER_SELECT } from '../constants/user-select.constant';
 
 /**
  * Generate a URL-safe slug that supports Arabic characters.
