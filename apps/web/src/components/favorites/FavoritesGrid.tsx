@@ -8,7 +8,6 @@ interface FavoritesGridProps {
   isSelecting: boolean
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
-  onRemove: (id: string) => void
 }
 
 export function FavoritesGrid({
@@ -17,7 +16,6 @@ export function FavoritesGrid({
   isSelecting,
   selectedIds,
   onToggleSelect,
-  onRemove,
 }: FavoritesGridProps) {
   return (
     <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-2'}>
@@ -31,7 +29,7 @@ export function FavoritesGrid({
               <ListingCard item={item} />
             )}
 
-            {/* Selection checkbox overlay */}
+            {/* Selection checkbox overlay (only in multi-select mode) */}
             {isSelecting && (
               <button
                 onClick={() => onToggleSelect(item.id)}
@@ -46,22 +44,6 @@ export function FavoritesGrid({
                 {isSelected && (
                   <span className="material-symbols-outlined text-sm">check</span>
                 )}
-              </button>
-            )}
-
-            {/* Remove button (non-selecting mode) */}
-            {!isSelecting && (
-              <button
-                onClick={() => onRemove(item.id)}
-                aria-label="إزالة من المفضلة"
-                className={`absolute ${viewMode === 'grid' ? 'top-2 right-2' : 'top-3 right-3'} w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-outline-variant/20 flex items-center justify-center text-error hover:bg-error/10 hover:border-error/20 transition-all z-10`}
-              >
-                <span
-                  className="material-symbols-outlined text-base"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  favorite
-                </span>
               </button>
             )}
           </div>

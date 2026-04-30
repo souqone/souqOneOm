@@ -298,7 +298,6 @@ export function FavoritesPageClient() {
                   isSelecting={isSelecting}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
-                  onRemove={handleRemove}
                 />
               )}
             </main>
