@@ -1,8 +1,10 @@
 import { UnifiedCard } from '@/features/listings/components/UnifiedCard'
+import { ListingCard } from '@/features/listings/components/ListingCard'
 import type { UnifiedListingItem } from '@/features/listings/types/unified-item.types'
 
 interface FavoritesGridProps {
   items: UnifiedListingItem[]
+  viewMode: 'grid' | 'list'
   isSelecting: boolean
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
@@ -11,18 +13,23 @@ interface FavoritesGridProps {
 
 export function FavoritesGrid({
   items,
+  viewMode,
   isSelecting,
   selectedIds,
   onToggleSelect,
   onRemove,
 }: FavoritesGridProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-2'}>
       {items.map(item => {
         const isSelected = selectedIds.has(item.id)
         return (
           <div key={item.id} className="relative">
-            <UnifiedCard item={item} className="h-full" />
+            {viewMode === 'grid' ? (
+              <UnifiedCard item={item} className="h-full" />
+            ) : (
+              <ListingCard item={item} />
+            )}
 
             {/* Selection checkbox overlay */}
             {isSelecting && (
@@ -47,7 +54,7 @@ export function FavoritesGrid({
               <button
                 onClick={() => onRemove(item.id)}
                 aria-label="إزالة من المفضلة"
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-outline-variant/20 flex items-center justify-center text-error hover:bg-error/10 hover:border-error/20 transition-all z-10"
+                className={`absolute ${viewMode === 'grid' ? 'top-2 right-2' : 'top-3 right-3'} w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-outline-variant/20 flex items-center justify-center text-error hover:bg-error/10 hover:border-error/20 transition-all z-10`}
               >
                 <span
                   className="material-symbols-outlined text-base"

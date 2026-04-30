@@ -34,6 +34,7 @@ export function FavoritesPageClient() {
   // ── State ──
   const [activeCategory, setActiveCategory] = useState<EntityType | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isSelecting, setIsSelecting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -224,28 +225,53 @@ export function FavoritesPageClient() {
 
           {/* ── Content ── */}
           <div className="pt-5 px-4">
-            {/* Sort pills (same style as seller sub-tabs) */}
+            {/* Sort bar + view toggle */}
             {!isLoading && totalCount > 0 && (
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4">
-                {SORT_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSortBy(opt.value)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors ${
-                      sortBy === opt.value
-                        ? 'bg-primary text-on-primary shadow-sm'
-                        : 'bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between gap-3 pb-4">
+                {/* Sort pills */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0">
+                  {SORT_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSortBy(opt.value)}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors ${
+                        sortBy === opt.value
+                          ? 'bg-primary text-on-primary shadow-sm'
+                          : 'bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
 
-                {/* Desktop select button */}
-                {totalCount > 0 && (
+                {/* View mode toggle + select */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex border border-outline-variant/40 rounded-lg overflow-hidden bg-background">
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`p-1.5 transition-colors ${
+                        viewMode === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+                      }`}
+                      aria-label="عرض كقائمة"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">view_list</span>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-1.5 transition-colors ${
+                        viewMode === 'grid' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+                      }`}
+                      aria-label="عرض كشبكة"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                    </button>
+                  </div>
+
+                  {/* Desktop select button */}
                   <button
                     onClick={() => { setIsSelecting(s => !s); setSelectedIds(new Set()) }}
-                    className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors border border-outline-variant/20 text-on-surface-variant hover:border-primary/30 mr-auto"
+                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border border-outline-variant/40 text-on-surface-variant hover:border-primary/30"
                     aria-label={isSelecting ? 'إلغاء التحديد' : 'تحديد'}
                   >
                     <span className="material-symbols-outlined text-base">
@@ -253,7 +279,7 @@ export function FavoritesPageClient() {
                     </span>
                     {isSelecting ? 'إلغاء' : 'تحديد'}
                   </button>
-                )}
+                </div>
               </div>
             )}
 
@@ -268,6 +294,7 @@ export function FavoritesPageClient() {
               ) : (
                 <FavoritesGrid
                   items={sorted}
+                  viewMode={viewMode}
                   isSelecting={isSelecting}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
