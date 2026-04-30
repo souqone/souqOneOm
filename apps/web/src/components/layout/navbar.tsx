@@ -39,9 +39,9 @@ function useNavLinks() {
       ],
     },
     {
-      href: '/browse/buses', label: t('buses'),
+      href: '/buses', label: t('buses'),
       children: [
-        { href: '/browse/buses', label: t('allBuses'), icon: 'directions_bus', desc: tn('busesSaleRentalContracts') },
+        { href: '/buses', label: t('allBuses'), icon: 'directions_bus', desc: tn('busesSaleRentalContracts') },
         { href: '/browse/buses?type=SALE', label: t('busesForSale'), icon: 'sell', desc: tn('busesForSaleDesc') },
         { href: '/browse/buses?type=RENTAL', label: t('busRental'), icon: 'car_rental', desc: tn('busRentalDesc') },
         { href: '/browse/buses?type=CONTRACT', label: t('transportRequests'), icon: 'request_quote', desc: tn('transportRequestsDesc') },
@@ -71,7 +71,7 @@ function useNavLinks() {
     { href: '/motors', label: t('cars') },
     { href: '/browse/parts', label: t('spareParts') },
     { href: '/browse/services', label: t('carServices') },
-    { href: '/browse/buses', label: t('buses') },
+    { href: '/buses', label: t('buses') },
     { href: '/equipment', label: t('equipment') },
     { href: '/jobs', label: t('jobs') },
   ];
