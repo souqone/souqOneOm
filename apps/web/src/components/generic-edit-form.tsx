@@ -8,9 +8,8 @@ import { AuthGuard } from '@/components/auth-guard';
 import { DetailSkeleton } from '@/components/loading-skeleton';
 import { ErrorState } from '@/components/error-state';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
-import { getAuthToken } from '@/lib/auth';
+import { apiFetch } from '@/lib/auth';
 import { useToast } from '@/components/toast';
-import { API_BASE } from '@/lib/config';
 import { getImageUrl } from '@/lib/image-utils';
 import { getGovernorates } from '@/lib/location-data';
 import { inputCls, labelCls, sectionCls, sectionTitleCls } from '@/lib/constants/form-styles';
@@ -118,15 +117,13 @@ export function GenericEditForm({
         const newImages = images.filter((img) => img.file);
         if (newImages.length > 0) {
           setUploading(true);
-          const token = getAuthToken();
           for (const img of newImages) {
             if (img.file) {
               const fd = new FormData();
               fd.append('file', img.file);
               fd.append('isPrimary', String(img.isPrimary));
-              await fetch(`${API_BASE}${uploadEndpoint}`, {
+              await apiFetch(uploadEndpoint, {
                 method: 'POST',
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: fd,
               });
             }

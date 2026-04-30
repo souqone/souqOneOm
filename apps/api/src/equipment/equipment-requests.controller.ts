@@ -1,9 +1,9 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, Req,
+  UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { EquipmentRequestsService } from './equipment-requests.service';
 import { EquipmentBidsService } from './equipment-bids.service';
@@ -21,8 +21,8 @@ export class EquipmentRequestsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateEquipmentRequestDto, @Req() req: Request) {
-    return this.reqSvc.create(dto, (req.user as JwtPayload).sub);
+  create(@Body() dto: CreateEquipmentRequestDto, @CurrentUser() user: JwtPayload) {
+    return this.reqSvc.create(dto, user.sub);
   }
 
   @Get()
@@ -32,8 +32,8 @@ export class EquipmentRequestsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  my(@Req() req: Request) {
-    return this.reqSvc.my((req.user as JwtPayload).sub);
+  my(@CurrentUser() user: JwtPayload) {
+    return this.reqSvc.my(user.sub);
   }
 
   @Get(':id')
@@ -43,39 +43,39 @@ export class EquipmentRequestsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateEquipmentRequestDto, @Req() req: Request) {
-    return this.reqSvc.update(id, (req.user as JwtPayload).sub, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateEquipmentRequestDto, @CurrentUser() user: JwtPayload) {
+    return this.reqSvc.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/status')
-  changeStatus(@Param('id') id: string, @Body() body: { requestStatus: string }, @Req() req: Request) {
-    return this.reqSvc.changeStatus(id, (req.user as JwtPayload).sub, body.requestStatus);
+  changeStatus(@Param('id') id: string, @Body() body: { requestStatus: string }, @CurrentUser() user: JwtPayload) {
+    return this.reqSvc.changeStatus(id, user.sub, body.requestStatus);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    return this.reqSvc.remove(id, (req.user as JwtPayload).sub);
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.reqSvc.remove(id, user.sub);
   }
 
   // ─── Bids ───
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/bids')
-  createBid(@Param('id') id: string, @Body() dto: CreateEquipmentBidDto, @Req() req: Request) {
-    return this.bidSvc.create(id, dto, (req.user as JwtPayload).sub);
+  createBid(@Param('id') id: string, @Body() dto: CreateEquipmentBidDto, @CurrentUser() user: JwtPayload) {
+    return this.bidSvc.create(id, dto, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/bids/:bidId/accept')
-  acceptBid(@Param('id') id: string, @Param('bidId') bidId: string, @Req() req: Request) {
-    return this.bidSvc.accept(id, bidId, (req.user as JwtPayload).sub);
+  acceptBid(@Param('id') id: string, @Param('bidId') bidId: string, @CurrentUser() user: JwtPayload) {
+    return this.bidSvc.accept(id, bidId, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/bids/:bidId/reject')
-  rejectBid(@Param('id') id: string, @Param('bidId') bidId: string, @Req() req: Request) {
-    return this.bidSvc.reject(id, bidId, (req.user as JwtPayload).sub);
+  rejectBid(@Param('id') id: string, @Param('bidId') bidId: string, @CurrentUser() user: JwtPayload) {
+    return this.bidSvc.reject(id, bidId, user.sub);
   }
 }

@@ -8,6 +8,7 @@ import { clsx } from 'clsx'
 import type { ListingCategory } from '../types/category.types'
 import type { ActiveFilters, FilterField } from '../types/filters.types'
 import { FILTERS_CONFIG } from '../config/filters.config'
+import { GLOBAL_SHARED_FILTERS } from '../config/search-engine.config'
 import { GOVERNORATE_OPTIONS, WILAYAT_BY_GOVERNORATE } from '../config/shared'
 import { useBrands, useCarModels } from '@/lib/api'
 
@@ -548,7 +549,7 @@ export function FilterSidebar({
   onFiltersChange,
   onClearAll,
 }: FilterSidebarProps) {
-  const config = FILTERS_CONFIG[category]
+  const config = category === '__global__' as any ? GLOBAL_SHARED_FILTERS : FILTERS_CONFIG[category]
   const activeCount = countActive(config, filters)
   const t = useTranslations('listings')
 

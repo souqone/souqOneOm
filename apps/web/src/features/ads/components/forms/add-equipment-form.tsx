@@ -8,8 +8,7 @@ import { FormErrorOverlay } from '@/components/form-error-overlay';
 import { useCreateEquipmentListing } from '@/lib/api/equipment';
 import { useToast } from '@/components/toast';
 import { getGovernorates, type LocationOption } from '@/lib/location-data';
-import { getAuthToken } from '@/lib/auth';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/auth';
 import { inputCls, labelCls, sectionCls, sectionTitleCls, chipCls, checkboxLabelCls, checkboxCls, checkboxTextCls } from '@/lib/constants/form-styles';
 import { useTranslations, useLocale } from 'next-intl';
 import dynamic from 'next/dynamic';
@@ -127,10 +126,9 @@ export function AddEquipmentForm() {
         if (img.file) {
           const fd = new FormData();
           fd.append('file', img.file);
-          const token = getAuthToken();
-          await fetch(`${API_BASE}/api/v1/uploads/equipment/${result.id}/images`, {
-            method: 'POST', body: fd,
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          await apiFetch(`/uploads/equipment/${result.id}/images`, {
+            method: 'POST',
+            body: fd,
           });
         }
       }

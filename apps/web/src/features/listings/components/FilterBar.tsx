@@ -1,8 +1,13 @@
+/**
+ * @deprecated — Replaced by FilterSidebar + BrowseGlobalShell unified search.
+ * All filtering now uses URL params consumed by useGlobalSearch.
+ * Scheduled for removal in a future sprint.
+ */
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Search, X, Check } from 'lucide-react'
-import { createPortal } from 'react-dom'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcn/popover'
 import clsx from 'clsx'
 import { Button } from '@/components/ui/button'
 import type { 
@@ -13,12 +18,10 @@ import type {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface DropdownProps {
+interface FilterContentProps {
   field: FilterBarFieldConfig
   value: string | null
   onSelect: (value: string | null) => void
-  onClose: () => void
-  triggerRect: DOMRect | null
 }
 
 interface FieldButtonProps {
@@ -97,123 +100,76 @@ function RangeFields({
   )
 }
 
-// ── Dropdown Component ───────────────────────────────────────────────────────
+// ── Filter Content Component ──────────────────────────────────────────────────────────────────
 
-function Dropdown({ field, value, onSelect, onClose, triggerRect }: DropdownProps) {
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
+function FilterContent({ field, value, onSelect }: FilterContentProps) {
+  switch (field.type) {
+    case 'select':
+      return (
+        <div className="max-h-60 overflow-y-auto no-scrollbar pb-1">
+          {/* Clear option */}
+          <button
+            onClick={() => onSelect(null)}
+            className={clsx(
+              'w-full text-right px-4 py-3 text-sm transition-all duration-200',
+              value === null
+                ? 'bg-primary/15 text-primary font-bold'
+                : 'text-on-surface font-medium hover:bg-surface-container hover:text-primary'
+            )}
+          >
+            {field.placeholder || 'الكل'}
+          </button>
+          
+          {field.options?.map((opt: FilterBarOption) => {
+            const isSelected = value === opt.value
+            return (
+              <button
+                key={opt.value}
+                onClick={() => onSelect(isSelected ? null : opt.value)}
+                className={clsx(
+                  'w-full text-right px-4 py-3 text-sm transition-all duration-200',
+                  'border-t border-outline-variant/10',
+                  isSelected
+                    ? 'bg-primary/15 text-primary font-bold'
+                    : 'text-on-surface font-medium hover:bg-surface-container hover:text-primary'
+                )}
+              >
+                <span className="flex items-center justify-between gap-3">
+                  {opt.label}
+                  {isSelected && <Check size={16} className="text-primary shrink-0" />}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )
 
-  useEffect(() => {
-    if (triggerRect) {
-      setPosition({
-        top: triggerRect.bottom + 8,
-        left: triggerRect.left,
-        width: Math.max(280, triggerRect.width),
-      })
-    }
-  }, [triggerRect])
+    case 'range':
+      return <RangeFields field={field} value={value} onSelect={onSelect} />
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        onClose()
-      }
-    }
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [onClose])
-
-  const renderContent = () => {
-    switch (field.type) {
-      case 'select':
-        return (
-          <div className="max-h-60 overflow-y-auto premium-scrollbar pb-1">
-            {/* Clear option */}
-            <button
-              onClick={() => onSelect(null)}
-              className={clsx(
-                'w-full text-right px-4 py-3 text-sm transition-all duration-200',
-                value === null
-                  ? 'bg-primary/15 text-primary font-bold'
-                  : 'text-on-surface font-medium hover:bg-surface-container hover:text-primary'
-              )}
-            >
-              {field.placeholder || 'الكل'}
-            </button>
-            
-            {field.options?.map((opt: FilterBarOption) => {
-              const isSelected = value === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => onSelect(isSelected ? null : opt.value)}
-                  className={clsx(
-                    'w-full text-right px-4 py-3 text-sm transition-all duration-200',
-                    'border-t border-outline-variant/10',
-                    isSelected
-                      ? 'bg-primary/15 text-primary font-bold'
-                      : 'text-on-surface font-medium hover:bg-surface-container hover:text-primary'
-                  )}
-                >
-                  <span className="flex items-center justify-between gap-3">
-                    {opt.label}
-                    {isSelected && <Check size={16} className="text-primary shrink-0" />}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )
-
-      case 'range':
-        return <RangeFields field={field} value={value} onSelect={onSelect} />
-
-      default:
-        return null
-    }
+    default:
+      return null
   }
-
-  const content = (
-    <div
-      ref={dropdownRef}
-      style={{
-        position: 'fixed',
-        top: position.top,
-        left: position.left,
-        width: position.width,
-        zIndex: 9999,
-      }}
-      className={clsx(
-        'bg-surface-container-lowest/95 backdrop-blur-2xl',
-        'rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
-        'border border-outline-variant/20',
-        'overflow-hidden flex flex-col',
-        'search-dropdown-enter'
-      )}
-    >
-      {renderContent()}
-    </div>
-  )
-
-  return createPortal(content, document.body)
 }
-
 // ── Field Button Component ─────────────────────────────────────────────────
 
-const FieldButton = ({ field, value, isActive, onClick, onClear, ref }: FieldButtonProps) => {
-  const Icon = field.icon
+interface FieldButtonProps {
+  field: FilterBarFieldConfig
+  value?: string
+  isActive: boolean
+  onClick: () => void
+  onClear?: () => void
+}
 
-  return (
-    <button
-      ref={ref}
-      onClick={onClick}
+const FieldButton = React.forwardRef<HTMLButtonElement, FieldButtonProps>(
+  ({ field, value, isActive, onClick, onClear, ...props }, ref) => {
+    const Icon = field.icon
+
+    return (
+      <button
+        ref={ref}
+        onClick={onClick}
+        {...props}
       className={clsx(
         'group relative flex-1 min-w-0 h-full px-4 py-3 text-right',
         'transition-all duration-200 ease-out',
@@ -265,7 +221,9 @@ const FieldButton = ({ field, value, isActive, onClick, onClear, ref }: FieldBut
       )}
     </button>
   )
-}
+  }
+)
+FieldButton.displayName = 'FieldButton'
 
 // ── Helper: Format field value ────────────────────────────────────────────────
 
@@ -302,19 +260,13 @@ export function FilterBar({
 }: FilterBarProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null)
 
-  const triggerRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Filter to only show fields that should appear in the bar
   const barFields = config.filter(f => f.showInBar !== false)
 
   const handleFieldClick = useCallback((key: string) => {
-    const trigger = triggerRefs.current.get(key)
-    if (trigger) {
-      setTriggerRect(trigger.getBoundingClientRect())
-    }
     setActiveDropdown(activeDropdown === key ? null : key)
   }, [activeDropdown])
 
@@ -353,30 +305,43 @@ export function FilterBar({
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-8 bg-outline-variant/30" />
               )}
 
-              <FieldButton
-                ref={(el: HTMLButtonElement | null) => { 
-                  triggerRefs.current.set(field.key, el) 
-                }}
-                field={field}
-                value={value}
-                isActive={isActive}
-                onClick={() => handleFieldClick(field.key)}
-                onClear={() => handleClear(field.key)}
-              />
-
-              {/* Dropdown for select/range fields */}
-              {(field.type === 'select' || field.type === 'range') && isOpen && (
-                <Dropdown
-                  field={field}
-                  value={values[field.key] as string | null}
-                  onSelect={(val) => {
-                    onChange(field.key, val)
-                    setActiveDropdown(null)
-                  }}
-                  onClose={() => setActiveDropdown(null)}
-                  triggerRect={triggerRect}
-                />
-              )}
+              <Popover 
+                open={isOpen} 
+                onOpenChange={(open) => setActiveDropdown(open ? field.key : null)}
+              >
+                <PopoverTrigger asChild>
+                  <FieldButton
+                    field={field}
+                    value={value}
+                    isActive={isActive}
+                    onClick={() => handleFieldClick(field.key)}
+                    onClear={() => handleClear(field.key)}
+                  />
+                </PopoverTrigger>
+                
+                {(field.type === 'select' || field.type === 'range') && (
+                  <PopoverContent 
+                    align="end"
+                    sideOffset={8}
+                    className={clsx(
+                      'w-[280px] p-0 bg-surface-container-lowest/95 backdrop-blur-2xl',
+                      'rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
+                      'border border-outline-variant/20',
+                      'overflow-hidden flex flex-col',
+                      'search-dropdown-enter'
+                    )}
+                  >
+                    <FilterContent
+                      field={field}
+                      value={values[field.key] as string | null}
+                      onSelect={(val) => {
+                        onChange(field.key, val)
+                        setActiveDropdown(null)
+                      }}
+                    />
+                  </PopoverContent>
+                )}
+              </Popover>
             </div>
           )
         })}

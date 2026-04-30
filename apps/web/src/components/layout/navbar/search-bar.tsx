@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { useAutocomplete } from '@/lib/api/search';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const RECENT_KEY = 'carone.recent_searches';
 const MAX_RECENT = 5;
@@ -46,7 +47,8 @@ export function NavSearchBar({ searchOpen, onSearchOpenChange, onCloseMobile, he
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestRef = useRef<HTMLDivElement>(null);
-  const { data: suggestions } = useAutocomplete(searchQuery);
+  const debouncedQuery = useDebounce(searchQuery, 300);
+  const { data: suggestions } = useAutocomplete(debouncedQuery);
   const activeCat = searchCategories.find(c => c.value === searchCategory) ?? searchCategories[0];
 
   useEffect(() => {
@@ -61,11 +63,18 @@ export function NavSearchBar({ searchOpen, onSearchOpenChange, onCloseMobile, he
     return () => document.removeEventListener('mousedown', onOutside);
   }, []);
 
+  function buildSearchUrl(query: string) {
+    const params = new URLSearchParams();
+    params.set('q', query);
+    if (activeCat.value !== 'all') params.set('category', activeCat.value);
+    return `/browse?${params.toString()}`;
+  }
+
   function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
     if (!searchQuery.trim()) return;
     saveRecent(searchQuery.trim());
-    router.push(`${activeCat.route}?q=${encodeURIComponent(searchQuery.trim())}`);
+    router.push(buildSearchUrl(searchQuery.trim()));
     onSearchOpenChange(false);
     setShowSuggestions(false);
     onCloseMobile?.();
@@ -74,7 +83,7 @@ export function NavSearchBar({ searchOpen, onSearchOpenChange, onCloseMobile, he
   function handleSuggestionClick(title: string) {
     setSearchQuery(title);
     saveRecent(title);
-    router.push(`${activeCat.route}?q=${encodeURIComponent(title)}`);
+    router.push(buildSearchUrl(title));
     onSearchOpenChange(false);
     setShowSuggestions(false);
     onCloseMobile?.();

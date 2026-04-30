@@ -1,11 +1,11 @@
 import {
   Controller, Get, Patch, Delete, Body, Param, Query,
-  UseGuards, Req,
+  UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { AdminJobsService } from './admin-jobs.service';
 import { DriverVerificationService } from './driver-verification.service';
@@ -58,9 +58,8 @@ export class AdminJobsController {
   reviewVerification(
     @Param('id') id: string,
     @Body() body: { decision: 'APPROVED' | 'REJECTED'; rejectionReason?: string },
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.verificationService.adminReview(id, user.sub, body.decision, body.rejectionReason);
   }
 }

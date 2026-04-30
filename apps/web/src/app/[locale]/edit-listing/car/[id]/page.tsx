@@ -12,9 +12,8 @@ import { DetailSkeleton } from '@/components/loading-skeleton';
 import { ErrorState } from '@/components/error-state';
 import { useListing, useUpdateListing } from '@/lib/api';
 import { useRemoveListingImage } from '@/lib/api/uploads';
-import { getAuthToken } from '@/lib/auth';
+import { apiFetch } from '@/lib/auth';
 import { useToast } from '@/components/toast';
-import { API_BASE } from '@/lib/config';
 import { getImageUrl } from '@/lib/image-utils';
 import { useTranslations } from 'next-intl';
 
@@ -51,7 +50,6 @@ export default function EditCarListingPage() {
       const newImages = images.filter((img) => img.file);
       if (newImages.length > 0) {
         setUploading(true);
-        const token = getAuthToken();
 
         for (const img of newImages) {
           if (img.file) {
@@ -59,9 +57,8 @@ export default function EditCarListingPage() {
             formData.append('file', img.file);
             formData.append('isPrimary', String(img.isPrimary));
 
-            const res = await fetch(`${API_BASE}/api/v1/uploads/listings/${id}/images`, {
+            const res = await apiFetch(`/uploads/listings/${id}/images`, {
               method: 'POST',
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
               body: formData,
             });
             if (!res.ok) {

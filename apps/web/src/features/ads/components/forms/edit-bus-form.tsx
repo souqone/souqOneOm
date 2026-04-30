@@ -42,7 +42,7 @@ export function EditBusForm() {
       updateFn={(payload) => update.mutateAsync({ id, data: payload })}
       isUpdating={update.isPending}
       redirectPath={`/sale/bus/${id}`}
-      uploadEndpoint={`/api/v1/uploads/buses/${id}/images`}
+      uploadEndpoint={`/uploads/buses/${id}/images`}
       deleteImageFn={(imageId) => removeBusImage.mutateAsync(imageId)}
     />
   );

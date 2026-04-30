@@ -80,13 +80,13 @@ function translateEquipmentType(v: string, enums: EnumTranslations): string { re
 const ENTITY_CATEGORY: Record<string, ListingCategory> = {
   LISTING: 'cars', BUS_LISTING: 'buses', EQUIPMENT_LISTING: 'equipment',
   EQUIPMENT_REQUEST: 'equipment-requests', OPERATOR_LISTING: 'operators',
-  SPARE_PART: 'parts', CAR_SERVICE: 'services', JOB: 'jobs', INSURANCE: 'services',
+  SPARE_PART: 'parts', CAR_SERVICE: 'services', JOB: 'jobs',
 }
 
 const ENTITY_ROUTE: Record<string, string> = {
   LISTING: '/sale/car', BUS_LISTING: '/sale/bus', EQUIPMENT_LISTING: '/sale/equipment',
   EQUIPMENT_REQUEST: '/equipment/requests', OPERATOR_LISTING: '/equipment/operators',
-  SPARE_PART: '/sale/part', CAR_SERVICE: '/sale/service', JOB: '/jobs', INSURANCE: '/insurance',
+  SPARE_PART: '/sale/part', CAR_SERVICE: '/sale/service', JOB: '/jobs',
 }
 
 // ─── Favorite item interface ────────────────────────────────────────────────

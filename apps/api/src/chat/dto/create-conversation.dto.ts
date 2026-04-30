@@ -1,10 +1,11 @@
 import { IsString, IsOptional, IsIn } from 'class-validator';
 
-const ENTITY_TYPES = ['LISTING', 'SPARE_PART', 'CAR_SERVICE', 'TRANSPORT', 'TRIP', 'INSURANCE', 'JOB', 'EQUIPMENT_LISTING', 'EQUIPMENT_REQUEST', 'OPERATOR_LISTING'] as const;
+export const ENTITY_TYPES = ['LISTING', 'SPARE_PART', 'CAR_SERVICE', 'TRANSPORT', 'TRIP', 'INSURANCE', 'JOB', 'EQUIPMENT_LISTING', 'EQUIPMENT_REQUEST', 'OPERATOR_LISTING'] as const;
+export type EntityType = typeof ENTITY_TYPES[number];
 
 export class CreateConversationDto {
   @IsIn(ENTITY_TYPES, { message: 'نوع الكيان غير صالح' })
-  entityType!: string;
+  entityType!: EntityType;
 
   @IsString({ message: 'معرف الكيان مطلوب' })
   entityId!: string;

@@ -16,11 +16,11 @@ import { Queue } from 'bull';
 import { Request } from 'express';
 import { PAYMENT_WEBHOOK_QUEUE } from './payment-webhook.processor';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/auth.types';
 import { PaymentsService } from './payments.service';
 import { CreateFeaturedPaymentDto } from './dto/create-featured-payment.dto';
 import { CreateSubscriptionPaymentDto } from './dto/create-subscription-payment.dto';
-
-interface JwtPayload { sub: string; username: string }
 
 @Controller('payments')
 export class PaymentsController {
@@ -36,11 +36,12 @@ export class PaymentsController {
   @Post('featured')
   createFeatured(
     @Body() dto: CreateFeaturedPaymentDto,
+    @CurrentUser() user: JwtPayload,
     @Req() req: Request,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     const ip = req.ip || (req.headers['x-forwarded-for'] as string);
-    return this.paymentsService.createFeaturedPayment(dto, (req.user as JwtPayload).sub, ip, idempotencyKey);
+    return this.paymentsService.createFeaturedPayment(dto, user.sub, ip, idempotencyKey);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -48,11 +49,12 @@ export class PaymentsController {
   @Post('subscribe')
   createSubscription(
     @Body() dto: CreateSubscriptionPaymentDto,
+    @CurrentUser() user: JwtPayload,
     @Req() req: Request,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     const ip = req.ip || (req.headers['x-forwarded-for'] as string);
-    return this.paymentsService.createSubscriptionPayment(dto, (req.user as JwtPayload).sub, ip, idempotencyKey);
+    return this.paymentsService.createSubscriptionPayment(dto, user.sub, ip, idempotencyKey);
   }
 
   @Get('verify/:sessionId')
@@ -79,8 +81,8 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myPayments(@Req() req: Request) {
-    return this.paymentsService.myPayments((req.user as JwtPayload).sub);
+  myPayments(@CurrentUser() user: JwtPayload) {
+    return this.paymentsService.myPayments(user.sub);
   }
 
   @Get('plans')
@@ -90,14 +92,14 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('subscription')
-  mySubscription(@Req() req: Request) {
-    return this.paymentsService.mySubscription((req.user as JwtPayload).sub);
+  mySubscription(@CurrentUser() user: JwtPayload) {
+    return this.paymentsService.mySubscription(user.sub);
   }
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @Post('subscription/cancel')
-  cancelSubscription(@Req() req: Request) {
-    return this.paymentsService.cancelSubscription((req.user as JwtPayload).sub);
+  cancelSubscription(@CurrentUser() user: JwtPayload) {
+    return this.paymentsService.cancelSubscription(user.sub);
   }
 }

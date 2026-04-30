@@ -9,7 +9,6 @@ export type EntityType =
   | 'CAR_SERVICE'
   | 'BUS_LISTING'
   | 'EQUIPMENT_LISTING'
-  | 'INSURANCE'
   | 'OPERATOR_LISTING'
 ;
 

@@ -23,7 +23,6 @@ const CATEGORY_TABS: { value: EntityType; labelKey: string; icon: string }[] = [
   { value: 'SPARE_PART', labelKey: 'catParts', icon: 'settings' },
   { value: 'CAR_SERVICE', labelKey: 'catServices', icon: 'build' },
   { value: 'JOB', labelKey: 'catJobs', icon: 'work' },
-  { value: 'INSURANCE', labelKey: 'catInsurance', icon: 'shield' },
   { value: 'OPERATOR_LISTING', labelKey: 'catOperators', icon: 'engineering' },
 ];
 

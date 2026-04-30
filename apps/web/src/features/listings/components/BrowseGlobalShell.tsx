@@ -5,8 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { Link, useRouter } from '@/i18n/navigation'
 import {
-  Search, X, Loader2, SearchX,
-  Car, Bus, Wrench, Settings, Briefcase, LayoutGrid,
+  Search, X, Loader2, SearchX, TrendingUp,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -17,30 +16,65 @@ import { CardSkeleton } from '@/components/loading-skeleton'
 import { useGlobalSearch } from '../hooks/useGlobalSearch'
 import { useFilterState } from '../hooks/useFilterState'
 import { UnifiedCard } from './UnifiedCard'
-import { GLOBAL_FILTERS, GLOBAL_SORT_OPTIONS, type GlobalEntityType } from '../config/global-filters.config'
 import { ActiveFilters } from './ActiveFilters'
 import { FilterSidebar } from './FilterSidebar'
 import type { ListingCategory } from '../types/category.types'
+import {
+  ALL_SEARCH_CATEGORIES,
+  CATEGORY_META,
+  SEARCH_SORT_OPTIONS,
+  getAllCategorySpecificKeys,
+  type SearchCategory,
+} from '../config/search-engine.config'
 
-// We re-use category-mode helpers, but global has no category — provide a synthetic
-// "global" config slot so FilterSidebar/ActiveFilters can render.
-import { FILTERS_CONFIG } from '../config/filters.config'
+// FilterSidebar and ActiveFilters natively handle __global__ now.
 
-// Inject GLOBAL_FILTERS as a synthetic key for shared components that index by category.
-;(FILTERS_CONFIG as any).__global__ = GLOBAL_FILTERS
+// ─── Category Tab Component ──────────────────────────────────────────────────
 
-// ─── Entity tab definitions ───────────────────────────────────────────────────
+function CategoryTabs({
+  active,
+  onSelect,
+}: {
+  active: SearchCategory | ''
+  onSelect: (cat: SearchCategory | '') => void
+}) {
+  const tabs: { value: SearchCategory | ''; labelAr: string; icon: string }[] = [
+    { value: '', labelAr: 'الكل', icon: 'grid_view' },
+    ...ALL_SEARCH_CATEGORIES.map(cat => ({
+      value: cat,
+      labelAr: CATEGORY_META[cat].labelAr,
+      icon: CATEGORY_META[cat].icon,
+    })),
+  ]
 
-type LucideIcon = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-6 px-6 pb-1">
+      {tabs.map(tab => {
+        const isActive = active === tab.value
+        return (
+          <button
+            key={tab.value || 'all'}
+            onClick={() => onSelect(tab.value)}
+            className={clsx(
+              'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] whitespace-nowrap',
+              'transition-all duration-150 ease-out border active:scale-95',
+              isActive
+                ? 'bg-primary text-on-primary border-primary shadow-sm shadow-primary/20'
+                : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface hover:border-primary/40 hover:text-primary',
+            )}
+          >
+            <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+            <span className="font-semibold">{tab.labelAr}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
-const ENTITY_TABS: { value: GlobalEntityType | ''; label: string; icon: LucideIcon }[] = [
-  { value: '',         label: 'الكل',        icon: LayoutGrid },
-  { value: 'listings', label: 'سيارات',     icon: Car },
-  { value: 'buses',    label: 'حافلات',     icon: Bus },
-  { value: 'parts',    label: 'قطع غيار',   icon: Settings },
-  { value: 'services', label: 'خدمات',      icon: Wrench },
-  { value: 'jobs',     label: 'وظائف',      icon: Briefcase },
-]
+// ─── Trending/Suggested Searches ─────────────────────────────────────────────
+
+const TRENDING_SEARCHES = ['تويوتا', 'لاندكروزر', 'إيجار', 'صيانة', 'سائق']
 
 // ─── Top-level export ─────────────────────────────────────────────────────────
 
@@ -74,29 +108,35 @@ function ShellContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  // We piggy-back useFilterState by passing a synthetic '__global__' category key.
-  // FilterState reads/writes URL params so this is safe even though it's not a "real" category.
+  // Read category from URL params (unified routing)
+  const urlCategory = (searchParams.get('category') || '') as SearchCategory | ''
+
+  // FilterState for shared filters (governorate, price)
   const { filters, setFilter, clearAll, hasActiveFilters } = useFilterState('__global__' as unknown as ListingCategory)
 
-  // q/type/page live in URL but not in GLOBAL_FILTERS, so read them directly
+  // Core search params from URL
   const q = searchParams.get('q') || ''
-  const entityType = (searchParams.get('type') || '') as GlobalEntityType | ''
   const page = Number(searchParams.get('page') ?? '1')
 
   const [searchQuery, setSearchQuery] = useState(q)
   useEffect(() => { setSearchQuery(q) }, [q])
 
+  // Fetch from Meilisearch
   const { items, total, totalPages, isLoading, isFetching } = useGlobalSearch({
     q,
-    entityType: entityType || undefined,
+    category: urlCategory || undefined,
     filters,
     page,
   })
 
-  // Handlers
+  // ── Handlers ──
+
   const submitSearch = (query: string = searchQuery) => {
-    setFilter('page', null)
-    setFilter('q', query.trim() || null)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('page')
+    if (query.trim()) params.set('q', query.trim())
+    else params.delete('q')
+    router.push(`/browse?${params.toString()}`)
   }
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -105,36 +145,35 @@ function ShellContent() {
 
   const handleClearSearch = () => {
     setSearchQuery('')
-    setFilter('q', null)
-    setFilter('page', null)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('q')
+    params.delete('page')
+    router.push(`/browse?${params.toString()}`)
   }
 
-  const handleEntityTabClick = (val: GlobalEntityType | '') => {
-    if (!val) {
-      // "All" — stay on /browse with current q
-      setFilter('type', null)
-      setFilter('page', null)
-      return
+  const handleCategorySelect = (cat: SearchCategory | '') => {
+    const params = new URLSearchParams(searchParams.toString())
+
+    // Clear ALL category-specific filters to prevent stale params
+    // e.g. switching cars→jobs should NOT carry `make=Toyota`
+    const categoryKeys = getAllCategorySpecificKeys()
+    for (const key of categoryKeys) {
+      params.delete(key)
     }
-    // Switching to a specific entity tab → navigate to the dedicated category page
-    // so the user gets full category-specific filters.
-    const map: Record<GlobalEntityType, ListingCategory> = {
-      listings: 'cars',
-      buses:    'buses',
-      parts:    'parts',
-      services: 'services',
-      jobs:     'jobs',
-    }
-    const cat = map[val]
-    const sp = new URLSearchParams()
-    if (q) sp.set('q', q)
-    router.push(`/browse/${cat}${sp.toString() ? `?${sp.toString()}` : ''}`)
+
+    if (cat) params.set('category', cat)
+    else params.delete('category')
+    params.delete('page')
+    router.push(`/browse?${params.toString()}`)
   }
 
   const handleFilterChange = (key: string, value: string | boolean | null) => {
     if (key !== 'page') setFilter('page', null)
     setFilter(key, value)
   }
+
+  // Active category label
+  const activeCategoryLabel = urlCategory ? CATEGORY_META[urlCategory]?.labelAr : 'كل الإعلانات'
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -150,11 +189,11 @@ function ShellContent() {
               <Search size={22} strokeWidth={2.5} />
             </div>
             <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-on-surface leading-none">
-              {q ? t('resultsFor', { q }) : 'تصفّح كل الإعلانات'}
+              {q ? t('resultsFor', { q }) : activeCategoryLabel}
             </h1>
           </div>
 
-          {/* Search input (Airbnb-style) */}
+          {/* Search input */}
           <div className="relative w-full max-w-2xl">
             <input
               value={searchQuery}
@@ -179,28 +218,9 @@ function ShellContent() {
             </button>
           </div>
 
-          {/* Entity tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide mt-5 -mx-6 px-6 pb-1">
-            {ENTITY_TABS.map((tab) => {
-              const active = entityType === tab.value
-              const Icon = tab.icon
-              return (
-                <button
-                  key={tab.value || 'all'}
-                  onClick={() => handleEntityTabClick(tab.value)}
-                  className={clsx(
-                    'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] whitespace-nowrap',
-                    'transition-all duration-150 ease-out border active:scale-95',
-                    active
-                      ? 'bg-primary text-on-primary border-primary shadow-sm shadow-primary/20'
-                      : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface hover:border-primary/40 hover:text-primary',
-                  )}
-                >
-                  <Icon size={14} />
-                  <span className="font-semibold">{tab.label}</span>
-                </button>
-              )
-            })}
+          {/* Category tabs */}
+          <div className="mt-5">
+            <CategoryTabs active={urlCategory} onSelect={handleCategorySelect} />
           </div>
 
         </div>
@@ -209,7 +229,7 @@ function ShellContent() {
       {/* ── Body ──────────────────────────────────────────────────────────── */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-6 flex gap-6 items-start py-5">
 
-        {/* Sidebar — uses global filters via injected synthetic category */}
+        {/* Sidebar */}
         <FilterSidebar
           category={'__global__' as unknown as ListingCategory}
           filters={filters}
@@ -235,7 +255,7 @@ function ShellContent() {
                 onChange={(e) => setFilter('sort', e.target.value || null)}
                 className="h-8 rounded-lg border border-outline-variant/60 bg-background px-2.5 text-[12px] text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer"
               >
-                {GLOBAL_SORT_OPTIONS.map((opt) => (
+                {SEARCH_SORT_OPTIONS.map((opt) => (
                   <option key={opt.value || '_default'} value={opt.value}>
                     {opt.labelAr}
                   </option>
@@ -263,8 +283,51 @@ function ShellContent() {
             </div>
           )}
 
-          {/* Empty (no q yet) */}
-          {!isLoading && !q && !entityType && total === 0 && (
+          {/* ── Zero Results — Smart Fallback ── */}
+          {!isLoading && total === 0 && (q || urlCategory || hasActiveFilters) && (
+            <div className="flex flex-col items-center justify-center py-16 text-center border border-outline-variant/30 rounded-xl bg-background mt-4">
+              <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
+                <SearchX size={30} className="text-on-surface-variant/40" />
+              </div>
+              <h3 className="text-[15px] font-medium text-on-surface mb-1">{t('noResults')}</h3>
+              <p className="text-[13px] text-on-surface-variant mb-5">{t('tryChangeFilters')}</p>
+
+              {/* Suggested actions */}
+              <div className="flex flex-col gap-3 items-center">
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearAll}
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-outline-variant/60 text-[13px] text-on-surface hover:bg-surface-container transition-colors"
+                  >
+                    <X size={14} />
+                    {t('clearFilters')}
+                  </button>
+                )}
+
+                {/* Trending searches */}
+                <div className="flex flex-col items-center gap-2 mt-4">
+                  <div className="flex items-center gap-1.5 text-[12px] text-on-surface-variant">
+                    <TrendingUp size={14} />
+                    <span>الأكثر بحثاً</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                    {TRENDING_SEARCHES.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => submitSearch(s)}
+                        className="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant/30 text-[12px] text-on-surface hover:border-primary/40 hover:text-primary transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Empty state (no search yet) ── */}
+          {!isLoading && !q && !urlCategory && !hasActiveFilters && total === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
                 <Search size={28} className="text-on-surface-variant/40" />
@@ -276,7 +339,7 @@ function ShellContent() {
                 ابحث عن أي إعلان أو اختر فئة من الأعلى
               </p>
               <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                {['تويوتا', 'إطارات', 'صيانة', 'سائق', 'إيجار'].map((s) => (
+                {TRENDING_SEARCHES.map((s) => (
                   <button
                     key={s}
                     onClick={() => submitSearch(s)}
@@ -289,48 +352,71 @@ function ShellContent() {
             </div>
           )}
 
-          {/* Empty (with q but zero results) */}
-          {!isLoading && total === 0 && (q || entityType) && (
-            <div className="flex flex-col items-center justify-center py-16 text-center border border-outline-variant/30 rounded-xl bg-background mt-4">
-              <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
-                <SearchX size={30} className="text-on-surface-variant/40" />
-              </div>
-              <h3 className="text-[15px] font-medium text-on-surface mb-1">{t('noResults')}</h3>
-              <p className="text-[13px] text-on-surface-variant mb-5">{t('tryChangeFilters')}</p>
-              <button
-                onClick={clearAll}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-outline-variant/60 text-[13px] text-on-surface hover:bg-surface-container transition-colors"
-              >
-                <X size={14} />
-                {t('clearFilters')}
-              </button>
-            </div>
-          )}
-
-          {/* Items */}
+          {/* ── Results Grid ── */}
           {!isLoading && total > 0 && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-                {items.map((item) => (
-                  <UnifiedCard key={item.id} item={item} className="h-full" />
-                ))}
-              </div>
-
-              {totalPages > page && (
-                <div className="flex justify-center mt-8 pb-8">
-                  <button
-                    onClick={() => setFilter('page', String(page + 1))}
-                    disabled={isFetching}
-                    className="flex items-center gap-2 px-8 py-2.5 rounded-full border border-outline-variant/60 text-[13px] text-on-surface font-medium hover:border-outline-variant/80 hover:bg-surface-container/50 disabled:opacity-50 transition-all bg-background shadow-sm"
-                  >
-                    {isFetching
-                      ? <Loader2 size={15} className="animate-spin text-primary" />
-                      : <span>{t('loadMore')}</span>}
-                  </button>
+              {!urlCategory ? (
+                // Federated View
+                <div className="flex flex-col gap-8">
+                  {Object.entries(
+                    items.reduce((acc, item) => {
+                      if (!acc[item.category]) acc[item.category] = [];
+                      acc[item.category].push(item);
+                      return acc;
+                    }, {} as Record<string, typeof items>)
+                  ).map(([cat, catItems]) => (
+                    <div key={cat} className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-[17px] font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary text-[20px]">
+                            {CATEGORY_META[cat as SearchCategory]?.icon}
+                          </span>
+                          {CATEGORY_META[cat as SearchCategory]?.labelAr}
+                        </h2>
+                        {catItems.length >= 4 && (
+                          <button
+                            onClick={() => handleCategorySelect(cat as SearchCategory)}
+                            className="text-[13px] text-primary font-medium hover:underline flex items-center gap-1"
+                          >
+                            عرض المزيد
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                        {catItems.slice(0, 4).map((item) => (
+                          <UnifiedCard key={item.id} item={item} className="h-full" />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                // Flat View (Category Specific)
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                    {items.map((item) => (
+                      <UnifiedCard key={item.id} item={item} className="h-full" />
+                    ))}
+                  </div>
+
+                  {totalPages > page && (
+                    <div className="flex justify-center mt-8 pb-8">
+                      <button
+                        onClick={() => setFilter('page', String(page + 1))}
+                        disabled={isFetching}
+                        className="flex items-center gap-2 px-8 py-2.5 rounded-full border border-outline-variant/60 text-[13px] text-on-surface font-medium hover:border-outline-variant/80 hover:bg-surface-container/50 disabled:opacity-50 transition-all bg-background shadow-sm"
+                      >
+                        {isFetching
+                          ? <Loader2 size={15} className="animate-spin text-primary" />
+                          : <span>{t('loadMore')}</span>}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
+
         </main>
       </div>
 
@@ -339,5 +425,5 @@ function ShellContent() {
   )
 }
 
-// Suppress unused-link warning (kept for parity with other shells in case nav helpers are added).
+// Suppress unused-link warning
 void Link

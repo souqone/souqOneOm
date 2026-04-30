@@ -1,5 +1,4 @@
-import { getAuthToken } from '@/lib/auth';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/auth';
 import type { UploadedImage } from '@/features/ads/components/image-uploader';
 
 /**
@@ -14,7 +13,6 @@ export async function uploadImages(
   entityId: string,
   images: UploadedImage[],
 ): Promise<void> {
-  const token = getAuthToken();
   const filesToUpload = images.filter((img) => img.file);
 
   for (const img of filesToUpload) {
@@ -22,14 +20,10 @@ export async function uploadImages(
     fd.append('file', img.file!);
     fd.append('isPrimary', String(img.isPrimary));
 
-    const res = await fetch(
-      `${API_BASE}/api/v1${uploadEndpoint}/${entityId}/images`,
-      {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: fd,
-      },
-    );
+    const res = await apiFetch(`${uploadEndpoint}/${entityId}/images`, {
+      method: 'POST',
+      body: fd,
+    });
 
     if (!res.ok) {
       const err = await res.json().catch(() => null);

@@ -1,4 +1,5 @@
-import { IsString, IsDateString, IsOptional, IsBoolean, IsIn } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsDateString, IsOptional, IsBoolean, IsIn, IsInt, Min } from 'class-validator';
 
 export class CreateBookingDto {
   @IsIn(['CAR', 'BUS', 'EQUIPMENT', 'TRANSPORT', 'TRIP'])
@@ -34,6 +35,8 @@ export class CreateBookingDto {
   notes?: string;
 
   @IsOptional()
-  @IsString()
-  quantity?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  quantity?: number;
 }

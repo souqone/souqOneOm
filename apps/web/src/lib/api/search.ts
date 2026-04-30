@@ -54,7 +54,9 @@ export interface SearchParams {
   city?: string;
   governorate?: string;
   make?: string;
+  model?: string;
   condition?: string;
+  listingType?: string;
   sortBy?: 'price:asc' | 'price:desc' | 'newest';
   page?: number;
   limit?: number;

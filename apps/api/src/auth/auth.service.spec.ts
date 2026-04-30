@@ -3,6 +3,8 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import { AuthService } from './auth.service';
+import { AuthTokenService } from './auth-token.service';
+import { AuthAuditService } from './auth-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { RedisService } from '../redis/redis.service';
@@ -53,6 +55,8 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        AuthTokenService,
+        AuthAuditService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
@@ -92,7 +96,7 @@ describe('AuthService', () => {
     });
 
     it('should throw if email already exists', async () => {
-      mockPrisma.user.findUnique.mockResolvedValueOnce({ id: 'existing' });
+      mockPrisma.user.create.mockRejectedValue({ code: 'P2002', meta: { target: ['email'] } });
 
       await expect(
         service.signup({ email: 'test@example.com', username: 'new', password: 'Password1' }),

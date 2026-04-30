@@ -97,50 +97,50 @@ export async function tryRefreshToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}) {
+/**
+ * Low-level authenticated fetch with automatic 401 → refresh → retry.
+ * Works for both JSON and FormData (uploads).
+ * Use this instead of raw fetch() for any authenticated API call.
+ */
+export async function apiFetch(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const headers = new Headers(init.headers ?? {});
-  const token = getAuthToken();
+  const url = `${apiBaseUrl}/api/v1${normalizedPath}`;
 
-  if (!headers.has('Content-Type') && init.body) {
-    headers.set('Content-Type', 'application/json');
-  }
+  const buildHeaders = (token: string | null): Headers => {
+    const headers = new Headers(init.headers ?? {});
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return headers;
+  };
 
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  let token = getAuthToken();
+  let response = await fetch(url, { ...init, headers: buildHeaders(token) });
 
-  const response = await fetch(`${apiBaseUrl}/api/v1${normalizedPath}`, {
-    ...init,
-    headers,
-  });
-
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-
-  // On 401, try refreshing the token once and retry
   if (response.status === 401 && token && !normalizedPath.startsWith('/auth/')) {
     const newToken = await tryRefreshToken();
     if (newToken) {
-      headers.set('Authorization', `Bearer ${newToken}`);
-      const retryResponse = await fetch(`${apiBaseUrl}/api/v1${normalizedPath}`, {
-        ...init,
-        headers,
-      });
-      const retryText = await retryResponse.text();
-      const retryData = retryText ? JSON.parse(retryText) : null;
-      if (!retryResponse.ok) {
-        const retryError = retryData?.message || retryData?.error || 'SERVER_ERROR';
-        throw new Error(retryError);
-      }
-      return retryData as T;
+      response = await fetch(url, { ...init, headers: buildHeaders(newToken) });
     }
   }
 
+  return response;
+}
+
+export async function apiRequest<T>(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers ?? {});
+
+  if (!headers.has('Content-Type') && init.body && typeof init.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await apiFetch(path, { ...init, headers });
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
   if (!response.ok) {
-    const errorMessage =
-      data?.message || data?.error || 'SERVER_ERROR';
-    throw new Error(errorMessage);
+    throw new Error(data?.message || data?.error || 'SERVER_ERROR');
   }
 
   return data as T;

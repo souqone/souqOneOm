@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 import type { ActiveFilters as ActiveFiltersType } from '../types/filters.types'
 import type { ListingCategory } from '../types/category.types'
 import { FILTERS_CONFIG } from '../config/filters.config'
-
+import { GLOBAL_SHARED_FILTERS } from '../config/search-engine.config'
 import { WILAYAT_BY_GOVERNORATE, GOVERNORATE_OPTIONS } from '../config/shared'
 import { useBrands, useCarModels, CarBrand, CarModelItem } from '@/lib/api'
 
@@ -45,7 +45,7 @@ function buildLabel(
     return found ? (found.nameAr || found.name) : str
   }
 
-  const config = FILTERS_CONFIG[category]
+  const config = category === '__global__' as any ? GLOBAL_SHARED_FILTERS : FILTERS_CONFIG[category]
   const field = config.find(f => f.key === key)
   if (!field) return Array.isArray(value) ? value.join('، ') : value
 
@@ -146,7 +146,7 @@ export function ActiveFilters({
   const selectedBrand = brands.find(b => b.name === makeVal)
   const { data: models = [] } = useCarModels(selectedBrand?.id ?? '')
 
-  const config = FILTERS_CONFIG[category]
+  const config = category === '__global__' as any ? GLOBAL_SHARED_FILTERS : FILTERS_CONFIG[category]
 
   const activeEntries = config
     .filter(field => hasValue(filters[field.key] as string | string[] | undefined))

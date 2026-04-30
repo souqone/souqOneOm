@@ -1,14 +1,16 @@
+import { Logger } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { ServerOptions } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 
 export class RedisIoAdapter extends IoAdapter {
+  private readonly logger = new Logger(RedisIoAdapter.name);
   private adapterConstructor: ReturnType<typeof createAdapter> | null = null;
 
   async connectToRedis(): Promise<void> {
     const redisUrl = process.env.REDIS_URL;
-    console.log(`[RedisIoAdapter] REDIS_URL present: ${!!redisUrl}, starts with: ${redisUrl?.substring(0, 20)}...`);
+    this.logger.log(`REDIS_URL configured: ${!!redisUrl}`);
 
     try {
       const pubClient = redisUrl
@@ -26,9 +28,9 @@ export class RedisIoAdapter extends IoAdapter {
       await Promise.all([pubClient.connect(), subClient.connect()]);
 
       this.adapterConstructor = createAdapter(pubClient, subClient);
-      console.log('✅ Redis Socket.IO Adapter connected');
+      this.logger.log('Redis Socket.IO Adapter connected');
     } catch (err) {
-      console.warn('⚠️ Redis Socket.IO Adapter failed — using default adapter:', (err as Error).message);
+      this.logger.warn(`Redis Socket.IO Adapter failed — using default adapter: ${(err as Error).message}`);
       this.adapterConstructor = null;
     }
   }

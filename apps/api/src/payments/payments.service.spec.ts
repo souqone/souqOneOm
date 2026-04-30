@@ -5,32 +5,41 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { PaymentActivationService } from './payment-activation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ThawaniService } from './thawani.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 // ── Mock Factories ──
 
-const createMockPrisma = () => ({
-  payment: {
-    create: jest.fn(),
-    update: jest.fn(),
-    findUnique: jest.fn(),
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-    count: jest.fn(),
-  },
-  paymentEvent: { create: jest.fn() },
-  listing: { update: jest.fn() },
-  busListing: { update: jest.fn() },
-  equipmentListing: { update: jest.fn() },
-  subscription: {
-    upsert: jest.fn(),
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-  $transaction: jest.fn((args: any[]) => Promise.all(args)),
-});
+const createMockPrisma = () => {
+  const mock: any = {
+    payment: {
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    paymentEvent: { create: jest.fn() },
+    listing: { update: jest.fn() },
+    busListing: { update: jest.fn() },
+    equipmentListing: { update: jest.fn() },
+    subscription: {
+      upsert: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    $transaction: jest.fn((arg: any) => {
+      if (typeof arg === 'function') return arg(mock);
+      return Promise.all(arg);
+    }),
+  };
+  return mock;
+};
 
 const PAID_PAYMENT = {
   id: 'pay-1',
@@ -77,6 +86,7 @@ describe('PaymentsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
+        PaymentActivationService,
         { provide: PrismaService, useValue: prisma },
         { provide: ThawaniService, useValue: thawani },
         { provide: NotificationsService, useValue: notifications },
@@ -246,11 +256,11 @@ describe('PaymentsService', () => {
   describe('State Machine', () => {
     it('T11 — PROCESSING → PAID via reconcile', async () => {
       prisma.payment.findUnique.mockResolvedValue(PROCESSING_PAYMENT);
-      prisma.payment.update.mockResolvedValue(PAID_PAYMENT);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(PAID_PAYMENT);
 
       await service.reconcilePayment('pay-1');
 
-      expect(prisma.payment.update).toHaveBeenCalledWith(
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: 'PAID' }),
         }),
@@ -295,12 +305,12 @@ describe('PaymentsService', () => {
       prisma.payment.findUnique
         .mockResolvedValueOnce(PROCESSING_PAYMENT) // lookup by session
         .mockResolvedValueOnce(PROCESSING_PAYMENT); // handlePaymentSuccess lookup
-      prisma.payment.update.mockResolvedValue(PAID_PAYMENT);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(PAID_PAYMENT);
 
       const result = await service.verifyPayment('sess_123');
 
       expect(result.status).toBe('paid');
-      expect(prisma.payment.update).toHaveBeenCalled();
+      expect(prisma.payment.updateMany).toHaveBeenCalled();
     });
 
     it('T16 — should throw for unknown session', async () => {
@@ -331,14 +341,14 @@ describe('PaymentsService', () => {
       prisma.payment.findUnique
         .mockResolvedValueOnce(PROCESSING_PAYMENT) // lookup by session
         .mockResolvedValueOnce(PROCESSING_PAYMENT); // handlePaymentSuccess
-      prisma.payment.update.mockResolvedValue(PAID_PAYMENT);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(PAID_PAYMENT);
 
       const result = await service.handleWebhook({
         data: { session_id: 'sess_123', payment_status: 'paid' },
       });
 
       expect(result.received).toBe(true);
-      expect(prisma.payment.update).toHaveBeenCalled();
+      expect(prisma.payment.updateMany).toHaveBeenCalled();
     });
 
     it('T19 — should skip duplicate webhook for PAID', async () => {
@@ -474,54 +484,37 @@ describe('PaymentsService', () => {
     });
 
     it('T29 — concurrent webhook + verify — no crash, payment activated', async () => {
-      let updateCount = 0;
       thawani.getSession.mockResolvedValue({ payment_status: 'paid' });
 
       prisma.payment.findUnique.mockImplementation(async (args: any) => {
         if (args?.where?.thawaniSessionId) return PROCESSING_PAYMENT;
-        if (args?.where?.id) {
-          if (updateCount > 0) return PAID_PAYMENT;
-          return PROCESSING_PAYMENT;
-        }
+        if (args?.where?.id) return PROCESSING_PAYMENT;
         return null;
       });
-
-      prisma.payment.update.mockImplementation(async () => {
-        updateCount++;
-        return PAID_PAYMENT;
-      });
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(PAID_PAYMENT);
 
       await Promise.all([
         service.handleWebhook({ data: { session_id: 'sess_123', payment_status: 'paid' } }),
         service.verifyPayment('sess_123'),
       ]);
 
-      expect(prisma.payment.update).toHaveBeenCalled();
+      expect(prisma.payment.updateMany).toHaveBeenCalled();
     });
 
     it('T30 — concurrent reconcile + webhook — no crash', async () => {
-      let updateCount = 0;
-
       prisma.payment.findUnique.mockImplementation(async (args: any) => {
         if (args?.where?.thawaniSessionId) return PROCESSING_PAYMENT;
-        if (args?.where?.id) {
-          if (updateCount > 0) return PAID_PAYMENT;
-          return PROCESSING_PAYMENT;
-        }
+        if (args?.where?.id) return PROCESSING_PAYMENT;
         return null;
       });
-
-      prisma.payment.update.mockImplementation(async () => {
-        updateCount++;
-        return PAID_PAYMENT;
-      });
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(PAID_PAYMENT);
 
       await Promise.all([
         service.reconcilePayment('pay-1'),
         service.handleWebhook({ data: { session_id: 'sess_123', payment_status: 'paid' } }),
       ]);
 
-      expect(prisma.payment.update).toHaveBeenCalled();
+      expect(prisma.payment.updateMany).toHaveBeenCalled();
     });
   });
 
@@ -566,11 +559,11 @@ describe('PaymentsService', () => {
       notifications.create.mockRejectedValue(new Error('Notification service down'));
 
       prisma.payment.findUnique.mockResolvedValue(PROCESSING_PAYMENT);
-      prisma.payment.update.mockResolvedValue(PAID_PAYMENT);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(PAID_PAYMENT);
 
       await service.reconcilePayment('pay-1');
 
-      expect(prisma.payment.update).toHaveBeenCalledWith(
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: 'PAID' }),
         }),

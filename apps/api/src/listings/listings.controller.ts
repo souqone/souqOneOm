@@ -7,11 +7,10 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { ListingsService } from './listings.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -24,8 +23,7 @@ export class ListingsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateListingDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreateListingDto, @CurrentUser() user: JwtPayload) {
     return this.listingsService.create(dto, user.sub);
   }
 
@@ -36,8 +34,7 @@ export class ListingsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  findMy(@Query() query: QueryListingsDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  findMy(@Query() query: QueryListingsDto, @CurrentUser() user: JwtPayload) {
     return this.listingsService.findMyListings({ ...query, sellerId: user.sub });
   }
 
@@ -53,15 +50,13 @@ export class ListingsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateListingDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  update(@Param('id') id: string, @Body() dto: UpdateListingDto, @CurrentUser() user: JwtPayload) {
     return this.listingsService.update(id, dto, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.listingsService.remove(id, user.sub);
   }
 

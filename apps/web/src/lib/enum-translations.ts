@@ -103,15 +103,6 @@ export function useEnumTranslations() {
       COMPANY:    t('enumCompany'),
     },
 
-    // ─── Insurance Type ───────────────────────────────────────
-    insuranceType: {
-      CAR_COMPREHENSIVE: t('enumComprehensive'),
-      CAR_THIRD_PARTY:   t('enumThirdParty'),
-      MARINE_INSURANCE:  t('enumMarine'),
-      FINANCING:         t('enumFinancing'),
-      LEASE:             t('enumLeasing'),
-    },
-
     // ─── Bus Type ─────────────────────────────────────────────
     busType: {
       MINI_BUS:   t('enumMiniBus'),

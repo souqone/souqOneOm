@@ -111,7 +111,7 @@ export abstract class BaseListingService {
 
     this.searchService
       .indexDocument(this.config.meiliIndex as any, this.buildMeiliDoc(item))
-      .catch(() => {});
+      .catch((err) => this.logger.warn(`Failed to index ${this.config.entityType} ${item.id}: ${(err as Error).message}`));
 
     // Invalidate list cache
     await this.redis.delPattern(this.cacheKey('list:*'));
@@ -259,7 +259,7 @@ export abstract class BaseListingService {
     // Sync to Meilisearch
     this.searchService
       .indexDocument(this.config.meiliIndex as any, this.buildMeiliDoc(updated))
-      .catch(() => {});
+      .catch((err) => this.logger.warn(`Failed to index updated ${this.config.entityType} ${updated.id}: ${(err as Error).message}`));
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -282,7 +282,8 @@ export abstract class BaseListingService {
 
     await this.model.delete({ where: { id } });
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
-    this.searchService.removeDocument(this.config.meiliIndex as any, id).catch(() => {});
+    this.searchService.removeDocument(this.config.meiliIndex as any, id)
+      .catch((err) => this.logger.warn(`Failed to remove ${this.config.entityType} ${id} from search: ${(err as Error).message}`));
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -312,7 +313,7 @@ export abstract class BaseListingService {
     // Sync to Meilisearch
     this.searchService
       .indexDocument(this.config.meiliIndex as any, this.buildMeiliDoc(updated))
-      .catch(() => {});
+      .catch((err) => this.logger.warn(`Failed to index status change for ${this.config.entityType} ${updated.id}: ${(err as Error).message}`));
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));

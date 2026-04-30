@@ -4,6 +4,8 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { TransportService } from './transport.service';
 import { CreateTransportDto } from './dto/create-transport.dto';
@@ -15,8 +17,7 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateTransportDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreateTransportDto, @CurrentUser() user: JwtPayload) {
     return this.transportService.create(dto, user.sub);
   }
 
@@ -27,9 +28,8 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myTransport(@Req() req: Request, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const user = req.user as JwtPayload;
-    return this.transportService.myListings(user.sub, parseInt(page ?? '1'), parseInt(limit ?? '20'));
+  myTransport(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
+    return this.transportService.myListings(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
   @Get('slug/:slug')
@@ -44,22 +44,19 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/status')
-  toggleStatus(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  toggleStatus(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportService.toggleStatus(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateTransportDto>, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  update(@Param('id') id: string, @Body() dto: Partial<CreateTransportDto>, @CurrentUser() user: JwtPayload) {
     return this.transportService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportService.remove(id, user.sub);
   }
 }

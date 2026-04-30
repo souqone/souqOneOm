@@ -3,6 +3,32 @@
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+
+function AnimatedSection({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={inView ? 'visible' : 'hidden'}
+      variants={stagger}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 const CAT_META = [
   { labelKey: 'catCars',      descKey: 'catCarsDesc',      image: '/images/categories/cars.webp',   href: '/browse/cars',   color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' },
@@ -18,18 +44,17 @@ const SLIDE_INTERVAL = 3000;
 
 export function CategoriesSection() {
   const t = useTranslations('home');
-  const trackRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
   const dirRef = useRef(1);
 
   useEffect(() => {
     const maxPos = CAT_META.length - 4;
-    const isRtl = document.documentElement.dir === 'rtl';
 
     const timer = setInterval(() => {
-      const track = trackRef.current;
-      if (!track) return;
-      const item = track.children[0] as HTMLElement;
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+      const item = scroller.children[0] as HTMLElement;
       if (!item) return;
 
       posRef.current += dirRef.current;
@@ -37,8 +62,10 @@ export function CategoriesSection() {
       if (posRef.current <= 0) { posRef.current = 0; dirRef.current = 1; }
 
       const step = item.offsetWidth + 8;
-      const sign = isRtl ? 1 : -1;
-      track.style.transform = `translateX(${posRef.current * sign * step}px)`;
+      scroller.scrollTo({
+        left: posRef.current * step,
+        behavior: 'smooth',
+      });
     }, SLIDE_INTERVAL);
 
     return () => clearInterval(timer);
@@ -46,19 +73,22 @@ export function CategoriesSection() {
 
   return (
     <section className="max-w-7xl mx-auto px-3 sm:px-6 pt-6 sm:pt-10 pb-2 sm:pb-3">
-      <div className="flex items-center gap-2 sm:gap-3 mb-5 sm:mb-8">
-        <div className="h-6 sm:h-8 w-1 rounded-full bg-primary" />
-        <h2 className="text-sm sm:text-xl md:text-3xl font-black tracking-tight whitespace-nowrap">{t('browseCategories')}</h2>
-      </div>
+      <AnimatedSection>
+        <motion.div variants={fadeUp} className="flex items-center gap-2 sm:gap-3 mb-5 sm:mb-8">
+          <div className="h-6 sm:h-8 w-1 rounded-full bg-primary" />
+          <h2 className="text-sm sm:text-xl md:text-3xl font-black tracking-tight whitespace-nowrap">{t('browseCategories')}</h2>
+        </motion.div>
 
       {/* Mobile: sliding window carousel — always shows 4, shifts 1 at a time */}
-      <div className="lg:hidden overflow-hidden">
-        <div ref={trackRef} className="flex gap-2 transition-transform duration-500 ease-in-out">
+      <div
+        ref={scrollerRef}
+        className="lg:hidden flex gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory touch-pan-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
           {CAT_META.map((cat) => (
             <Link
               key={cat.labelKey}
               href={cat.href}
-              className="group relative overflow-hidden shrink-0 flex flex-col rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 active:scale-[0.97] transition-all duration-300"
+              className="group relative overflow-hidden shrink-0 snap-start flex flex-col rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 active:scale-[0.97] transition-all duration-300"
               style={{ width: 'calc((100% - 24px) / 4)' }}
             >
               <div className="w-full h-16 sm:h-20 relative overflow-hidden">
@@ -71,7 +101,6 @@ export function CategoriesSection() {
               </div>
             </Link>
           ))}
-        </div>
       </div>
 
       {/* Desktop: full-width grid */}
@@ -93,6 +122,7 @@ export function CategoriesSection() {
           </Link>
         ))}
       </div>
+      </AnimatedSection>
     </section>
   );
 }

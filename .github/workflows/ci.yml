@@ -53,6 +53,9 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-
 
+      - name: Generate Prisma Client
+        run: npx turbo run db:generate
+
       - name: Lint (affected)
         run: npx turbo run lint --filter="...[origin/main...HEAD]"
         if: github.event_name == 'pull_request'

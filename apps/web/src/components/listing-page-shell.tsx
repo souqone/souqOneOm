@@ -1,3 +1,7 @@
+/**
+ * @deprecated — Replaced by BrowseGlobalShell + unified Meilisearch search.
+ * All listing browsing now goes through /browse. Scheduled for removal.
+ */
 'use client';
 
 import { Suspense, useState, type ReactNode } from 'react';

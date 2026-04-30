@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, DefaultValuePipe, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
@@ -35,10 +35,10 @@ export class ChatController {
   searchMessages(
     @Param('id') id: string,
     @Query('q') q: string,
-    @Query('page') page?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.chatService.searchMessages(id, user!.sub, q, page ? parseInt(page, 10) : 1);
+    return this.chatService.searchMessages(id, user!.sub, q, page);
   }
 
   @Post('conversations/:id/messages')

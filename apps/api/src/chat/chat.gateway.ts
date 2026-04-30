@@ -8,14 +8,18 @@ import {
   MessageBody,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
+import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { WsJwtGuard } from './guards/ws-jwt.guard';
 import { ChatService } from './chat.service';
 import { RedisService } from '../redis/redis.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { CHAT_EVENTS } from './chat.events';
+import { NOTIFICATION_EVENTS } from '../notifications/notification.events';
+import { getJwtSecret } from '../config/jwt.config';
 import type { JwtPayload } from '../auth/auth.types';
 
 @SkipThrottle()
@@ -30,7 +34,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @WebSocketServer()
   server!: Server;
 
-  private connectedUsers = new Map<string, string>(); // userId -> socketId
+  private readonly logger = new Logger(ChatGateway.name);
+  private readonly connectedUsers = new Map<string, Set<string>>(); // userId → Set<socketId>
+  private readonly typingCooldown = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly chatService: ChatService,
@@ -38,10 +44,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private readonly jwtService: JwtService,
   ) {}
 
-  afterInit() {
-    console.log('🔌 ChatGateway initialized');
-    // Delay subscription to ensure RedisService is fully initialized
-    setTimeout(() => this.subscribeToRedis(), 1000);
+  async afterInit() {
+    this.logger.log('ChatGateway initialized');
+    await this.redis.waitForReady();
+    this.subscribeToRedis();
   }
 
   async handleConnection(client: Socket) {
@@ -52,9 +58,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         return;
       }
 
-      // Manually verify JWT on connection (guards don't run here)
       const user = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: process.env.JWT_SECRET || 'dev-secret',
+        secret: getJwtSecret(),
       });
       client.data.user = user;
 
@@ -63,23 +68,26 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         return;
       }
 
-      this.connectedUsers.set(user.sub, client.id);
-      await this.redis.set(`user:online:${user.sub}`, client.id, 600);
+      // Multi-socket: add this socket to the user's set
+      const sockets = this.connectedUsers.get(user.sub) ?? new Set<string>();
+      sockets.add(client.id);
+      this.connectedUsers.set(user.sub, sockets);
+      await this.redis.set(`user:online:${user.sub}`, '1', 600);
 
-      console.log(`✅ User ${user.username} connected (${client.id})`);
+      this.logger.log(`User ${user.username} connected (${client.id})`);
 
       // Join user's personal room for notifications
       client.join(`user:${user.sub}`);
 
-      // Auto-join user's active conversations
-      const conversations = await this.chatService.getConversations(user.sub);
-      for (const conv of conversations) {
-        client.join(`conversation:${conv.id}`);
+      // Lightweight: join conversation rooms by ID only
+      const ids = await this.chatService.getConversationIds(user.sub);
+      for (const id of ids) {
+        client.join(`conversation:${id}`);
       }
 
       client.emit('connected', { userId: user.sub, username: user.username });
     } catch (err) {
-      console.error('Connection error:', err);
+      this.logger.error('Connection error', err instanceof Error ? err.stack : String(err));
       client.disconnect();
     }
   }
@@ -87,9 +95,16 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleDisconnect(client: Socket) {
     const user = client.data.user as JwtPayload;
     if (user) {
-      this.connectedUsers.delete(user.sub);
-      await this.redis.del(`user:online:${user.sub}`);
-      console.log(`❌ User ${user.username} disconnected`);
+      const sockets = this.connectedUsers.get(user.sub);
+      sockets?.delete(client.id);
+
+      // Only remove user if no sockets remain
+      if (!sockets?.size) {
+        this.connectedUsers.delete(user.sub);
+        await this.redis.del(`user:online:${user.sub}`);
+      }
+
+      this.logger.log(`User ${user.username} disconnected (${client.id})`);
     }
   }
 
@@ -101,12 +116,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ) {
     const user = client.data.user as JwtPayload;
 
-    // Verify user is participant
-    const participant = await this.chatService['prisma'].conversationParticipant.findFirst({
-      where: { conversationId: data.conversationId, userId: user.sub },
-    });
+    // Verify user is participant via service method
+    const ok = await this.chatService.isParticipant(data.conversationId, user.sub);
 
-    if (!participant) {
+    if (!ok) {
       client.emit('error', { message: 'لا يمكنك الانضمام لهذه المحادثة' });
       return;
     }
@@ -141,13 +154,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       };
 
       const message = await this.chatService.sendMessage(data.conversationId, dto, user.sub);
-
-      // Publish to Redis for multi-instance support
-      await this.redis.publish('chat:message', {
-        conversationId: data.conversationId,
-        message,
-      });
-
+      // Broadcast is handled by @OnEvent → Redis publish → subscriber emit
       return { success: true, message };
     } catch (err: any) {
       client.emit('error', { message: err.message || 'فشل إرسال الرسالة' });
@@ -162,6 +169,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { conversationId: string },
   ) {
     const user = client.data.user as JwtPayload;
+    const key = `${user.sub}:${data.conversationId}`;
+
+    // Server-side throttle: 1 event per 2 seconds per user per conversation
+    if (this.typingCooldown.has(key)) return;
+    this.typingCooldown.set(key, setTimeout(() => this.typingCooldown.delete(key), 2000));
 
     client.to(`conversation:${data.conversationId}`).emit('user-typing', {
       conversationId: data.conversationId,
@@ -217,14 +229,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const user = client.data.user as JwtPayload;
 
     try {
-      const result = await this.chatService.deleteMessage(data.messageId, user.sub);
-
-      // Broadcast deletion to conversation room
-      this.server.to(`conversation:${result.conversationId}`).emit('message-deleted', {
-        messageId: result.messageId,
-        conversationId: result.conversationId,
-      });
-
+      await this.chatService.deleteMessage(data.messageId, user.sub);
+      // Broadcast is handled by @OnEvent → Redis publish → subscriber emit
       return { success: true };
     } catch (err: any) {
       client.emit('error', { message: err.message || 'فشل حذف الرسالة' });
@@ -277,11 +283,26 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     client.emit('online-status', { userId: data.userId, online });
   }
 
+  /* ───── EVENT-DRIVEN BROADCAST ───── */
+
+  @OnEvent(CHAT_EVENTS.MESSAGE_SENT)
+  async onMessageSent(payload: { conversationId: string; message: any }) {
+    await this.redis.publish('chat:message', payload);
+  }
+
+  @OnEvent(CHAT_EVENTS.MESSAGE_DELETED)
+  async onMessageDeleted(payload: { messageId: string; conversationId: string }) {
+    await this.redis.publish('chat:message-deleted', payload);
+  }
+
   // Subscribe to Redis Pub/Sub for multi-instance support
   private subscribeToRedis() {
     this.redis.subscribe('chat:message', (data: { conversationId: string; message: any }) => {
-      // Emit message to all clients in the conversation room
       this.server.to(`conversation:${data.conversationId}`).emit('message', data.message);
+    });
+
+    this.redis.subscribe('chat:message-deleted', (data: { messageId: string; conversationId: string }) => {
+      this.server.to(`conversation:${data.conversationId}`).emit('message-deleted', data);
     });
   }
 
@@ -290,7 +311,17 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     return this.redis.exists(`user:online:${userId}`);
   }
 
-  // Send notification via WebSocket if user is online
+  /* ───── NOTIFICATION BROADCAST ───── */
+
+  @OnEvent(NOTIFICATION_EVENTS.CREATED)
+  async onNotificationCreated(payload: { userId: string; notification: any }) {
+    const isOnline = await this.isUserOnline(payload.userId);
+    if (isOnline) {
+      this.server.to(`user:${payload.userId}`).emit('notification', payload.notification);
+    }
+  }
+
+  // Send notification via WebSocket if user is online (kept for direct calls if needed)
   async sendNotification(userId: string, notification: any) {
     const isOnline = await this.isUserOnline(userId);
     if (isOnline) {

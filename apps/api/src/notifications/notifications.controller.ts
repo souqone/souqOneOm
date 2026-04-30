@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { NotificationsService } from './notifications.service';
 import { PushService } from './push.service';
@@ -26,22 +27,17 @@ export class NotificationsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('push/unsubscribe')
-  unsubscribe(@Body() dto: PushUnsubscribeDto) {
-    return this.pushService.unsubscribe(dto.endpoint);
+  unsubscribe(@Body() dto: PushUnsubscribeDto, @CurrentUser() user: JwtPayload) {
+    return this.pushService.unsubscribe(dto.endpoint, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
   findAll(
     @CurrentUser() user: JwtPayload,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.notificationsService.findAll(
-      user.sub,
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
-    );
+    return this.notificationsService.findAll(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -1,65 +1,18 @@
-import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, Req,
-} from '@nestjs/common';
-import type { Request } from 'express';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import type { JwtPayload } from '../auth/auth.types';
-import { TripsService } from './trips.service';
-import { CreateTripDto } from './dto/create-trip.dto';
-import { QueryTripsDto } from './dto/query-trips.dto';
+import { Controller, All, GoneException } from '@nestjs/common';
 
+/**
+ * Trips feature has been removed.
+ * All routes return 410 Gone for backward compatibility.
+ */
 @Controller('trips')
 export class TripsController {
-  constructor(private readonly tripsService: TripsService) {}
-
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@Body() dto: CreateTripDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
-    return this.tripsService.create(dto, user.sub);
+  @All('*')
+  gone() {
+    throw new GoneException('خدمة الرحلات لم تعد متوفرة');
   }
 
-  @Get()
-  findAll(@Query() query: QueryTripsDto) {
-    return this.tripsService.findAll(query);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('my')
-  myTrips(@Req() req: Request, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const user = req.user as JwtPayload;
-    return this.tripsService.myListings(user.sub, parseInt(page ?? '1'), parseInt(limit ?? '20'));
-  }
-
-  @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string, @Req() req: Request) {
-    return this.tripsService.findBySlug(slug, req.ip);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
-    return this.tripsService.findOne(id, req.ip);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch(':id/status')
-  toggleStatus(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
-    return this.tripsService.toggleStatus(id, user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateTripDto>, @Req() req: Request) {
-    const user = req.user as JwtPayload;
-    return this.tripsService.update(id, user.sub, dto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
-    return this.tripsService.remove(id, user.sub);
+  @All()
+  goneRoot() {
+    throw new GoneException('خدمة الرحلات لم تعد متوفرة');
   }
 }

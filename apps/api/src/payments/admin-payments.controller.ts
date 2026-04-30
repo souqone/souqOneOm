@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards, Logger } from '@nestjs/common';
+import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query, UseGuards, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { AdminApiKeyGuard } from '../common/guards/admin-api-key.guard';
@@ -17,13 +17,13 @@ export class AdminPaymentsController {
 
   @Get()
   async findAll(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit = 20,
     @Query('status') status?: string,
     @Query('type') type?: string,
   ) {
-    const p = Math.max(parseInt(page || '1', 10), 1);
-    const l = Math.min(parseInt(limit || '20', 10), 100);
+    const p = Math.max(page, 1);
+    const l = Math.min(Math.max(limit, 1), 100);
     const skip = (p - 1) * l;
 
     const where: any = {};

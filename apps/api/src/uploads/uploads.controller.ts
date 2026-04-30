@@ -5,7 +5,6 @@ import {
   Patch,
   Param,
   Body,
-  Req,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -16,8 +15,8 @@ import {
   FileInterceptor,
   FilesInterceptor,
 } from '@nestjs/platform-express';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { UploadsService } from './uploads.service';
 
@@ -60,9 +59,8 @@ export class UploadsController {
     @Param('listingId') listingId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToListing(
       listingId,
@@ -78,9 +76,8 @@ export class UploadsController {
   async addImageByUrl(
     @Param('listingId') listingId: string,
     @Body() body: { url: string; isPrimary?: boolean },
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.uploadsService.addImageToListing(
       listingId,
       user.sub,
@@ -94,9 +91,8 @@ export class UploadsController {
   @Delete('listings/:listingId/images/:imageId')
   async removeImage(
     @Param('imageId') imageId: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.uploadsService.removeImageFromListing(imageId, user.sub);
   }
 
@@ -106,9 +102,8 @@ export class UploadsController {
   async reorderImages(
     @Param('listingId') listingId: string,
     @Body() body: { imageIds: string[] },
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.uploadsService.reorderImages(listingId, user.sub, body.imageIds);
   }
 
@@ -121,9 +116,8 @@ export class UploadsController {
     @Param('partId') partId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToPart(partId, user.sub, url, isPrimary === 'true');
   }
@@ -132,9 +126,8 @@ export class UploadsController {
   @Delete('parts/images/:imageId')
   async removePartImage(
     @Param('imageId') imageId: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.uploadsService.removeImageFromPart(imageId, user.sub);
   }
 
@@ -147,9 +140,8 @@ export class UploadsController {
     @Param('serviceId') serviceId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToService(serviceId, user.sub, url, isPrimary === 'true');
   }
@@ -158,9 +150,8 @@ export class UploadsController {
   @Delete('services/images/:imageId')
   async removeServiceImage(
     @Param('imageId') imageId: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.uploadsService.removeImageFromService(imageId, user.sub);
   }
 
@@ -173,9 +164,8 @@ export class UploadsController {
     @Param('busId') busId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToBus(busId, user.sub, url, isPrimary === 'true');
   }
@@ -189,9 +179,8 @@ export class UploadsController {
     @Param('transportId') transportId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToTransport(transportId, user.sub, url, isPrimary === 'true');
   }
@@ -205,9 +194,8 @@ export class UploadsController {
     @Param('tripId') tripId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToTrip(tripId, user.sub, url, isPrimary === 'true');
   }
@@ -221,9 +209,8 @@ export class UploadsController {
     @Param('insuranceId') insuranceId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToInsurance(insuranceId, user.sub, url, isPrimary === 'true');
   }
@@ -237,9 +224,8 @@ export class UploadsController {
     @Param('equipmentId') equipmentId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('isPrimary') isPrimary: string,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToEquipment(equipmentId, user.sub, url, isPrimary === 'true');
   }

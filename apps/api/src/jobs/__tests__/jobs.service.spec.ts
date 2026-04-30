@@ -177,7 +177,7 @@ describe('JobsService', () => {
 
     it('should throw ConflictException for duplicate application', async () => {
       mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
-      mockPrisma.jobApplication.findUnique.mockResolvedValue({ id: 'existing' });
+      mockPrisma.jobApplication.create.mockRejectedValue({ code: 'P2002', meta: { target: ['jobId_applicantId'] } });
 
       await expect(
         service.apply('job1', 'applicant1', {} as any),

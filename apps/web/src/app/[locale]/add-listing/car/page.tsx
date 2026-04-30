@@ -9,9 +9,8 @@ import { AuthGuard } from '@/components/auth-guard';
 import { ListingForm } from '@/features/ads/components/listing-form';
 import type { UploadedImage } from '@/features/ads/components/image-uploader';
 import { useCreateListing } from '@/lib/api';
-import { getAuthToken } from '@/lib/auth';
+import { apiFetch } from '@/lib/auth';
 import { useToast } from '@/components/toast';
-import { API_BASE } from '@/lib/config';
 import { useTranslations } from 'next-intl';
 
 export default function AddCarListingPage() {
@@ -39,7 +38,6 @@ function AddCarContent() {
 
       if (images.length > 0) {
         setUploading(true);
-        const token = getAuthToken();
 
         for (const img of images) {
           if (img.file) {
@@ -47,9 +45,8 @@ function AddCarContent() {
             formData.append('file', img.file);
             formData.append('isPrimary', String(img.isPrimary));
 
-            const res = await fetch(`${API_BASE}/api/v1/uploads/listings/${listing.id}/images`, {
+            const res = await apiFetch(`/uploads/listings/${listing.id}/images`, {
               method: 'POST',
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
               body: formData,
             });
             if (!res.ok) {

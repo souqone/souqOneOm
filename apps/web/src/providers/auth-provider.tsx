@@ -100,7 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Refresh failed — force re-login
           clearAllTokens();
           setHasToken(false);
-          queryClient.setQueryData(['me'], null);
+          disconnectSocket();
+          queryClient.clear();
+          window.location.href = '/login';
         }
       }, delay);
     }
