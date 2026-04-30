@@ -52,7 +52,7 @@ export function HeroSection() {
     if (query.trim()) params.set('q', query.trim());
     if (selectedGov) params.set('governorate', selectedGov.value);
     const qs = params.toString();
-    router.push(`/browse${qs ? `?${qs}` : ''}`);
+    router.push(`/browse/cars${qs ? `?${qs}` : ''}`);
   }
 
   return (

@@ -42,17 +42,17 @@ function useNavLinks() {
       href: '/buses', label: t('buses'),
       children: [
         { href: '/buses', label: t('allBuses'), icon: 'directions_bus', desc: tn('busesSaleRentalContracts') },
-        { href: '/browse/buses?type=SALE', label: t('busesForSale'), icon: 'sell', desc: tn('busesForSaleDesc') },
-        { href: '/browse/buses?type=RENTAL', label: t('busRental'), icon: 'car_rental', desc: tn('busRentalDesc') },
-        { href: '/browse/buses?type=CONTRACT', label: t('transportRequests'), icon: 'request_quote', desc: tn('transportRequestsDesc') },
+        { href: '/browse/buses?busListingType=BUS_SALE', label: t('busesForSale'), icon: 'sell', desc: tn('busesForSaleDesc') },
+        { href: '/browse/buses?busListingType=BUS_RENT', label: t('busRental'), icon: 'car_rental', desc: tn('busRentalDesc') },
+        { href: '/browse/buses?busListingType=BUS_CONTRACT', label: t('transportRequests'), icon: 'request_quote', desc: tn('transportRequestsDesc') },
       ],
     },
     {
       href: '/equipment', label: t('equipment'),
       children: [
         { href: '/browse/equipment', label: t('allEquipment'), icon: 'construction', desc: tn('equipmentSaleRental') },
-        { href: '/browse/equipment?listingType=SALE', label: t('sellEquipment'), icon: 'sell', desc: tn('equipmentForSaleDesc') },
-        { href: '/browse/equipment?listingType=RENTAL', label: t('rentEquipment'), icon: 'car_rental', desc: tn('equipmentRentalDesc') },
+        { href: '/browse/equipment?listingType=EQUIPMENT_SALE', label: t('sellEquipment'), icon: 'sell', desc: tn('equipmentForSaleDesc') },
+        { href: '/browse/equipment?listingType=EQUIPMENT_RENT', label: t('rentEquipment'), icon: 'car_rental', desc: tn('equipmentRentalDesc') },
         { href: '/browse/equipment-requests', label: t('requestEquipment'), icon: 'assignment_add', desc: tn('equipmentRequestsDesc') },
         { href: '/browse/operators', label: t('operators'), icon: 'engineering', desc: tn('equipmentOperatorsDesc') },
       ],
