@@ -12,8 +12,6 @@ export const INDEXES = {
   LISTINGS: 'listings',
   PARTS: 'parts',
   TRANSPORT: 'transport',
-  TRIPS: 'trips',
-  INSURANCE: 'insurance',
   SERVICES: 'services',
   JOBS: 'jobs',
   BUSES: 'buses',
@@ -44,16 +42,6 @@ const INDEX_CONFIGS: Record<IndexName, IndexConfig> = {
     searchableAttributes: ['title', 'description', 'providerName', 'governorate', 'city', 'coverageAreas'],
     filterableAttributes: ['transportType', 'providerType', 'governorate', 'city', 'status', 'basePrice', 'hasInsurance', 'hasTracking'],
     sortableAttributes: ['basePrice', 'createdAt'],
-  },
-  trips: {
-    searchableAttributes: ['title', 'description', 'routeFrom', 'routeTo', 'providerName', 'governorate', 'city'],
-    filterableAttributes: ['tripType', 'scheduleType', 'governorate', 'city', 'status', 'pricePerTrip'],
-    sortableAttributes: ['pricePerTrip', 'createdAt'],
-  },
-  insurance: {
-    searchableAttributes: ['title', 'description', 'providerName', 'coverageType', 'governorate'],
-    filterableAttributes: ['offerType', 'governorate', 'status', 'priceFrom'],
-    sortableAttributes: ['priceFrom', 'createdAt'],
   },
   services: {
     searchableAttributes: ['title', 'description', 'providerName', 'governorate', 'city'],
@@ -423,56 +411,6 @@ export class SearchService implements OnModuleInit {
     }
     counts.transport = transportDocs.length;
 
-    // ── Trips ──
-    const trips = await this.prisma.tripService.findMany({
-      where: { status: 'ACTIVE' },
-    });
-    const tripDocs = trips.map(t => this.serializeDocument({
-      id: t.id,
-      title: t.title,
-      slug: t.slug,
-      description: t.description,
-      tripType: t.tripType,
-      routeFrom: t.routeFrom,
-      routeTo: t.routeTo,
-      providerName: t.providerName,
-      scheduleType: t.scheduleType,
-      pricePerTrip: t.pricePerTrip ? Number(t.pricePerTrip) : null,
-      priceMonthly: t.priceMonthly ? Number(t.priceMonthly) : null,
-      currency: t.currency,
-      governorate: t.governorate,
-      city: t.city,
-      status: t.status,
-      createdAt: t.createdAt.getTime(),
-    }));
-    if (tripDocs.length > 0) {
-      await this.meili.index(INDEXES.TRIPS).addDocuments(tripDocs);
-    }
-    counts.trips = tripDocs.length;
-
-    // ── Insurance ──
-    const insurance = await this.prisma.insuranceOffer.findMany({
-      where: { status: 'ACTIVE' },
-    });
-    const insuranceDocs = insurance.map(i => this.serializeDocument({
-      id: i.id,
-      title: i.title,
-      slug: i.slug,
-      description: i.description,
-      offerType: i.offerType,
-      providerName: i.providerName,
-      coverageType: i.coverageType,
-      priceFrom: i.priceFrom ? Number(i.priceFrom) : null,
-      currency: i.currency,
-      governorate: i.governorate,
-      status: i.status,
-      createdAt: i.createdAt.getTime(),
-    }));
-    if (insuranceDocs.length > 0) {
-      await this.meili.index(INDEXES.INSURANCE).addDocuments(insuranceDocs);
-    }
-    counts.insurance = insuranceDocs.length;
-
     // ── Services ──
     const services = await this.prisma.carService.findMany({
       where: { status: 'ACTIVE' },
@@ -543,7 +481,7 @@ export class SearchService implements OnModuleInit {
     if (dto.category) {
       // category maps to different fields per entity
       // Use OR across possible category fields
-      filters.push(`(partCategory = "${dto.category}" OR transportType = "${dto.category}" OR tripType = "${dto.category}" OR offerType = "${dto.category}" OR serviceType = "${dto.category}")`);
+      filters.push(`(partCategory = "${dto.category}" OR transportType = "${dto.category}" OR serviceType = "${dto.category}")`);
     }
     if (dto.city) {
       filters.push(`city = "${dto.city}"`);
@@ -589,9 +527,6 @@ export class SearchService implements OnModuleInit {
     switch (entityType) {
       case 'transport':
         return [`basePrice:${direction}`];
-      case 'trips':
-        return [`pricePerTrip:${direction}`];
-      case 'insurance':
       case 'services':
         return [`priceFrom:${direction}`];
       default:

@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '../auth';
-import { API_BASE } from '../config';
+import { apiRequest, apiFetch } from '../auth';
 
 export interface UploadResult {
   url: string;
@@ -23,11 +22,8 @@ export function useUploadImage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const token = (await import('../auth')).getAuthToken();
-
-      const res = await fetch(`${API_BASE}/api/v1/uploads`, {
+      const res = await apiFetch('/uploads', {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
 
@@ -49,11 +45,8 @@ export function useAddListingImage(listingId: string) {
       formData.append('file', params.file);
       formData.append('isPrimary', String(params.isPrimary ?? false));
 
-      const token = (await import('../auth')).getAuthToken();
-
-      const res = await fetch(`${API_BASE}/api/v1/uploads/listings/${listingId}/images`, {
+      const res = await apiFetch(`/uploads/listings/${listingId}/images`, {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
 

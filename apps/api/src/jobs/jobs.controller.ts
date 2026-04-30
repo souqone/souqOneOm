@@ -4,6 +4,8 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { JobsService } from './jobs.service';
 import { DriverProfileService } from './driver-profile.service';
@@ -39,8 +41,7 @@ export class JobsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateJobDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreateJobDto, @CurrentUser() user: JwtPayload) {
     return this.jobsService.create(user.sub, dto);
   }
 
@@ -51,41 +52,36 @@ export class JobsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('recommended')
-  getRecommended(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getRecommended(@CurrentUser() user: JwtPayload) {
     return this.recommendationService.getRecommended(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myJobs(@Req() req: Request, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const user = req.user as JwtPayload;
+  myJobs(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
     return this.jobsService.myJobs(
       user.sub,
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
+      query.page ?? 1,
+      query.limit ?? 20,
     );
   }
 
   // ─── Driver Profile ───
   @UseGuards(JwtAuthGuard)
   @Post('driver-profile')
-  createDriverProfile(@Body() dto: CreateDriverProfileDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  createDriverProfile(@Body() dto: CreateDriverProfileDto, @CurrentUser() user: JwtPayload) {
     return this.driverProfileService.create(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('driver-profile/me')
-  getMyDriverProfile(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getMyDriverProfile(@CurrentUser() user: JwtPayload) {
     return this.driverProfileService.getMyProfile(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('driver-profile')
-  updateDriverProfile(@Body() dto: UpdateDriverProfileDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  updateDriverProfile(@Body() dto: UpdateDriverProfileDto, @CurrentUser() user: JwtPayload) {
     return this.driverProfileService.update(user.sub, dto);
   }
 
@@ -107,22 +103,19 @@ export class JobsController {
   // ─── Employer Profile ───
   @UseGuards(JwtAuthGuard)
   @Post('employer-profile')
-  createEmployerProfile(@Body() dto: CreateEmployerProfileDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  createEmployerProfile(@Body() dto: CreateEmployerProfileDto, @CurrentUser() user: JwtPayload) {
     return this.employerProfileService.create(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('employer-profile/me')
-  getMyEmployerProfile(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getMyEmployerProfile(@CurrentUser() user: JwtPayload) {
     return this.employerProfileService.getMyProfile(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('employer-profile')
-  updateEmployerProfile(@Body() dto: UpdateEmployerProfileDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  updateEmployerProfile(@Body() dto: UpdateEmployerProfileDto, @CurrentUser() user: JwtPayload) {
     return this.employerProfileService.update(user.sub, dto);
   }
 
@@ -134,8 +127,7 @@ export class JobsController {
   // ─── Invites ───
   @UseGuards(JwtAuthGuard)
   @Get('invites/my')
-  getMyInvites(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getMyInvites(@CurrentUser() user: JwtPayload) {
     return this.jobInviteService.getMyInvites(user.sub);
   }
 
@@ -145,9 +137,8 @@ export class JobsController {
     @Param('id') jobId: string,
     @Param('driverId') driverId: string,
     @Body('message') message: string | undefined,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.jobInviteService.invite(jobId, user.sub, driverId, message);
   }
 
@@ -156,16 +147,14 @@ export class JobsController {
   @Post('verification/submit')
   submitVerification(
     @Body() body: { licenseImageUrl: string; idImageUrl: string; notes?: string },
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.verificationService.submit(user.sub, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('verification/status')
-  getVerificationStatus(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getVerificationStatus(@CurrentUser() user: JwtPayload) {
     return this.verificationService.getMyStatus(user.sub);
   }
 
@@ -182,9 +171,8 @@ export class JobsController {
   adminReviewVerification(
     @Param('id') id: string,
     @Body() body: { decision: 'APPROVED' | 'REJECTED'; rejectionReason?: string },
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.verificationService.adminReview(id, user.sub, body.decision, body.rejectionReason);
   }
 
@@ -193,9 +181,8 @@ export class JobsController {
   respondToInvite(
     @Param('id') inviteId: string,
     @Body('status') status: 'ACCEPTED' | 'DECLINED',
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.jobInviteService.respond(inviteId, user.sub, status);
   }
 
@@ -205,16 +192,14 @@ export class JobsController {
   payForApplication(
     @Param('id') id: string,
     @Body('amount') amount: number,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.escrowService.pay(id, user.sub, amount);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('escrow/:id/release')
-  releaseEscrow(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  releaseEscrow(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.escrowService.release(id, user.sub);
   }
 
@@ -223,9 +208,8 @@ export class JobsController {
   disputeEscrow(
     @Param('id') id: string,
     @Body('reason') reason: string | undefined,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.escrowService.dispute(id, user.sub, reason);
   }
 
@@ -236,29 +220,25 @@ export class JobsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateJobDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  update(@Param('id') id: string, @Body() dto: UpdateJobDto, @CurrentUser() user: JwtPayload) {
     return this.jobsService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.jobsService.remove(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/apply')
-  apply(@Param('id') jobId: string, @Body() dto: ApplyJobDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  apply(@Param('id') jobId: string, @Body() dto: ApplyJobDto, @CurrentUser() user: JwtPayload) {
     return this.jobsService.apply(jobId, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/applications')
-  getApplications(@Param('id') jobId: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getApplications(@Param('id') jobId: string, @CurrentUser() user: JwtPayload) {
     return this.jobsService.getApplications(jobId, user.sub);
   }
 
@@ -267,16 +247,14 @@ export class JobsController {
   updateApplicationStatus(
     @Param('id') applicationId: string,
     @Body('status') status: ApplicationStatus,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.jobsService.updateApplicationStatus(applicationId, user.sub, status);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('applications/:id/withdraw')
-  withdrawApplication(@Param('id') applicationId: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  withdrawApplication(@Param('id') applicationId: string, @CurrentUser() user: JwtPayload) {
     return this.jobsService.withdrawApplication(applicationId, user.sub);
   }
 }

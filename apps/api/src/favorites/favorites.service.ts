@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class FavoritesService {
+  private readonly logger = new Logger(FavoritesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async toggle(
@@ -51,7 +53,9 @@ export class FavoritesService {
           },
         });
       }
-    } catch { /* non-critical */ }
+    } catch (err) {
+      this.logger.warn(`Failed to send favorite notification: ${(err as Error).message}`);
+    }
 
     return { favorited: true };
   }

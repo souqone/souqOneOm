@@ -1,14 +1,22 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { useSearch, type SearchHit } from '@/lib/api/search'
 import { resolveLocationLabel } from '@/lib/location-data'
 import { getImageUrl } from '@/lib/image-utils'
 import type { ActiveFilters } from '../types/filters.types'
 import type { UnifiedListingItem } from '../types/unified-item.types'
-import type { ListingCategory } from '../types/category.types'
-import { ENTITY_TYPE_TO_CATEGORY, type GlobalEntityType } from '../config/global-filters.config'
+import {
+  CATEGORY_TO_ENTITY,
+  ENTITY_TO_CATEGORY,
+  FAVORITE_ENTITY_TYPE,
+  buildDetailHref,
+  type SearchCategory,
+  type MeiliEntityType,
+} from '../config/search-engine.config'
+
+// ── Return type ──────────────────────────────────────────────────────────────
 
 interface UseGlobalSearchReturn {
   items:      UnifiedListingItem[]
@@ -21,46 +29,28 @@ interface UseGlobalSearchReturn {
 }
 
 interface UseGlobalSearchOptions {
-  /** Search query — if empty, returns no results unless `entityType` is set */
+  /** Search query */
   q?: string
-  /** Restrict to a single entity type (used by tabs) */
-  entityType?: GlobalEntityType | ''
-  /** Active filters from URL (governorate, priceMin, priceMax) */
+  /** UI category (cars, buses, jobs, ...) — mapped to entityType internally */
+  category?: SearchCategory | ''
+  /** Active filters from URL */
   filters?: ActiveFilters
   /** 1-based page */
   page?: number
 }
 
-// ─── Hit → Unified mapper ─────────────────────────────────────────────────────
+import type { ListingCategory } from '../types/category.types'
+
+// ── Hit → Unified mapper ────────────────────────────────────────────────────
 
 function hitToUnified(hit: SearchHit, locale: string): UnifiedListingItem {
-  const entityType = (hit._entityType ?? '').toLowerCase() as GlobalEntityType
-  const category: ListingCategory =
-    (ENTITY_TYPE_TO_CATEGORY as Record<string, ListingCategory>)[entityType] ?? 'cars'
+  const entityType = (hit._entityType ?? '').toLowerCase() as MeiliEntityType
+  const rawCategory = ENTITY_TO_CATEGORY[entityType] ?? 'cars'
+  // Cast to ListingCategory (transport → services fallback for UI purposes)
+  const category = (rawCategory === 'transport' ? 'services' : rawCategory) as ListingCategory
 
   const price = (hit.price ?? hit.basePrice ?? hit.priceFrom ?? null) as number | null
   const image = hit.imageUrl ? getImageUrl(hit.imageUrl) ?? null : null
-
-  // Choose href based on category
-  const href: string = (() => {
-    switch (category) {
-      case 'cars':     return `/sale/car/${hit.id}`
-      case 'buses':    return `/sale/bus/${hit.id}`
-      case 'parts':    return `/sale/part/${hit.id}`
-      case 'services': return `/sale/service/${hit.id}`
-      case 'jobs':     return `/jobs/${hit.slug || hit.id}`
-      default:         return `/sale/car/${hit.id}`
-    }
-  })()
-
-  // Favorite entity type maps
-  const favoriteMap: Record<string, string> = {
-    cars:     'LISTING',
-    buses:    'BUS_LISTING',
-    parts:    'SPARE_PART',
-    services: 'CAR_SERVICE',
-    jobs:     'JOB',
-  }
 
   return {
     id:                  hit.id,
@@ -75,8 +65,8 @@ function hitToUnified(hit: SearchHit, locale: string): UnifiedListingItem {
     primaryBadge:        null,
     secondaryBadge:      null,
     details:             [],
-    href,
-    favoriteEntityType:  favoriteMap[category] ?? 'LISTING',
+    href:                buildDetailHref(rawCategory, hit.id, hit.slug),
+    favoriteEntityType:  FAVORITE_ENTITY_TYPE[rawCategory] ?? 'LISTING',
     attributes: {
       slug:        hit.slug,
       make:        hit.make,
@@ -90,19 +80,20 @@ function hitToUnified(hit: SearchHit, locale: string): UnifiedListingItem {
   }
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGlobalSearch({
   q,
-  entityType,
+  category,
   filters = {},
   page = 1,
 }: UseGlobalSearchOptions): UseGlobalSearchReturn {
-  // We're inside next-intl context; useLocale just to ensure consistent locale resolution
-  const _t = useTranslations('listings')
   const locale = useLocale()
-  void _t
 
+  // Map UI category → Meilisearch entityType
+  const entityType = category ? CATEGORY_TO_ENTITY[category] : undefined
+
+  // Extract filters
   const governorate = (filters.governorate as string) || undefined
   const priceRange = filters['priceMin_priceMax'] as string | undefined
   const [pmin, pmax] = priceRange ? priceRange.split('|') : []
@@ -113,13 +104,23 @@ export function useGlobalSearch({
     : sort === 'newest' ? 'newest'
     : undefined
 
+  // Advanced filters (per-category)
+  const make        = (filters.make as string) || undefined
+  const model       = (filters.model as string) || undefined
+  const condition   = (filters.condition as string) || undefined
+  const listingType = (filters.listingType as string) || undefined
+
   const query = useSearch(
     {
       q:          q || undefined,
-      entityType: entityType || undefined,
+      entityType,
       governorate,
       minPrice:   pmin ? Number(pmin) : undefined,
       maxPrice:   pmax ? Number(pmax) : undefined,
+      make,
+      model,
+      condition,
+      listingType,
       sortBy,
       page,
       limit:      24,

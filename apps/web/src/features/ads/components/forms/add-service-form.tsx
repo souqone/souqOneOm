@@ -7,9 +7,8 @@ import dynamic from 'next/dynamic';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
 import { useCreateCarService } from '@/lib/api';
-import { getAuthToken } from '@/lib/auth';
+import { apiFetch } from '@/lib/auth';
 import { useToast } from '@/components/toast';
-import { API_BASE } from '@/lib/config';
 import { getGovernorates, getCities } from '@/lib/location-data';
 import { inputCls, labelCls, sectionCls, sectionTitleCls, chipCls, checkboxLabelCls, checkboxCls, checkboxTextCls } from '@/lib/constants/form-styles';
 import { FormErrorOverlay } from '@/components/form-error-overlay';
@@ -126,15 +125,13 @@ export function AddServiceForm() {
       const svc = await create.mutateAsync(payload);
 
       if (images.length > 0) {
-        const token = getAuthToken();
         for (const img of images) {
           if (img.file) {
             const fd = new FormData();
             fd.append('file', img.file);
             fd.append('isPrimary', String(img.isPrimary));
-            await fetch(`${API_BASE}/api/v1/uploads/services/${svc.id}/images`, {
+            await apiFetch(`/uploads/services/${svc.id}/images`, {
               method: 'POST',
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
               body: fd,
             });
           }

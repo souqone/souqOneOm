@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   ConflictException,
@@ -15,6 +16,7 @@ import { ApplyJobDto } from './dto/apply-job.dto';
 import { Prisma, ApplicationStatus } from '@prisma/client';
 import { generateSlug } from '../common/utils/entity.utils';
 import { incrementViewCount } from '../common/utils/view-count.helper';
+import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
 import { SearchService } from '../search/search.service';
 import { INDEXES } from '../search/search.service';
 
@@ -28,6 +30,8 @@ const DETAIL_CACHE_TTL = 600;  // 10 minutes
 
 @Injectable()
 export class JobsService {
+  private readonly logger = new Logger(JobsService.name);
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
@@ -86,12 +90,14 @@ export class JobsService {
     });
 
     // Sync to Meilisearch + invalidate cache
-    this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(job)).catch(() => {});
+    this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(job))
+      .catch((err) => this.logger.warn(`Failed to index job ${job.id}: ${(err as Error).message}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
 
     // Smart notifications: notify matching drivers for HIRING jobs
     if (dto.jobType === 'HIRING') {
-      this.notifyMatchingDrivers(job).catch(() => {});
+      this.notifyMatchingDrivers(job)
+        .catch((err) => this.logger.warn(`Failed to notify matching drivers for job ${job.id}: ${(err as Error).message}`));
     }
 
     return job;
@@ -122,7 +128,7 @@ export class JobsService {
         title: 'وظيفة قد تناسبك',
         body: `وظيفة جديدة "${job.title}" في ${job.governorate}`,
         data: { jobId: job.id },
-      }).catch(() => {}),
+      }).catch((err) => this.logger.warn(`Failed to send job recommendation for job ${job.id}: ${(err as Error).message}`)),
     );
 
     await Promise.allSettled(notifPromises);
@@ -248,7 +254,8 @@ export class JobsService {
     });
 
     // Sync to Meilisearch + invalidate caches
-    this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(updated)).catch(() => {});
+    this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(updated))
+      .catch((err) => this.logger.warn(`Failed to index updated job ${updated.id}: ${(err as Error).message}`));
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
 
@@ -267,7 +274,8 @@ export class JobsService {
     await this.prisma.cleanupPolymorphicOrphans('JOB', id);
 
     // Remove from Meilisearch + invalidate caches
-    this.searchService.removeDocument(INDEXES.JOBS, id).catch(() => {});
+    this.searchService.removeDocument(INDEXES.JOBS, id)
+      .catch((err) => this.logger.warn(`Failed to remove job ${id} from search: ${(err as Error).message}`));
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
 
@@ -302,23 +310,25 @@ export class JobsService {
     if (job.status !== 'ACTIVE') throw new ForbiddenException('هذه الوظيفة مغلقة');
     if (job.userId === applicantId) throw new ForbiddenException('لا يمكنك التقديم على وظيفتك الخاصة');
 
-    // check duplicate
-    const existing = await this.prisma.jobApplication.findUnique({
-      where: { jobId_applicantId: { jobId, applicantId } },
-    });
-    if (existing) throw new ConflictException('لقد قدمت على هذه الوظيفة مسبقاً');
-
-    const application = await this.prisma.jobApplication.create({
-      data: {
-        jobId,
-        applicantId,
-        message: dto.message,
-        resumeUrl: dto.resumeUrl,
-      },
-      include: {
-        applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
-      },
-    });
+    let application;
+    try {
+      application = await this.prisma.jobApplication.create({
+        data: {
+          jobId,
+          applicantId,
+          message: dto.message,
+          resumeUrl: dto.resumeUrl,
+        },
+        include: {
+          applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
+        },
+      });
+    } catch (err) {
+      if (isPrismaUniqueError(err)) {
+        throw new ConflictException('لقد قدمت على هذه الوظيفة مسبقاً');
+      }
+      throw err;
+    }
 
     // notify job owner
     await this.notifications.create({

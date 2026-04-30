@@ -4,6 +4,8 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { BusesService } from './buses.service';
 import { CreateBusListingDto } from './dto/create-bus-listing.dto';
@@ -18,8 +20,7 @@ export class BusesController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateBusListingDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreateBusListingDto, @CurrentUser() user: JwtPayload) {
     return this.busesService.create(dto, user.sub);
   }
 
@@ -30,9 +31,8 @@ export class BusesController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myListings(@Req() req: Request, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const user = req.user as JwtPayload;
-    return this.busesService.myListings(user.sub, parseInt(page || '1'), parseInt(limit || '20'));
+  myListings(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
+    return this.busesService.myListings(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
   @Get('slug/:slug')
@@ -47,29 +47,25 @@ export class BusesController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateBusListingDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  update(@Param('id') id: string, @Body() dto: UpdateBusListingDto, @CurrentUser() user: JwtPayload) {
     return this.busesService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.remove(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/images')
-  addImages(@Param('id') id: string, @Body() body: { urls: string[] }, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  addImages(@Param('id') id: string, @Body() body: { urls: string[] }, @CurrentUser() user: JwtPayload) {
     return this.busesService.addImages(id, user.sub, body.urls);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('images/:imageId')
-  removeImage(@Param('imageId') imageId: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  removeImage(@Param('imageId') imageId: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.removeImage(imageId, user.sub);
   }
 
@@ -77,15 +73,13 @@ export class BusesController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/status-history')
-  getStatusHistory(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getStatusHistory(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.getStatusHistory(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/stats')
-  getStats(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getStats(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.getStats(id, user.sub);
   }
 
@@ -93,22 +87,19 @@ export class BusesController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/offers')
-  createOffer(@Param('id') id: string, @Body() dto: CreateBusOfferDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  createOffer(@Param('id') id: string, @Body() dto: CreateBusOfferDto, @CurrentUser() user: JwtPayload) {
     return this.busesService.createOffer(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/offers')
-  getOffers(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  getOffers(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.getOffers(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('offers/:offerId')
-  updateOffer(@Param('offerId') offerId: string, @Body() dto: UpdateBusOfferDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  updateOffer(@Param('offerId') offerId: string, @Body() dto: UpdateBusOfferDto, @CurrentUser() user: JwtPayload) {
     return this.busesService.updateOffer(offerId, user.sub, dto);
   }
 }

@@ -12,7 +12,6 @@
 | `/parts` | `useParts` | partCategory (via ListingPageShell) | condition, make, minPrice/maxPrice | ❌ |
 | `/services` | `useCarServices` | serviceType (via ListingPageShell) | providerType, isHomeService, governorate | ❌ |
 | `/transport` | `useTransportServices` | governorate | search, transportType, providerType | ❌ |
-| `/trips` | `useTrips` | governorate | search, tripType, scheduleType | ❌ |
 
 ### Existing Cards
 
@@ -23,7 +22,7 @@
 | `EquipmentCard` (inline `equipment/page.tsx`) | `/equipment` | title, price/dailyPrice, listingType badge, governorate, createdAt |
 | `PartCard` (inline `parts/page.tsx`) | `/parts` | title, price, condition badge, isOriginal badge, governorate |
 | Service card (inline `services/page.tsx`) | `/services` | title, priceFrom-priceTo, serviceType badge, isHomeService badge, providerName, governorate |
-| `GenericListingCard` (`components/generic-listing-card.tsx`) | `/transport`, `/trips` | title, price, governorate, createdAt, description |
+| `GenericListingCard` (`components/generic-listing-card.tsx`) | `/transport` | title, price, governorate, createdAt, description |
 
 ### API DTOs — Supported Query Params
 
@@ -49,9 +48,6 @@
 
 **`/transport`** (`QueryTransportDto`):
 `page`, `limit`, `search`, `transportType`, `providerType`, `governorate`, `userId`
-
-**`/trips`** (`QueryTripsDto`):
-`page`, `limit`, `search`, `tripType`, `scheduleType`, `governorate`, `userId`
 
 ---
 
@@ -114,6 +110,6 @@ UnifiedCard.tsx  →  renders from UnifiedListingItem (consistent UI for all 7 t
 1. **Single page `browse/[category]/page.tsx`** — replaces 7 separate pages. Old pages stay alive for backward-compat redirects.
 2. **`UnifiedListingItem`** — all 7 API shapes normalize to one type. Normalizers live in `categories.config.ts`.
 3. **Filter config per category** — `filters.config.ts` exports `CATEGORY_FILTERS: Record<ListingCategory, FilterField[]>`. The UI reads this; no hardcoded filter lists.
-4. **`useUnifiedListings`** — internally calls the correct hook (`useBusListings`, `useTrips`, etc.) based on `category` param. Returns `{ items: UnifiedListingItem[], meta, isLoading, isError }`.
+4. **`useUnifiedListings`** — internally calls the correct hook (`useBusListings`, `useTransportServices`, etc.) based on `category` param. Returns `{ items: UnifiedListingItem[], meta, isLoading, isError }`.
 5. **Sort** — only `/listings` has full sort on API. Others get `sort: newest` only until API DTOs are extended.
 6. **`primary: true` filters** → shown directly in FilterBar. `primary: false` → collapsed under "المزيد" button.

@@ -166,6 +166,13 @@
     overflow-x: hidden;
   }
 
+  /* Ensure placeholders in Arabic/RTL maintain RTL direction even if input is dir="auto" */
+  html[dir="rtl"] input::placeholder,
+  html[dir="rtl"] textarea::placeholder {
+    direction: rtl;
+    text-align: right;
+  }
+
   body {
     min-height: 100vh;
     line-height: 1.7;
@@ -669,7 +676,7 @@
   100% { transform: translate3d(-50%, 0, 0); }
 }
 
-[dir="rtl"] @keyframes marquee {
+@keyframes marquee-rtl {
   0% { transform: translate3d(0, 0, 0); }
   100% { transform: translate3d(50%, 0, 0); }
 }
@@ -679,6 +686,10 @@
   width: max-content;
   flex-wrap: nowrap;
   animation: marquee 60s linear infinite;
+}
+
+[dir="rtl"] .animate-marquee {
+  animation-name: marquee-rtl;
 }
 
 @utility pause-on-hover {

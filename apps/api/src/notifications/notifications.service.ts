@@ -1,14 +1,20 @@
-import { Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { ChatGateway } from '../chat/chat.gateway';
 import { PushService } from './push.service';
+import { NOTIFICATION_EVENTS } from './notification.events';
+
+/** Retention window for the notification list (findAll only) */
+const RETENTION_DAYS = 90;
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => ChatGateway)) private readonly chatGateway: ChatGateway,
+    private readonly events: EventEmitter2,
     private readonly pushService: PushService,
   ) {}
 
@@ -23,10 +29,11 @@ export class NotificationsService {
       },
     });
 
-    // Push real-time notification via WebSocket
-    try {
-      await this.chatGateway.sendNotification(dto.userId, notification);
-    } catch { /* gateway may not be initialized yet */ }
+    // Fire event — ChatGateway listens and pushes via WebSocket
+    this.events.emit(NOTIFICATION_EVENTS.CREATED, {
+      userId: dto.userId,
+      notification,
+    });
 
     // Send Web Push notification
     try {
@@ -36,22 +43,27 @@ export class NotificationsService {
         url: '/notifications',
         data: dto.data,
       });
-    } catch { /* push may not be configured */ }
+    } catch (err) {
+      this.logger.error('Push notification failed', err instanceof Error ? err.stack : String(err));
+    }
 
     return notification;
   }
 
   async findAll(userId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
+    const retentionDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
+    const where = { userId, createdAt: { gt: retentionDate } };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
-        where: { userId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      this.prisma.notification.count({ where: { userId } }),
+      this.prisma.notification.count({ where }),
     ]);
 
     return {
@@ -61,6 +73,7 @@ export class NotificationsService {
   }
 
   async getUnreadCount(userId: string) {
+    // No retention filter — badge must reflect ALL unread notifications
     const count = await this.prisma.notification.count({
       where: { userId, isRead: false },
     });
@@ -68,18 +81,15 @@ export class NotificationsService {
   }
 
   async markAsRead(id: string, userId: string) {
-    const notification = await this.prisma.notification.findFirst({
-      where: { id, userId },
-    });
-
-    if (!notification) {
-      throw new NotFoundException('الإشعار غير موجود');
-    }
-
-    await this.prisma.notification.update({
-      where: { id },
+    const result = await this.prisma.notification.updateMany({
+      where: { id, userId, isRead: false },
       data: { isRead: true },
     });
+
+    if (result.count === 0) {
+      const exists = await this.prisma.notification.findFirst({ where: { id, userId } });
+      if (!exists) throw new NotFoundException('الإشعار غير موجود');
+    }
 
     return { message: 'تم تحديد الإشعار كمقروء' };
   }

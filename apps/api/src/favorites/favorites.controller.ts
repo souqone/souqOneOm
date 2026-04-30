@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
@@ -32,14 +32,14 @@ export class FavoritesController {
   getUserFavorites(
     @CurrentUser() user: JwtPayload,
     @Query('type') entityType?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit = 20,
   ) {
     return this.favoritesService.getUserFavorites(
       user.sub,
       entityType,
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
+      page,
+      limit,
     );
   }
 

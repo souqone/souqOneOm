@@ -1,9 +1,9 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, Req,
+  UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { PartsService } from './parts.service';
 import { CreatePartDto } from './dto/create-part.dto';
@@ -15,8 +15,7 @@ export class PartsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreatePartDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreatePartDto, @CurrentUser() user: JwtPayload) {
     return this.partsService.create(dto, user.sub);
   }
 
@@ -27,8 +26,7 @@ export class PartsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myParts(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+  myParts(@CurrentUser() user: JwtPayload) {
     return this.partsService.myParts(user.sub);
   }
 
@@ -39,15 +37,13 @@ export class PartsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreatePartDto>, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  update(@Param('id') id: string, @Body() dto: Partial<CreatePartDto>, @CurrentUser() user: JwtPayload) {
     return this.partsService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.partsService.remove(id, user.sub);
   }
 }

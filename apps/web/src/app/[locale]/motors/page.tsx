@@ -2,6 +2,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { serverFetch } from '@/lib/server-fetch';
 import type { ListingsResponse } from '@/lib/api/listings';
+import type { SparePartItem } from '@/lib/api/parts';
 import type { Metadata } from 'next';
 import { MotorsShell } from './motors-shell';
 
@@ -29,22 +30,28 @@ interface PaginatedServices {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
+interface PaginatedParts {
+  items: SparePartItem[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export const metadata: Metadata = {
   title: 'السيارات وخدماتها | سوق ون',
   description: 'تصفح السيارات للبيع والإيجار وخدمات السيارات في عُمان — صيانة، تنظيف، تعديل، فحص، سمكرة وأكثر.',
 };
 
 async function getMotorsData() {
-  const [saleCars, rentalCars, services] = await Promise.all([
+  const [saleCars, rentalCars, services, parts] = await Promise.all([
     serverFetch<ListingsResponse>('/listings?page=1&limit=8&listingType=SALE', { revalidate: 60, tags: ['listings'] }).catch(() => null),
     serverFetch<ListingsResponse>('/listings?page=1&limit=4&listingType=RENTAL', { revalidate: 60, tags: ['listings'] }).catch(() => null),
     serverFetch<PaginatedServices>('/services?page=1&limit=6', { revalidate: 60, tags: ['services'] }).catch(() => null),
+    serverFetch<PaginatedParts>('/parts?page=1&limit=8', { revalidate: 60, tags: ['parts'] }).catch(() => null),
   ]);
-  return { saleCars, rentalCars, services };
+  return { saleCars, rentalCars, services, parts };
 }
 
 export default async function MotorsPage() {
-  const { saleCars, rentalCars, services } = await getMotorsData();
+  const { saleCars, rentalCars, services, parts } = await getMotorsData();
 
   return (
     <>
@@ -53,6 +60,7 @@ export default async function MotorsPage() {
         saleCars={saleCars?.items ?? []}
         rentalCars={rentalCars?.items ?? []}
         services={services?.items ?? []}
+        parts={parts?.items ?? []}
       />
       <Footer />
     </>

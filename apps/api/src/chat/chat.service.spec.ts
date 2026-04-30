@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -54,6 +55,7 @@ describe('ChatService', () => {
       providers: [
         ChatService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
@@ -10,6 +10,7 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import * as path from 'path';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Redis Socket.IO Adapter for horizontal scaling
@@ -49,7 +50,7 @@ async function bootstrap() {
   const port = process.env.PORT || process.env.API_PORT || 4000;
   await app.listen(port);
 
-  console.warn(`🚀 كار وان API يعمل على: http://localhost:${port}/api/v1`);
+  logger.log(`كار وان API يعمل على: http://localhost:${port}/api/v1`);
 }
 
 bootstrap();

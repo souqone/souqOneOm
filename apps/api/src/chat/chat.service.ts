@@ -2,16 +2,24 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
+import { CHAT_EVENTS } from './chat.events';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ChatService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   /* ───── RESOLVE ENTITY OWNER ───── */
   private async resolveEntityOwner(entityType: string, entityId: string): Promise<{ ownerId: string; title: string }> {
@@ -76,7 +84,8 @@ export class ChatService {
     try {
       const { title } = await this.resolveEntityOwner(entityType, entityId);
       return title;
-    } catch {
+    } catch (err) {
+      this.logger.warn(`Failed to resolve entity title: ${entityType}/${entityId} — ${err}`);
       return '';
     }
   }
@@ -286,6 +295,9 @@ export class ChatService {
       });
     }
 
+    // Fire event — Gateway listens and broadcasts via Redis
+    this.events.emit(CHAT_EVENTS.MESSAGE_SENT, { conversationId, message });
+
     return message;
   }
 
@@ -317,7 +329,12 @@ export class ChatService {
       data: { isDeleted: true, deletedAt: new Date(), content: '' },
     });
 
-    return { messageId, conversationId: msg.conversationId };
+    const result = { messageId, conversationId: msg.conversationId };
+
+    // Fire event — Gateway listens and broadcasts via Redis
+    this.events.emit(CHAT_EVENTS.MESSAGE_DELETED, result);
+
+    return result;
   }
 
   /* ───── ARCHIVE / UNARCHIVE CONVERSATION ───── */
@@ -388,6 +405,24 @@ export class ChatService {
     ]);
 
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+  }
+
+  /* ───── PARTICIPANT CHECKS ───── */
+  async isParticipant(conversationId: string, userId: string): Promise<boolean> {
+    const p = await this.prisma.conversationParticipant.findFirst({
+      where: { conversationId, userId },
+      select: { id: true },
+    });
+    return !!p;
+  }
+
+  /** Lightweight — returns IDs only, used by Gateway on connection */
+  async getConversationIds(userId: string): Promise<string[]> {
+    const rows = await this.prisma.conversationParticipant.findMany({
+      where: { userId, isArchived: false },
+      select: { conversationId: true },
+    });
+    return rows.map(r => r.conversationId);
   }
 
   /* ───── CHECK ONLINE STATUS ───── */

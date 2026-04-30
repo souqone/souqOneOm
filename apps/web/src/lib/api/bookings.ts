@@ -68,24 +68,43 @@ export interface BookingAvailability {
   status: string;
 }
 
+export interface CreateBookingPayload {
+  entityType: BookingEntityType;
+  entityId: string;
+  startDate: string;
+  endDate: string;
+  driverRequested?: boolean;
+  insuranceSelected?: boolean;
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  notes?: string;
+  quantity?: number;
+}
+
+function validateBookingPayload(data: CreateBookingPayload): void {
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) throw new Error('تواريخ غير صالحة');
+  if (start < today) throw new Error('تاريخ البداية يجب أن يكون في المستقبل');
+  if (end <= start) throw new Error('تاريخ النهاية يجب أن يكون بعد البداية');
+  if (data.quantity !== undefined && (!Number.isInteger(data.quantity) || data.quantity < 1)) {
+    throw new Error('الكمية يجب أن تكون رقم صحيح 1 أو أكثر');
+  }
+}
+
 export function useCreateBooking() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
-      entityType: BookingEntityType;
-      entityId: string;
-      startDate: string;
-      endDate: string;
-      driverRequested?: boolean;
-      insuranceSelected?: boolean;
-      pickupLocation?: string;
-      dropoffLocation?: string;
-      notes?: string;
-    }) =>
-      apiRequest<BookingItem>('/bookings', {
+    mutationFn: (data: CreateBookingPayload) => {
+      validateBookingPayload(data);
+      return apiRequest<BookingItem>('/bookings', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
     },

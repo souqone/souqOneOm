@@ -5,12 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class PushService {
   private readonly logger = new Logger(PushService.name);
+  private readonly vapidPublicKey: string;
   private enabled: boolean;
 
   constructor(private readonly prisma: PrismaService) {
     const publicKey = process.env.VAPID_PUBLIC_KEY || '';
     const privateKey = process.env.VAPID_PRIVATE_KEY || '';
     const subject = process.env.VAPID_SUBJECT || 'mailto:admin@souqone.com';
+    this.vapidPublicKey = publicKey;
 
     let valid = !!(publicKey && privateKey);
 
@@ -30,7 +32,10 @@ export class PushService {
   }
 
   getPublicKey(): string {
-    return process.env.VAPID_PUBLIC_KEY || '';
+    if (!this.vapidPublicKey) {
+      this.logger.warn('VAPID public key requested but not configured');
+    }
+    return this.vapidPublicKey;
   }
 
   async subscribe(userId: string, subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) {
@@ -52,9 +57,9 @@ export class PushService {
     return { success: true };
   }
 
-  async unsubscribe(endpoint: string) {
+  async unsubscribe(endpoint: string, userId: string) {
     await this.prisma.pushSubscription.deleteMany({
-      where: { endpoint },
+      where: { endpoint, userId },
     });
     return { success: true };
   }

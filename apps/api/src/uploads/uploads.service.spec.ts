@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UploadsService } from './uploads.service';
+import { UploadFileStorageService } from './upload-file-storage.service';
+import { UploadImageManagerService } from './upload-image-manager.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
@@ -36,6 +38,8 @@ describe('UploadsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UploadsService,
+        UploadFileStorageService,
+        UploadImageManagerService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: CloudinaryService, useValue: mockCloudinary },
       ],

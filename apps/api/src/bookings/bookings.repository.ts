@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -20,21 +20,24 @@ const ENTITY_INCLUDES = {
   tripService: { include: { images: true } },
 };
 
-const FULL_INCLUDE = {
+export const FULL_INCLUDE = {
   ...ENTITY_INCLUDES,
   renter: { select: USER_SELECT },
   owner: { select: USER_SELECT },
 } as const;
 
 // Map entityType → the foreign key field on Booking
-function entityFkField(entityType: string): string {
-  switch (entityType) {
-    case 'BUS': return 'busListingId';
-    case 'EQUIPMENT': return 'equipmentListingId';
-    case 'TRANSPORT': return 'transportServiceId';
-    case 'TRIP': return 'tripServiceId';
-    default: return 'listingId';
-  }
+export function entityFkField(entityType: string): string {
+  const map: Record<string, string> = {
+    CAR: 'listingId',
+    BUS: 'busListingId',
+    EQUIPMENT: 'equipmentListingId',
+    TRANSPORT: 'transportServiceId',
+    TRIP: 'tripServiceId',
+  };
+  const field = map[entityType];
+  if (!field) throw new BadRequestException(`نوع كيان غير معروف: ${entityType}`);
+  return field;
 }
 
 @Injectable()
@@ -48,31 +51,26 @@ export class BookingsRepository {
     });
   }
 
-  async findById(id: string) {
+  async findById(id: string, options?: { withEntityOnly?: boolean }) {
     return this.prisma.booking.findUnique({
       where: { id },
-      include: {
-        listing: { include: { images: true, seller: { select: USER_SELECT } } },
-        busListing: { include: { images: true, user: { select: USER_SELECT } } },
-        equipmentListing: { include: { images: true, user: { select: USER_SELECT } } },
-        transportService: { include: { images: true, user: { select: USER_SELECT } } },
-        tripService: { include: { images: true, user: { select: USER_SELECT } } },
-        renter: { select: USER_SELECT },
-        owner: { select: USER_SELECT },
-      },
-    });
-  }
-
-  async findByIdWithEntity(id: string) {
-    return this.prisma.booking.findUnique({
-      where: { id },
-      include: {
-        listing: true,
-        busListing: true,
-        equipmentListing: true,
-        transportService: true,
-        tripService: true,
-      },
+      include: options?.withEntityOnly
+        ? {
+            listing: true,
+            busListing: true,
+            equipmentListing: true,
+            transportService: true,
+            tripService: true,
+          }
+        : {
+            listing: { include: { images: true, seller: { select: USER_SELECT } } },
+            busListing: { include: { images: true, user: { select: USER_SELECT } } },
+            equipmentListing: { include: { images: true, user: { select: USER_SELECT } } },
+            transportService: { include: { images: true, user: { select: USER_SELECT } } },
+            tripService: { include: { images: true, user: { select: USER_SELECT } } },
+            renter: { select: USER_SELECT },
+            owner: { select: USER_SELECT },
+          },
     });
   }
 

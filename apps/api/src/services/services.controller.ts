@@ -4,6 +4,8 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -15,8 +17,7 @@ export class ServicesController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateServiceDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreateServiceDto, @CurrentUser() user: JwtPayload) {
     return this.servicesService.create(dto, user.sub);
   }
 
@@ -27,9 +28,8 @@ export class ServicesController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myServices(@Req() req: Request, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const user = req.user as JwtPayload;
-    return this.servicesService.myListings(user.sub, parseInt(page ?? '1'), parseInt(limit ?? '20'));
+  myServices(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
+    return this.servicesService.myListings(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
   @Get('slug/:slug')
@@ -44,22 +44,19 @@ export class ServicesController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/status')
-  toggleStatus(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  toggleStatus(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.servicesService.toggleStatus(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateServiceDto>, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  update(@Param('id') id: string, @Body() dto: Partial<CreateServiceDto>, @CurrentUser() user: JwtPayload) {
     return this.servicesService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.servicesService.remove(id, user.sub);
   }
 }

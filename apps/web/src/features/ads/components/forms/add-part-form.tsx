@@ -6,9 +6,8 @@ import { useRouter } from '@/i18n/navigation';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
 import { useCreatePart, useBrands } from '@/lib/api';
-import { getAuthToken } from '@/lib/auth';
+import { apiFetch } from '@/lib/auth';
 import { useToast } from '@/components/toast';
-import { API_BASE } from '@/lib/config';
 import { getGovernorates, getCities } from '@/lib/location-data';
 import { inputCls, labelCls, sectionCls, sectionTitleCls, chipCls, checkboxLabelCls, checkboxCls, checkboxTextCls } from '@/lib/constants/form-styles';
 import { FormErrorOverlay } from '@/components/form-error-overlay';
@@ -137,15 +136,13 @@ export function AddPartForm() {
       const part = await createPart.mutateAsync(payload);
 
       if (images.length > 0) {
-        const token = getAuthToken();
         for (const img of images) {
           if (img.file) {
             const fd = new FormData();
             fd.append('file', img.file);
             fd.append('isPrimary', String(img.isPrimary));
-            await fetch(`${API_BASE}/api/v1/uploads/parts/${part.id}/images`, {
+            await apiFetch(`/uploads/parts/${part.id}/images`, {
               method: 'POST',
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
               body: fd,
             });
           }

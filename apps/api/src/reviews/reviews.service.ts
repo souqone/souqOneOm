@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   BadRequestException,
   NotFoundException,
   ForbiddenException,
@@ -7,12 +8,15 @@ import {
 import { Prisma, ReviewEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { QueryReviewsDto } from './dto/query-reviews.dto';
 import { ReplyReviewDto } from './dto/reply-review.dto';
 
 @Injectable()
 export class ReviewsService {
+  private readonly logger = new Logger(ReviewsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -28,33 +32,27 @@ export class ReviewsService {
       await this.validateJobReview(dto, reviewerId);
     }
 
-    const existing = await this.prisma.review.findUnique({
-      where: {
-        reviewerId_entityType_entityId: {
-          reviewerId,
+    let review;
+    try {
+      review = await this.prisma.review.create({
+        data: {
+          rating: dto.rating,
+          comment: dto.comment,
           entityType: dto.entityType as ReviewEntityType,
           entityId: dto.entityId,
+          reviewerId,
+          revieweeId: dto.revieweeId,
         },
-      },
-    });
-
-    if (existing) {
-      throw new BadRequestException('لقد قمت بتقييم هذا العنصر مسبقاً');
+        include: {
+          reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
+        },
+      });
+    } catch (err) {
+      if (isPrismaUniqueError(err)) {
+        throw new BadRequestException('لقد قمت بتقييم هذا العنصر مسبقاً');
+      }
+      throw err;
     }
-
-    const review = await this.prisma.review.create({
-      data: {
-        rating: dto.rating,
-        comment: dto.comment,
-        entityType: dto.entityType as ReviewEntityType,
-        entityId: dto.entityId,
-        reviewerId,
-        revieweeId: dto.revieweeId,
-      },
-      include: {
-        reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
-      },
-    });
 
     // Recalculate average rating
     await this.recalculateUserRating(dto.revieweeId);
@@ -75,7 +73,9 @@ export class ReviewsService {
         userId: dto.revieweeId,
         data: { reviewId: review.id, entityType: dto.entityType, entityId: dto.entityId },
       });
-    } catch { /* non-critical */ }
+    } catch (err) {
+      this.logger.warn(`Failed to send review notification: ${(err as Error).message}`);
+    }
 
     return review;
   }

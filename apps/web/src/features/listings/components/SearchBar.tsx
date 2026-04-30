@@ -1,9 +1,14 @@
+/**
+ * @deprecated — This component is replaced by the unified search in BrowseGlobalShell.
+ * All search now goes through /browse with Meilisearch. Do not use for new features.
+ * Scheduled for removal in a future sprint.
+ */
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { Search, MapPin, Tag, Banknote, X, Check } from 'lucide-react'
-import { createPortal } from 'react-dom'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcn/popover'
 import clsx from 'clsx'
 import type { ListingCategory } from '../types/category.types'
 import type { ActiveFilters, FilterField, FilterOption } from '../types/filters.types'
@@ -27,12 +32,10 @@ interface FieldConfig {
   isPrimary?: boolean
 }
 
-interface DropdownProps {
+interface FilterContentProps {
   field: FilterField
   value: string | null
   onSelect: (value: string | null) => void
-  onClose: () => void
-  triggerRect: DOMRect | null
 }
 
 // ── Range Fields (extracted to comply with rules-of-hooks) ──────────────
@@ -88,90 +91,40 @@ function RangeFields({
   )
 }
 
-// ── Dropdown Component ─────────────────────────────────────────────────────────────────────────
+// ── Filter Content Component ──────────────────────────────────────────────────────────────────
 
-function Dropdown({ field, value, onSelect, onClose, triggerRect }: DropdownProps) {
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
+function FilterContent({ field, value, onSelect }: FilterContentProps) {
+  switch (field.type) {
+    case 'select':
+      return (
+        <div className="max-h-60 overflow-y-auto no-scrollbar py-1">
+          {field.options?.map((opt: FilterOption) => {
+            const isSelected = value === opt.value
+            return (
+              <button
+                key={opt.value}
+                onClick={() => onSelect(isSelected ? null : opt.value)}
+                className={clsx(
+                  'w-full px-4 py-2.5 text-right text-sm flex items-center justify-between gap-3 transition-colors',
+                  isSelected
+                    ? 'bg-primary/10 text-primary font-semibold'
+                    : 'text-on-surface hover:bg-surface-container'
+                )}
+              >
+                <span>{opt.labelAr}</span>
+                {isSelected && <Check size={16} className="text-primary shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
+      )
 
-  useEffect(() => {
-    if (triggerRect) {
-      setPosition({
-        top: triggerRect.bottom + 8,
-        left: triggerRect.left,
-        width: Math.max(280, triggerRect.width),
-      })
-    }
-  }, [triggerRect])
+    case 'range':
+      return <RangeFields field={field} value={value} onSelect={onSelect} />
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        onClose()
-      }
-    }
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [onClose])
-
-  const renderContent = () => {
-    switch (field.type) {
-      case 'select':
-        return (
-          <div className="py-1">
-            {field.options?.map((opt: FilterOption) => {
-              const isSelected = value === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => onSelect(isSelected ? null : opt.value)}
-                  className={clsx(
-                    'w-full px-4 py-2.5 text-right text-sm flex items-center justify-between gap-3 transition-colors',
-                    isSelected
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-on-surface hover:bg-surface-container'
-                  )}
-                >
-                  <span>{opt.labelAr}</span>
-                  {isSelected && <Check size={16} className="text-primary shrink-0" />}
-                </button>
-              )
-            })}
-          </div>
-        )
-
-      case 'range':
-        return <RangeFields field={field} value={value} onSelect={onSelect} />
-
-      default:
-        return null
-    }
+    default:
+      return null
   }
-
-  const content = (
-    <div
-      ref={dropdownRef}
-      style={{
-        position: 'fixed',
-        top: position.top,
-        left: position.left,
-        width: position.width,
-        zIndex: 9999,
-      }}
-      className="bg-surface-container-low border border-outline-variant/30 rounded-xl shadow-ambient overflow-hidden"
-    >
-      {renderContent()}
-    </div>
-  )
-
-  return createPortal(content, document.body)
 }
 
 // ── Field Button Component ─────────────────────────────────────────────────
@@ -182,14 +135,15 @@ interface FieldButtonProps {
   isActive: boolean
   onClick: () => void
   onClear?: () => void
-  ref?: React.Ref<HTMLButtonElement>
 }
 
-const FieldButton = ({ config, value, isActive, onClick, onClear, ref }: FieldButtonProps) => {
-  return (
-    <button
-      ref={ref}
-      onClick={onClick}
+const FieldButton = React.forwardRef<HTMLButtonElement, FieldButtonProps>(
+  ({ config, value, isActive, onClick, onClear, ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        onClick={onClick}
+        {...props}
       className={clsx(
         'group relative flex-1 min-w-0 h-full px-4 py-3 text-right transition-all duration-200 ease-out',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-inset',
@@ -227,17 +181,17 @@ const FieldButton = ({ config, value, isActive, onClick, onClear, ref }: FieldBu
       )}
     </button>
   )
-}
+  }
+)
+FieldButton.displayName = 'FieldButton'
 
 // ── Main SearchBar Component ───────────────────────────────────────────────
 
 export function SearchBar({ category, filters, onFilterChange, onSearch }: SearchBarProps) {
-  const t = useTranslations('pages')
+  const t = useTranslations('listings')
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null)
 
-  const triggerRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const config = FILTERS_CONFIG[category]
@@ -265,10 +219,6 @@ export function SearchBar({ category, filters, onFilterChange, onSearch }: Searc
   ].filter(f => config.some(cfg => cfg.key === f.key) || f.key === 'governorate')
 
   const handleFieldClick = useCallback((key: string) => {
-    const trigger = triggerRefs.current.get(key)
-    if (trigger) {
-      setTriggerRect(trigger.getBoundingClientRect())
-    }
     setActiveDropdown(activeDropdown === key ? null : key)
   }, [activeDropdown])
 
@@ -321,24 +271,36 @@ export function SearchBar({ category, filters, onFilterChange, onSearch }: Searc
             <div key={field.key} className="relative flex-1 min-w-0">
               {index > 0 && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-8 bg-outline-variant/30" />}
 
-              <FieldButton
-                ref={(el: HTMLButtonElement | null) => { triggerRefs.current.set(field.key, el) }}
-                config={field}
-                value={value}
-                isActive={isActive}
-                onClick={() => handleFieldClick(field.key)}
-                onClear={() => handleClear(field.key)}
-              />
-
-              {isOpen && fieldConfig && (
-                <Dropdown
-                  field={fieldConfig}
-                  value={filters[field.key] as string | null}
-                  onSelect={(val) => handleSelect(field.key, val)}
-                  onClose={() => setActiveDropdown(null)}
-                  triggerRect={triggerRect}
-                />
-              )}
+              <Popover 
+                open={isOpen} 
+                onOpenChange={(open) => setActiveDropdown(open ? field.key : null)}
+              >
+                <PopoverTrigger asChild>
+                  <FieldButton
+                    config={field}
+                    value={value}
+                    isActive={isActive}
+                    onClick={() => handleFieldClick(field.key)}
+                    onClear={() => handleClear(field.key)}
+                  />
+                </PopoverTrigger>
+                {fieldConfig && (
+                  <PopoverContent 
+                    align="end"
+                    sideOffset={8}
+                    className="w-[280px] p-0 bg-surface-container-low border border-outline-variant/30 rounded-xl shadow-ambient overflow-hidden"
+                  >
+                    <FilterContent
+                      field={fieldConfig}
+                      value={filters[field.key] as string | null}
+                      onSelect={(val) => {
+                        handleSelect(field.key, val)
+                        setActiveDropdown(null)
+                      }}
+                    />
+                  </PopoverContent>
+                )}
+              </Popover>
             </div>
           )
         })}
@@ -362,7 +324,7 @@ export function SearchBar({ category, filters, onFilterChange, onSearch }: Searc
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder={t('sfSearchBarPlaceholder')}
+                placeholder={t('sfSearchPlaceholder')}
                 className="w-full bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none text-right transition-all duration-150"
               />
             </div>

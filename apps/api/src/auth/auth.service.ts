@@ -1,75 +1,28 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
-import type { User } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
-import type { JwtPayload } from './auth.types';
 import { MailService } from '../mail/mail.service';
+import { AuthTokenService } from './auth-token.service';
+import { AuthAuditService } from './auth-audit.service';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-
-const REFRESH_TOKEN_EXPIRY_DAYS = 30;
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_SECONDS = 15 * 60; // 15 minutes
 
 @Injectable()
 export class AuthService {
   private readonly googleClient: OAuth2Client;
-  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-    private readonly redis: RedisService,
+    private readonly tokens: AuthTokenService,
+    private readonly audit: AuthAuditService,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
-  }
-
-  private generateVerificationCode(): string {
-    return crypto.randomInt(100000, 999999).toString();
-  }
-
-  private sanitizeUser(user: User) {
-    const { passwordHash, emailVerificationCode, emailVerificationExpiry, passwordResetCode, passwordResetExpiry, ...safeUser } = user;
-    return safeUser;
-  }
-
-  private safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false;
-    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
-  }
-
-  private buildPayload(user: User): JwtPayload {
-    return {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-    };
-  }
-
-  private hashToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
-  }
-
-  private async generateRefreshToken(userId: string): Promise<string> {
-    const token = crypto.randomBytes(64).toString('hex');
-    const hashedToken = this.hashToken(token);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
-
-    await this.prisma.refreshToken.create({
-      data: { token: hashedToken, userId, expiresAt },
-    });
-
-    return token;
   }
 
   async signup(dto: SignupDto) {
@@ -78,7 +31,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const code = this.generateVerificationCode();
+    const code = this.tokens.generateVerificationCode();
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
     try {
@@ -95,10 +48,10 @@ export class AuthService {
 
       await this.mailService.sendVerificationEmail(email, code);
 
-      const accessToken = await this.jwtService.signAsync(this.buildPayload(user));
-      const refreshToken = await this.generateRefreshToken(user.id);
+      const accessToken = await this.tokens.signAccessToken(user);
+      const refreshToken = await this.tokens.generateRefreshToken(user.id);
 
-      return { accessToken, refreshToken, user: this.sanitizeUser(user), requiresVerification: true };
+      return { accessToken, refreshToken, user: this.tokens.sanitizeUser(user), requiresVerification: true };
     } catch (err: any) {
       if (err.code === 'P2002') {
         const field = err.meta?.target?.includes('email') ? 'البريد الإلكتروني' : 'اسم المستخدم';
@@ -108,92 +61,52 @@ export class AuthService {
     }
   }
 
-  private async logAudit(data: {
-    email: string; userId?: string; success: boolean;
-    method?: string; reason?: string; ip?: string; userAgent?: string;
-  }) {
-    try {
-      await this.prisma.loginAudit.create({
-        data: {
-          email: data.email,
-          userId: data.userId,
-          success: data.success,
-          method: data.method || 'EMAIL',
-          ipAddress: data.ip,
-          userAgent: data.userAgent,
-          reason: data.reason,
-        },
-      });
-    } catch (err) {
-      this.logger.error('Failed to write login audit', err);
-    }
-  }
-
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
     const email = dto.email.trim().toLowerCase();
 
     // Brute-force lockout check
-    const lockoutKey = `auth:fail:${email}`;
-    const attempts = await this.redis.get<number>(lockoutKey);
-    if (attempts !== null && attempts >= MAX_LOGIN_ATTEMPTS) {
-      const ttl = await this.redis.getTTL(lockoutKey);
-      await this.logAudit({ email, success: false, reason: 'ACCOUNT_LOCKED', ip, userAgent });
+    const lockout = await this.audit.checkLockout(email);
+    if (lockout.locked) {
+      await this.audit.logAudit({ email, success: false, reason: 'ACCOUNT_LOCKED', ip, userAgent });
       throw new UnauthorizedException(
-        `تم قفل الحساب مؤقتاً بسبب محاولات فاشلة متعددة. حاول مرة أخرى بعد ${Math.ceil(ttl / 60)} دقيقة.`,
+        `تم قفل الحساب مؤقتاً بسبب محاولات فاشلة متعددة. حاول مرة أخرى بعد ${lockout.ttlMinutes} دقيقة.`,
       );
     }
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      await this.redis.incr(lockoutKey, LOCKOUT_DURATION_SECONDS);
-      await this.logAudit({ email, success: false, reason: 'USER_NOT_FOUND', ip, userAgent });
+      await this.audit.recordFailedAttempt(email);
+      await this.audit.logAudit({ email, success: false, reason: 'USER_NOT_FOUND', ip, userAgent });
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
     }
 
     if (!user.passwordHash) {
-      await this.logAudit({ email, userId: user.id, success: false, reason: 'GOOGLE_ONLY', ip, userAgent });
+      await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'GOOGLE_ONLY', ip, userAgent });
       throw new UnauthorizedException('هذا الحساب مسجل بواسطة Google. استخدم تسجيل الدخول بـ Google.');
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) {
-      await this.redis.incr(lockoutKey, LOCKOUT_DURATION_SECONDS);
-      await this.logAudit({ email, userId: user.id, success: false, reason: 'WRONG_PASSWORD', ip, userAgent });
+      await this.audit.recordFailedAttempt(email);
+      await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'WRONG_PASSWORD', ip, userAgent });
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
     }
 
     // Reset lockout on success
-    await this.redis.del(lockoutKey);
-    await this.logAudit({ email, userId: user.id, success: true, ip, userAgent });
+    await this.audit.resetLockout(email);
+    await this.audit.logAudit({ email, userId: user.id, success: true, ip, userAgent });
 
-    const accessToken = await this.jwtService.signAsync(this.buildPayload(user));
-    const refreshToken = await this.generateRefreshToken(user.id);
+    const accessToken = await this.tokens.signAccessToken(user);
+    const refreshToken = await this.tokens.generateRefreshToken(user.id);
 
-    return { accessToken, refreshToken, user: this.sanitizeUser(user) };
+    return { accessToken, refreshToken, user: this.tokens.sanitizeUser(user) };
   }
 
   async refresh(token: string) {
-    const hashedToken = this.hashToken(token);
-    const stored = await this.prisma.refreshToken.findUnique({ where: { token: hashedToken } });
-
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    const result = await this.tokens.rotateRefreshToken(token);
+    if (!result) {
       throw new UnauthorizedException('رمز التجديد غير صالح أو منتهي');
     }
-
-    // إلغاء الرمز القديم
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    });
-
-    const user = await this.prisma.user.findUnique({ where: { id: stored.userId } });
-    if (!user) {
-      throw new UnauthorizedException('المستخدم غير موجود');
-    }
-
-    const accessToken = await this.jwtService.signAsync(this.buildPayload(user));
-    const refreshToken = await this.generateRefreshToken(user.id);
-
-    return { accessToken, refreshToken };
+    return result;
   }
 
   async googleAuth(dto: GoogleAuthDto, ip?: string, userAgent?: string) {
@@ -248,12 +161,12 @@ export class AuthService {
       }
     }
 
-    await this.logAudit({ email, userId: user.id, success: true, method: 'GOOGLE', ip, userAgent });
+    await this.audit.logAudit({ email, userId: user.id, success: true, method: 'GOOGLE', ip, userAgent });
 
-    const accessToken = await this.jwtService.signAsync(this.buildPayload(user));
-    const refreshToken = await this.generateRefreshToken(user.id);
+    const accessToken = await this.tokens.signAccessToken(user);
+    const refreshToken = await this.tokens.generateRefreshToken(user.id);
 
-    return { accessToken, refreshToken, user: this.sanitizeUser(user) };
+    return { accessToken, refreshToken, user: this.tokens.sanitizeUser(user) };
   }
 
   async verifyEmail(userId: string, code: string) {
@@ -269,7 +182,7 @@ export class AuthService {
       throw new BadRequestException('رمز التحقق منتهي. اطلب رمز جديد.');
     }
 
-    if (!this.safeCompare(user.emailVerificationCode, code)) {
+    if (!this.tokens.safeCompare(user.emailVerificationCode, code)) {
       throw new BadRequestException('رمز التحقق غير صحيح');
     }
 
@@ -286,7 +199,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('المستخدم غير موجود');
     if (user.isVerified) return { message: 'البريد موثق بالفعل' };
 
-    const code = this.generateVerificationCode();
+    const code = this.tokens.generateVerificationCode();
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.user.update({
@@ -303,7 +216,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
     if (!user) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
 
-    const code = this.generateVerificationCode();
+    const code = this.tokens.generateVerificationCode();
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.user.update({
@@ -323,7 +236,7 @@ export class AuthService {
     if (new Date() > user.passwordResetExpiry) {
       throw new BadRequestException('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
     }
-    if (!this.safeCompare(user.passwordResetCode, code)) {
+    if (!this.tokens.safeCompare(user.passwordResetCode, code)) {
       throw new BadRequestException('رمز إعادة التعيين غير صحيح');
     }
 
@@ -337,14 +250,7 @@ export class AuthService {
   }
 
   async logout(token: string) {
-    const hashedToken = this.hashToken(token);
-    const stored = await this.prisma.refreshToken.findUnique({ where: { token: hashedToken } });
-    if (stored && !stored.revokedAt) {
-      await this.prisma.refreshToken.update({
-        where: { id: stored.id },
-        data: { revokedAt: new Date() },
-      });
-    }
+    await this.tokens.revokeRefreshToken(token);
     return { message: 'تم تسجيل الخروج بنجاح' };
   }
 }

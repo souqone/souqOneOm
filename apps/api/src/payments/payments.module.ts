@@ -1,9 +1,9 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
+import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { ThawaniService } from './thawani.service';
+import { PaymentActivationService } from './payment-activation.service';
 import { PaymentsCronService } from './payments-cron.service';
 import { PaymentWebhookProcessor, PAYMENT_WEBHOOK_QUEUE, PAYMENT_DLQ } from './payment-webhook.processor';
 import { AdminPaymentsController } from './admin-payments.controller';
@@ -13,7 +13,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [
     PrismaModule,
-    ScheduleModule.forRoot(),
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST || '127.0.0.1',
@@ -22,10 +21,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
     }),
     BullModule.registerQueue({ name: PAYMENT_WEBHOOK_QUEUE }),
     BullModule.registerQueue({ name: PAYMENT_DLQ }),
-    forwardRef(() => NotificationsModule),
+    NotificationsModule,
   ],
   controllers: [PaymentsController, AdminPaymentsController],
-  providers: [PaymentsService, ThawaniService, PaymentsCronService, PaymentWebhookProcessor],
+  providers: [PaymentsService, ThawaniService, PaymentActivationService, PaymentsCronService, PaymentWebhookProcessor],
   exports: [PaymentsService, ThawaniService],
 })
 export class PaymentsModule {}

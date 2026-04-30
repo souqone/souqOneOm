@@ -4,7 +4,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
+import { motion } from 'framer-motion';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcn/popover';
 import { getGovernorates, type LocationOption } from '@/lib/location-data';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
+};
 
 const HERO_SLIDES = ['/hero.webp', '/hero-banner-2.png'];
 const SLIDE_INTERVAL = 5000;
@@ -20,13 +27,10 @@ const OMAN_GOVS = getGovernorates('OM');
 export function HeroSection() {
   const router = useRouter();
   const t = useTranslations('home');
-  const tc = useTranslations('common');
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedGov, setSelectedGov] = useState<{ value: string; label: string } | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const nextSlide = useCallback(() => {
     setActiveSlide(prev => (prev + 1) % HERO_SLIDES.length);
@@ -41,66 +45,66 @@ export function HeroSection() {
     return () => clearInterval(timer);
   }, [nextSlide]);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (query.trim()) params.set('search', query.trim());
+    if (query.trim()) params.set('q', query.trim());
     if (selectedGov) params.set('governorate', selectedGov.value);
     const qs = params.toString();
-    router.push(`/listings${qs ? `?${qs}` : ''}` as any);
+    router.push(`/browse${qs ? `?${qs}` : ''}`);
   }
 
   return (
     <section>
       {/* ── Search Bar ── */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        className="max-w-7xl mx-auto px-3 sm:px-6 py-2"
+      >
        <div className="lg:max-w-3xl lg:mx-auto">
         <form
           onSubmit={handleSearch}
           className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container rounded-full border border-outline-variant/20 ps-1.5 pe-1.5 py-1 shadow-sm"
         >
-          <div ref={dropdownRef} className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-1 text-xs sm:text-sm font-bold text-on-surface bg-surface-container-low dark:bg-surface-container-high rounded-full px-2.5 py-1.5 sm:px-3 sm:py-2 hover:bg-surface-container transition-colors"
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-xs sm:text-sm font-bold text-on-surface bg-surface-container-low dark:bg-surface-container-high rounded-full px-2.5 py-1.5 sm:px-3 sm:py-2 hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-primary">location_on</span>
+                <span>{selectedGov ? selectedGov.label : t('heroLocation')}</span>
+                <span className="material-symbols-outlined text-[12px] sm:text-[14px] text-on-surface-variant">expand_more</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent 
+              align="end" 
+              sideOffset={8}
+              className="w-44 max-h-56 overflow-y-auto no-scrollbar rounded-xl border border-outline-variant/20 bg-surface-container-lowest dark:bg-surface-container shadow-lg p-1"
             >
-              <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-primary">location_on</span>
-              <span>{selectedGov ? selectedGov.label : t('heroLocation')}</span>
-              <span className="material-symbols-outlined text-[12px] sm:text-[14px] text-on-surface-variant">expand_more</span>
-            </button>
-            {showDropdown && (
-              <div className="absolute top-full mt-1 start-0 z-50 w-44 max-h-56 overflow-y-auto rounded-xl border border-outline-variant/20 bg-surface-container-lowest dark:bg-surface-container shadow-lg py-1">
+              <button
+                type="button"
+                onClick={() => setSelectedGov(null)}
+                className={`w-full text-start px-3 py-2 text-xs sm:text-sm hover:bg-surface-container-low rounded-lg transition-colors ${!selectedGov ? 'text-primary font-bold bg-primary/5' : 'text-on-surface'}`}
+              >
+                {t('heroLocationAll')}
+              </button>
+              {OMAN_GOVS.map((gov: LocationOption) => (
                 <button
+                  key={gov.value}
                   type="button"
-                  onClick={() => { setSelectedGov(null); setShowDropdown(false); }}
-                  className={`w-full text-start px-3 py-2 text-xs sm:text-sm hover:bg-surface-container-low transition-colors ${!selectedGov ? 'text-primary font-bold' : 'text-on-surface'}`}
+                  onClick={() => setSelectedGov(gov)}
+                  className={`w-full text-start px-3 py-2 text-xs sm:text-sm hover:bg-surface-container-low rounded-lg transition-colors ${selectedGov?.value === gov.value ? 'text-primary font-bold bg-primary/5' : 'text-on-surface'}`}
                 >
-                  {t('heroLocationAll')}
+                  {gov.label}
                 </button>
-                {OMAN_GOVS.map((gov: LocationOption) => (
-                  <button
-                    key={gov.value}
-                    type="button"
-                    onClick={() => { setSelectedGov(gov); setShowDropdown(false); }}
-                    className={`w-full text-start px-3 py-2 text-xs sm:text-sm hover:bg-surface-container-low transition-colors ${selectedGov?.value === gov.value ? 'text-primary font-bold' : 'text-on-surface'}`}
-                  >
-                    {gov.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              ))}
+            </PopoverContent>
+          </Popover>
 
           <input
             ref={inputRef}
@@ -121,7 +125,7 @@ export function HeroSection() {
         </form>
       </div>
 
-      </div>
+      </motion.div>
 
       {/* ── Hero Banner Slider ── */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
@@ -130,7 +134,7 @@ export function HeroSection() {
             <Image
               key={src}
               src={src}
-              alt={tc('siteName')}
+              alt="سوق وان"
               fill
               priority={i === 0}
               className={`object-cover transition-opacity duration-700 ${i === activeSlide ? 'opacity-100' : 'opacity-0'}`}

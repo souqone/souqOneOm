@@ -6,11 +6,10 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -23,25 +22,23 @@ export class BookingsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateBookingDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  create(@Body() dto: CreateBookingDto, @CurrentUser() user: JwtPayload) {
     return this.bookingsService.create(dto, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  findMyBookings(@Query() query: QueryBookingsDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  findMyBookings(@Query() query: QueryBookingsDto, @CurrentUser() user: JwtPayload) {
     return this.bookingsService.findMyBookings(user.sub, query);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('received')
-  findReceivedBookings(@Query() query: QueryBookingsDto, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  findReceivedBookings(@Query() query: QueryBookingsDto, @CurrentUser() user: JwtPayload) {
     return this.bookingsService.findReceivedBookings(user.sub, query);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('availability/:entityType/:entityId')
   getAvailability(
     @Param('entityType') entityType: string,
@@ -50,6 +47,7 @@ export class BookingsController {
     return this.bookingsService.getAvailability(entityType, entityId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('calculate-price')
   calculatePrice(
     @Query('entityType') entityType: string,
@@ -62,8 +60,7 @@ export class BookingsController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as JwtPayload;
+  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.bookingsService.findOne(id, user.sub);
   }
 
@@ -72,9 +69,8 @@ export class BookingsController {
   updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateBookingStatusDto,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     return this.bookingsService.updateStatus(id, dto, user.sub);
   }
 }

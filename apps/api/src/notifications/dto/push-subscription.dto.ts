@@ -1,4 +1,4 @@
-import { IsString, IsObject, ValidateNested } from 'class-validator';
+import { IsString, IsObject, IsUrl, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class PushKeys {
@@ -10,7 +10,7 @@ class PushKeys {
 }
 
 export class PushSubscriptionDto {
-  @IsString()
+  @IsUrl({}, { message: 'endpoint must be a valid URL' })
   endpoint!: string;
 
   @IsObject()
@@ -20,6 +20,6 @@ export class PushSubscriptionDto {
 }
 
 export class PushUnsubscribeDto {
-  @IsString()
+  @IsUrl({}, { message: 'endpoint must be a valid URL' })
   endpoint!: string;
 }

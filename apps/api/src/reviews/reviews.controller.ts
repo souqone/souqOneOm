@@ -5,17 +5,15 @@ import {
   Param,
   Body,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/auth.types';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { QueryReviewsDto } from './dto/query-reviews.dto';
 import { ReplyReviewDto } from './dto/reply-review.dto';
-
-interface JwtPayload { sub: string; username: string }
 
 @Controller('reviews')
 export class ReviewsController {
@@ -23,8 +21,8 @@ export class ReviewsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateReviewDto, @Req() req: Request) {
-    return this.reviewsService.create(dto, (req.user as JwtPayload).sub);
+  create(@Body() dto: CreateReviewDto, @CurrentUser() user: JwtPayload) {
+    return this.reviewsService.create(dto, user.sub);
   }
 
   @Get()
@@ -42,8 +40,8 @@ export class ReviewsController {
   reply(
     @Param('id') id: string,
     @Body() dto: ReplyReviewDto,
-    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.reviewsService.reply(id, dto, (req.user as JwtPayload).sub);
+    return this.reviewsService.reply(id, dto, user.sub);
   }
 }

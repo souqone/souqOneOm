@@ -6,12 +6,12 @@ import {
   ServiceUnavailableException,
   ConflictException,
 } from '@nestjs/common';
-import { PaymentStatus, SubscriptionPlan } from '@prisma/client';
+import { PaymentStatus, Prisma, SubscriptionPlan } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ThawaniService } from './thawani.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { CreateFeaturedPaymentDto } from './dto/create-featured-payment.dto';
 import { CreateSubscriptionPaymentDto } from './dto/create-subscription-payment.dto';
+import { PaymentActivationService } from './payment-activation.service';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING:    ['PROCESSING', 'FAILED', 'EXPIRED'],
@@ -23,7 +23,6 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 const FEATURED_PRICE_BAISA = 2000; // 2 OMR
-const FEATURED_DURATION_DAYS = 30;
 
 const PLAN_PRICES: Record<string, { baisa: number; name: string }> = {
   PRO: { baisa: 5000, name: 'اشتراك برو' },
@@ -37,7 +36,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly thawani: ThawaniService,
-    private readonly notifications: NotificationsService,
+    private readonly activation: PaymentActivationService,
   ) {}
 
   private assertEnabled() {
@@ -51,7 +50,9 @@ export class PaymentsService {
       await this.prisma.paymentEvent.create({
         data: { paymentId, event, data: data ?? undefined },
       });
-    } catch { /* non-critical */ }
+    } catch (err) {
+      this.logger.warn(`Failed to log payment event: ${(err as Error).message}`);
+    }
   }
 
   private async transitionStatus(paymentId: string, from: PaymentStatus, to: PaymentStatus, extra?: Record<string, any>) {
@@ -64,6 +65,34 @@ export class PaymentsService {
 
     const data: any = { status: to, ...extra };
     const payment = await this.prisma.payment.update({ where: { id: paymentId }, data });
+    await this.logEvent(paymentId, `STATUS_${to}`, { from });
+    return payment;
+  }
+
+  private async transitionStatusIfCurrent(
+    paymentId: string,
+    from: PaymentStatus,
+    to: PaymentStatus,
+    extra?: Record<string, any>,
+  ) {
+    const allowed = VALID_TRANSITIONS[from] || [];
+    if (!allowed.includes(to)) {
+      this.logger.error(`Invalid transition: ${from} → ${to} for payment ${paymentId}`);
+      await this.logEvent(paymentId, 'INVALID_TRANSITION', { from, to });
+      throw new ConflictException(`Cannot transition from ${from} to ${to}`);
+    }
+
+    const data: any = { status: to, ...extra };
+    const result = await this.prisma.payment.updateMany({
+      where: { id: paymentId, status: from },
+      data,
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    const payment = await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
     await this.logEvent(paymentId, `STATUS_${to}`, { from });
     return payment;
   }
@@ -110,32 +139,51 @@ export class PaymentsService {
       }
     }
 
-    // Prevent double payment for same entity
-    const existing = await this.prisma.payment.findFirst({
-      where: { userId, type: 'FEATURED', entityType: dto.entityType, entityId: dto.entityId, status: 'PENDING' },
+    const { payment, isExisting } = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.payment.findFirst({
+        where: {
+          userId,
+          type: 'FEATURED',
+          entityType: dto.entityType,
+          entityId: dto.entityId,
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+      });
+      if (existing) {
+        return { payment: existing, isExisting: true };
+      }
+
+      const created = await tx.payment.create({
+        data: {
+          userId,
+          amount: FEATURED_PRICE_BAISA,
+          type: 'FEATURED',
+          entityType: dto.entityType,
+          entityId: dto.entityId,
+          ipAddress: ip,
+          idempotencyKey,
+        },
+      });
+
+      return { payment: created, isExisting: false };
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
-    if (existing?.thawaniSessionId) {
-      this.logger.warn(`Reusing pending payment ${existing.id} for ${dto.entityType}:${dto.entityId}`);
+
+    if (isExisting && payment.thawaniSessionId) {
+      this.logger.warn(`Reusing pending payment ${payment.id} for ${dto.entityType}:${dto.entityId}`);
       return {
-        paymentId: existing.id,
-        checkoutUrl: this.thawani.getCheckoutUrl(existing.thawaniSessionId),
-        sessionId: existing.thawaniSessionId,
+        paymentId: payment.id,
+        checkoutUrl: this.thawani.getCheckoutUrl(payment.thawaniSessionId),
+        sessionId: payment.thawaniSessionId,
       };
     }
 
-    const baseUrl = process.env.WEB_URL || 'http://localhost:3000';
+    if (isExisting) {
+      throw new ConflictException('توجد عملية دفع قيد المعالجة لهذا الإعلان');
+    }
 
-    const payment = await this.prisma.payment.create({
-      data: {
-        userId,
-        amount: FEATURED_PRICE_BAISA,
-        type: 'FEATURED',
-        entityType: dto.entityType,
-        entityId: dto.entityId,
-        ipAddress: ip,
-        idempotencyKey,
-      },
-    });
+    const baseUrl = process.env.WEB_URL || 'http://localhost:3000';
 
     await this.logEvent(payment.id, 'CREATED', { entityType: dto.entityType, entityId: dto.entityId });
 
@@ -182,31 +230,44 @@ export class PaymentsService {
       }
     }
 
-    // Prevent double payment
-    const existing = await this.prisma.payment.findFirst({
-      where: { userId, type: 'SUBSCRIPTION', status: 'PENDING' },
+    const { payment, isExisting } = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.payment.findFirst({
+        where: { userId, type: 'SUBSCRIPTION', status: { in: ['PENDING', 'PROCESSING'] } },
+      });
+      if (existing) {
+        return { payment: existing, isExisting: true };
+      }
+
+      const created = await tx.payment.create({
+        data: {
+          userId,
+          amount: planInfo.baisa,
+          type: 'SUBSCRIPTION',
+          metadata: { plan: dto.plan },
+          ipAddress: ip,
+          idempotencyKey,
+        },
+      });
+
+      return { payment: created, isExisting: false };
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
-    if (existing?.thawaniSessionId) {
-      this.logger.warn(`Reusing pending subscription payment ${existing.id} for user ${userId}`);
+
+    if (isExisting && payment.thawaniSessionId) {
+      this.logger.warn(`Reusing pending subscription payment ${payment.id} for user ${userId}`);
       return {
-        paymentId: existing.id,
-        checkoutUrl: this.thawani.getCheckoutUrl(existing.thawaniSessionId),
-        sessionId: existing.thawaniSessionId,
+        paymentId: payment.id,
+        checkoutUrl: this.thawani.getCheckoutUrl(payment.thawaniSessionId),
+        sessionId: payment.thawaniSessionId,
       };
     }
 
-    const baseUrl = process.env.WEB_URL || 'http://localhost:3000';
+    if (isExisting) {
+      throw new ConflictException('توجد عملية اشتراك قيد المعالجة بالفعل');
+    }
 
-    const payment = await this.prisma.payment.create({
-      data: {
-        userId,
-        amount: planInfo.baisa,
-        type: 'SUBSCRIPTION',
-        metadata: { plan: dto.plan },
-        ipAddress: ip,
-        idempotencyKey,
-      },
-    });
+    const baseUrl = process.env.WEB_URL || 'http://localhost:3000';
 
     await this.logEvent(payment.id, 'CREATED', { plan: dto.plan });
 
@@ -285,81 +346,22 @@ export class PaymentsService {
     const current = await this.prisma.payment.findUnique({ where: { id: paymentId } });
     if (!current || current.status === 'PAID') return;
 
-    const payment = await this.transitionStatus(paymentId, current.status, 'PAID', { paidAt: new Date() });
+    const payment = await this.transitionStatusIfCurrent(paymentId, current.status, 'PAID', { paidAt: new Date() });
+    if (!payment) return;
 
     this.logger.log(`Payment SUCCESS: ${payment.id} type=${payment.type} amount=${payment.amount} user=${payment.userId}`);
     await this.logEvent(paymentId, 'PAID', { type: payment.type, amount: payment.amount });
 
     if (payment.type === 'FEATURED' && payment.entityType && payment.entityId) {
-      await this.activateFeatured(payment.entityType, payment.entityId);
+      await this.activation.activateFeatured(payment.entityType, payment.entityId);
     }
 
     if (payment.type === 'SUBSCRIPTION') {
       const plan = (payment.metadata as any)?.plan as string;
-      await this.activateSubscription(payment.userId, plan as SubscriptionPlan, payment.id);
+      await this.activation.activateSubscription(payment.userId, plan as SubscriptionPlan, payment.id);
     }
 
-    try {
-      await this.notifications.create({
-        type: 'PAYMENT_SUCCESS',
-        title: 'تمت عملية الدفع بنجاح',
-        body: payment.type === 'FEATURED' ? 'تم تفعيل الإعلان المميز' : 'تم تفعيل الاشتراك',
-        userId: payment.userId,
-        data: { paymentId: payment.id },
-      });
-    } catch { /* non-critical */ }
-  }
-
-  private async activateFeatured(entityType: string, entityId: string) {
-    const featuredUntil = new Date();
-    featuredUntil.setDate(featuredUntil.getDate() + FEATURED_DURATION_DAYS);
-
-    const data = { isPremium: true, featuredUntil };
-
-    switch (entityType) {
-      case 'LISTING':
-        await this.prisma.listing.update({ where: { id: entityId }, data });
-        break;
-      case 'BUS_LISTING':
-        await this.prisma.busListing.update({ where: { id: entityId }, data });
-        break;
-      case 'EQUIPMENT_LISTING':
-        await this.prisma.equipmentListing.update({ where: { id: entityId }, data });
-        break;
-    }
-  }
-
-  private async activateSubscription(userId: string, plan: SubscriptionPlan, paymentId: string) {
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30);
-
-    await this.prisma.subscription.upsert({
-      where: { userId },
-      create: {
-        userId,
-        plan,
-        status: 'ACTIVE',
-        endDate,
-        paymentId,
-      },
-      update: {
-        plan,
-        status: 'ACTIVE',
-        startDate: new Date(),
-        endDate,
-        paymentId,
-      },
-    });
-
-    try {
-      await this.notifications.create({
-        type: 'SUBSCRIPTION_ACTIVATED',
-        title: 'تم تفعيل الاشتراك',
-        body: `تم تفعيل خطة ${plan}`,
-        userId,
-        data: { plan },
-      });
-    } catch { /* non-critical */ }
+    await this.activation.notifyPaymentSuccess(payment);
   }
 
   // ── User payments history ──
