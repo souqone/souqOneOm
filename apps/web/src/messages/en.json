@@ -3269,5 +3269,39 @@
     "step2Desc": "Compare prices and specs, and contact the seller directly",
     "step3Title": "Close the Deal",
     "step3Desc": "Schedule a viewing or complete the purchase safely"
+  },
+  "terms": {
+    "title": "Terms & Conditions",
+    "lastUpdated": "Last updated: April 2026",
+    "agree": "Agree",
+    "close": "Close",
+    "s1Title": "1. Acceptance of Terms",
+    "s1Body": "By using SouqOne, you agree to these terms and conditions in full. If you do not agree to any part, you may not use the platform. SouqOne reserves the right to modify these terms at any time, and you are responsible for reviewing them regularly.",
+    "s2Title": "2. User Account",
+    "s2Body": "You are responsible for maintaining the confidentiality of your account and password, and for all activities under your account. Provide accurate information at registration. Creating multiple accounts or impersonating others is prohibited.",
+    "s3Title": "3. Listings & Content",
+    "s3Body": "Content you post must be lawful, truthful, and not infringe on others' rights or intellectual property. We reserve the right to remove any non-compliant, misleading, or inappropriate listing without prior notice.",
+    "s4Title": "4. Transactions & Payments",
+    "s4Body": "SouqOne is an intermediary platform only and is not a party to any transaction between users. You are responsible for verifying listings and exercising caution when dealing with advertisers. We are not liable for any losses or disputes arising between users.",
+    "s5Title": "5. Limitation of Liability",
+    "s5Body": "The service is provided as-is without any express or implied warranties. We are not liable for any direct or indirect damages arising from use of the platform, including data loss or lost profits."
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: April 2026",
+    "agree": "Agree",
+    "close": "Close",
+    "s1Title": "1. Information We Collect",
+    "s1Body": "We collect information you provide directly (name, email, phone, location) when registering or posting a listing, plus essential usage data (IP address, browser type, pages visited) to improve the service.",
+    "s2Title": "2. How We Use Your Information",
+    "s2Body": "We use your information to provide the service, improve user experience, communicate with you about your account and listings, and send important notifications. We do not use your data for any other purpose without explicit consent.",
+    "s3Title": "3. Sharing Information",
+    "s3Body": "We do not sell or rent your personal information. We may share necessary information only with service providers helping us operate the platform (payment, cloud storage, analytics) under strict confidentiality agreements.",
+    "s4Title": "4. Data Security",
+    "s4Body": "We take reasonable security measures (encryption, firewalls, restricted access) to protect your information from unauthorized access, loss, or alteration. However, no system is 100% secure, and we cannot guarantee absolute security.",
+    "s5Title": "5. Your Rights",
+    "s5Body": "You have the right to access, correct, export, or request deletion of your personal data at any time. You also have the right to object to or restrict processing of your data in certain cases.",
+    "contactTitle": "Contact Us",
+    "contactBody": "If you have any questions about this Privacy Policy or to exercise your rights, contact us at info@souqone.com and we will respond within 48 hours."
   }
 }

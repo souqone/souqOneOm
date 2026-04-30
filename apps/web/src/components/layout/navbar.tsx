@@ -53,8 +53,8 @@ function useNavLinks() {
         { href: '/browse/equipment', label: t('allEquipment'), icon: 'construction', desc: tn('equipmentSaleRental') },
         { href: '/browse/equipment?listingType=SALE', label: t('sellEquipment'), icon: 'sell', desc: tn('equipmentForSaleDesc') },
         { href: '/browse/equipment?listingType=RENTAL', label: t('rentEquipment'), icon: 'car_rental', desc: tn('equipmentRentalDesc') },
-        { href: '/equipment/requests', label: t('requestEquipment'), icon: 'assignment_add', desc: tn('equipmentRequestsDesc') },
-        { href: '/equipment/operators', label: t('operators'), icon: 'engineering', desc: tn('equipmentOperatorsDesc') },
+        { href: '/browse/equipment-requests', label: t('requestEquipment'), icon: 'assignment_add', desc: tn('equipmentRequestsDesc') },
+        { href: '/browse/operators', label: t('operators'), icon: 'engineering', desc: tn('equipmentOperatorsDesc') },
       ],
     },
     {

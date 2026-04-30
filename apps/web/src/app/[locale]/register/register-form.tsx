@@ -1,6 +1,5 @@
 'use client';
 
-import { Link } from '@/i18n/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { apiRequest } from '@/lib/auth';
 import { useAuth } from '@/providers/auth-provider';
@@ -10,6 +9,7 @@ import { getCountryCodes } from '@/lib/country-codes';
 import { useTranslations, useLocale } from 'next-intl';
 import { CustomSelect } from '@/components/ui/custom-select';
 import { getGovernorates, getCities } from '@/lib/location-data';
+import { LegalSheet } from '@/components/legal/LegalSheet';
 
 export default function RegisterForm() {
   const t = useTranslations('auth');
@@ -29,6 +29,7 @@ export default function RegisterForm() {
   const [governorate, setGovernorate] = useState('');
   const [city, setCity] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(false);
+  const [legalSheet, setLegalSheet] = useState<'terms' | 'privacy' | null>(null);
 
   const governorateOptions = getGovernorates(country, locale);
   const cityOptions = getCities(country, governorate, locale);
@@ -267,9 +268,21 @@ export default function RegisterForm() {
           />
           <span className="text-[10px] text-on-surface-variant leading-relaxed">
             {t('agreeToTerms')}{' '}
-            <Link href="/terms" className="text-primary hover:underline">{t('termsAndConditions')}</Link>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); setLegalSheet('terms'); }}
+              className="text-primary hover:underline font-semibold"
+            >
+              {t('termsAndConditions')}
+            </button>
             {' '}{t('and')}{' '}
-            <Link href="/privacy" className="text-primary hover:underline">{t('privacyPolicy')}</Link>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); setLegalSheet('privacy'); }}
+              className="text-primary hover:underline font-semibold"
+            >
+              {t('privacyPolicy')}
+            </button>
           </span>
         </label>
 
@@ -321,6 +334,18 @@ export default function RegisterForm() {
           {t('loginBtn')}
         </button>
       </p>
+
+      {legalSheet && (
+        <LegalSheet
+          type={legalSheet}
+          open
+          onClose={() => setLegalSheet(null)}
+          onAgree={() => {
+            setAgreedTerms(true);
+            setLegalSheet(null);
+          }}
+        />
+      )}
     </div>
   );
 }
