@@ -125,18 +125,21 @@ export function AddBusForm() {
   const isContract = form.busListingType === 'BUS_CONTRACT';
   const isSale = form.busListingType === 'BUS_SALE' || form.busListingType === 'BUS_SALE_WITH_CONTRACT';
   const isRent = form.busListingType === 'BUS_RENT';
-  const hasContract = form.busListingType === 'BUS_SALE_WITH_CONTRACT';
+  const hasContract = form.busListingType === 'BUS_SALE_WITH_CONTRACT' || isContract;
 
-  const steps = isContract
-    ? [{ label: tp('busStepContractType') }, { label: tp('busStepContractDetails') }, { label: tp('busStepContractLocation') }]
-    : [{ label: tp('busStepAdType') }, { label: tp('busStepBusInfo') }, { label: tp('busStepPriceDetails') }, { label: tp('busStepLocationPhotos') }];
+  const steps = [
+    { label: tp('busStepAdType') },
+    { label: tp('busStepBusInfo') },
+    { label: isContract ? tp('busStepContractDetails') : tp('busStepPriceDetails') },
+    { label: tp('busStepLocationPhotos') },
+  ];
 
   const maxStep = steps.length - 1;
 
   const canProceed =
-    step === 0 ? !!form.busListingType && (isContract || !!form.busType) :
-    step === 1 ? (isContract ? !!form.title && !!form.requestPassengers : !!form.title && !!form.make && !!form.year && !!form.capacity) :
-    step === 2 ? (isContract ? true : (isSale ? !!form.price : isRent ? (!!form.dailyPrice || !!form.monthlyPrice) : true)) :
+    step === 0 ? !!form.busListingType && !!form.busType :
+    step === 1 ? !!form.title && !!form.make && !!form.year && !!form.capacity :
+    step === 2 ? (isSale ? !!form.price : isRent ? (!!form.dailyPrice || !!form.monthlyPrice) : true) :
     true;
 
   async function handleSubmit() {
@@ -162,7 +165,7 @@ export function AddBusForm() {
 
       // Sale fields
       if (form.price) payload.price = parseFloat(form.price);
-      payload.isPriceNegotiable = form.isPriceNegotiable;
+      if (isSale) payload.isPriceNegotiable = form.isPriceNegotiable;
 
       // Contract fields
       if (form.contractType) payload.contractType = form.contractType;
@@ -250,7 +253,7 @@ export function AddBusForm() {
               </div>
             </section>
 
-            {!isContract && form.busListingType && (
+            {form.busListingType && (
               <section className={sectionCls}>
                 <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">directions_bus</span>{tp('busLabelBusType')}</h2>
                 <div className="flex flex-wrap gap-2">
@@ -266,7 +269,7 @@ export function AddBusForm() {
           </div>
         )}
 
-        {/* ── Step 1: Bus Details / Contract Request Details ── */}
+        {/* ── Step 1: Bus Details (ALL types) ── */}
         {step === 1 && (
           <div className="space-y-8">
             <section className={sectionCls}>
@@ -274,7 +277,7 @@ export function AddBusForm() {
               <div className="space-y-4">
                 <div>
                   <label className={labelCls}>{tp('busLabelAdTitle')}</label>
-                  <input className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} placeholder={isContract ? tp('busPlaceholderContract') : tp('busPlaceholderBus')} />
+                  <input className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} placeholder={tp('busPlaceholderBus')} />
                 </div>
                 <div>
                   <label className={labelCls}>{tp('busLabelDescription')}</label>
@@ -283,130 +286,89 @@ export function AddBusForm() {
               </div>
             </section>
 
-            {isContract ? (
-              <section className={sectionCls}>
-                <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">request_quote</span>{tp('busLabelContractDetails')}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">directions_bus</span>{tp('busLabelBusData')}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>{tp('busLabelBrand')}</label>
+                  <input className={inputCls} value={form.make} onChange={e => set('make', e.target.value)} placeholder={tp('busPlaceholderBrand')} />
+                </div>
+                <div>
+                  <label className={labelCls}>{tp('busLabelModel')}</label>
+                  <input className={inputCls} value={form.model} onChange={e => set('model', e.target.value)} placeholder="Rosa, Coaster" />
+                </div>
+                <div>
+                  <label className={labelCls}>{tp('busLabelYear')}</label>
+                  <input type="number" className={inputCls} value={form.year} onChange={e => set('year', e.target.value)} placeholder="2020" />
+                </div>
+                <div>
+                  <label className={labelCls}>{tp('busLabelCapacity')}</label>
+                  <input type="number" className={inputCls} value={form.capacity} onChange={e => set('capacity', e.target.value)} placeholder="30" />
+                </div>
+                <div>
+                  <label className={labelCls}>{tp('busLabelMileage')}</label>
+                  <input type="number" className={inputCls} value={form.mileage} onChange={e => set('mileage', e.target.value)} placeholder="100000" />
+                </div>
+                <div>
+                  <label className={labelCls}>{tp('busLabelPlate')}</label>
+                  <input className={inputCls} value={form.plateNumber} onChange={e => set('plateNumber', e.target.value)} />
+                </div>
+              </div>
+            </section>
+
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">tune</span>{tp('busLabelSpecs')}</h2>
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelCls}>{tp('busLabelPassengers')}</label>
-                    <input type="number" className={inputCls} value={form.requestPassengers} onChange={e => set('requestPassengers', e.target.value)} placeholder="30" />
-                  </div>
-                  <div>
-                    <label className={labelCls}>{tp('busLabelSchedule')}</label>
-                    <select className={inputCls} value={form.requestSchedule} onChange={e => set('requestSchedule', e.target.value)}>
-                      <option value="">{tp('lfSelect')}</option>
-                      <option value="daily">{tp('busScheduleDaily')}</option>
-                      <option value="weekly">{tp('busScheduleWeekly')}</option>
-                      <option value="monthly">{tp('busScheduleMonthly')}</option>
-                      <option value="one_trip">{tp('busScheduleOneTrip')}</option>
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className={labelCls}>{tp('busLabelRoute')}</label>
-                    <input className={inputCls} value={form.requestRoute} onChange={e => set('requestRoute', e.target.value)} placeholder={tp('busPlaceholderRoute')} />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className={labelCls}>{tp('busLabelContractType')}</label>
+                    <label className={labelCls}>{tp('busLabelFuel')}</label>
                     <div className="flex flex-wrap gap-2">
-                      {CONTRACT_TYPE_KEYS.map(c => (
-                        <button key={c.value} type="button" onClick={() => set('contractType', c.value)}
-                          className={chipCls(form.contractType === c.value)}>{tp(c.labelKey)}</button>
+                      {FUEL_TYPE_KEYS.map(f => (
+                        <button key={f.value} type="button" onClick={() => set('fuelType', f.value)}
+                          className={chipCls(form.fuelType === f.value)}>{tp(f.labelKey)}</button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>{tp('busLabelMonthlyBudget')}</label>
-                    <input type="number" className={inputCls} value={form.price} onChange={e => set('price', e.target.value)} placeholder={tp('busPlaceholderOptional')} />
+                    <label className={labelCls}>{tp('busLabelTransmission')}</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[{ value: 'AUTOMATIC', labelKey: 'busTransAutomatic' as const }, { value: 'MANUAL', labelKey: 'busTransManual' as const }].map(t => (
+                        <button key={t.value} type="button" onClick={() => set('transmission', t.value)}
+                          className={chipCls(form.transmission === t.value)}>{tp(t.labelKey)}</button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </section>
-            ) : (
-              <>
-                <section className={sectionCls}>
-                  <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">directions_bus</span>{tp('busLabelBusData')}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelCls}>{tp('busLabelBrand')}</label>
-                      <input className={inputCls} value={form.make} onChange={e => set('make', e.target.value)} placeholder={tp('busPlaceholderBrand')} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>{tp('busLabelModel')}</label>
-                      <input className={inputCls} value={form.model} onChange={e => set('model', e.target.value)} placeholder="Rosa, Coaster" />
-                    </div>
-                    <div>
-                      <label className={labelCls}>{tp('busLabelYear')}</label>
-                      <input type="number" className={inputCls} value={form.year} onChange={e => set('year', e.target.value)} placeholder="2020" />
-                    </div>
-                    <div>
-                      <label className={labelCls}>{tp('busLabelCapacity')}</label>
-                      <input type="number" className={inputCls} value={form.capacity} onChange={e => set('capacity', e.target.value)} placeholder="30" />
-                    </div>
-                    <div>
-                      <label className={labelCls}>{tp('busLabelMileage')}</label>
-                      <input type="number" className={inputCls} value={form.mileage} onChange={e => set('mileage', e.target.value)} placeholder="100000" />
-                    </div>
-                    <div>
-                      <label className={labelCls}>{tp('busLabelPlate')}</label>
-                      <input className={inputCls} value={form.plateNumber} onChange={e => set('plateNumber', e.target.value)} />
-                    </div>
+                <div>
+                  <label className={labelCls}>{tp('busLabelCondition')}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {CONDITION_KEYS.map(c => (
+                      <button key={c.value} type="button" onClick={() => set('condition', c.value)}
+                        className={chipCls(form.condition === c.value)}>{tp(c.labelKey)}</button>
+                    ))}
                   </div>
-                </section>
+                </div>
+              </div>
+            </section>
 
-                <section className={sectionCls}>
-                  <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">tune</span>{tp('busLabelSpecs')}</h2>
-                  <div className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className={labelCls}>{tp('busLabelFuel')}</label>
-                        <div className="flex flex-wrap gap-2">
-                          {FUEL_TYPE_KEYS.map(f => (
-                            <button key={f.value} type="button" onClick={() => set('fuelType', f.value)}
-                              className={chipCls(form.fuelType === f.value)}>{tp(f.labelKey)}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className={labelCls}>{tp('busLabelTransmission')}</label>
-                        <div className="flex flex-wrap gap-2">
-                          {[{ value: 'AUTOMATIC', labelKey: 'busTransAutomatic' as const }, { value: 'MANUAL', labelKey: 'busTransManual' as const }].map(t => (
-                            <button key={t.value} type="button" onClick={() => set('transmission', t.value)}
-                              className={chipCls(form.transmission === t.value)}>{tp(t.labelKey)}</button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelCls}>{tp('busLabelCondition')}</label>
-                      <div className="flex flex-wrap gap-2">
-                        {CONDITION_KEYS.map(c => (
-                          <button key={c.value} type="button" onClick={() => set('condition', c.value)}
-                            className={chipCls(form.condition === c.value)}>{tp(c.labelKey)}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <section className={sectionCls}>
-                  <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">star</span>{tp('busLabelFeatures')}</h2>
-                  <div className="flex flex-wrap gap-2.5">
-                    {BUS_FEATURE_KEYS.map(key => {
-                      const label = tp(key);
-                      return (
-                        <button key={key} type="button"
-                          onClick={() => set('features', form.features.includes(label) ? form.features.filter(x => x !== label) : [...form.features, label])}
-                          className={chipCls(form.features.includes(label))}>{label}</button>
-                      );
-                    })}
-                  </div>
-                </section>
-              </>
-            )}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">star</span>{tp('busLabelFeatures')}</h2>
+              <div className="flex flex-wrap gap-2.5">
+                {BUS_FEATURE_KEYS.map(key => {
+                  const label = tp(key);
+                  return (
+                    <button key={key} type="button"
+                      onClick={() => set('features', form.features.includes(label) ? form.features.filter(x => x !== label) : [...form.features, label])}
+                      className={chipCls(form.features.includes(label))}>{label}</button>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         )}
 
         {/* ── Step 2: Price / Contract / Rental ── */}
-        {step === 2 && !isContract && (
+        {step === 2 && (
           <div className="space-y-8">
             {isSale && (
               <section className={sectionCls}>
@@ -426,7 +388,7 @@ export function AddBusForm() {
               </section>
             )}
 
-            {hasContract && (
+            {(hasContract || isContract) && (
               <section className={sectionCls}>
                 <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">assignment</span>{tp('busLabelContractAttached')}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -454,6 +416,36 @@ export function AddBusForm() {
                   <div>
                     <label className={labelCls}>{tp('busLabelContractExpiry')}</label>
                     <input type="date" className={inputCls} value={form.contractExpiry} onChange={e => set('contractExpiry', e.target.value)} />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {isContract && (
+              <section className={sectionCls}>
+                <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">request_quote</span>{tp('busLabelContractDetails')}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>{tp('busLabelPassengers')}</label>
+                    <input type="number" className={inputCls} value={form.requestPassengers} onChange={e => set('requestPassengers', e.target.value)} placeholder="30" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{tp('busLabelSchedule')}</label>
+                    <select className={inputCls} value={form.requestSchedule} onChange={e => set('requestSchedule', e.target.value)}>
+                      <option value="">{tp('lfSelect')}</option>
+                      <option value="daily">{tp('busScheduleDaily')}</option>
+                      <option value="weekly">{tp('busScheduleWeekly')}</option>
+                      <option value="monthly">{tp('busScheduleMonthly')}</option>
+                      <option value="one_trip">{tp('busScheduleOneTrip')}</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelCls}>{tp('busLabelRoute')}</label>
+                    <input className={inputCls} value={form.requestRoute} onChange={e => set('requestRoute', e.target.value)} placeholder={tp('busPlaceholderRoute')} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{tp('busLabelMonthlyBudget')}</label>
+                    <input type="number" className={inputCls} value={form.price} onChange={e => set('price', e.target.value)} placeholder={tp('busPlaceholderOptional')} />
                   </div>
                 </div>
               </section>
@@ -541,12 +533,10 @@ export function AddBusForm() {
               </div>
             </section>
 
-            {!isContract && (
-              <section className={sectionCls}>
-                <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">photo_camera</span>{tp('busLabelPhotos')}</h2>
-                <ImageUploader images={images} onChange={setImages} maxImages={10} />
-              </section>
-            )}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">photo_camera</span>{tp('busLabelPhotos')}</h2>
+              <ImageUploader images={images} onChange={setImages} maxImages={10} />
+            </section>
           </div>
         )}
       </MultiStepForm>

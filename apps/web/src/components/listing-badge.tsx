@@ -9,33 +9,32 @@ interface ListingBadgeProps {
   type: string;
 }
 
+type BadgeStyle = { label: string; dot: string; cls: string };
+
+const BADGE_MAP: Record<string, BadgeStyle> = {
+  // ── Generic ──
+  SALE:                   { label: 'للبيع',        dot: 'bg-blue-500',    cls: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' },
+  RENTAL:                 { label: 'إيجار',        dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' },
+  WANTED:                 { label: 'مطلوب',        dot: 'bg-orange-500',  cls: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800' },
+  // ── Bus ──
+  BUS_SALE:               { label: 'للبيع',        dot: 'bg-blue-500',    cls: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' },
+  BUS_RENT:               { label: 'للإيجار',      dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' },
+  BUS_CONTRACT:           { label: 'تعاقد',        dot: 'bg-purple-500',  cls: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' },
+  BUS_SALE_WITH_CONTRACT: { label: 'بيع مع عقد',   dot: 'bg-amber-500',   cls: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800' },
+  BUS_REQUEST:            { label: 'طلب تعاقد',    dot: 'bg-rose-500',    cls: 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800' },
+  // ── Equipment ──
+  EQUIPMENT_SALE:         { label: 'للبيع',        dot: 'bg-blue-500',    cls: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' },
+  EQUIPMENT_RENT:         { label: 'للإيجار',      dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' },
+};
+
+const FALLBACK_BADGE: BadgeStyle = BADGE_MAP.SALE;
+
 export const ListingBadge = memo(function ListingBadge({ type }: ListingBadgeProps) {
-  // Unified background for all badges to match card backgrounds
-  const baseClass = "px-3 py-0.5 rounded-full text-[11px] font-medium bg-surface-container-lowest text-on-surface border border-outline-variant/30 dark:bg-surface-container dark:text-on-surface dark:border-outline-variant/50";
-  
-  if (type === 'RENTAL') {
-    return (
-      <span className={baseClass}>
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block me-1.5" />
-        إيجار
-      </span>
-    );
-  }
-
-  if (type === 'WANTED') {
-    return (
-      <span className={baseClass}>
-        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block me-1.5" />
-        مطلوب
-      </span>
-    );
-  }
-
-  // SALE/Price badge - blue like other cards
+  const { label, dot, cls } = BADGE_MAP[type] ?? FALLBACK_BADGE;
   return (
-    <span className="px-3 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block me-1.5" />
-      للبيع
+    <span className={`px-3 py-0.5 rounded-full text-[11px] font-medium border ${cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dot} inline-block me-1.5`} />
+      {label}
     </span>
   );
 });
