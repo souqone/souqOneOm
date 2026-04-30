@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
@@ -14,7 +14,7 @@ import {
 
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { CardGrid } from '@/features/listings/components/CardGrid';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { BusListingItem } from '@/lib/api/buses';
 
@@ -42,6 +42,103 @@ function AnimatedSection({ children, className }: { children: React.ReactNode; c
     >
       {children}
     </motion.div>
+  );
+}
+
+/* ─── Bus Category Slider ─────────────────────────────────────────────── */
+
+const BUS_SECTIONS = [
+  { type: 'BUS_SALE',               title: 'حافلات للبيع',         icon: 'sell',              color: 'from-blue-500 to-blue-600' },
+  { type: 'BUS_RENT',               title: 'حافلات للإيجار',       icon: 'key',               color: 'from-green-500 to-green-600' },
+  { type: 'BUS_CONTRACT',           title: 'حافلات للتعاقد',       icon: 'handshake',         color: 'from-purple-500 to-purple-600' },
+  { type: 'BUS_SALE_WITH_CONTRACT', title: 'بيع مع عقد تشغيل',    icon: 'assignment_turned_in', color: 'from-amber-500 to-amber-600' },
+] as const;
+
+function BusCategorySlider({ items, title, icon, color, filterType }: {
+  items: BusListingItem[];
+  title: string;
+  icon: string;
+  color: string;
+  filterType: string;
+}) {
+  const { transformBus } = useItemTransformers();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const sl = Math.abs(el.scrollLeft);
+    setCanScrollLeft(sl > 4);
+    setCanScrollRight(sl + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scroll = useCallback((dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-10 sm:mb-14">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-md`}>
+            <span className="material-symbols-outlined text-white text-[18px] sm:text-[20px]">{icon}</span>
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-lg font-black text-on-surface">{title}</h3>
+            <p className="text-[10px] sm:text-xs text-on-surface-variant">{items.length} إعلان</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Arrows — desktop only */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <button
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              className="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary disabled:opacity-30 disabled:cursor-default transition-colors cursor-pointer"
+              aria-label="السابق"
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              className="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary disabled:opacity-30 disabled:cursor-default transition-colors cursor-pointer"
+              aria-label="التالي"
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+          </div>
+          <Link
+            href={`/browse/buses?busListingType=${filterType}`}
+            className="text-[11px] sm:text-[13px] font-bold text-primary hover:underline underline-offset-2"
+          >
+            عرض الكل
+            <ArrowLeft size={12} className="inline ms-1" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Slider */}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide -mx-3 px-3 pb-2"
+      >
+        {items.map((bus) => (
+          <div key={bus.id} className="w-[calc(50%-6px)] md:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)] flex-shrink-0 snap-start">
+            <UnifiedCard item={transformBus(bus)} className="h-full" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -86,8 +183,18 @@ interface Props {
 export function BusesLandingClient({ buses, totalBuses }: Props) {
   const t = useTranslations('busesLanding');
   const router = useRouter();
-  const { transformBus } = useItemTransformers();
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Group buses by listing type for per-section sliders
+  const busGroups = useMemo(() => {
+    const groups: Record<string, BusListingItem[]> = {};
+    for (const bus of buses) {
+      const key = bus.busListingType || 'BUS_SALE';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(bus);
+    }
+    return groups;
+  }, [buses]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -245,36 +352,33 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
         </div>
       </section>
 
-      {/* ═══════════════════ 4. FEATURED LISTINGS ═══════════════════ */}
+      {/* ═══════════════════ 4. LISTINGS BY TYPE ═══════════════════ */}
       {buses.length > 0 && (
         <section className="bg-surface-container-low dark:bg-surface-dim py-10 sm:py-16">
           <div className="max-w-7xl mx-auto px-3 sm:px-6">
             <AnimatedSection>
-              <motion.div variants={fadeUp} className="flex flex-wrap justify-between items-end gap-2 mb-6 sm:mb-8">
-                <div>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <div className="h-6 sm:h-8 w-1 bg-primary rounded-full" />
-                    <h2 className="text-base sm:text-xl md:text-3xl font-black">{t('featuredTitle')}</h2>
-                  </div>
-                  <p className="text-on-surface-variant text-xs sm:text-sm">{t('featuredSubtitle')}</p>
+              <motion.div variants={fadeUp} className="mb-6 sm:mb-10">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 bg-primary rounded-full" />
+                  <h2 className="text-base sm:text-xl md:text-3xl font-black">{t('featuredTitle')}</h2>
                 </div>
-                <Link
-                  href="/browse/buses"
-                  className="flex items-center gap-1.5 text-primary font-bold text-xs sm:text-sm hover:underline transition-colors"
-                >
-                  {t('featuredViewAll')}
-                  <ArrowLeft size={14} />
-                </Link>
+                <p className="text-on-surface-variant text-xs sm:text-sm">{t('featuredSubtitle')}</p>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <CardGrid
-                  items={buses}
-                  mapItem={transformBus}
-                  isLoading={false}
-                  emptyIcon="directions_bus"
-                  emptyMessage=""
-                />
+                {BUS_SECTIONS.map((sec) => {
+                  const sectionBuses = busGroups[sec.type] || [];
+                  return (
+                    <BusCategorySlider
+                      key={sec.type}
+                      items={sectionBuses}
+                      title={sec.title}
+                      icon={sec.icon}
+                      color={sec.color}
+                      filterType={sec.type}
+                    />
+                  );
+                })}
               </motion.div>
             </AnimatedSection>
           </div>
