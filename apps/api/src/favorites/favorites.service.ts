@@ -86,15 +86,8 @@ export class FavoritesService {
         include: {
           listing: {
             include: {
-              images: { take: 1, orderBy: { order: 'asc' } },
-              seller: {
-                select: {
-                  id: true,
-                  username: true,
-                  displayName: true,
-                  avatarUrl: true,
-                },
-              },
+              images: { orderBy: { order: 'asc' }, take: 5 },
+              seller: { select: USER_SELECT },
             },
           },
         },
