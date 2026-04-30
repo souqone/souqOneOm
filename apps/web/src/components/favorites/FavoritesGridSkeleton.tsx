@@ -2,8 +2,8 @@ import { Skeleton } from '@/components/seller/Skeleton'
 
 export function FavoritesGridSkeleton() {
   return (
-    <div role="status" aria-label="جاري التحميل" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 px-4">
-      {[...Array(8)].map((_, i) => (
+    <div role="status" aria-label="جاري التحميل" className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      {[...Array(6)].map((_, i) => (
         <div key={i} className="rounded-xl border border-outline-variant/10 overflow-hidden bg-surface-container-lowest">
           <Skeleton className="aspect-[16/10] w-full rounded-none" />
           <div className="p-2.5 sm:p-3 space-y-2">

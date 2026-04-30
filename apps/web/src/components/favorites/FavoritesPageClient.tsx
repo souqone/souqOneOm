@@ -4,11 +4,12 @@ import { useState, useMemo, useCallback } from 'react'
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers'
 import { useFavorites, useToggleFavorite, type EntityType } from '@/lib/api/favorites'
 import { useToast } from '@/components/toast'
-import { ErrorState } from '@/components/error-state'
+import { Button } from '@/components/ui/button'
 
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
 import { AuthGuard } from '@/components/auth-guard'
+import { Skeleton } from '@/components/seller/Skeleton'
 
 import { FavoritesCategoryFilter } from './FavoritesCategoryFilter'
 import { FavoritesCategoryFilterSkeleton } from './FavoritesCategoryFilterSkeleton'
@@ -111,103 +112,171 @@ export function FavoritesPageClient() {
     addToast('success', `تم حذف ${ids.length} إعلانات`)
   }, [selectedIds, handleRemove, addToast])
 
+  // ── Error state (same style as seller page) ──
+  if (isError) {
+    return (
+      <AuthGuard>
+        <Navbar />
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
+          <div className="w-16 h-16 rounded-2xl bg-error/10 flex items-center justify-center text-3xl">⚠️</div>
+          <h2 className="text-on-surface font-bold text-lg">حدث خطأ</h2>
+          <p className="text-on-surface-variant text-sm">تعذر تحميل المفضلة. يرجى المحاولة مرة أخرى.</p>
+          <Button variant="outline" onClick={() => refetch()} className="rounded-full px-6">
+            إعادة المحاولة
+          </Button>
+        </div>
+        <Footer />
+      </AuthGuard>
+    )
+  }
+
   return (
     <AuthGuard>
-      <Navbar />
-      <div className="min-h-screen bg-background pb-24 lg:pb-16">
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
 
-        {/* ── Banner Header ── */}
-        <div className="relative bg-gradient-to-bl from-primary via-primary-container to-brand-navy overflow-hidden px-4 pt-8 pb-10">
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
-          <div className="relative max-w-7xl mx-auto flex flex-col items-center text-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
-              <span
-                className="material-symbols-outlined text-xl text-white"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                favorite
-              </span>
-            </div>
-            <div>
-              <h1 className="text-[24px] font-bold text-white leading-tight">المفضلة</h1>
-              {!isLoading && (
-                <span className="inline-block mt-1 px-3 py-0.5 rounded-full bg-white/15 text-[11px] font-medium text-white/90">
-                  {totalCount} إعلان محفوظ
-                </span>
+        <div className="flex-1 max-w-5xl mx-auto w-full">
+          {/* ── Hero (matches SellerHero style) ── */}
+          <section className="relative px-4 pt-6 pb-5 bg-primary/5">
+            <div className="flex flex-col items-center md:flex-row md:items-start md:gap-5">
+              {/* Icon */}
+              {isLoading ? (
+                <Skeleton className="w-20 h-20 rounded-2xl mb-3 md:mb-0" />
+              ) : (
+                <div className="relative mb-3 md:mb-0">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md ring-4 ring-background bg-primary/20 flex items-center justify-center">
+                    <span
+                      className="material-symbols-outlined text-4xl text-primary"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      favorite
+                    </span>
+                  </div>
+                </div>
               )}
+
+              {/* Title + Stats */}
+              <div className="text-center md:text-right md:flex-1 min-w-0">
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-32 mx-auto md:mx-0 rounded" />
+                    <Skeleton className="h-4 w-48 mx-auto md:mx-0 rounded" />
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-xl font-bold text-on-surface mb-3">المفضلة</h1>
+                    {/* Stats Row */}
+                    <div className="flex items-center justify-center md:justify-start gap-5">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="flex items-center gap-1 text-lg font-bold text-on-surface leading-none">
+                          {totalCount}
+                          <span
+                            className="material-symbols-outlined text-sm text-error"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                          >
+                            favorite
+                          </span>
+                        </span>
+                        <span className="text-[11px] text-on-surface-variant font-medium">إعلان محفوظ</span>
+                      </div>
+                      <div className="w-px h-8 bg-outline-variant/30" />
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-lg font-bold text-on-surface leading-none">
+                          {Object.keys(categoryCounts).length}
+                        </span>
+                        <span className="text-[11px] text-on-surface-variant font-medium">أقسام</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            {/* Select button */}
-            {totalCount > 0 && !isLoading && (
-              <button
-                onClick={() => {
-                  setIsSelecting(s => !s)
-                  setSelectedIds(new Set())
-                }}
-                className="absolute top-4 left-4 text-white/80 text-sm font-bold min-h-11 min-w-11 flex items-center justify-center"
-                aria-label={isSelecting ? 'إلغاء التحديد' : 'تحديد'}
-              >
-                {isSelecting ? 'إلغاء' : 'تحديد'}
-              </button>
+
+            {/* Mobile CTA */}
+            {!isLoading && totalCount > 0 && (
+              <div className="flex gap-3 mt-5 md:hidden">
+                <button
+                  onClick={() => { setIsSelecting(s => !s); setSelectedIds(new Set()) }}
+                  className="flex-1 h-11 rounded-xl border-2 border-outline-variant/30 text-on-surface text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-colors"
+                  aria-label={isSelecting ? 'إلغاء التحديد' : 'تحديد'}
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {isSelecting ? 'close' : 'checklist'}
+                  </span>
+                  {isSelecting ? 'إلغاء التحديد' : 'تحديد متعدد'}
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* ── Sticky Filter Bar (matches SellerTabs) ── */}
+          <div className="sticky top-14 z-10 bg-background border-b border-outline-variant/20">
+            {isLoading ? (
+              <FavoritesCategoryFilterSkeleton />
+            ) : (
+              <FavoritesCategoryFilter
+                active={activeCategory}
+                onChange={setActiveCategory}
+                counts={categoryCounts}
+              />
             )}
           </div>
-        </div>
 
-        {/* ── Category Filter ── */}
-        <div className="max-w-7xl mx-auto">
-          {isLoading ? (
-            <FavoritesCategoryFilterSkeleton />
-          ) : (
-            <FavoritesCategoryFilter
-              active={activeCategory}
-              onChange={setActiveCategory}
-              counts={categoryCounts}
-            />
-          )}
-        </div>
+          {/* ── Content ── */}
+          <div className="pt-5 px-4">
+            {/* Sort pills (same style as seller sub-tabs) */}
+            {!isLoading && totalCount > 0 && (
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4">
+                {SORT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSortBy(opt.value)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors ${
+                      sortBy === opt.value
+                        ? 'bg-primary text-on-primary shadow-sm'
+                        : 'bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
 
-        {/* ── Sort Bar ── */}
-        {!isLoading && totalCount > 0 && (
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex gap-2 mb-4">
-              {SORT_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSortBy(opt.value)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium flex-shrink-0 transition-colors ${
-                    sortBy === opt.value
-                      ? 'bg-primary text-on-primary'
-                      : 'border border-outline-variant/20 text-on-surface-variant hover:border-primary/30 bg-surface-container-lowest'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+                {/* Desktop select button */}
+                {totalCount > 0 && (
+                  <button
+                    onClick={() => { setIsSelecting(s => !s); setSelectedIds(new Set()) }}
+                    className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors border border-outline-variant/20 text-on-surface-variant hover:border-primary/30 mr-auto"
+                    aria-label={isSelecting ? 'إلغاء التحديد' : 'تحديد'}
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      {isSelecting ? 'close' : 'checklist'}
+                    </span>
+                    {isSelecting ? 'إلغاء' : 'تحديد'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Grid */}
+            <main id="main-content">
+              {isLoading ? (
+                <FavoritesGridSkeleton />
+              ) : allItems.length === 0 ? (
+                <FavoritesEmptyState variant="empty" />
+              ) : sorted.length === 0 ? (
+                <FavoritesEmptyState variant="no-results" onClear={() => setActiveCategory('ALL')} />
+              ) : (
+                <FavoritesGrid
+                  items={sorted}
+                  isSelecting={isSelecting}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  onRemove={handleRemove}
+                />
+              )}
+            </main>
           </div>
-        )}
-
-        {/* ── Content ── */}
-        <main id="main-content" className="max-w-7xl mx-auto">
-          {isLoading ? (
-            <FavoritesGridSkeleton />
-          ) : isError ? (
-            <div className="px-4">
-              <ErrorState onRetry={() => refetch()} />
-            </div>
-          ) : allItems.length === 0 ? (
-            <FavoritesEmptyState variant="empty" />
-          ) : sorted.length === 0 ? (
-            <FavoritesEmptyState variant="no-results" onClear={() => setActiveCategory('ALL')} />
-          ) : (
-            <FavoritesGrid
-              items={sorted}
-              isSelecting={isSelecting}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
-              onRemove={handleRemove}
-            />
-          )}
-        </main>
+        </div>
 
         {/* ── Bulk Actions Bar ── */}
         {isSelecting && (
@@ -218,8 +287,9 @@ export function FavoritesPageClient() {
             onDelete={handleBulkDelete}
           />
         )}
+
+        <Footer />
       </div>
-      <Footer />
     </AuthGuard>
   )
 }
