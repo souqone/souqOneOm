@@ -71,13 +71,18 @@ export const CONDITION_INTENT: Record<string, BadgeIntent> = {
 // ── Listing type → Intent mapping ───────────────────────────────────────────
 
 export const LISTING_TYPE_INTENT: Record<string, BadgeIntent> = {
-  SALE:           'primary',
-  RENTAL:         'success',
-  WANTED:         'orange',
-  BUS_SALE:       'primary',
-  BUS_RENT:       'success',
-  EQUIPMENT_SALE: 'primary',
-  EQUIPMENT_RENT: 'success',
+  SALE:                   'primary',
+  RENTAL:                 'success',
+  WANTED:                 'orange',
+  BUS_SALE:               'primary',
+  BUS_RENT:               'success',
+  BUS_CONTRACT:           'primary',
+  BUS_SALE_WITH_CONTRACT: 'orange',
+  BUS_REQUEST:            'orange',
+  EQUIPMENT_SALE:         'primary',
+  EQUIPMENT_RENT:         'success',
+  PART:                   'neutral',
+  SERVICE:                'success',
 }
 
 // ── Booking status → Intent mapping ─────────────────────────────────────────

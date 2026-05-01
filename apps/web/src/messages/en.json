@@ -763,7 +763,11 @@
     "enumSalDaily": "Daily",
     "enumSalMonthly": "Monthly",
     "enumSalYearly": "Yearly",
-    "enumSalNegotiable": "Negotiable"
+    "enumSalNegotiable": "Negotiable",
+    "enumReqOpen": "Open",
+    "enumReqInProgress": "In Progress",
+    "enumReqClosed": "Closed",
+    "enumReqCancelled": "Cancelled"
   },
   "colors": {
     "white": "White",
@@ -1805,6 +1809,14 @@
     "svcLabelPhone": "Phone Number",
     "svcLabelWhatsapp": "WhatsApp",
     "svcLabelWebsite": "Website",
+
+    "tripDaySat": "Saturday",
+    "tripDaySun": "Sunday",
+    "tripDayMon": "Monday",
+    "tripDayTue": "Tuesday",
+    "tripDayWed": "Wednesday",
+    "tripDayThu": "Thursday",
+    "tripDayFri": "Friday",
 
     "partTitle": "Add Spare Part",
     "partSubmit": "Publish Listing",
@@ -3223,7 +3235,8 @@
     "step2Title": "Compare",
     "step2Desc": "Compare prices and specs, and contact the seller directly",
     "step3Title": "Close the Deal",
-    "step3Desc": "Schedule a viewing or complete the purchase safely"
+    "step3Desc": "Schedule a viewing or complete the purchase safely",
+    "addListingCta": "Add Listing"
   },
   "terms": {
     "title": "Terms & Conditions",

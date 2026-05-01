@@ -25,6 +25,9 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
   // ── Equipment ──
   EQUIPMENT_SALE:         { label: 'للبيع',        dot: 'bg-blue-500',    cls: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' },
   EQUIPMENT_RENT:         { label: 'للإيجار',      dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' },
+  // ── Part & Service ──
+  PART:                   { label: 'قطعة غيار',    dot: 'bg-slate-500',   cls: 'bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-900/30 dark:text-slate-300 dark:border-slate-800' },
+  SERVICE:                { label: 'خدمة',          dot: 'bg-teal-500',    cls: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800' },
 };
 
 const FALLBACK_BADGE: BadgeStyle = BADGE_MAP.SALE;

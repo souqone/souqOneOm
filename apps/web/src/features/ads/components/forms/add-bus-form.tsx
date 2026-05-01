@@ -101,6 +101,11 @@ export function AddBusForm() {
     minRentalDays: '',
     withDriver: false,
     deliveryAvailable: false,
+    depositAmount: '',
+    insuranceIncluded: false,
+    availableFrom: '',
+    availableTo: '',
+    cancellationPolicy: '',
     // contract request
     requestPassengers: '',
     requestRoute: '',
@@ -180,6 +185,11 @@ export function AddBusForm() {
       if (form.minRentalDays) payload.minRentalDays = parseInt(form.minRentalDays);
       payload.withDriver = form.withDriver;
       payload.deliveryAvailable = form.deliveryAvailable;
+      if (form.depositAmount) payload.depositAmount = parseFloat(form.depositAmount);
+      if (isRent) payload.insuranceIncluded = form.insuranceIncluded;
+      if (form.availableFrom) payload.availableFrom = form.availableFrom;
+      if (form.availableTo) payload.availableTo = form.availableTo;
+      if (form.cancellationPolicy) payload.cancellationPolicy = form.cancellationPolicy;
 
       // Contract request
       if (form.requestPassengers) payload.requestPassengers = parseInt(form.requestPassengers);
@@ -212,7 +222,7 @@ export function AddBusForm() {
       }
 
       addToast('success', tp('busSuccess'));
-      router.push(`/sale/bus/${bus.id}`);
+      router.push(`${form.busListingType === 'BUS_RENT' ? '/rental' : '/sale'}/bus/${bus.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : tp('busError');
       setErrorMessages(msg.split('\n').filter(Boolean));
@@ -477,6 +487,28 @@ export function AddBusForm() {
                     <input type="checkbox" checked={form.deliveryAvailable} onChange={e => set('deliveryAvailable', e.target.checked)} className={checkboxCls} />
                     <span className={checkboxTextCls}>{tp('busLabelDelivery')}</span>
                   </label>
+                  <label className={checkboxLabelCls}>
+                    <input type="checkbox" checked={form.insuranceIncluded} onChange={e => set('insuranceIncluded', e.target.checked)} className={checkboxCls} />
+                    <span className={checkboxTextCls}>{tp('busLabelInsurance')}</span>
+                  </label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className={labelCls}>{tp('busLabelDeposit')}</label>
+                    <input type="number" className={inputCls} value={form.depositAmount} onChange={e => set('depositAmount', e.target.value)} placeholder={tp('busPlaceholderOptional')} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{tp('busLabelAvailableFrom')}</label>
+                    <input type="date" className={inputCls} value={form.availableFrom} onChange={e => set('availableFrom', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{tp('busLabelAvailableTo')}</label>
+                    <input type="date" className={inputCls} value={form.availableTo} onChange={e => set('availableTo', e.target.value)} />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className={labelCls}>{tp('busLabelCancellation')}</label>
+                  <textarea className={inputCls + ' min-h-[80px]'} rows={3} value={form.cancellationPolicy} onChange={e => set('cancellationPolicy', e.target.value)} placeholder={tp('busPlaceholderCancellation')} />
                 </div>
               </section>
             )}

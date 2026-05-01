@@ -31,7 +31,15 @@ export const MobileCTABar = memo(function MobileCTABar({
     <div className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-background/95 backdrop-blur-sm border-t border-outline-variant/30 px-4 py-3 pb-[env(safe-area-inset-bottom)]">
       {/* Price row */}
       <div className="flex items-baseline gap-1 mb-2">
-        {!listing.price || listing.price <= 0 ? (
+        {listing.type === 'bus' && listing.busData?.contractMonthly ? (
+          <>
+            <span className="text-[16px] font-bold text-on-surface">
+              {Number(listing.busData.contractMonthly).toLocaleString('en-US')}
+            </span>
+            <span className="text-[12px] text-on-surface-variant">{listing.currency}</span>
+            <span className="text-[10px] text-on-surface-variant ms-1">/ {ts('contractMonthlyLabel')}</span>
+          </>
+        ) : !listing.price || listing.price <= 0 ? (
           <span className="text-[14px] font-bold text-on-surface">{ts('contactForPrice')}</span>
         ) : (
           <>

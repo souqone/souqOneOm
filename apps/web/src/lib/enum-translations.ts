@@ -212,6 +212,14 @@ export function useEnumTranslations() {
       MODERATE: t('cancelModerate'),
       STRICT:   t('cancelStrict'),
     },
+
+    // ─── Equipment Request Status ──────────────────────────────
+    equipmentRequestStatus: {
+      OPEN:        t('enumReqOpen'),
+      IN_PROGRESS: t('enumReqInProgress'),
+      CLOSED:      t('enumReqClosed'),
+      CANCELLED:   t('enumReqCancelled'),
+    },
   };
 }
 

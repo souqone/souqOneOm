@@ -313,7 +313,10 @@ export function useItemTransformers() {
         currency: raw.currency || 'OMR', images: [],
         governorate: raw.governorate ?? null, createdAt: raw.createdAt, viewCount: raw.viewCount,
         primaryBadge: { label: t('equipmentRequest'), color: 'orange' },
-        secondaryBadge: raw.requestStatus ? { label: raw.requestStatus, color: raw.requestStatus === 'OPEN' ? 'green' : 'gray' } : null,
+        secondaryBadge: raw.requestStatus ? {
+          label: translateEnum(enums.equipmentRequestStatus, raw.requestStatus),
+          color: raw.requestStatus === 'OPEN' ? 'green' : raw.requestStatus === 'IN_PROGRESS' ? 'orange' : 'gray',
+        } : null,
         details: details.slice(0, 5),
         href: `/equipment/requests/${raw.slug || raw.id}`,
         phoneNumber: raw.contactPhone ?? raw.user?.phone ?? null,
