@@ -47,8 +47,6 @@ const TABLES_TO_TRUNCATE = [
   'conversations',
 
   // Content tables
-  'insurance_offers',
-  'trip_services',
   'transport_services',
   'car_services',
   'spare_parts',
