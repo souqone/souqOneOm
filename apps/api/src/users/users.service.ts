@@ -56,7 +56,6 @@ export class UsersService {
             carServices: activeWhere,
             transportServices: activeWhere,
             tripServices: activeWhere,
-            insuranceOffers: activeWhere,
             driverJobs: activeWhere,
           },
         },
@@ -77,7 +76,6 @@ export class UsersService {
       counts.carServices +
       counts.transportServices +
       counts.tripServices +
-      counts.insuranceOffers +
       counts.driverJobs;
 
     return { ...user, totalListings };

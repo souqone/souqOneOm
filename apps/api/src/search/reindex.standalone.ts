@@ -99,17 +99,6 @@ async function main() {
   if (tripDocs.length > 0) await meili.index('trips').addDocuments(tripDocs);
   counts.trips = tripDocs.length;
 
-  // ── Insurance ──
-  const insurance = await prisma.insuranceOffer.findMany({ where: { status: 'ACTIVE' } });
-  const insuranceDocs = insurance.map(i => serialize({
-    id: i.id, title: i.title, slug: i.slug, description: i.description,
-    offerType: i.offerType, providerName: i.providerName, coverageType: i.coverageType,
-    priceFrom: i.priceFrom ? Number(i.priceFrom) : null, currency: i.currency,
-    governorate: i.governorate, status: i.status, createdAt: i.createdAt,
-  }));
-  if (insuranceDocs.length > 0) await meili.index('insurance').addDocuments(insuranceDocs);
-  counts.insurance = insuranceDocs.length;
-
   // ── Services ──
   const services = await prisma.carService.findMany({
     where: { status: 'ACTIVE' },

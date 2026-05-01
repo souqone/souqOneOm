@@ -23,7 +23,6 @@ import { PartsModule } from './parts/parts.module';
 import { ServicesModule } from './services/services.module';
 import { TransportModule } from './transport/transport.module';
 import { TripsModule } from './trips/trips.module';
-import { InsuranceModule } from './insurance/insurance.module';
 import { SearchModule } from './search/search.module';
 import { BusesModule } from './buses/buses.module';
 import { EquipmentModule } from './equipment/equipment.module';
@@ -55,7 +54,6 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     ServicesModule,
     TransportModule,
     TripsModule,
-    InsuranceModule,
     SearchModule,
     BusesModule,
     EquipmentModule,

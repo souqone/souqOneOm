@@ -9,7 +9,7 @@ export class SearchQueryDto {
 
   /** Filter by entity type */
   @IsOptional()
-  @IsIn(['listings', 'parts', 'transport', 'trips', 'insurance', 'services', 'jobs', 'buses', 'equipment'])
+  @IsIn(['listings', 'parts', 'transport', 'trips', 'services', 'jobs', 'buses', 'equipment'])
   entityType?: string;
 
   /** Minimum price filter */

@@ -6,7 +6,7 @@ export const LISTING_EVENTS = {
 } as const;
 
 export interface ListingEventPayload {
-  /** Entity type e.g. 'CAR_SERVICE', 'TRANSPORT', 'TRIP', 'INSURANCE' */
+  /** Entity type e.g. 'CAR_SERVICE', 'TRANSPORT', 'TRIP' */
   entityType: string;
   /** Listing ID */
   listingId: string;
