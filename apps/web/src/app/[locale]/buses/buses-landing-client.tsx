@@ -193,12 +193,6 @@ const BUS_TYPES = [
   { key: 'mini',     icon: MinusSquare,     color: 'from-rose-500 to-rose-600',    filter: 'MINIBUS' },
 ] as const;
 
-const STATS = [
-  { key: 'Buses',   icon: 'directions_bus' },
-  { key: 'Cities',  icon: 'location_city' },
-  { key: 'Clients', icon: 'group' },
-  { key: 'Years',   icon: 'workspace_premium' },
-] as const;
 
 const STEPS = [
   { num: '١', icon: 'search',       gradient: 'from-primary to-[#2563eb]' },
