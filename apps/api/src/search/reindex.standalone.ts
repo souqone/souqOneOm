@@ -85,20 +85,6 @@ async function main() {
   if (transportDocs.length > 0) await meili.index('transport').addDocuments(transportDocs);
   counts.transport = transportDocs.length;
 
-  // ── Trips ──
-  const trips = await prisma.tripService.findMany({ where: { status: 'ACTIVE' } });
-  const tripDocs = trips.map(t => serialize({
-    id: t.id, title: t.title, slug: t.slug, description: t.description,
-    tripType: t.tripType, routeFrom: t.routeFrom, routeTo: t.routeTo,
-    providerName: t.providerName, scheduleType: t.scheduleType,
-    pricePerTrip: t.pricePerTrip ? Number(t.pricePerTrip) : null,
-    priceMonthly: t.priceMonthly ? Number(t.priceMonthly) : null,
-    currency: t.currency, governorate: t.governorate, city: t.city,
-    status: t.status, createdAt: t.createdAt,
-  }));
-  if (tripDocs.length > 0) await meili.index('trips').addDocuments(tripDocs);
-  counts.trips = tripDocs.length;
-
   // ── Services ──
   const services = await prisma.carService.findMany({
     where: { status: 'ACTIVE' },

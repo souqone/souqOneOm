@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsString, IsDateString, IsOptional, IsBoolean, IsIn, IsInt, Min } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsIn(['CAR', 'BUS', 'EQUIPMENT', 'TRANSPORT', 'TRIP'])
+  @IsIn(['CAR', 'BUS', 'EQUIPMENT', 'TRANSPORT'])
   entityType!: string;
 
   @IsString()

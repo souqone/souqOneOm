@@ -6,7 +6,6 @@ import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 const ENTITY_LABELS: Record<string, string> = {
   CAR_SERVICE: 'خدمة سيارات',
   TRANSPORT: 'خدمة نقل',
-  TRIP: 'رحلة',
 };
 
 @Injectable()

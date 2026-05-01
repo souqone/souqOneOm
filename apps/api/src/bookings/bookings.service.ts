@@ -154,7 +154,6 @@ export class BookingsService {
     if (booking.busListing) return booking.busListing.title;
     if (booking.equipmentListing) return booking.equipmentListing.title;
     if (booking.transportService) return booking.transportService.title;
-    if (booking.tripService) return booking.tripService.title;
     return 'إعلان';
   }
 
