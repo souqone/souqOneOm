@@ -13,7 +13,7 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
 };
 
-const HERO_SLIDES = ['/hero.webp', '/hero-banner-2.png'];
+const HERO_SLIDES = ['/hero.webp', '/hero-banner-2.webp'];
 const SLIDE_INTERVAL = 5000;
 
 const TRUST_BADGES = [

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
@@ -93,7 +94,7 @@ export function CategoriesSection() {
             >
               <div className="w-full h-16 sm:h-20 relative overflow-hidden">
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-                <img src={cat.image} alt={t(cat.labelKey)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                <Image src={cat.image} alt={t(cat.labelKey)} width={200} height={150} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" sizes="25vw" loading="lazy" />
               </div>
               <div className="p-2 text-center relative z-20 bg-surface-container-lowest dark:bg-surface-container">
                 <h3 className="font-bold text-[10px] sm:text-xs text-on-surface leading-tight mb-0.5">{t(cat.labelKey)}</h3>
@@ -113,7 +114,7 @@ export function CategoriesSection() {
           >
             <div className="w-full h-28 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 opacity-60 group-hover:opacity-20 transition-opacity duration-300 z-10" />
-              <img src={cat.image} alt={t(cat.labelKey)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+              <Image src={cat.image} alt={t(cat.labelKey)} width={400} height={300} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" sizes="14vw" loading="lazy" />
             </div>
             <div className="p-4 text-center relative z-20 bg-surface-container-lowest dark:bg-surface-container transition-colors duration-300 group-hover:bg-surface-container-low dark:group-hover:bg-surface-container-high">
               <h3 className="font-bold text-[15px] text-on-surface leading-tight mb-1.5">{t(cat.labelKey)}</h3>
