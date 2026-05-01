@@ -22,7 +22,6 @@ import { JobsModule } from './jobs/jobs.module';
 import { PartsModule } from './parts/parts.module';
 import { ServicesModule } from './services/services.module';
 import { TransportModule } from './transport/transport.module';
-import { TripsModule } from './trips/trips.module';
 import { SearchModule } from './search/search.module';
 import { BusesModule } from './buses/buses.module';
 import { EquipmentModule } from './equipment/equipment.module';
@@ -53,7 +52,6 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     PartsModule,
     ServicesModule,
     TransportModule,
-    TripsModule,
     SearchModule,
     BusesModule,
     EquipmentModule,
