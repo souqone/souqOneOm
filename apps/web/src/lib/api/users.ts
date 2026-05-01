@@ -9,7 +9,9 @@ export interface UserProfile {
   avatarUrl: string | null;
   phone: string | null;
   bio: string | null;
+  country: string | null;
   governorate: string | null;
+  city: string | null;
   isVerified: boolean;
   role: string;
   createdAt: string;

@@ -9,8 +9,6 @@ const mockPrisma = {
   sparePart: { findUnique: jest.fn() },
   carService: { findUnique: jest.fn() },
   transportService: { findUnique: jest.fn() },
-  tripService: { findUnique: jest.fn() },
-  insuranceOffer: { findUnique: jest.fn() },
   favorite: {
     findUnique: jest.fn(),
     findMany: jest.fn(),

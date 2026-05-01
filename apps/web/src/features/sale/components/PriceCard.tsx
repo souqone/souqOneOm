@@ -127,7 +127,18 @@ export const PriceCard = memo(function PriceCard({
                 {ts('views', { count: listing.views })}
               </span>
             </div>
-            {listing.type === 'service' && listing.serviceData?.priceTo ? (
+            {listing.type === 'bus' && listing.busData?.contractMonthly ? (
+              <div className="flex items-baseline gap-1.5 flex-wrap" dir="ltr">
+                <span className="text-[28px] font-bold text-red-600 leading-none">{Number(listing.busData.contractMonthly).toLocaleString('en-US')}</span>
+                <span className="text-[13px] text-on-surface-variant">{currencyLabel}</span>
+                <span className="text-[12px] text-on-surface-variant">/ {ts('contractMonthlyLabel')}</span>
+              </div>
+            ) : !listing.price || listing.price <= 0 ? (
+              <div className="flex items-center justify-center gap-2 py-1">
+                <span className="material-symbols-outlined text-primary text-[20px]">contact_phone</span>
+                <span className="text-[16px] font-bold text-on-surface">{ts('contactForPrice')}</span>
+              </div>
+            ) : listing.type === 'service' && listing.serviceData?.priceTo ? (
               <div className="flex items-baseline gap-1 flex-wrap" dir="ltr">
                 <span className="text-[24px] font-bold text-red-600">{listing.price.toLocaleString('en-US')}</span>
                 <span className="text-[14px] text-on-surface-variant mx-0.5">—</span>

@@ -64,8 +64,8 @@ export function getMainCategories(t: T): MainCategory[] {
       value: 'heavy-equipment', label: t('heavyEquipment'), icon: '🏗️',
       color: 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
       subcategories: [
-        { value: 'equipment-sale', label: t('equipmentSale'), route: '/add-listing/equipment?type=SALE', available: true },
-        { value: 'equipment-rental', label: t('equipmentRental'), route: '/add-listing/equipment?type=RENTAL', available: true },
+        { value: 'equipment-sale', label: t('equipmentSale'), route: '/add-listing/equipment?type=EQUIPMENT_SALE', available: true },
+        { value: 'equipment-rental', label: t('equipmentRental'), route: '/add-listing/equipment?type=EQUIPMENT_RENT', available: true },
         { value: 'equipment-request', label: t('equipmentRequest'), route: '/equipment/requests/new', available: true },
         { value: 'operator-listing', label: t('operatorListing'), route: '/add-listing/operator', available: true },
       ],

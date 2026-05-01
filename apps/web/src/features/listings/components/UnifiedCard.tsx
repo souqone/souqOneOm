@@ -258,7 +258,7 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '' }: U
             </span>
           ) : (
             <span className="shrink-0 text-left text-[12px] font-bold text-red-500">
-              تواصل للسعر
+              {t('contactForPrice')}
             </span>
           )}
 

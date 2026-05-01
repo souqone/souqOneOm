@@ -1,11 +1,6 @@
-import type { Metadata } from 'next'
-import { BrowseGlobalShell } from '@/features/listings/components/BrowseGlobalShell'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = {
-  title: 'تصفّح كل الإعلانات — سوق وان',
-  description: 'ابحث وتصفح كل الإعلانات في عُمان (سيارات، حافلات، قطع غيار، خدمات، وظائف) من مكان واحد.',
-}
-
-export default function BrowseGlobalPage() {
-  return <BrowseGlobalShell />
+// Temporarily redirect /browse to /browse/cars until "الكل" tab is implemented
+export default function BrowsePage() {
+  redirect('/browse/cars')
 }

@@ -53,8 +53,6 @@ model User {
   spareParts        SparePart[]        @relation("UserSpareParts")
   carServices       CarService[]       @relation("UserCarServices")
   transportServices TransportService[] @relation("UserTransportServices")
-  tripServices      TripService[]      @relation("UserTripServices")
-  insuranceOffers   InsuranceOffer[]   @relation("UserInsuranceOffers")
   busListings       BusListing[]       @relation("UserBusListings")
   busOffers         BusListingOffer[]  @relation("UserBusOffers")
   equipmentListings  EquipmentListing[]  @relation("UserEquipmentListings")
@@ -207,7 +205,7 @@ model Listing {
 model Booking {
   id                 String             @id @default(cuid())
 
-  entityType         String             @default("CAR") // CAR, BUS, EQUIPMENT, TRANSPORT, TRIP
+  entityType         String             @default("CAR") // CAR, BUS, EQUIPMENT, TRANSPORT
 
   listingId          String?
   listing            Listing?           @relation(fields: [listingId], references: [id], onDelete: Cascade)
@@ -220,9 +218,6 @@ model Booking {
 
   transportServiceId String?
   transportService   TransportService?  @relation(fields: [transportServiceId], references: [id], onDelete: Cascade)
-
-  tripServiceId      String?
-  tripService        TripService?       @relation(fields: [tripServiceId], references: [id], onDelete: Cascade)
 
   renterId           String
   renter             User               @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
@@ -258,7 +253,6 @@ model Booking {
   @@index([busListingId])
   @@index([equipmentListingId])
   @@index([transportServiceId])
-  @@index([tripServiceId])
   @@index([entityType])
   @@index([renterId])
   @@index([ownerId])
@@ -293,7 +287,7 @@ model ListingImage {
 model Conversation {
   id         String   @id @default(cuid())
 
-  entityType String   // LISTING | SPARE_PART | CAR_SERVICE | TRANSPORT | TRIP | INSURANCE | JOB
+  entityType String   // LISTING | SPARE_PART | CAR_SERVICE | TRANSPORT | JOB
   entityId   String   // ID of the related entity
 
   // Backward compat — optional relation kept for existing listing conversations
@@ -391,7 +385,7 @@ model Favorite {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  entityType String   @default("LISTING") // LISTING | JOB | SPARE_PART | CAR_SERVICE | TRANSPORT | TRIP | INSURANCE
+  entityType String   @default("LISTING") // LISTING | JOB | SPARE_PART | CAR_SERVICE | TRANSPORT
   entityId   String
 
   // Keep optional relation for listing queries
@@ -937,37 +931,12 @@ enum PricingType {
   NEGOTIABLE_PRICE
 }
 
-// ── تعدادات الاشتراكات والرحلات ──
-enum TripType {
-  BUS_SUBSCRIPTION
-  SCHOOL_TRANSPORT
-  TOURISM
-  CORPORATE
-  CARPOOLING
-}
-
-enum ScheduleType {
-  SCHEDULE_DAILY
-  SCHEDULE_WEEKLY
-  SCHEDULE_MONTHLY
-  ONE_TIME
-}
-
 // ── تعدادات المركبات الموسعة ──
 enum VehicleCategory {
   CAR
   MOTORCYCLE
   MARINE
   HEAVY_EQUIPMENT
-}
-
-// ── تعدادات التأمين والتمويل ──
-enum InsuranceType {
-  CAR_COMPREHENSIVE
-  CAR_THIRD_PARTY
-  MARINE_INSURANCE
-  FINANCING
-  LEASE
 }
 
 // ──────────────────────────────────────
@@ -1140,121 +1109,6 @@ model TransportImage {
 
   @@index([transportServiceId])
   @@map("transport_images")
-}
-
-// ──────────────────────────────────────
-// اشتراكات ورحلات — TripService
-// ──────────────────────────────────────
-model TripService {
-  id              String       @id @default(cuid())
-  title           String
-  slug            String       @unique
-  description     String
-  tripType        TripType
-  routeFrom       String
-  routeTo         String
-  routeStops      String[]
-  scheduleType    ScheduleType
-  departureTimes  String[]
-  operatingDays   String[]
-  pricePerTrip    Decimal?     @db.Decimal(12, 2)
-  priceMonthly    Decimal?     @db.Decimal(12, 2)
-  currency        String       @default("OMR")
-  vehicleType     String?
-  capacity        Int?
-  availableSeats  Int?
-  features        String[]
-  providerName    String
-  governorate     String
-  city            String?
-  latitude        Float?
-  longitude       Float?
-  contactPhone    String?
-  whatsapp        String?
-  startDate       DateTime?
-  endDate         DateTime?
-  status          ListingStatus @default(ACTIVE)
-  viewCount       Int           @default(0)
-
-  userId          String
-  user            User          @relation("UserTripServices", fields: [userId], references: [id], onDelete: Cascade)
-  images          TripImage[]
-  bookings        Booking[]
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@index([userId])
-  @@index([tripType])
-  @@index([governorate])
-  @@index([status])
-  @@index([slug])
-  @@map("trip_services")
-}
-
-model TripImage {
-  id            String      @id @default(cuid())
-  url           String
-  isPrimary     Boolean     @default(false)
-  order         Int         @default(0)
-  tripServiceId String
-  tripService   TripService @relation(fields: [tripServiceId], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now())
-
-  @@index([tripServiceId])
-  @@map("trip_images")
-}
-
-// ──────────────────────────────────────
-// تأمين وتمويل — InsuranceOffer
-// ──────────────────────────────────────
-model InsuranceOffer {
-  id             String        @id @default(cuid())
-  title          String
-  slug           String        @unique
-  description    String
-  offerType      InsuranceType
-  providerName   String
-  providerLogo   String?
-  coverageType   String?
-  priceFrom      Decimal?      @db.Decimal(12, 2)
-  currency       String        @default("OMR")
-  features       String[]
-  termsUrl       String?
-  contactPhone   String?
-  whatsapp       String?
-  website        String?
-  governorate    String?
-  latitude       Float?
-  longitude      Float?
-  status         ListingStatus @default(ACTIVE)
-  viewCount      Int           @default(0)
-
-  userId         String
-  user           User          @relation("UserInsuranceOffers", fields: [userId], references: [id], onDelete: Cascade)
-  images         InsuranceImage[]
-
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  @@index([userId])
-  @@index([offerType])
-  @@index([status])
-  @@index([slug])
-  @@map("insurance_offers")
-}
-
-model InsuranceImage {
-  id               String         @id @default(cuid())
-  url              String
-  isPrimary        Boolean        @default(false)
-  order            Int            @default(0)
-  insuranceOfferId String
-  insuranceOffer   InsuranceOffer @relation(fields: [insuranceOfferId], references: [id], onDelete: Cascade)
-  createdAt        DateTime       @default(now())
-
-  @@index([insuranceOfferId])
-  @@map("insurance_images")
 }
 
 // ══════════════════════════════════════════════════

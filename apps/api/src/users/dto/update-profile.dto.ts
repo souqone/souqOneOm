@@ -18,8 +18,18 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(10)
+  country?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(50)
   governorate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  city?: string;
 
   @IsOptional()
   @IsString()

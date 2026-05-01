@@ -92,24 +92,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} className={almarai.variable} suppressHydrationWarning>
       <head>
-        {/* Non-render-blocking Material Symbols loading — no next/font alternative for icon fonts */}
+        {/* Material Symbols — loaded eagerly so icons render immediately */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
-          rel="preload"
+          rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-          as="style"
           crossOrigin="anonymous"
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              var l = document.createElement('link');
-              l.rel = 'stylesheet';
-              l.crossOrigin = 'anonymous';
-              l.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap';
-              document.head.appendChild(l);
-            `,
-          }}
         />
       </head>
       <body className="bg-surface text-on-surface antialiased">

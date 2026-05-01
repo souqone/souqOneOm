@@ -194,7 +194,7 @@ export function SearchBar({ category, filters, onFilterChange, onSearch }: Searc
 
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const config = FILTERS_CONFIG[category]
+  const config = FILTERS_CONFIG[category] ?? []
 
   const fields: FieldConfig[] = [
     {

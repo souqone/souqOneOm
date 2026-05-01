@@ -14,7 +14,9 @@ export class UsersService {
     displayName: true,
     avatarUrl: true,
     bio: true,
+    country: true,
     governorate: true,
+    city: true,
     isVerified: true,
     role: true,
     createdAt: true,
@@ -55,8 +57,6 @@ export class UsersService {
             spareParts: activeWhere,
             carServices: activeWhere,
             transportServices: activeWhere,
-            tripServices: activeWhere,
-            insuranceOffers: activeWhere,
             driverJobs: activeWhere,
           },
         },
@@ -76,8 +76,6 @@ export class UsersService {
       counts.spareParts +
       counts.carServices +
       counts.transportServices +
-      counts.tripServices +
-      counts.insuranceOffers +
       counts.driverJobs;
 
     return { ...user, totalListings };
@@ -95,7 +93,9 @@ export class UsersService {
         displayName: dto.displayName,
         bio: dto.bio,
         phone: dto.phone,
+        country: dto.country,
         governorate: dto.governorate,
+        city: dto.city,
         avatarUrl: dto.avatarUrl,
       },
       select: this.privateSelect,

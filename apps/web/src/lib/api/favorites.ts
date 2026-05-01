@@ -25,6 +25,12 @@ export interface FavoriteItem {
   createdAt: string;
   listing?: ListingItem | null;
   entity?: FavoriteEntity | null;
+  busListing?: any;
+  equipmentListing?: any;
+  operatorListing?: any;
+  sparePart?: any;
+  job?: any;
+  carService?: any;
 }
 
 export interface FavoritesResponse {

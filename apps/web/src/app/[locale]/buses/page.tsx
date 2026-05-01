@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default async function BusesLandingPage() {
   const data = await serverFetch<Paginated<BusListingItem>>(
-    '/buses?page=1&limit=6',
+    '/buses?page=1&limit=50',
     { revalidate: 120, tags: ['buses'] }
   ).catch(() => null);
 
