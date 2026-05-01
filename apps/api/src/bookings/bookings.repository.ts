@@ -17,7 +17,6 @@ const ENTITY_INCLUDES = {
   busListing: { include: { images: true } },
   equipmentListing: { include: { images: true } },
   transportService: { include: { images: true } },
-  tripService: { include: { images: true } },
 };
 
 export const FULL_INCLUDE = {
@@ -33,7 +32,6 @@ export function entityFkField(entityType: string): string {
     BUS: 'busListingId',
     EQUIPMENT: 'equipmentListingId',
     TRANSPORT: 'transportServiceId',
-    TRIP: 'tripServiceId',
   };
   const field = map[entityType];
   if (!field) throw new BadRequestException(`نوع كيان غير معروف: ${entityType}`);
@@ -60,14 +58,12 @@ export class BookingsRepository {
             busListing: true,
             equipmentListing: true,
             transportService: true,
-            tripService: true,
           }
         : {
             listing: { include: { images: true, seller: { select: USER_SELECT } } },
             busListing: { include: { images: true, user: { select: USER_SELECT } } },
             equipmentListing: { include: { images: true, user: { select: USER_SELECT } } },
             transportService: { include: { images: true, user: { select: USER_SELECT } } },
-            tripService: { include: { images: true, user: { select: USER_SELECT } } },
             renter: { select: USER_SELECT },
             owner: { select: USER_SELECT },
           },

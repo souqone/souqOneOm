@@ -588,7 +588,7 @@ export function FilterSheet({
   onClose,
   total,
 }: FilterSheetProps) {
-  const config = FILTERS_CONFIG[category]
+  const config = FILTERS_CONFIG[category] ?? []
   const meta = CATEGORY_META[category]
   const [mounted, setMounted] = useState(false)
 

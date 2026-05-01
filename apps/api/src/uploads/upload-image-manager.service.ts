@@ -238,41 +238,4 @@ export class UploadImageManagerService {
     });
   }
 
-  async addImageToTrip(tripId: string, userId: string, url: string, isPrimary: boolean) {
-    const trip = await this.prisma.tripService.findUnique({ where: { id: tripId } });
-    if (!trip) throw new NotFoundException('الرحلة غير موجودة');
-    if (trip.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
-
-    const maxOrder = await this.prisma.tripImage.aggregate({ where: { tripServiceId: tripId }, _max: { order: true } });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
-
-    if (isPrimary) {
-      await this.prisma.tripImage.updateMany({ where: { tripServiceId: tripId }, data: { isPrimary: false } });
-    }
-    const imageCount = await this.prisma.tripImage.count({ where: { tripServiceId: tripId } });
-    const shouldBePrimary = isPrimary || imageCount === 0;
-
-    return this.prisma.tripImage.create({
-      data: { url, order: nextOrder, isPrimary: shouldBePrimary, tripServiceId: tripId },
-    });
-  }
-
-  async addImageToInsurance(insuranceId: string, userId: string, url: string, isPrimary: boolean) {
-    const insurance = await this.prisma.insuranceOffer.findUnique({ where: { id: insuranceId } });
-    if (!insurance) throw new NotFoundException('العرض غير موجود');
-    if (insurance.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
-
-    const maxOrder = await this.prisma.insuranceImage.aggregate({ where: { insuranceOfferId: insuranceId }, _max: { order: true } });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
-
-    if (isPrimary) {
-      await this.prisma.insuranceImage.updateMany({ where: { insuranceOfferId: insuranceId }, data: { isPrimary: false } });
-    }
-    const imageCount = await this.prisma.insuranceImage.count({ where: { insuranceOfferId: insuranceId } });
-    const shouldBePrimary = isPrimary || imageCount === 0;
-
-    return this.prisma.insuranceImage.create({
-      data: { url, order: nextOrder, isPrimary: shouldBePrimary, insuranceOfferId: insuranceId },
-    });
-  }
 }

@@ -28,8 +28,6 @@ import { JobsModule } from '../src/jobs/jobs.module';
 import { PartsModule } from '../src/parts/parts.module';
 import { ServicesModule } from '../src/services/services.module';
 import { TransportModule } from '../src/transport/transport.module';
-import { TripsModule } from '../src/trips/trips.module';
-import { InsuranceModule } from '../src/insurance/insurance.module';
 import { SearchModule } from '../src/search/search.module';
 import { BusesModule } from '../src/buses/buses.module';
 import { EquipmentModule } from '../src/equipment/equipment.module';
@@ -115,8 +113,6 @@ export async function createTestApp(): Promise<INestApplication> {
       PartsModule,
       ServicesModule,
       TransportModule,
-      TripsModule,
-      InsuranceModule,
       SearchModule,
       BusesModule,
       EquipmentModule,

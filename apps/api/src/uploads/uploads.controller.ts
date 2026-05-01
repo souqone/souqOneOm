@@ -185,36 +185,6 @@ export class UploadsController {
     return this.uploadsService.addImageToTransport(transportId, user.sub, url, isPrimary === 'true');
   }
 
-  // ─── Trip Image Management ───
-
-  @UseGuards(JwtAuthGuard)
-  @Post('trips/:tripId/images')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  async addTripImage(
-    @Param('tripId') tripId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('isPrimary') isPrimary: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    const { url } = await this.uploadsService.uploadFile(file);
-    return this.uploadsService.addImageToTrip(tripId, user.sub, url, isPrimary === 'true');
-  }
-
-  // ─── Insurance Image Management ───
-
-  @UseGuards(JwtAuthGuard)
-  @Post('insurance/:insuranceId/images')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  async addInsuranceImage(
-    @Param('insuranceId') insuranceId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('isPrimary') isPrimary: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    const { url } = await this.uploadsService.uploadFile(file);
-    return this.uploadsService.addImageToInsurance(insuranceId, user.sub, url, isPrimary === 'true');
-  }
-
   // ─── Equipment Image Management ───
 
   @UseGuards(JwtAuthGuard)

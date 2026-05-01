@@ -25,45 +25,13 @@ export interface NavLinkItem { href: string; label: string; children?: NavChild[
 
 function useNavLinks() {
   const t = useTranslations('common');
-  const tn = useTranslations('nav');
 
   const navLinks: NavLinkItem[] = [
     { href: '/', label: t('home') },
-    {
-      href: '/motors', label: t('cars'),
-      children: [
-        { href: '/browse/cars', label: t('carsForSale'), icon: 'directions_car', desc: tn('browseNewUsedCars') },
-        { href: '/browse/cars?listingType=RENTAL', label: t('carsForRent'), icon: 'car_rental', desc: tn('dailyMonthlyRental') },
-        { href: '/browse/parts', label: t('spareParts'), icon: 'settings', desc: tn('originalAlternativeParts') },
-        { href: '/browse/services', label: t('carServices'), icon: 'build', desc: tn('maintenanceInspection') },
-      ],
-    },
-    {
-      href: '/browse/buses', label: t('buses'),
-      children: [
-        { href: '/browse/buses', label: t('allBuses'), icon: 'directions_bus', desc: tn('busesSaleRentalContracts') },
-        { href: '/browse/buses?type=SALE', label: t('busesForSale'), icon: 'sell', desc: tn('busesForSaleDesc') },
-        { href: '/browse/buses?type=RENTAL', label: t('busRental'), icon: 'car_rental', desc: tn('busRentalDesc') },
-        { href: '/browse/buses?type=CONTRACT', label: t('transportRequests'), icon: 'request_quote', desc: tn('transportRequestsDesc') },
-      ],
-    },
-    {
-      href: '/equipment', label: t('equipment'),
-      children: [
-        { href: '/browse/equipment', label: t('allEquipment'), icon: 'construction', desc: tn('equipmentSaleRental') },
-        { href: '/browse/equipment?listingType=SALE', label: t('sellEquipment'), icon: 'sell', desc: tn('equipmentForSaleDesc') },
-        { href: '/browse/equipment?listingType=RENTAL', label: t('rentEquipment'), icon: 'car_rental', desc: tn('equipmentRentalDesc') },
-        { href: '/browse/equipment-requests', label: t('requestEquipment'), icon: 'assignment_add', desc: tn('equipmentRequestsDesc') },
-        { href: '/browse/operators', label: t('operators'), icon: 'engineering', desc: tn('equipmentOperatorsDesc') },
-      ],
-    },
-    {
-      href: '/jobs', label: t('jobs'),
-      children: [
-        { href: '/jobs', label: t('jobs'), icon: 'work', desc: tn('browseAllJobs') },
-        { href: '/jobs/drivers', label: t('driverJobs'), icon: 'person_search', desc: tn('browseDriverProfiles') },
-      ],
-    },
+    { href: '/motors', label: t('cars') },
+    { href: '/buses', label: t('buses') },
+    { href: '/equipment', label: t('equipment') },
+    { href: '/jobs', label: t('jobs') },
   ];
 
   const flatNavLinks = [
@@ -71,7 +39,7 @@ function useNavLinks() {
     { href: '/motors', label: t('cars') },
     { href: '/browse/parts', label: t('spareParts') },
     { href: '/browse/services', label: t('carServices') },
-    { href: '/browse/buses', label: t('buses') },
+    { href: '/buses', label: t('buses') },
     { href: '/equipment', label: t('equipment') },
     { href: '/jobs', label: t('jobs') },
   ];
@@ -208,33 +176,13 @@ export function Navbar() {
             <div className="hidden lg:flex items-center justify-center">
               <nav className="flex items-center gap-1">
                 {navLinks.map(link => {
-                  const active = isActive(link.href) || link.children?.some(c => isActive(c.href));
-                  const hasChildren = link.children && link.children.length > 0;
+                  const active = isActive(link.href);
                   return (
                     <div key={link.href} className="relative group/nav">
                       <Link href={link.href} className={`relative flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg transition-colors duration-300 ${active ? 'text-primary dark:text-[#FE5E00]' : 'text-on-surface-variant hover:text-primary dark:hover:text-[#FE5E00] hover:bg-surface-container-low/50'}`}>
                         {link.label}
                         <span className={`absolute bottom-0.5 inset-x-3 h-[2px] rounded-full transition-all duration-300 origin-center ${active ? 'bg-primary dark:bg-[#FE5E00] scale-x-100' : 'bg-primary/60 dark:bg-[#FE5E00] scale-x-0 group-hover/nav:scale-x-100'}`} />
                       </Link>
-                      {hasChildren && (
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-200 z-50">
-                          <div className="bg-surface-container-lowest dark:bg-surface-container-high border border-outline-variant/15 dark:border-outline-variant/30 shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] min-w-[260px] rounded-xl py-2 overflow-hidden">
-                            {link.children!.map(child => (
-                              <Link
-                                key={child.label}
-                                href={child.href}
-                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[20px] text-primary dark:text-[#FE5E00] shrink-0">{child.icon}</span>
-                                <div>
-                                  <p className="text-sm font-bold text-on-surface">{child.label}</p>
-                                  <p className="text-[11px] text-on-surface-variant">{child.desc}</p>
-                                </div>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}

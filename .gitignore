@@ -46,6 +46,7 @@ apps/api/uploads/
 # Windsurf / AI
 .windsurf/
 .agents/
+.claude/worktrees
 
 # Misc
 *.tsbuildinfo

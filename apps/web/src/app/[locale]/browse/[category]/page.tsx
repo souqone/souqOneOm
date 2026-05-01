@@ -2,10 +2,10 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { VALID_CATEGORIES, CATEGORY_META } from '@/features/listings/types/category.types'
 import type { ListingCategory } from '@/features/listings/types/category.types'
+import { ListingsPageShell } from '@/features/listings/components/ListingsPageShell'
 
 interface PageProps {
   params: Promise<{ locale: string; category: string }>
-  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export async function generateStaticParams() {
@@ -23,27 +23,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-/**
- * Redirect /browse/[category] → /browse?category=[category]
- * Preserves all existing search params (q, filters, etc.)
- */
-export default async function BrowseCategoryPage({ params, searchParams }: PageProps) {
+export default async function BrowseCategoryPage({ params }: PageProps) {
   const { category } = await params
 
   if (!VALID_CATEGORIES.includes(category as ListingCategory)) {
     redirect('/browse')
   }
 
-  const sp = await searchParams
-  const qs = new URLSearchParams()
-  qs.set('category', category)
-
-  // Preserve all existing params
-  for (const [key, value] of Object.entries(sp)) {
-    if (key !== 'category' && value) {
-      qs.set(key, Array.isArray(value) ? value[0] : value)
-    }
-  }
-
-  redirect(`/browse?${qs.toString()}`)
+  return <ListingsPageShell category={category as ListingCategory} />
 }

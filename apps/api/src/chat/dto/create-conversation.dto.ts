@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsIn } from 'class-validator';
 
-export const ENTITY_TYPES = ['LISTING', 'SPARE_PART', 'CAR_SERVICE', 'TRANSPORT', 'TRIP', 'INSURANCE', 'JOB', 'EQUIPMENT_LISTING', 'EQUIPMENT_REQUEST', 'OPERATOR_LISTING'] as const;
+export const ENTITY_TYPES = ['LISTING', 'SPARE_PART', 'CAR_SERVICE', 'TRANSPORT', 'JOB', 'EQUIPMENT_LISTING', 'EQUIPMENT_REQUEST', 'OPERATOR_LISTING'] as const;
 export type EntityType = typeof ENTITY_TYPES[number];
 
 export class CreateConversationDto {

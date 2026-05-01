@@ -1,4 +1,0 @@
-
-> @carone/api@0.0.1 test:e2e
-> jest --config jest-e2e.config.js --runInBand --forceExit
-

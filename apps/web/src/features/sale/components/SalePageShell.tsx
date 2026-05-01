@@ -403,9 +403,11 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
         )}
 
         {/* ══ C — PHOTO GALLERY ══ */}
-        <div className="mb-4">
-          <PhotoGallery images={listing.images} title={listing.title} placeholderIcon={config.icon} />
-        </div>
+        {listing.images.length > 0 && (
+          <div className="mb-4">
+            <PhotoGallery images={listing.images} title={listing.title} placeholderIcon={config.icon} />
+          </div>
+        )}
 
         {/* ══ MOBILE/TABLET CTA BUTTONS — Below Gallery ══ */}
         <div className="lg:hidden mb-5">

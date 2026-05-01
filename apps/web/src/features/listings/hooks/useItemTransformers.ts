@@ -102,6 +102,12 @@ interface FavoriteLike {
     createdAt?: string
   } | null
   listing?: ListingItem | null
+  busListing?: BusListingItem | null
+  equipmentListing?: EquipmentListingItem | null
+  operatorListing?: OperatorListingItem | null
+  sparePart?: SparePartItem | null
+  carService?: CarServiceItem | null
+  job?: JobItem | null
   createdAt?: string
 }
 
@@ -307,7 +313,10 @@ export function useItemTransformers() {
         currency: raw.currency || 'OMR', images: [],
         governorate: raw.governorate ?? null, createdAt: raw.createdAt, viewCount: raw.viewCount,
         primaryBadge: { label: t('equipmentRequest'), color: 'orange' },
-        secondaryBadge: raw.requestStatus ? { label: raw.requestStatus, color: raw.requestStatus === 'OPEN' ? 'green' : 'gray' } : null,
+        secondaryBadge: raw.requestStatus ? {
+          label: translateEnum(enums.equipmentRequestStatus, raw.requestStatus),
+          color: raw.requestStatus === 'OPEN' ? 'green' : raw.requestStatus === 'IN_PROGRESS' ? 'orange' : 'gray',
+        } : null,
         details: details.slice(0, 5),
         href: `/equipment/requests/${raw.slug || raw.id}`,
         phoneNumber: raw.contactPhone ?? raw.user?.phone ?? null,
@@ -511,7 +520,16 @@ export function useItemTransformers() {
     // ── Favorite (minimal — entity data may be incomplete) ───────────────
 
     function transformFavorite(fav: FavoriteLike): UnifiedListingItem {
-      if (fav.entityType === 'LISTING' && fav.listing) return transformCar(fav.listing)
+      // Route to the proper transformer if full entity data is available
+      if (fav.entityType === 'LISTING' && fav.listing)           return transformCar(fav.listing)
+      if (fav.entityType === 'BUS_LISTING' && fav.busListing)    return transformBus(fav.busListing as BusListingItem)
+      if (fav.entityType === 'EQUIPMENT_LISTING' && fav.equipmentListing) return transformEquipment(fav.equipmentListing as EquipmentListingItem)
+      if (fav.entityType === 'OPERATOR_LISTING' && fav.operatorListing)   return transformOperator(fav.operatorListing as OperatorListingItem)
+      if (fav.entityType === 'SPARE_PART' && fav.sparePart)      return transformPart(fav.sparePart as SparePartItem)
+      if (fav.entityType === 'CAR_SERVICE' && fav.carService)    return transformService(fav.carService as CarServiceItem)
+      if (fav.entityType === 'JOB' && fav.job)                   return transformJob(fav.job as JobItem)
+
+      // Fallback: minimal data (entity may have been deleted or API didn't return full data)
       const category = ENTITY_CATEGORY[fav.entityType] ?? 'cars'
       const route = ENTITY_ROUTE[fav.entityType] || '/'
       const title = fav.entity?.title || t('deletedListing')

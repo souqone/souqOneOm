@@ -30,7 +30,7 @@ interface UseUnifiedListingsReturn {
 // ─── Param builders ───────────────────────────────────────────────────────────
 
 function toParams(filters: ActiveFilters, category: ListingCategory, page: number): Record<string, string> {
-  return { ...buildQueryParams(filters, FILTERS_CONFIG[category]), page: String(page) }
+  return { ...buildQueryParams(filters, FILTERS_CONFIG[category] ?? []), page: String(page) }
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

@@ -6,8 +6,7 @@ type BookingEntityConnectField =
   | { listing: { connect: { id: string } } }
   | { busListing: { connect: { id: string } } }
   | { equipmentListing: { connect: { id: string } } }
-  | { transportService: { connect: { id: string } } }
-  | { tripService: { connect: { id: string } } };
+  | { transportService: { connect: { id: string } } };
 
 export interface ResolvedBookingEntity {
   title: string;
@@ -109,26 +108,6 @@ export class BookingEntityResolverService {
           currency: ts.currency,
           cancellationPolicy: CancellationPolicy.FREE,
           connectField: { transportService: { connect: { id: entityId } } },
-        };
-      }
-      case 'TRIP': {
-        const trip = await this.prisma.tripService.findUnique({
-          where: { id: entityId },
-          include: { user: { select: { id: true, displayName: true, username: true } } },
-        });
-        if (!trip) throw new NotFoundException('الرحلة غير موجودة');
-        if (trip.status !== 'ACTIVE') throw new BadRequestException('الرحلة غير متاحة حالياً');
-        return {
-          title: trip.title,
-          ownerId: trip.userId,
-          dailyPrice: trip.pricePerTrip ? Number(trip.pricePerTrip) : null,
-          weeklyPrice: null,
-          monthlyPrice: trip.priceMonthly ? Number(trip.priceMonthly) : null,
-          minRentalDays: null,
-          depositAmount: null,
-          currency: trip.currency,
-          cancellationPolicy: CancellationPolicy.FREE,
-          connectField: { tripService: { connect: { id: entityId } } },
         };
       }
       default:

@@ -64,10 +64,8 @@ export function NavSearchBar({ searchOpen, onSearchOpenChange, onCloseMobile, he
   }, []);
 
   function buildSearchUrl(query: string) {
-    const params = new URLSearchParams();
-    params.set('q', query);
-    if (activeCat.value !== 'all') params.set('category', activeCat.value);
-    return `/browse?${params.toString()}`;
+    const cat = activeCat.value !== 'all' ? activeCat.value : 'cars';
+    return `/browse/${cat}?q=${encodeURIComponent(query)}`;
   }
 
   function handleSearch(e?: React.FormEvent) {

@@ -21,10 +21,13 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
-    "prettier": "^3.4.0"
+    "prettier": "^3.4.0",
+    "turbo": "^2.4.0"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0"
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
@@ -39,10 +40,18 @@ const CONDITION_KEYS = [
   { value: 'FAIR', labelKey: 'eqCondFair' },
 ] as const;
 
+function normalizeListingType(type: string | null) {
+  if (type === 'SALE') return 'EQUIPMENT_SALE';
+  if (type === 'RENTAL') return 'EQUIPMENT_RENT';
+  if (type === 'EQUIPMENT_SALE' || type === 'EQUIPMENT_RENT') return type;
+  return '';
+}
 
 export function AddEquipmentForm() {
   const tp = useTranslations('pages');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialType = normalizeListingType(searchParams.get('type'));
   const { addToast } = useToast();
   const createEquip = useCreateEquipmentListing();
 
@@ -51,7 +60,7 @@ export function AddEquipmentForm() {
   const [images, setImages] = useState<UploadedImage[]>([]);
 
   // Form state
-  const [listingType, setListingType] = useState('');
+  const [listingType, setListingType] = useState(initialType);
   const [equipmentType, setEquipmentType] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -71,6 +80,12 @@ export function AddEquipmentForm() {
   const [withOperator, setWithOperator] = useState(false);
   const [deliveryAvailable, setDeliveryAvailable] = useState(false);
   const [minRentalDays, setMinRentalDays] = useState('');
+  const [features, setFeatures] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [insuranceIncluded, setInsuranceIncluded] = useState(false);
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [availableTo, setAvailableTo] = useState('');
+  const [cancellationPolicy, setCancellationPolicy] = useState('');
   const [governorate, setGovernorate] = useState('');
   const [city, setCity] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -114,6 +129,12 @@ export function AddEquipmentForm() {
         monthlyPrice: monthlyPrice ? Number(monthlyPrice) : undefined,
         isPriceNegotiable, withOperator, deliveryAvailable,
         minRentalDays: minRentalDays ? Number(minRentalDays) : undefined,
+        features: features ? features.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        depositAmount: depositAmount ? Number(depositAmount) : undefined,
+        insuranceIncluded: listingType === 'EQUIPMENT_RENT' ? insuranceIncluded : undefined,
+        availableFrom: availableFrom || undefined,
+        availableTo: availableTo || undefined,
+        cancellationPolicy: cancellationPolicy || undefined,
         governorate: governorate || undefined, city: city || undefined,
         latitude: latitude ?? undefined, longitude: longitude ?? undefined,
         contactPhone: contactPhone || undefined, whatsapp: whatsapp || undefined,
@@ -134,7 +155,7 @@ export function AddEquipmentForm() {
       }
 
       addToast('success', tp('eqSuccess'));
-      router.push(`/sale/equipment/${result.id}`);
+      router.push(`${result.listingType === 'EQUIPMENT_RENT' ? '/rental' : '/sale'}/equipment/${result.id}`);
     } catch (e: any) {
       addToast('error', e?.message || tp('eqError'));
     }
@@ -244,6 +265,36 @@ export function AddEquipmentForm() {
                   <div><label className={labelCls}>{tp('eqLabelMinRental')}</label><input type="number" className={inputCls} value={minRentalDays} onChange={e => setMinRentalDays(e.target.value)} /></div>
                 )}
               </div>
+              {listingType === 'EQUIPMENT_RENT' && (
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <label className={labelCls}>{tp('eqLabelFeatures')}</label>
+                    <input className={inputCls} value={features} onChange={e => setFeatures(e.target.value)} placeholder={tp('eqPlaceholderFeatures')} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>{tp('eqLabelDeposit')}</label>
+                      <input type="number" className={inputCls} value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder={tp('eqPlaceholderOptional')} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{tp('eqLabelAvailableFrom')}</label>
+                      <input type="date" className={inputCls} value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{tp('eqLabelAvailableTo')}</label>
+                      <input type="date" className={inputCls} value={availableTo} onChange={e => setAvailableTo(e.target.value)} />
+                    </div>
+                  </div>
+                  <label className={checkboxLabelCls}>
+                    <input type="checkbox" checked={insuranceIncluded} onChange={e => setInsuranceIncluded(e.target.checked)} className={checkboxCls} />
+                    <span className={checkboxTextCls}>{tp('eqLabelInsurance')}</span>
+                  </label>
+                  <div>
+                    <label className={labelCls}>{tp('eqLabelCancellation')}</label>
+                    <textarea className={inputCls + ' min-h-[80px]'} rows={3} value={cancellationPolicy} onChange={e => setCancellationPolicy(e.target.value)} placeholder={tp('eqPlaceholderCancellation')} />
+                  </div>
+                </div>
+              )}
             </section>
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">location_on</span>{tp('eqLabelLocationContact')}</h2>

@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import type { NavLinkItem } from '../navbar';
@@ -25,7 +24,6 @@ export function MobileDrawer({ open, close, navLinks, flatNavLinks: _flatNavLink
   const t = useTranslations('common');
   const locale = useLocale();
   const { openAuth } = useAuthModal();
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   const accountLinks = [
     { href: '/profile', icon: 'person', label: t('profile') },
@@ -92,50 +90,17 @@ export function MobileDrawer({ open, close, navLinks, flatNavLinks: _flatNavLink
         <div className="flex-1 overflow-y-auto py-3">
           <p className="px-5 pt-2 pb-1 text-[11px] font-bold text-outline uppercase tracking-widest">{t('browsing')}</p>
           {navLinks.map(link => {
-            const active = isActive(link.href) || link.children?.some(c => isActive(c.href));
-            const hasChildren = link.children && link.children.length > 0;
-            const isExpanded = expanded === link.href;
-
+            const active = isActive(link.href);
             return (
-              <div key={link.href}>
-                {hasChildren ? (
-                  <button
-                    onClick={() => setExpanded(isExpanded ? null : link.href)}
-                    className={`w-full flex items-center justify-between px-5 py-3 text-sm font-semibold transition-colors
-                      ${active ? 'text-primary bg-primary/5' : 'text-on-surface hover:bg-surface-container-low'}`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-primary' : 'bg-outline/30'}`} />
-                      {link.label}
-                    </span>
-                    <span className={`material-symbols-outlined icon-flip text-sm text-on-surface-variant transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>chevron_left</span>
-                  </button>
-                ) : (
-                  <Link
-                    href={link.href}
-                    className={`flex items-center gap-3 px-5 py-3 text-sm font-semibold transition-colors
-                      ${active ? 'text-primary bg-primary/5' : 'text-on-surface hover:bg-surface-container-low'}`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-primary' : 'bg-outline/30'}`} />
-                    {link.label}
-                  </Link>
-                )}
-                {hasChildren && isExpanded && (
-                  <div className="bg-surface-container-low/50 border-y border-outline-variant/10">
-                    {link.children!.map(child => (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className={`flex items-center gap-3 pe-12 ps-5 py-2.5 text-sm transition-colors
-                          ${isActive(child.href) ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'}`}
-                      >
-                        <span className="material-symbols-outlined text-base shrink-0">{child.icon}</span>
-                        {child.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-3 px-5 py-3 text-sm font-semibold transition-colors
+                  ${active ? 'text-primary bg-primary/5' : 'text-on-surface hover:bg-surface-container-low'}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-primary' : 'bg-outline/30'}`} />
+                {link.label}
+              </Link>
             );
           })}
 

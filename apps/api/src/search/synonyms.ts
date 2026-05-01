@@ -98,10 +98,6 @@ export const GENERAL_SYNONYMS: Record<string, string[]> = {
   'نقل': ['شحن', 'transport', 'shipping'],
   'توصيل': ['delivery'],
 
-  // Insurance
-  'تأمين': ['insurance'],
-  'تأمين شامل': ['comprehensive', 'full coverage'],
-  'ضد الغير': ['third party'],
 };
 
 /**

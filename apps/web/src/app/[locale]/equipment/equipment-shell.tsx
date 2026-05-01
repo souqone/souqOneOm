@@ -1,21 +1,62 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { Search, ArrowLeft, ArrowRight, ChevronLeft, Wrench, HardHat, Package, Users, Plus, Sparkles, MapPin } from 'lucide-react';
 import type { EquipmentListingItem, EquipmentRequestItem, OperatorListingItem } from '@/lib/api/equipment';
 import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
 import { normalizeEquipment } from '@/features/listings/config/categories.config';
 
+// ── Neon Typing Animation ────────────────────────────────────────────────────
+
+function NeonTypingText({ text, className, speed = 70, glowColor = '#f59e0b' }: { text: string; className?: string; speed?: number; glowColor?: string }) {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDisplayed('');
+    setDone(false);
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) {
+        clearInterval(id);
+        setDone(true);
+      }
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed]);
+
+  return (
+    <span
+      className={className}
+      style={{
+        textShadow: `0 0 7px ${glowColor}80, 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20`,
+        transition: 'text-shadow 0.3s ease',
+      }}
+    >
+      {displayed}
+      {!done && (
+        <span
+          className="inline-block w-[3px] h-[0.85em] align-middle ms-0.5 rounded-full animate-pulse"
+          style={{ backgroundColor: glowColor, boxShadow: `0 0 8px ${glowColor}, 0 0 20px ${glowColor}80` }}
+        />
+      )}
+    </span>
+  );
+}
+
 // ── Equipment Type Config ────────────────────────────────────────────────────
 
 const EQUIP_TYPES = [
   { key: 'EXCAVATOR', label: 'حفارة', icon: 'precision_manufacturing' },
-  { key: 'CRANE', label: 'رافعة', icon: 'crane' },
+  { key: 'CRANE', label: 'رافعة', icon: 'hardware' },
   { key: 'LOADER', label: 'لودر', icon: 'front_loader' },
   { key: 'BULLDOZER', label: 'بلدوزر', icon: 'agriculture' },
   { key: 'FORKLIFT', label: 'رافعة شوكية', icon: 'forklift' },
-  { key: 'CONCRETE_MIXER', label: 'خلاطة', icon: 'concrete' },
+  { key: 'CONCRETE_MIXER', label: 'خلاطة', icon: 'autorenew' },
   { key: 'GENERATOR', label: 'مولد كهربائي', icon: 'bolt' },
   { key: 'COMPRESSOR', label: 'ضاغط هواء', icon: 'air' },
   { key: 'SCAFFOLDING', label: 'سقالات', icon: 'construction' },
@@ -59,74 +100,91 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
       {/* ═══════════════════════════════════════════════════════════════════════
           1. HERO SECTION
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-gradient-to-bl from-slate-900 via-amber-900/80 to-amber-700/90 pt-8 pb-16 md:pt-12 md:pb-24">
-        {/* Decorative */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 right-10 w-72 h-72 rounded-full bg-amber-500 blur-[100px]" />
-          <div className="absolute bottom-10 left-10 w-96 h-96 rounded-full bg-orange-400 blur-[120px]" />
-        </div>
-        <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-5" />
-
-        <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-8">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-[13px] text-white/60 mb-8">
-            <Link href="/" className="hover:text-white transition-colors flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">home</span>
-              الرئيسية
-            </Link>
-            <ChevronLeft size={14} className="opacity-50" />
-            <span className="text-white font-medium">المعدات الثقيلة</span>
-          </nav>
-
-          {/* Title */}
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white/80 text-[12px] font-medium mb-4">
-              <Sparkles size={14} className="text-amber-400" />
-              سوق المعدات الثقيلة في عُمان
+      <section>
+        {/* Search bar — above slider */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container rounded-full border border-outline-variant/20 ps-3 pe-1.5 py-1 shadow-sm">
+              <Search size={16} className="text-on-surface-variant/50 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث عن معدة، حفارة، رافعة، مولد..."
+                className="flex-1 h-8 sm:h-9 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none min-w-0"
+              />
+              <Link
+                href={`/browse/equipment${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`}
+                className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-amber-600 rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all"
+              >
+                <span className="material-symbols-outlined text-white text-[16px] sm:text-[18px]">search</span>
+              </Link>
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tight mb-3">
-              عالم <span className="text-amber-400">المعدات الثقيلة</span>
-            </h1>
-            <p className="text-white/60 text-sm md:text-base max-w-lg mx-auto">
-              بيع وإيجار المعدات الثقيلة، طلبات المعدات، ومشغلين محترفين في مكان واحد
-            </p>
           </div>
+        </div>
 
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-white/20 rounded-2xl blur-xl group-hover:bg-white/30 transition-all duration-300" />
-              <div className="relative flex items-center bg-white rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
-                <Search size={20} className="mr-4 text-on-surface-variant shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن معدة، حفارة، رافعة، مولد..."
-                  className="flex-1 h-14 bg-transparent text-[15px] text-on-surface placeholder:text-on-surface-variant/60 outline-none"
-                />
+        {/* Hero Banner */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
+          <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5] xl:aspect-[16/5] rounded-2xl sm:rounded-3xl">
+            <Image
+              src="/images/categories/equipment.webp"
+              alt="معدات سوق وان"
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1280px"
+              quality={80}
+              placeholder="blur"
+              blurDataURL="data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAADQAQCdASoQAAkAAkA4JZQCdAEO/hepgAAA/vxR0f//LGf/0pV//9Kf/+lf/6Uq1PUAAP7+IQAA"
+              className="object-cover"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 sm:px-8 lg:px-12 xl:px-16 text-white">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10 text-white/80 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
+                <Sparkles size={12} className="text-amber-400 sm:w-[14px] sm:h-[14px]" />
+                سوق المعدات الثقيلة في عُمان
+              </div>
+
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-2 lg:mb-3">
+                <NeonTypingText text="عالم المعدات الثقيلة" speed={80} glowColor="#f59e0b" className="text-amber-400" />
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-lg lg:max-w-xl">
+                بيع وإيجار المعدات الثقيلة، طلبات المعدات، ومشغلين محترفين في مكان واحد
+              </p>
+
+              {/* CTAs */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-5">
                 <Link
-                  href={`/browse/equipment${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`}
-                  className="h-10 px-6 ml-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[14px] font-bold flex items-center gap-2 transition-all duration-200 active:scale-95 shrink-0"
+                  href="/browse/equipment"
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl bg-amber-600 hover:bg-amber-700 text-white transition-all"
                 >
-                  بحث
+                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">explore</span>
+                  تصفح المعدات
+                </Link>
+                <Link
+                  href="/add-listing/equipment"
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
+                >
+                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">add_circle</span>
+                  أضف معدتك
                 </Link>
               </div>
-            </div>
-          </div>
 
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-6 md:gap-10 mt-8">
-            {[
-              { label: 'معدة للبيع', value: `+${saleEquipment.length > 0 ? '500' : '0'}` },
-              { label: 'معدة للإيجار', value: `+${rentalEquipment.length > 0 ? '200' : '0'}` },
-              { label: 'مشغل معتمد', value: `+${operators.length > 0 ? '50' : '0'}` },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="text-xl md:text-2xl font-black text-white">{stat.value}</p>
-                <p className="text-[11px] md:text-[12px] text-white/50">{stat.label}</p>
+              {/* Stats as trust badges */}
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-3 flex-wrap">
+                {[
+                  { label: 'معدة للبيع', value: `+${saleEquipment.length > 0 ? '500' : '0'}` },
+                  { label: 'معدة للإيجار', value: `+${rentalEquipment.length > 0 ? '200' : '0'}` },
+                  { label: 'مشغل معتمد', value: `+${operators.length > 0 ? '50' : '0'}` },
+                ].map((stat) => (
+                  <span key={stat.label} className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2 py-1 sm:px-2.5 sm:py-1 lg:px-3 lg:py-1.5">
+                    {stat.value} {stat.label}
+                  </span>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
@@ -134,21 +192,20 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
       {/* ═══════════════════════════════════════════════════════════════════════
           2. QUICK LINKS
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="-mt-10 relative z-20 max-w-6xl mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <section className="relative z-20 max-w-6xl mx-auto px-2 sm:px-4 md:px-8 mt-4 sm:mt-6">
+        <div className="grid grid-cols-4 gap-1 sm:gap-3 md:gap-4">
           {QUICK_LINKS.map((link) => (
             <Link
               key={link.title}
               href={link.href}
-              className="group relative overflow-hidden rounded-2xl p-5 md:p-6 bg-white dark:bg-surface-container border border-outline-variant/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className="group flex flex-col items-center text-center py-2 sm:py-3 hover:opacity-80 transition-opacity"
             >
-              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${link.gradient}`} />
-              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <link.icon size={22} className="text-white" />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-1.5 sm:mb-2 shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                <link.icon size={18} className="text-white sm:hidden" />
+                <link.icon size={22} className="text-white hidden sm:block" />
               </div>
-              <h3 className="text-[14px] md:text-[15px] font-bold text-on-surface mb-1">{link.title}</h3>
-              <p className="text-[11px] md:text-[12px] text-on-surface-variant leading-relaxed line-clamp-2">{link.desc}</p>
-              <span className="inline-block mt-2 text-[10px] md:text-[11px] font-bold text-primary/80">{link.count}</span>
+              <h3 className="text-[10px] sm:text-[13px] md:text-[14px] font-bold text-on-surface leading-tight">{link.title}</h3>
+              <span className="text-[8px] sm:text-[10px] md:text-[11px] font-medium text-on-surface-variant mt-0.5">{link.count}</span>
             </Link>
           ))}
         </div>

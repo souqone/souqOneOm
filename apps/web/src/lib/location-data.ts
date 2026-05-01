@@ -281,6 +281,37 @@ function findOmanCityRef(input?: string | null, preferredGovCode?: string): Oman
   return matches[0];
 }
 
+function splitLocationParts(input: string): string[] {
+  return input
+    .split(/[،,|/>\\]+|\s+-\s+/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function findOmanGovernorateCodeInText(input?: string | null): string | undefined {
+  if (!input) return undefined;
+  const direct = findOmanGovernorateCode(input);
+  if (direct) return direct;
+
+  for (const part of splitLocationParts(input)) {
+    const partGov = findOmanGovernorateCode(part);
+    if (partGov) return partGov;
+    const cityRef = findOmanCityRef(part);
+    if (cityRef) return cityRef.governorateCode;
+  }
+
+  const normalized = normalizePlaceKey(input);
+  const omGovernorates = governorates.OM ?? [];
+  for (const gov of omGovernorates) {
+    const candidates = [gov.value, gov.label, EN[gov.value]].filter(Boolean);
+    if (candidates.some((candidate) => normalized.includes(normalizePlaceKey(candidate)))) {
+      return gov.value;
+    }
+  }
+
+  return undefined;
+}
+
 export function resolveOmanLocationLabels(
   governorateInput?: string | null,
   cityInput?: string | null,
@@ -316,8 +347,12 @@ export function resolveLocationLabel(
   locale?: string
 ): string | undefined {
   if (!value) return undefined;
-  const { governorateLabel } = resolveOmanLocationLabels(value, undefined, locale);
-  return governorateLabel ?? value.trim();
+  const rawValue = value.trim();
+  const governorateCode = findOmanGovernorateCodeInText(rawValue);
+  if (governorateCode) return getGovernorateLabel('OM', governorateCode, locale);
+  const cityRef = findOmanCityRef(rawValue);
+  if (cityRef) return getGovernorateLabel('OM', cityRef.governorateCode, locale);
+  return rawValue;
 }
 
 export function resolveCityLabel(

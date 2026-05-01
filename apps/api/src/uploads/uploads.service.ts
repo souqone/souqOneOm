@@ -78,15 +78,4 @@ export class UploadsService {
     return this.images.addImageToEquipment(equipmentId, userId, url, isPrimary);
   }
 
-  // ─── Trip Images ───
-
-  async addImageToTrip(tripId: string, userId: string, url: string, isPrimary: boolean) {
-    return this.images.addImageToTrip(tripId, userId, url, isPrimary);
-  }
-
-  // ─── Insurance Images ───
-
-  async addImageToInsurance(insuranceId: string, userId: string, url: string, isPrimary: boolean) {
-    return this.images.addImageToInsurance(insuranceId, userId, url, isPrimary);
-  }
 }

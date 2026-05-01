@@ -1,22 +1,62 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, useInView } from 'framer-motion';
 import {
-  Search, Plus, Bus, Users, GraduationCap, Crown,
+  Search, Plus, Bus, Users, GraduationCap, Crown, KeyRound,
   Truck, MinusSquare, ArrowLeft,
   TrendingUp, ShieldCheck, Headphones, Layers,
 } from 'lucide-react';
 
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { CardGrid } from '@/features/listings/components/CardGrid';
+import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { BusListingItem } from '@/lib/api/buses';
+
+// ── Neon Typing Animation ────────────────────────────────────────────────────
+
+function NeonTypingText({ text, className, speed = 70, glowColor = '#FE5E00' }: { text: string; className?: string; speed?: number; glowColor?: string }) {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDisplayed('');
+    setDone(false);
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) {
+        clearInterval(id);
+        setDone(true);
+      }
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed]);
+
+  return (
+    <span
+      className={className}
+      style={{
+        textShadow: `0 0 7px ${glowColor}80, 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20`,
+        transition: 'text-shadow 0.3s ease',
+      }}
+    >
+      {displayed}
+      {!done && (
+        <span
+          className="inline-block w-[3px] h-[0.85em] align-middle ms-0.5 rounded-full animate-pulse"
+          style={{ backgroundColor: glowColor, boxShadow: `0 0 8px ${glowColor}, 0 0 20px ${glowColor}80` }}
+        />
+      )}
+    </span>
+  );
+}
 
 /* ─── Animation Helpers ───────────────────────────────────────────────── */
 
@@ -45,6 +85,103 @@ function AnimatedSection({ children, className }: { children: React.ReactNode; c
   );
 }
 
+/* ─── Bus Category Slider ─────────────────────────────────────────────── */
+
+const BUS_SECTIONS = [
+  { type: 'BUS_SALE',               title: 'حافلات للبيع',         icon: 'sell',              color: 'from-blue-500 to-blue-600' },
+  { type: 'BUS_RENT',               title: 'حافلات للإيجار',       icon: 'key',               color: 'from-green-500 to-green-600' },
+  { type: 'BUS_CONTRACT',           title: 'حافلات للتعاقد',       icon: 'handshake',         color: 'from-purple-500 to-purple-600' },
+  { type: 'BUS_SALE_WITH_CONTRACT', title: 'بيع مع عقد تشغيل',    icon: 'assignment_turned_in', color: 'from-amber-500 to-amber-600' },
+] as const;
+
+function BusCategorySlider({ items, title, icon, color, filterType }: {
+  items: BusListingItem[];
+  title: string;
+  icon: string;
+  color: string;
+  filterType: string;
+}) {
+  const { transformBus } = useItemTransformers();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const sl = Math.abs(el.scrollLeft);
+    setCanScrollLeft(sl > 4);
+    setCanScrollRight(sl + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scroll = useCallback((dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-10 sm:mb-14">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-md`}>
+            <span className="material-symbols-outlined text-white text-[18px] sm:text-[20px]">{icon}</span>
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-lg font-black text-on-surface">{title}</h3>
+            <p className="text-[10px] sm:text-xs text-on-surface-variant">{items.length} إعلان</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Arrows — desktop only */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <button
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              className="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary disabled:opacity-30 disabled:cursor-default transition-colors cursor-pointer"
+              aria-label="السابق"
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              className="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary disabled:opacity-30 disabled:cursor-default transition-colors cursor-pointer"
+              aria-label="التالي"
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+          </div>
+          <Link
+            href={`/browse/buses?busListingType=${filterType}`}
+            className="text-[11px] sm:text-[13px] font-bold text-primary hover:underline underline-offset-2"
+          >
+            عرض الكل
+            <ArrowLeft size={12} className="inline ms-1" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Slider */}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide -mx-3 px-3 pb-2"
+      >
+        {items.map((bus) => (
+          <div key={bus.id} className="w-[calc(50%-6px)] md:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)] flex-shrink-0 snap-start">
+            <UnifiedCard item={transformBus(bus)} className="h-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Data ────────────────────────────────────────────────────────────── */
 
 const BUS_TYPES = [
@@ -56,12 +193,6 @@ const BUS_TYPES = [
   { key: 'mini',     icon: MinusSquare,     color: 'from-rose-500 to-rose-600',    filter: 'MINIBUS' },
 ] as const;
 
-const STATS = [
-  { key: 'Buses',   icon: 'directions_bus' },
-  { key: 'Cities',  icon: 'location_city' },
-  { key: 'Clients', icon: 'group' },
-  { key: 'Years',   icon: 'workspace_premium' },
-] as const;
 
 const STEPS = [
   { num: '١', icon: 'search',       gradient: 'from-primary to-[#2563eb]' },
@@ -83,11 +214,21 @@ interface Props {
   totalBuses: number;
 }
 
-export function BusesLandingClient({ buses, totalBuses }: Props) {
+export function BusesLandingClient({ buses, totalBuses: _totalBuses }: Props) {
   const t = useTranslations('busesLanding');
   const router = useRouter();
-  const { transformBus } = useItemTransformers();
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Group buses by listing type for per-section sliders
+  const busGroups = useMemo(() => {
+    const groups: Record<string, BusListingItem[]> = {};
+    for (const bus of buses) {
+      const key = bus.busListingType || 'BUS_SALE';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(bus);
+    }
+    return groups;
+  }, [buses]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -100,106 +241,116 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
       <Navbar />
 
       {/* ═══════════════════ 1. HERO ═══════════════════ */}
-      <section className="relative overflow-hidden bg-brand-navy">
-        {/* Background */}
-        <div className="absolute inset-0">
-          <Image
-            src="/images/categories/buses.webp"
-            alt=""
-            fill
-            priority
-            className="object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-navy/80 via-brand-navy/70 to-brand-navy" />
-        </div>
-
-        {/* Floating shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 start-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 end-10 w-96 h-96 bg-brand-amber/10 rounded-full blur-3xl" />
-        </div>
-
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-6 pt-16 sm:pt-24 pb-12 sm:pb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
-            className="max-w-3xl"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/80 text-xs sm:text-sm font-medium mb-4 sm:mb-6">
-              <span className="material-symbols-outlined text-brand-amber text-[16px]">verified</span>
-              <span>{totalBuses > 0 ? `${totalBuses.toLocaleString('ar-EG')} حافلة متاحة` : 'حافلات للبيع والإيجار'}</span>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-3 sm:mb-5">
-              {t('heroTitle')}
-            </h1>
-            <p className="text-sm sm:text-lg text-white/70 leading-relaxed mb-6 sm:mb-8 max-w-xl">
-              {t('heroSubtitle')}
-            </p>
-
-            {/* Search */}
-            <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-6 sm:mb-8">
-              <div className="relative flex-1">
-                <input
-                  ref={searchRef}
-                  type="text"
-                  placeholder={t('searchPlaceholder')}
-                  dir="auto"
-                  className="w-full h-12 sm:h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl pe-4 ps-12 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all"
-                />
-                <Search className="absolute start-4 top-1/2 -translate-y-1/2 text-white/50" size={18} />
-              </div>
-              <button
-                type="submit"
-                className="h-12 sm:h-14 px-6 sm:px-8 btn-brand rounded-2xl font-bold text-sm shrink-0 hover:brightness-110 active:scale-95 transition-all"
-              >
-                {t('heroCta')}
+      <section>
+        {/* Search bar — above slider */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+          <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSearch} className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container rounded-full border border-outline-variant/20 ps-3 pe-1.5 py-1 shadow-sm">
+              <Search size={16} className="text-on-surface-variant/50 shrink-0" />
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder={t('searchPlaceholder')}
+                dir="auto"
+                className="flex-1 h-8 sm:h-9 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none min-w-0"
+              />
+              <button type="submit" className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-primary rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all">
+                <span className="material-symbols-outlined text-on-primary text-[16px] sm:text-[18px]">search</span>
               </button>
             </form>
+          </div>
+        </div>
 
-            {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/browse/buses"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-brand-navy font-bold text-sm hover:bg-white/90 active:scale-95 transition-all shadow-lg"
-              >
-                <Bus size={18} />
-                {t('heroCta')}
-              </Link>
-              <Link
-                href="/add-listing/bus"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/30 text-white font-bold text-sm hover:bg-white/10 active:scale-95 transition-all"
-              >
-                <Plus size={18} />
-                {t('heroAddCta')}
-              </Link>
-            </div>
-          </motion.div>
+        {/* Hero Banner */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
+          <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5] xl:aspect-[16/5] rounded-2xl sm:rounded-3xl">
+            <Image
+              src="/images/categories/buses.webp"
+              alt="حافلات سوق وان"
+              fill
+              priority
+              className="object-cover"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-transparent" />
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
+              className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 sm:px-8 lg:px-12 xl:px-16 text-white"
+            >
+              {/* Badge */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10 text-white/80 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
+                <span className="material-symbols-outlined text-brand-amber text-[14px] sm:text-[16px]">verified</span>
+                <span>{_totalBuses > 0 ? `${_totalBuses.toLocaleString('ar-EG')} حافلة متاحة` : 'حافلات للبيع والإيجار'}</span>
+              </div>
+
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-2 lg:mb-3">
+                <span className="text-white">أكبر سوق </span>
+                <NeonTypingText text="حافلات" speed={100} glowColor="#FE5E00" className="text-brand-amber" />
+                <span className="text-white"> في عُمان</span>
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-lg lg:max-w-xl">
+                {t('heroSubtitle')}
+              </p>
+
+              {/* CTAs */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-5">
+                <Link
+                  href="/browse/buses"
+                  className="btn-brand shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl hover:brightness-110 transition-all"
+                >
+                  <Bus size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  {t('heroCta')}
+                </Link>
+                <Link
+                  href="/add-listing/bus"
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
+                >
+                  <Plus size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  {t('heroAddCta')}
+                </Link>
+              </div>
+
+              {/* Trust badges */}
+              <div className="hidden sm:flex items-center justify-center gap-2 lg:gap-3 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1 lg:px-3 lg:py-1.5">
+                  <span className="material-symbols-outlined !text-[13px] lg:!text-sm leading-none">verified_user</span>
+                  حافلات موثقة
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1 lg:px-3 lg:py-1.5">
+                  <span className="material-symbols-outlined !text-[13px] lg:!text-sm leading-none">local_shipping</span>
+                  بيع وإيجار
+                </span>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* ═══════════════════ 2. TRUST STATS ═══════════════════ */}
-      <section className="relative -mt-6 sm:-mt-8 z-10">
-        <div className="max-w-5xl mx-auto px-3 sm:px-6">
-          <AnimatedSection>
-            <motion.div
-              variants={fadeUp}
-              className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"
+      {/* ═══════════════════ 2. QUICK LINKS ═══════════════════ */}
+      <section className="relative z-10 max-w-6xl mx-auto px-3 sm:px-4 md:px-8 mt-6 sm:mt-8">
+        <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6">
+          {[
+            { title: 'حافلات للبيع', icon: Bus, href: '/browse/buses?busListingType=BUS_SALE', gradient: 'from-blue-600 to-indigo-700', count: 'عروض يومية' },
+            { title: 'حافلات للإيجار', icon: KeyRound, href: '/browse/buses?busListingType=BUS_RENT', gradient: 'from-emerald-600 to-teal-700', count: 'أسعار مرنة' },
+            { title: 'طلبات نقل', icon: Truck, href: '/browse/buses?busListingType=BUS_CONTRACT', gradient: 'from-purple-600 to-pink-600', count: 'عقود تشغيل' },
+            { title: 'أضف حافلتك', icon: Plus, href: '/add-listing/bus', gradient: 'from-amber-500 to-orange-600', count: 'مجاناً' },
+          ].map((link) => (
+            <Link
+              key={link.title}
+              href={link.href}
+              className="group flex flex-col items-center text-center py-3 sm:py-4 hover:opacity-80 transition-opacity"
             >
-              {STATS.map(s => (
-                <div
-                  key={s.key}
-                  className="flex flex-col items-center gap-1.5 py-5 sm:py-6 bg-surface-container-lowest dark:bg-surface-container rounded-2xl border border-outline-variant/20 shadow-ambient"
-                >
-                  <span className="material-symbols-outlined text-primary text-[24px] sm:text-[28px]">{s.icon}</span>
-                  <span className="text-lg sm:text-2xl font-black text-on-surface">{t(`stat${s.key}`)}</span>
-                  <span className="text-[10px] sm:text-xs text-on-surface-variant font-medium">{t(`stat${s.key}Label`)}</span>
-                </div>
-              ))}
-            </motion.div>
-          </AnimatedSection>
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-2 sm:mb-3 shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                <link.icon size={22} className="text-white sm:hidden" />
+                <link.icon size={28} className="text-white hidden sm:block" />
+              </div>
+              <h3 className="text-[11px] sm:text-[14px] md:text-[15px] font-bold text-on-surface leading-tight">{link.title}</h3>
+              <span className="text-[9px] sm:text-[11px] md:text-[12px] font-medium text-on-surface-variant mt-0.5">{link.count}</span>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -245,36 +396,33 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
         </div>
       </section>
 
-      {/* ═══════════════════ 4. FEATURED LISTINGS ═══════════════════ */}
+      {/* ═══════════════════ 4. LISTINGS BY TYPE ═══════════════════ */}
       {buses.length > 0 && (
         <section className="bg-surface-container-low dark:bg-surface-dim py-10 sm:py-16">
           <div className="max-w-7xl mx-auto px-3 sm:px-6">
             <AnimatedSection>
-              <motion.div variants={fadeUp} className="flex flex-wrap justify-between items-end gap-2 mb-6 sm:mb-8">
-                <div>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <div className="h-6 sm:h-8 w-1 bg-primary rounded-full" />
-                    <h2 className="text-base sm:text-xl md:text-3xl font-black">{t('featuredTitle')}</h2>
-                  </div>
-                  <p className="text-on-surface-variant text-xs sm:text-sm">{t('featuredSubtitle')}</p>
+              <motion.div variants={fadeUp} className="mb-6 sm:mb-10">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 bg-primary rounded-full" />
+                  <h2 className="text-base sm:text-xl md:text-3xl font-black">{t('featuredTitle')}</h2>
                 </div>
-                <Link
-                  href="/browse/buses"
-                  className="flex items-center gap-1.5 text-primary font-bold text-xs sm:text-sm hover:underline transition-colors"
-                >
-                  {t('featuredViewAll')}
-                  <ArrowLeft size={14} />
-                </Link>
+                <p className="text-on-surface-variant text-xs sm:text-sm">{t('featuredSubtitle')}</p>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <CardGrid
-                  items={buses}
-                  mapItem={transformBus}
-                  isLoading={false}
-                  emptyIcon="directions_bus"
-                  emptyMessage=""
-                />
+                {BUS_SECTIONS.map((sec) => {
+                  const sectionBuses = busGroups[sec.type] || [];
+                  return (
+                    <BusCategorySlider
+                      key={sec.type}
+                      items={sectionBuses}
+                      title={sec.title}
+                      icon={sec.icon}
+                      color={sec.color}
+                      filterType={sec.type}
+                    />
+                  );
+                })}
               </motion.div>
             </AnimatedSection>
           </div>

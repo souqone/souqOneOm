@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
@@ -111,6 +111,35 @@ const STEPS = [
   { num: '٣', icon: 'handshake',    gradient: 'from-brand-amber to-[#ff7a2e]' },
 ] as const;
 
+/* ─── Typing Animation ───────────────────────────────────────────────── */
+
+function TypingText({ text, className, speed = 60 }: { text: string; className?: string; speed?: number }) {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDisplayed('');
+    setDone(false);
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) {
+        clearInterval(id);
+        setDone(true);
+      }
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed]);
+
+  return (
+    <span className={className}>
+      {displayed}
+      {!done && <span className="inline-block w-[2px] h-[1em] bg-white/80 align-middle animate-pulse ms-0.5" />}
+    </span>
+  );
+}
+
 /* ─── Main Component ──────────────────────────────────────────────────── */
 
 export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShellProps) {
@@ -138,116 +167,120 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
     <main className="min-h-screen bg-background">
 
       {/* ═══════════════════ 1. HERO ═══════════════════ */}
-      <section className="relative overflow-hidden bg-brand-navy">
-        {/* Background */}
-        <div className="absolute inset-0">
-          <Image
-            src="/images/categories/cars.webp"
-            alt=""
-            fill
-            priority
-            className="object-cover opacity-25"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-navy/80 via-brand-navy/70 to-brand-navy" />
+      <section>
+        {/* Search bar — above slider */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+          <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSearch} className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container rounded-full border border-outline-variant/20 ps-3 pe-1.5 py-1 shadow-sm">
+              <Search size={16} className="text-on-surface-variant/50 shrink-0" />
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder={t('searchPlaceholder')}
+                dir="auto"
+                className="flex-1 h-8 sm:h-9 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none min-w-0"
+              />
+              <button type="submit" className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-primary rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all">
+                <span className="material-symbols-outlined text-on-primary text-[16px] sm:text-[18px]">search</span>
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* Floating shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 start-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 end-10 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl" />
-        </div>
+        {/* Hero Banner */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
+          <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5] xl:aspect-[16/5] rounded-2xl sm:rounded-3xl">
+            <Image
+              src="/images/categories/cars.webp"
+              alt="سيارات سوق وان"
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1280px"
+              quality={80}
+              placeholder="blur"
+              blurDataURL="data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAADQAQCdASoQAAkAAkA4JZQCdAEO/hepgAAA/vxR0f//LGf/0pV//9Kf/+lf/6Uq1PUAAP7+IQAA"
+              className="object-cover"
+            />
 
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-6 pt-16 sm:pt-24 pb-14 sm:pb-24">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
-          >
-            {/* Badge */}
-            <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/80 text-xs sm:text-sm font-medium">
-                <span className="material-symbols-outlined text-amber-400 text-[16px]">verified</span>
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-transparent" />
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
+              className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 sm:px-8 lg:px-12 xl:px-16 text-white"
+            >
+              {/* Badge */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10 text-white/80 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
+                <span className="material-symbols-outlined text-amber-400 text-[14px] sm:text-[16px]">verified</span>
                 {t('badge')}
               </div>
-            </div>
 
-            {/* Title */}
-            <div className="text-center mb-8 sm:mb-10">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-3 sm:mb-4">
-                {t('heroTitle')}
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-2 lg:mb-3">
+                <TypingText text={t('heroTitle')} speed={80} />
               </h1>
-              <p className="text-sm sm:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-lg lg:max-w-xl">
                 {t('heroSubtitle')}
               </p>
-            </div>
 
-            {/* Search */}
-            <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-8 sm:mb-10">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-white/20 rounded-2xl blur-xl group-hover:bg-white/30 transition-all duration-300" />
-                <div className="relative flex items-center bg-white dark:bg-surface-container rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
-                  <Search size={20} className="ms-4 text-on-surface-variant shrink-0" />
-                  <input
-                    ref={searchRef}
-                    type="text"
-                    placeholder={t('searchPlaceholder')}
-                    dir="auto"
-                    className="flex-1 h-14 bg-transparent px-3 text-[15px] text-on-surface placeholder:text-on-surface-variant/60 outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="h-10 px-6 me-2 rounded-xl btn-primary text-[14px] font-bold flex items-center gap-2 active:scale-95 transition-all shrink-0"
-                  >
-                    {t('searchBtn')}
-                  </button>
-                </div>
+              {/* CTAs */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-5">
+                <Link
+                  href="/browse/cars"
+                  className="btn-primary shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl hover:brightness-110 transition-all"
+                >
+                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">explore</span>
+                  {t('searchBtn')}
+                </Link>
+                <Link
+                  href="/add-listing/car"
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
+                >
+                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">add_circle</span>
+                  {t('addListingCta')}
+                </Link>
               </div>
-            </form>
 
-            {/* Stats inline */}
-            <div className="flex items-center justify-center gap-6 md:gap-10">
-              {STATS.slice(0, 3).map(s => (
-                <div key={s.key} className="text-center">
-                  <p className="text-xl md:text-2xl font-black text-white">{t(`stat${s.key}`)}</p>
-                  <p className="text-[11px] md:text-[12px] text-white/50">{t(`stat${s.key}Label`)}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+              {/* Stats as trust badges */}
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-3 flex-wrap">
+                {STATS.slice(0, 3).map(s => (
+                  <span key={s.key} className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2 py-1 sm:px-2.5 sm:py-1 lg:px-3 lg:py-1.5">
+                    {t(`stat${s.key}`)} {t(`stat${s.key}Label`)}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ═══════════════════ 2. QUICK LINKS ═══════════════════ */}
-      <section className="relative -mt-8 sm:-mt-10 z-10">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6">
-          <AnimatedSection>
-            <motion.div
-              variants={stagger}
-              className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"
-            >
-              {QUICK_LINKS_DATA.map(link => {
-                const Icon = link.icon;
-                return (
-                  <motion.div key={link.key} variants={fadeUp}>
-                    <Link
-                      href={link.href}
-                      className="group relative overflow-hidden flex flex-col rounded-2xl p-5 sm:p-6 bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                    >
-                      <div className={`absolute top-0 start-0 w-full h-1 bg-gradient-to-r ${link.gradient}`} />
-                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                        <Icon size={22} className="text-white" />
-                      </div>
-                      <h3 className="text-[13px] sm:text-[15px] font-bold text-on-surface mb-0.5">{t(`ql${link.key}`)}</h3>
-                      <p className="text-[10px] sm:text-[12px] text-on-surface-variant leading-relaxed line-clamp-2">{t(`ql${link.key}Desc`)}</p>
-                      <span className="inline-block mt-2 text-[10px] sm:text-[11px] font-bold text-primary/80">{t(`ql${link.key}Count`)}</span>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </AnimatedSection>
-        </div>
+      <section className="relative z-10 max-w-6xl mx-auto px-2 sm:px-4 md:px-8 mt-4 sm:mt-6">
+        <AnimatedSection>
+          <motion.div
+            variants={stagger}
+            className="grid grid-cols-4 gap-1 sm:gap-3 md:gap-4"
+          >
+            {QUICK_LINKS_DATA.map(link => {
+              const Icon = link.icon;
+              return (
+                <motion.div key={link.key} variants={fadeUp}>
+                  <Link
+                    href={link.href}
+                    className="group flex flex-col items-center text-center py-2 sm:py-3 hover:opacity-80 transition-opacity"
+                  >
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-1.5 sm:mb-2 shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon size={18} className="text-white sm:hidden" />
+                      <Icon size={22} className="text-white hidden sm:block" />
+                    </div>
+                    <h3 className="text-[10px] sm:text-[13px] md:text-[14px] font-bold text-on-surface leading-tight">{t(`ql${link.key}`)}</h3>
+                    <span className="text-[8px] sm:text-[10px] md:text-[11px] font-medium text-on-surface-variant mt-0.5">{t(`ql${link.key}Count`)}</span>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatedSection>
       </section>
 
       {/* ═══════════════════ 3. BRANDS ═══════════════════ */}
