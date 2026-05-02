@@ -36,8 +36,14 @@ export class NotificationsController {
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query() query: PaginationQueryDto,
+    @Query('filter') filter?: 'all' | 'unread',
   ) {
-    return this.notificationsService.findAll(user.sub, query.page ?? 1, query.limit ?? 20);
+    return this.notificationsService.findAll(
+      user.sub,
+      query.page ?? 1,
+      query.limit ?? 20,
+      filter,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

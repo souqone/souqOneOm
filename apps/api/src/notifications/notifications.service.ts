@@ -30,9 +30,11 @@ export class NotificationsService {
     });
 
     // Fire event — ChatGateway listens and pushes via WebSocket
+    const unreadCount = await this.getUnreadCount(dto.userId);
     this.events.emit(NOTIFICATION_EVENTS.CREATED, {
       userId: dto.userId,
       notification,
+      unreadCount: unreadCount.count,
     });
 
     // Send Web Push notification
@@ -50,11 +52,15 @@ export class NotificationsService {
     return notification;
   }
 
-  async findAll(userId: string, page = 1, limit = 20) {
+  async findAll(userId: string, page = 1, limit = 20, filter?: 'all' | 'unread') {
     const skip = (page - 1) * limit;
     const retentionDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
-    const where = { userId, createdAt: { gt: retentionDate } };
+    const where = {
+      userId,
+      createdAt: { gt: retentionDate },
+      ...(filter === 'unread' ? { isRead: false } : {}),
+    };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
@@ -81,15 +87,17 @@ export class NotificationsService {
   }
 
   async markAsRead(id: string, userId: string) {
-    const result = await this.prisma.notification.updateMany({
-      where: { id, userId, isRead: false },
-      data: { isRead: true },
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, userId },
     });
 
-    if (result.count === 0) {
-      const exists = await this.prisma.notification.findFirst({ where: { id, userId } });
-      if (!exists) throw new NotFoundException('الإشعار غير موجود');
-    }
+    if (!notification) throw new NotFoundException('الإشعار غير موجود');
+    if (notification.isRead) return { message: 'تم تحديد الإشعار كمقروء' };
+
+    await this.prisma.notification.update({
+      where: { id },
+      data: { isRead: true },
+    });
 
     return { message: 'تم تحديد الإشعار كمقروء' };
   }
