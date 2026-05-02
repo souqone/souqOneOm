@@ -202,8 +202,8 @@ export class JobsService {
     const cKey = this.cacheKey(`detail:${id}`);
     const cached = await this.redis.get<any>(cKey);
 
-    const job = cached ?? await this.prisma.driverJob.findUnique({
-      where: { id },
+    const job = cached ?? await this.prisma.driverJob.findFirst({
+      where: { OR: [{ id }, { slug: id }] },
       include: {
         user: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true, isVerified: true, createdAt: true } },
         _count: { select: { applications: true } },
@@ -305,7 +305,7 @@ export class JobsService {
 
   /* ───── APPLY TO JOB ───── */
   async apply(jobId: string, applicantId: string, dto: ApplyJobDto) {
-    const job = await this.prisma.driverJob.findUnique({ where: { id: jobId } });
+    const job = await this.prisma.driverJob.findFirst({ where: { OR: [{ id: jobId }, { slug: jobId }] } });
     if (!job) throw new NotFoundException('الوظيفة غير موجودة');
     if (job.status !== 'ACTIVE') throw new ForbiddenException('هذه الوظيفة مغلقة');
     if (job.userId === applicantId) throw new ForbiddenException('لا يمكنك التقديم على وظيفتك الخاصة');
@@ -314,7 +314,7 @@ export class JobsService {
     try {
       application = await this.prisma.jobApplication.create({
         data: {
-          jobId,
+          jobId: job.id,
           applicantId,
           message: dto.message,
           resumeUrl: dto.resumeUrl,
@@ -344,12 +344,12 @@ export class JobsService {
 
   /* ───── GET APPLICATIONS FOR MY JOB ───── */
   async getApplications(jobId: string, userId: string) {
-    const job = await this.prisma.driverJob.findUnique({ where: { id: jobId } });
+    const job = await this.prisma.driverJob.findFirst({ where: { OR: [{ id: jobId }, { slug: jobId }] } });
     if (!job) throw new NotFoundException('الوظيفة غير موجودة');
     if (job.userId !== userId) throw new ForbiddenException('غير مصرح لك بعرض الطلبات');
 
     return this.prisma.jobApplication.findMany({
-      where: { jobId },
+      where: { jobId: job.id },
       orderBy: { createdAt: 'desc' },
       include: {
         applicant: {

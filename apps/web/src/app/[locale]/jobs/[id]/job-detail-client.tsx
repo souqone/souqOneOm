@@ -7,7 +7,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { Share2, MessageCircle, Phone, Trash2, Send, MapPin, Briefcase, Clock, Eye, AlertTriangle } from 'lucide-react';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { useJob, useApplyToJob, useDeleteJob, useCreateConversation } from '@/lib/api';
+import { useJob, useApplyToJob, useDeleteJob, useCreateConversation, useMyApplications, useMyInvites, useWithdrawApplication, useRespondToInvite, useJobApplications, useUpdateApplicationStatus } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { useRequireJobProfile } from '@/hooks/use-require-job-profile';
 import { useToast } from '@/components/toast';
@@ -113,11 +113,23 @@ export default function JobDetailClient() {
   const deleteMutation = useDeleteJob();
   const createConv = useCreateConversation();
 
+  const { data: myApplications } = useMyApplications();
+  const myApplication = myApplications?.find(a => a.jobId === id) ?? null;
+
+  const { data: myInvites } = useMyInvites();
+  const myInvite = myInvites?.find(i => i.jobId === id && i.status === 'PENDING') ?? null;
+
+  const withdrawMutation = useWithdrawApplication();
+  const respondMutation  = useRespondToInvite();
+
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyMessage, setApplyMessage] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isOwner = !!(user && job?.user.id === user.id);
+
+  const { data: applications } = useJobApplications(isOwner ? id : '');
+  const updateStatusMutation = useUpdateApplicationStatus();
 
   const handleMessage = useCallback(() => {
     requireProfile('any', async () => {
@@ -174,6 +186,28 @@ export default function JobDetailClient() {
     if (!job?.contactPhone) return;
     window.location.href = `tel:${job.contactPhone}`;
   }, [job?.contactPhone]);
+
+  const handleWithdraw = useCallback(async () => {
+    if (!myApplication) return;
+    try {
+      await withdrawMutation.mutateAsync(myApplication.id);
+      addToast('success', tp('jobDetailWithdrawSuccess'));
+    } catch (err: any) {
+      addToast('error', err?.message || tp('jobDetailWithdrawFail'));
+    }
+  }, [myApplication, withdrawMutation, addToast, tp]);
+
+  const handleInviteRespond = useCallback(async (status: 'ACCEPTED' | 'DECLINED') => {
+    if (!myInvite) return;
+    try {
+      await respondMutation.mutateAsync({ inviteId: myInvite.id, status });
+      addToast('success',
+        status === 'ACCEPTED' ? tp('jobDetailInviteAccepted') : tp('jobDetailInviteDeclined')
+      );
+    } catch (err: any) {
+      addToast('error', err?.message || tp('jobDetailInviteFail'));
+    }
+  }, [myInvite, respondMutation, addToast, tp]);
 
   // ── Loading state ──
   if (isLoading) {
@@ -257,6 +291,43 @@ export default function JobDetailClient() {
             <span className="hidden sm:inline">{tShare}</span>
           </button>
         </div>
+
+        {/* ══ INVITE BANNER ══ */}
+        {myInvite && (
+          <div className="mb-6 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 rounded-2xl bg-violet-50/80 backdrop-blur-md border border-violet-200/60 shadow-sm">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-violet-600 text-[20px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-violet-900">{tp('jobDetailInvited')}</p>
+                  {myInvite.message && (
+                    <p className="text-[12px] text-violet-600 mt-0.5 leading-relaxed">&ldquo;{myInvite.message}&rdquo;</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2 sm:flex-shrink-0">
+                <button
+                  onClick={() => handleInviteRespond('ACCEPTED')}
+                  disabled={respondMutation.isPending}
+                  className="flex-1 sm:flex-none h-10 px-5 rounded-xl bg-violet-600 text-white text-[13px] font-bold flex items-center justify-center gap-1.5 shadow-sm shadow-violet-200 hover:bg-violet-700 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-base">check</span>
+                  {tp('jobDetailAcceptInvite')}
+                </button>
+                <button
+                  onClick={() => handleInviteRespond('DECLINED')}
+                  disabled={respondMutation.isPending}
+                  className="flex-1 sm:flex-none h-10 px-4 rounded-xl border border-violet-300 text-violet-700 text-[13px] font-bold hover:bg-violet-100 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {tp('jobDetailDeclineInvite')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ══ B — STATUS BANNER ══ */}
         {job.status && !['ACTIVE'].includes(job.status) && (
@@ -445,6 +516,85 @@ export default function JobDetailClient() {
                 </div>
               </div>
             )}
+            {/* ══ APPLICATIONS — Owner Only ══ */}
+            {isOwner && applications && applications.length > 0 && (
+              <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm">
+                <SectionTitle icon={<span className="material-symbols-outlined">people</span>}>
+                  {tp('jobDetailApplications')} ({applications.length})
+                </SectionTitle>
+                <div className="flex flex-col divide-y divide-outline-variant/[0.08]">
+                  {applications.map(app => {
+                    const applicant = app.applicant;
+                    const firstName = (applicant.displayName || applicant.username || '?')[0].toUpperCase();
+                    return (
+                      <div key={app.id} className="flex items-center gap-3 py-3.5">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
+                            {applicant.avatarUrl
+                              ? <Image src={applicant.avatarUrl} alt={applicant.displayName || applicant.username} width={40} height={40} className="object-cover w-full h-full" />
+                              : <span className="text-white font-bold text-sm">{firstName}</span>
+                            }
+                          </div>
+                          {applicant.isVerified && (
+                            <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 bg-primary rounded-full border-2 border-surface-container-lowest flex items-center justify-center">
+                              <span className="material-symbols-outlined text-white text-[8px]"
+                                style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold text-on-surface truncate">
+                            {applicant.displayName || applicant.username}
+                          </p>
+                          {app.message && (
+                            <p className="text-[11px] text-on-surface-variant/60 truncate mt-0.5">
+                              &ldquo;{app.message}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                          app.status === 'ACCEPTED' ? 'bg-green-50 text-green-700 border-green-200'
+                          : app.status === 'REJECTED' ? 'bg-error/10 text-error border-error/20'
+                          : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                        }`}>
+                          {app.status === 'ACCEPTED' ? tp('jobDetailAppAccepted')
+                            : app.status === 'REJECTED' ? tp('jobDetailAppRejected')
+                            : tp('jobDetailAppPending')}
+                        </span>
+                        {app.status === 'PENDING' && (
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => updateStatusMutation.mutate({ applicationId: app.id, status: 'ACCEPTED' })}
+                              disabled={updateStatusMutation.isPending}
+                              className="h-8 px-3 rounded-lg bg-primary text-on-primary text-[11px] font-bold hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                              {tp('jobDetailAccept')}
+                            </button>
+                            <button
+                              onClick={() => updateStatusMutation.mutate({ applicationId: app.id, status: 'REJECTED' })}
+                              disabled={updateStatusMutation.isPending}
+                              className="h-8 px-3 rounded-lg border border-outline-variant/30 text-on-surface-variant text-[11px] font-bold hover:text-error hover:border-error/20 hover:bg-error/5 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                              {tp('jobDetailReject')}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {isOwner && applications && applications.length === 0 && (
+              <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm text-center">
+                <div className="w-14 h-14 rounded-2xl bg-surface-container-low flex items-center justify-center mx-auto mb-3">
+                  <span className="material-symbols-outlined text-on-surface-variant/30 text-3xl">people</span>
+                </div>
+                <p className="text-on-surface font-bold text-[14px]">{tp('jobDetailNoApps')}</p>
+                <p className="text-on-surface-variant text-[12px] mt-1">{tp('jobDetailNoAppsDesc')}</p>
+              </div>
+            )}
           </div>
 
           {/* ════ RIGHT COLUMN — Sticky Salary Card (Desktop) & CTA Mobile ════ */}
@@ -525,13 +675,49 @@ export default function JobDetailClient() {
                     </div>
                   ) : job.status === 'ACTIVE' ? (
                     <>
-                      <button
-                        onClick={() => requireProfile('driver', () => setShowApplyModal(true))}
-                        className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-primary/90 text-white text-[15px] font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgb(37,99,235,0.25)] hover:shadow-[0_8px_25px_rgb(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
-                      >
-                        <Send size={18} />
-                        {tp('jobDetailApply')}
-                      </button>
+                      {/* ── Application Status Check ── */}
+                      {myApplication ? (
+                        <div className="flex flex-col gap-3">
+                          <div className={`flex items-center justify-center gap-2 h-14 rounded-2xl border font-bold text-[15px] ${
+                            myApplication.status === 'ACCEPTED'
+                              ? 'bg-green-50 border-green-200 text-green-700'
+                              : myApplication.status === 'REJECTED'
+                              ? 'bg-error/10 border-error/20 text-error'
+                              : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                          }`}>
+                            <span className="material-symbols-outlined text-[20px]"
+                              style={{ fontVariationSettings: "'FILL' 1" }}>
+                              {myApplication.status === 'ACCEPTED' ? 'check_circle'
+                                : myApplication.status === 'REJECTED' ? 'cancel'
+                                : 'schedule'}
+                            </span>
+                            {myApplication.status === 'ACCEPTED' ? tp('jobDetailAppAccepted')
+                              : myApplication.status === 'REJECTED' ? tp('jobDetailAppRejected')
+                              : tp('jobDetailAppPending')}
+                          </div>
+                          {myApplication.status === 'PENDING' && (
+                            <button
+                              onClick={handleWithdraw}
+                              disabled={withdrawMutation.isPending}
+                              className="w-full h-12 rounded-xl border border-outline-variant/30 text-on-surface-variant text-[14px] font-bold hover:border-error/30 hover:text-error hover:bg-error/5 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {withdrawMutation.isPending
+                                ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                                : <span className="material-symbols-outlined text-[18px]">undo</span>
+                              }
+                              {tp('jobDetailWithdraw')}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => requireProfile('driver', () => setShowApplyModal(true))}
+                          className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-primary/90 text-white text-[15px] font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgb(37,99,235,0.25)] hover:shadow-[0_8px_25px_rgb(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
+                        >
+                          <Send size={18} />
+                          {tp('jobDetailApply')}
+                        </button>
+                      )}
                       
                       <div className="grid grid-cols-2 gap-3 mt-1">
                         <button
