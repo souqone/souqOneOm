@@ -20,7 +20,7 @@ const CONDITION_DOT: Record<string, string> = {
 };
 
 // Material Symbols icon name per category (used for image fallback)
-const CATEGORY_FALLBACK_ICON: Record<ListingCategory, string> = {
+const CATEGORY_FALLBACK_ICON: Record<ListingCategory | 'jobs', string> = {
   cars:      'directions_car',
   buses:     'directions_bus',
   equipment: 'construction',
@@ -32,7 +32,7 @@ const CATEGORY_FALLBACK_ICON: Record<ListingCategory, string> = {
 };
 
 // Default href builder per category if href not provided
-function defaultHref(category: ListingCategory, id: string, _slug?: string | null, listingType?: string | null): string {
+function defaultHref(category: ListingCategory | 'jobs', id: string, _slug?: string | null, listingType?: string | null): string {
   switch (category) {
     case 'cars':      return listingType === 'RENTAL' ? `/rental/car/${id}` : `/sale/car/${id}`;
     case 'buses':     return listingType === 'BUS_RENT' ? `/rental/bus/${id}` : `/sale/bus/${id}`;
@@ -46,7 +46,7 @@ function defaultHref(category: ListingCategory, id: string, _slug?: string | nul
 }
 
 // Default favorite entityType per category
-const CATEGORY_ENTITY_TYPE: Record<ListingCategory, string> = {
+const CATEGORY_ENTITY_TYPE: Record<ListingCategory | 'jobs', string> = {
   cars:      'LISTING',
   buses:     'BUS_LISTING',
   equipment: 'EQUIPMENT_LISTING',
@@ -71,7 +71,7 @@ export interface VehicleCardProps {
 
   // ─── Identification ─────────────────────────
   /** Defaults to 'cars' for backwards compatibility */
-  category?: ListingCategory;
+  category?: ListingCategory | 'jobs';
   slug?: string | null;
   /** Override the favorite entity type (defaults to category-based) */
   entityType?: string;
@@ -128,7 +128,7 @@ export function VehicleCard(props: VehicleCardProps) {
   const tt = useTranslations('time');
   const locale = useLocale();
 
-  const category: ListingCategory = props.category ?? 'cars';
+  const category: ListingCategory | 'jobs' = props.category ?? 'cars';
   const entityType = props.entityType ?? CATEGORY_ENTITY_TYPE[category];
   const fallbackIcon = CATEGORY_FALLBACK_ICON[category];
 

@@ -1,12 +1,107 @@
+# Agent Prompt — Jobs Browse Page (From Scratch)
+# `apps/web/src/app/[locale]/jobs/page.tsx`
+
+---
+
+## Context
+
+SouqOne — Omani marketplace. اكتب `/jobs/page.tsx` من الصفر.
+الملف الحالي يُحذف ويُستبدل بالكامل.
+
+**المرجع الأساسي للـ style:**
+```
+apps/web/src/app/[locale]/jobs/my/page.tsx
+apps/web/src/app/[locale]/jobs/drivers/page.tsx
+apps/web/src/app/[locale]/jobs/[id]/job-detail-client.tsx
+```
+
+اقرأ الملفات دي الأول لتفهم الـ patterns المستخدمة.
+
+---
+
+## اقرأ هذه الملفات أولاً
+
+```
+apps/web/src/app/[locale]/jobs/my/page.tsx
+apps/web/src/app/[locale]/jobs/drivers/page.tsx
+apps/web/src/app/[locale]/jobs/[id]/job-detail-client.tsx
+apps/web/src/lib/api/jobs.ts
+apps/web/src/hooks/use-require-job-profile.ts
+apps/web/src/lib/location-data.ts
+apps/web/src/lib/constants/jobs.ts
+apps/web/src/lib/image-utils.ts
+apps/web/src/messages/ar.json      ← لتعرف الـ keys الموجودة
+```
+
+---
+
+## الـ Layout — صورة كاملة
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    HERO SECTION                     │
+│  gradient + search box + tabs + stats               │
+│  Mobile: 320px height / Desktop: 380px height       │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  [Onboarding CTA — لو مفيش profile]                 │
+└─────────────────────────────────────────────────────┘
+
+┌──────────────┬──────────────────────────────────────┐
+│   SIDEBAR    │           RESULTS                    │
+│   w-72       │           flex-1                     │
+│              │                                      │
+│  • نوع الإعلان│  ┌──────────────────────────────┐  │
+│  • نوع التوظيف│  │      JOB CARD                │  │
+│  • المحافظة  │  │  [avatar] title    [badge]   │  │
+│  • الرخصة    │  │  employer · verified ✓        │  │
+│  • الراتب    │  │  📍 location  💼 emp_type      │  │
+│  • ترتيب     │  │  🪪 license chips              │  │
+│              │  │  ──────────────────────────   │  │
+│  [مسح الكل]  │  │  salary    views · applicants  │  │
+│              │  │  ──────────────────────────   │  │
+│              │  │  [Apply] / [Status] / [Chat]   │  │
+│              │  └──────────────────────────────┘  │
+│              │                                      │
+│              │  PAGINATION                          │
+└──────────────┴──────────────────────────────────────┘
+
+Mobile: Sidebar → Bottom Sheet (يطلع من تحت)
+```
+
+---
+
+## Hero Section — Dimensions
+
+```
+Mobile:   min-h-[300px]  pt-16 pb-8
+Desktop:  min-h-[380px]  pt-28 pb-12
+
+نفس الـ gradient:
+bg-gradient-to-br from-[#004ac6] via-[#2563eb] to-[#0B2447]
+
+نفس الـ pattern:
+opacity-[0.07] checkerboard SVG
+
+نفس الـ decorative blurs من job-detail-client.tsx
+```
+
+---
+
+## ملف واحد — `apps/web/src/app/[locale]/jobs/page.tsx`
+
+```tsx
 'use client';
 
-import { Suspense, useState, useMemo } from 'react';
+import { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { useJobs, useRecommendedJobs, useCreateConversation, useApplyToJob, useMyApplications } from '@/lib/api';
+import { useJobs, useRecommendedJobs, useCreateConversation,
+         useApplyToJob, useMyApplications } from '@/lib/api';
 import { useRequireJobProfile } from '@/hooks/use-require-job-profile';
 import { useAuth } from '@/providers/auth-provider';
 import { getGovernorates, resolveLocationLabel } from '@/lib/location-data';
@@ -64,6 +159,7 @@ function JobCard({ job }: { job: JobItem }) {
   const createConv         = useCreateConversation();
   const applyMutation      = useApplyToJob();
 
+  // Derive: has this user already applied?
   const { data: myApplications } = useMyApplications();
   const myApplication = myApplications?.find(a => a.jobId === job.id) ?? null;
 
@@ -103,7 +199,7 @@ function JobCard({ job }: { job: JobItem }) {
         {/* ── Row 1: Avatar + Title + Badge ── */}
         <div className="flex items-start gap-3 mb-3">
 
-          {/* Employer avatar */}
+          {/* Employer avatar — صورة البروفايل داخل الدائرة */}
           <div className="relative flex-shrink-0">
             <div className={clsx(
               'w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center',
@@ -296,8 +392,8 @@ function JobCard({ job }: { job: JobItem }) {
             </Link>
           )}
 
-          {/* Closed / Expired */}
-          {!isOwner && user && !myApplication && !isActive && (
+          {/* Closed/Expired */}
+          {!isOwner && !isActive && (
             <div className="flex-1 h-9 rounded-xl bg-surface-container-high
                            border border-outline-variant/15
                            flex items-center justify-center gap-1.5
@@ -478,13 +574,19 @@ function MobileFilterSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose} />
+
+      {/* Sheet */}
       <div className="relative bg-surface-container-lowest rounded-t-3xl
                      max-h-[88vh] overflow-y-auto shadow-2xl">
+        {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-outline-variant/30 rounded-full" />
         </div>
+
+        {/* Sticky header */}
         <div className="sticky top-0 bg-surface-container-lowest
                        flex items-center justify-between px-4 py-3
                        border-b border-outline-variant/[0.08] z-10">
@@ -495,15 +597,22 @@ function MobileFilterSheet({
             <span className="material-symbols-outlined text-base">close</span>
           </button>
         </div>
+
         <div className="px-4 py-5">
           <FilterContent
-            governorate={governorate} employmentType={employmentType}
-            licenseType={licenseType} sortBy={sortBy}
-            onUpdate={onUpdate} onClear={onClear} activeCount={activeCount}
+            governorate={governorate}
+            employmentType={employmentType}
+            licenseType={licenseType}
+            sortBy={sortBy}
+            onUpdate={onUpdate}
+            onClear={onClear}
+            activeCount={activeCount}
           />
         </div>
+
+        {/* Apply button */}
         <div className="sticky bottom-0 bg-surface-container-lowest
-                       border-t border-outline-variant/[0.08] px-4 py-4">
+                       border-t border-outline-variant/[0.08] px-4 py-4 pb-safe">
           <button onClick={onClose}
             className="w-full h-12 rounded-2xl bg-primary text-on-primary
                       font-bold text-[14px] shadow-md shadow-primary/20
@@ -522,6 +631,7 @@ function MobileFilterSheet({
 
 function RecommendedSection() {
   const { user }  = useAuth();
+  const locale    = useLocale();
   const tp        = useTranslations('pages');
   const { data: jobs, isLoading } = useRecommendedJobs();
 
@@ -533,7 +643,7 @@ function RecommendedSection() {
         <span className="material-symbols-outlined text-primary"
           style={{ fontVariationSettings: "'FILL' 1" }}>recommend</span>
         <h2 className="text-[16px] font-bold text-on-surface">
-          {tp('jobsRecommended')}
+          وظائف مقترحة لك
         </h2>
       </div>
       <div className="grid grid-cols-1 gap-3">
@@ -557,7 +667,7 @@ export default function JobsPage() {
         <div className="min-h-[300px] md:min-h-[380px]
                        bg-gradient-to-br from-[#004ac6] via-[#2563eb] to-[#0B2447]" />
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-          <div className="flex gap-6 items-start">
+          <div className="md:flex md:gap-6">
             <div className="hidden md:block w-72 shrink-0">
               <div className="animate-pulse bg-surface-container-low rounded-2xl h-96" />
             </div>
@@ -577,10 +687,13 @@ export default function JobsPage() {
 
 function JobsContent() {
   const tp  = useTranslations('pages');
+  const tm  = useTranslations('mappings');
   const { profile, requireProfile } = useRequireJobProfile();
   const router       = useRouter();
   const searchParams = useSearchParams();
+  const locale       = useLocale();
 
+  // ── URL State ──
   const page           = searchParams.get('page') || '1';
   const search         = searchParams.get('search') || '';
   const jobType        = searchParams.get('jobType') || '';
@@ -589,7 +702,7 @@ function JobsContent() {
   const licenseType    = searchParams.get('licenseType') || '';
   const sortBy         = searchParams.get('sortBy') || '';
 
-  const [searchInput, setSearchInput]         = useState(search);
+  const [searchInput, setSearchInput] = useState(search);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const activeFilterCount = [employmentType, licenseType, governorate, sortBy].filter(Boolean).length;
@@ -613,6 +726,7 @@ function JobsContent() {
     router.push('/jobs');
   }
 
+  // ── API Params ──
   const params = useMemo(() => {
     const p: Record<string, string> = { page, limit: '10' };
     if (search)         p.search         = search;
@@ -632,6 +746,7 @@ function JobsContent() {
   const items = data?.items ?? [];
   const meta  = data?.meta;
 
+  // ── Pagination ──
   function goTo(p: number) {
     const sp = new URLSearchParams(searchParams);
     sp.set('page', String(p));
@@ -647,8 +762,10 @@ function JobsContent() {
       ════════════════════════════════ */}
       <section className="relative overflow-hidden min-h-[300px] md:min-h-[380px]">
 
+        {/* Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#004ac6] via-[#2563eb] to-[#0B2447]" />
 
+        {/* Pattern */}
         <div className="absolute inset-0 opacity-[0.07]"
           style={{
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20v20H0zm20 20h20v20H20z\' fill=\'%23fff\' fill-opacity=\'.4\'/%3E%3C/svg%3E")',
@@ -656,6 +773,7 @@ function JobsContent() {
           }}
         />
 
+        {/* Decorative blurs */}
         <div className="absolute top-[-20%] right-0 w-[60vw] md:w-[500px] h-[60vw] md:h-[500px] rounded-full bg-white/[0.05] blur-3xl pointer-events-none" />
         <div className="absolute bottom-[-20%] left-0 w-[50vw] md:w-[400px] h-[50vw] md:h-[400px] rounded-full bg-blue-300/[0.08] blur-3xl pointer-events-none" />
 
@@ -680,6 +798,7 @@ function JobsContent() {
             <div className="bg-white/10 backdrop-blur-xl border border-white/20
                            rounded-2xl p-2.5 md:p-3 shadow-[0_8px_40px_rgba(0,0,0,0.2)]">
 
+              {/* Search row */}
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex items-center gap-2 bg-white rounded-xl
                                px-3 py-2.5 focus-within:ring-2 focus-within:ring-white/40">
@@ -709,7 +828,7 @@ function JobsContent() {
                   <span className="hidden sm:inline">{tp('rentalsSearchBtn')}</span>
                 </button>
 
-                {/* Mobile filter button — md:hidden */}
+                {/* Mobile filter button */}
                 <button onClick={() => setShowMobileFilters(true)}
                   className={clsx(
                     'md:hidden shrink-0 px-3 py-2.5 rounded-xl text-sm font-black',
@@ -833,7 +952,7 @@ function JobsContent() {
           </aside>
 
           {/* ── RESULTS ── */}
-          <main className="flex-1 min-w-0">
+          <main className="flex-1 min-w-0" id="main-content">
 
             {/* Results count bar */}
             <div className="flex items-center justify-between mb-4">
@@ -851,6 +970,7 @@ function JobsContent() {
               )}
             </div>
 
+            {/* States */}
             {isLoading ? (
               <div className="grid grid-cols-1 gap-3">
                 {[...Array(4)].map((_, i) => (
@@ -886,6 +1006,7 @@ function JobsContent() {
               </div>
             ) : (
               <>
+                {/* Cards */}
                 <div className="grid grid-cols-1 gap-3">
                   {items.map(job => <JobCard key={job.id} job={job} />)}
                 </div>
@@ -933,6 +1054,7 @@ function JobsContent() {
                   );
                 })()}
 
+                {/* Recommended */}
                 <RecommendedSection />
               </>
             )}
@@ -940,7 +1062,7 @@ function JobsContent() {
         </div>
       </div>
 
-      {/* Mobile Filter Bottom Sheet */}
+      {/* Mobile Filter Sheet */}
       <MobileFilterSheet
         open={showMobileFilters}
         onClose={() => setShowMobileFilters(false)}
@@ -958,3 +1080,42 @@ function JobsContent() {
     </>
   );
 }
+```
+
+---
+
+## Validation
+
+```bash
+cd apps/web
+npx tsc --noEmit
+```
+
+Manual checklist:
+```
+✅ Hero: mobile min-h-[300px] / desktop min-h-[380px]
+✅ Desktop: sidebar on right + cards on left
+✅ Mobile: no sidebar — filter button opens bottom sheet
+✅ JobCard: employer profile image inside avatar circle
+✅ JobCard: verified badge (blue circle with check)
+✅ Role-aware actions: owner / applied / apply / visitor
+✅ Chat button: shows for all except owner
+✅ Search: updates URL params
+✅ Filters: update URL params (no page state)
+✅ Pagination: smart ellipsis
+✅ Recommended section: shows for logged-in users
+✅ Onboarding CTA: shows when no profile
+```
+
+---
+
+## Hard Rules
+
+- ❌ لا تغير أي شيء خارج هذا الملف
+- ❌ لا تستخدم UnifiedCard أو transformJob
+- ❌ لا state للـ filters — كل حاجة في URL params
+- ❌ لا inline styles إلا الـ SVG pattern و fontVariationSettings
+- ✅ Sidebar sticky top-20 على الديسكتوب
+- ✅ Bottom sheet على الموبايل (مش collapsible panel)
+- ✅ كل text من tp() — مش hardcoded
+- ✅ شغّل npx tsc --noEmit بعد الكتابة

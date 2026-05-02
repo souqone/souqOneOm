@@ -155,7 +155,6 @@ export function getAddListingHref(category: ListingCategory): string {
     operators: '/add-listing/operator',
     parts:     '/add-listing/parts',
     services:  '/add-listing/service',
-    jobs:      '/jobs/new',
   }
   return map[category]
 }

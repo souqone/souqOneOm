@@ -77,7 +77,7 @@ function translateEquipmentType(v: string, enums: EnumTranslations): string { re
 
 // ─── Entity route maps ──────────────────────────────────────────────────────
 
-const ENTITY_CATEGORY: Record<string, ListingCategory> = {
+const ENTITY_CATEGORY: Record<string, ListingCategory | 'jobs'> = {
   LISTING: 'cars', BUS_LISTING: 'buses', EQUIPMENT_LISTING: 'equipment',
   EQUIPMENT_REQUEST: 'equipment-requests', OPERATOR_LISTING: 'operators',
   SPARE_PART: 'parts', CAR_SERVICE: 'services', JOB: 'jobs',
@@ -548,7 +548,7 @@ export function useItemTransformers() {
 
     // ── Dispatcher ───────────────────────────────────────────────────────
 
-    function transformByCategory(category: ListingCategory, item: unknown): UnifiedListingItem {
+    function transformByCategory(category: ListingCategory | 'jobs', item: unknown): UnifiedListingItem {
       switch (category) {
         case 'cars':               return transformCar(item as ListingItem)
         case 'buses':              return transformBus(item as BusListingItem)

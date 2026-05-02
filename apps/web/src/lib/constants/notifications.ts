@@ -143,6 +143,15 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     labelKey: 'notifTypeJob',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : null),
   },
+  JOB_RECOMMENDATION: {
+    icon: Briefcase,
+    bg: 'bg-violet-500/10',
+    text: 'text-violet-600',
+    strip: 'bg-violet-500',
+    border: 'border-violet-200',
+    labelKey: 'notifTypeJob',
+    navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : '/jobs'),
+  },
 };
 
 export const DEFAULT_NOTIF_CONFIG: NotifTypeConfig = {

@@ -15,7 +15,6 @@ import { SERVICE_SLIDER_ITEMS } from './services'
 import { BUS_SLIDER_ITEMS } from './buses'
 import { EQUIPMENT_SLIDER_ITEMS } from './equipment'
 import { PARTS_SLIDER_ITEMS } from './parts'
-import { JOBS_SLIDER_ITEMS } from './jobs'
 
 export const CATEGORY_SLIDER_MAP: Partial<Record<ListingCategory, SliderConfig>> = {
   cars:      { items: CAR_SLIDER_ITEMS,       title: 'تصفح حسب الماركة',      defaultFilterKey: 'make' },
@@ -23,5 +22,4 @@ export const CATEGORY_SLIDER_MAP: Partial<Record<ListingCategory, SliderConfig>>
   equipment: { items: EQUIPMENT_SLIDER_ITEMS, title: 'تصفح حسب نوع المعدة',   defaultFilterKey: 'equipmentType' },
   parts:     { items: PARTS_SLIDER_ITEMS,     title: 'تصفح حسب فئة القطعة',   defaultFilterKey: 'partCategory' },
   services:  { items: SERVICE_SLIDER_ITEMS,   title: 'تصفح حسب نوع الخدمة',   defaultFilterKey: 'serviceType' },
-  jobs:      { items: JOBS_SLIDER_ITEMS,      title: 'تصفح حسب نوع الوظيفة',  defaultFilterKey: 'jobType' },
 }

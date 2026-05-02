@@ -7,7 +7,7 @@ import type { ListingCategory } from './category.types'
  */
 export interface UnifiedListingItem {
   id: string
-  category: ListingCategory
+  category: ListingCategory | 'jobs'
 
   // ── Core display fields (present in every category) ──────────────────
   title: string

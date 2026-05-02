@@ -259,25 +259,6 @@ export function normalizeService(raw: any): UnifiedListingItem {
 
 // ─── Dispatcher ─────────────────────────────────────────────────────────────
 
-function normalizeJob(raw: any): UnifiedListingItem {
-  return {
-    id: raw.id,
-    category: 'jobs',
-    title: raw.title || '',
-    price: raw.salary ? Number(raw.salary) : null,
-    priceLabel: null,
-    currency: raw.currency || 'OMR',
-    images: [],
-    governorate: raw.governorate ?? null,
-    createdAt: raw.createdAt ?? new Date().toISOString(),
-    primaryBadge: null,
-    secondaryBadge: null,
-    details: [],
-    href: `/jobs/${raw.slug || raw.id}`,
-    favoriteEntityType: 'JOB',
-  }
-}
-
 function normalizeEquipmentRequest(raw: any): UnifiedListingItem {
   return {
     id: raw.id,
@@ -324,7 +305,6 @@ export const NORMALIZERS: Record<ListingCategory, (raw: any) => UnifiedListingIt
   operators: normalizeOperator,
   parts: normalizePart,
   services: normalizeService,
-  jobs: normalizeJob,
 }
 
 export function normalizeItem(category: ListingCategory, raw: any): UnifiedListingItem {

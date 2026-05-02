@@ -168,7 +168,6 @@ export const FILTER_BAR_CONFIG: Record<ListingCategory, FilterBarConfig> = {
   operators: JOBS_CONFIG,
   parts: PARTS_CONFIG,
   services: SERVICES_CONFIG,
-  jobs: JOBS_CONFIG,
 }
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
