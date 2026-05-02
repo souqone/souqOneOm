@@ -161,18 +161,60 @@ function OnboardingContent() {
     );
   }
 
-  if (existingDriver || existingEmployer) {
+  if ((existingDriver || existingEmployer) && !profileType) {
     return (
       <>
         <Navbar />
-        <main className="pt-28 pb-16 max-w-3xl mx-auto px-4 md:px-8 text-center">
-          <span className="material-symbols-outlined text-6xl text-primary mb-4 block">check_circle</span>
-          <h1 className="text-2xl font-extrabold mb-2">لديك بروفايل بالفعل</h1>
-          <p className="text-on-surface-variant mb-6">
-            {existingDriver ? 'أنت مسجل كسائق' : 'أنت مسجل كصاحب عمل'}
-          </p>
-          <button onClick={() => router.push('/jobs')} className="bg-primary text-on-primary px-6 py-3 rounded-lg font-bold text-sm hover:brightness-110 transition">
-            العودة للوظائف
+        <main className="pt-28 pb-16 max-w-3xl mx-auto px-4 md:px-8">
+          <h1 className="text-3xl font-extrabold mb-2 flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-3xl">badge</span>
+            إدارة بروفايلك
+          </h1>
+          <p className="text-on-surface-variant mb-8">اختر ما تريد القيام به</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {existingDriver && (
+              <button
+                onClick={() => router.push('/dashboard/driver')}
+                className="glass-card rounded-xl p-8 text-center hover:border-primary/50 transition-all border-2 border-primary/30"
+              >
+                <span className="material-symbols-outlined text-5xl text-primary mb-3 block">local_shipping</span>
+                <h2 className="text-xl font-extrabold mb-2">لوحة تحكم السائق</h2>
+                <p className="text-sm text-on-surface-variant">إدارة طلباتك ودعواتك</p>
+              </button>
+            )}
+            {!existingDriver && (
+              <button
+                onClick={() => setProfileType('driver')}
+                className="glass-card rounded-xl p-8 text-center hover:border-primary/50 transition-all border-2 border-transparent"
+              >
+                <span className="material-symbols-outlined text-5xl text-primary mb-3 block">local_shipping</span>
+                <h2 className="text-xl font-extrabold mb-2">سائق</h2>
+                <p className="text-sm text-on-surface-variant">أبحث عن فرص عمل كسائق</p>
+              </button>
+            )}
+            {existingEmployer && (
+              <button
+                onClick={() => router.push('/jobs/my')}
+                className="glass-card rounded-xl p-8 text-center hover:border-primary/50 transition-all border-2 border-primary/30"
+              >
+                <span className="material-symbols-outlined text-5xl text-brand-green mb-3 block">business</span>
+                <h2 className="text-xl font-extrabold mb-2">إعلاناتي</h2>
+                <p className="text-sm text-on-surface-variant">إدارة وظائفك المنشورة</p>
+              </button>
+            )}
+            {!existingEmployer && (
+              <button
+                onClick={() => setProfileType('employer')}
+                className="glass-card rounded-xl p-8 text-center hover:border-primary/50 transition-all border-2 border-transparent"
+              >
+                <span className="material-symbols-outlined text-5xl text-brand-green mb-3 block">business</span>
+                <h2 className="text-xl font-extrabold mb-2">صاحب عمل</h2>
+                <p className="text-sm text-on-surface-variant">أبحث عن سائقين لتوظيفهم</p>
+              </button>
+            )}
+          </div>
+          <button onClick={() => router.push('/jobs')} className="mt-8 text-sm text-on-surface-variant hover:text-on-surface transition">
+            العودة لقائمة الوظائف
           </button>
         </main>
         <Footer />

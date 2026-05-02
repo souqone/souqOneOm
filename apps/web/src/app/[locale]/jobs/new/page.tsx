@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { JobsPageGuard } from '@/components/jobs/jobs-page-guard';
 import { useCreateJob } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/toast';
 import { getGovernorates } from '@/lib/location-data';
 import { employmentOptionsT } from '@/lib/constants/jobs';
@@ -49,8 +51,10 @@ const LANGUAGE_OPTIONS = [
 
 export default function NewJobPage() {
   return (
-    <JobsPageGuard role="employer">
-      <NewJobContent />
+    <JobsPageGuard role="any">
+      <Suspense>
+        <NewJobContent />
+      </Suspense>
     </JobsPageGuard>
   );
 }
@@ -59,16 +63,28 @@ function NewJobContent() {
   const tp = useTranslations('pages');
   const tj = useTranslations('jobs');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addToast } = useToast();
   const createJob = useCreateJob();
   const locale = useLocale();
   const govs = getGovernorates('OM', locale);
   const empOptions = employmentOptionsT(tj);
+  const qc = useQueryClient();
+  const driverProfile   = qc.getQueryData<{ id: string }>(['driver-profile', 'me']);
+  const employerProfile = qc.getQueryData<{ id: string }>(['employer-profile', 'me']);
+  const hasDriver   = !!driverProfile;
+  const hasEmployer = !!employerProfile;
+
+  const forcedType: 'OFFERING' | 'HIRING' | null =
+    hasDriver && !hasEmployer ? 'OFFERING' :
+    hasEmployer && !hasDriver ? 'HIRING' : null;
+
+  const paramType = (searchParams.get('type') ?? 'OFFERING') as 'OFFERING' | 'HIRING';
 
   const [form, setForm] = useState({
     title: '',
     description: '',
-    jobType: 'OFFERING' as 'OFFERING' | 'HIRING',
+    jobType: paramType as 'OFFERING' | 'HIRING',
     employmentType: 'FULL_TIME',
     salary: '',
     salaryPeriod: 'MONTHLY',
@@ -91,6 +107,10 @@ function NewJobContent() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  useEffect(() => {
+    if (forcedType) updateField('jobType', forcedType);
+  }, [forcedType]);
+
   function toggleArrayItem(key: 'licenseTypes' | 'languages' | 'vehicleTypes', value: string) {
     setForm((prev) => ({
       ...prev,
@@ -108,7 +128,7 @@ function NewJobContent() {
     const payload: Record<string, any> = {
       title: form.title,
       description: form.description,
-      jobType: form.jobType,
+      jobType: forcedType ?? form.jobType,
       employmentType: form.employmentType,
       governorate: form.governorate,
       licenseTypes: form.licenseTypes,
@@ -148,9 +168,21 @@ function NewJobContent() {
         <p className="text-on-surface-variant mb-8">{tp('jnSubtitle')}</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Job Type Toggle */}
+          {/* Job Type Toggle — hidden when role is forced */}
           <div className="glass-card rounded-xl p-6">
             <label className="block font-bold text-sm mb-3">{tp('jnTypeLabel')}</label>
+            {forcedType ? (
+              <div className={`flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm border-2 ${
+                forcedType === 'OFFERING'
+                  ? 'border-brand-green bg-brand-green/10 text-brand-green'
+                  : 'border-primary bg-primary/10 text-primary'
+              }`}>
+                <span className="material-symbols-outlined">
+                  {forcedType === 'OFFERING' ? 'person_search' : 'person_add'}
+                </span>
+                {forcedType === 'OFFERING' ? tp('jnTypeOffering') : tp('jnTypeHiring')}
+              </div>
+            ) : (
             <div className="flex gap-3">
               <button
                 type="button"
@@ -177,6 +209,7 @@ function NewJobContent() {
                 {tp('jnTypeHiring')}
               </button>
             </div>
+            )}
           </div>
 
           {/* Basic Info */}

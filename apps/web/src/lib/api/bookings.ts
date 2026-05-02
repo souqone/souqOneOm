@@ -6,7 +6,7 @@ import type { EquipmentListingItem } from './equipment';
 
 export type BookingEntityType = 'CAR' | 'BUS' | 'EQUIPMENT';
 
-interface BookingUser { id: string; username: string; displayName: string | null; avatarUrl: string | null; phone: string | null }
+interface BookingUser { id: string; username: string; displayName: string | null; avatarUrl: string | null; phone: string | null; isVerified?: boolean }
 
 export interface BookingItem {
   id: string;
@@ -29,6 +29,10 @@ export interface BookingItem {
   pickupLocation: string | null;
   dropoffLocation: string | null;
   notes: string | null;
+  renterNote: string | null;
+  cancellationReason: string | null;
+  renterRating: number | null;
+  ownerRating: number | null;
   confirmedAt: string | null;
   cancelledAt: string | null;
   completedAt: string | null;
@@ -149,6 +153,42 @@ export function useUpdateBookingStatus() {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['received-bookings'] });
+    },
+  });
+}
+
+export function useCancelBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest<BookingItem>(`/bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'CANCELLED' }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['received-bookings'] });
+    },
+  });
+}
+
+export function useConfirmBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest<BookingItem>(`/bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'CONFIRMED' }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['received-bookings'] });
+    },
+  });
+}
+
+export function useRejectBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest<BookingItem>(`/bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'REJECTED' }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
       qc.invalidateQueries({ queryKey: ['received-bookings'] });

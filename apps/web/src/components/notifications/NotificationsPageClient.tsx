@@ -76,18 +76,13 @@ export function NotificationsPageClient() {
   );
   const desktopMeta = desktopQuery.data?.meta;
 
-  const dateLabels = {
-    today: tp('notifToday'),
-    yesterday: tp('notifYesterday'),
-  };
-
   const mobileGroups = useMemo(
-    () => groupNotificationsByDate(mobileNotifs, locale, dateLabels),
-    [mobileNotifs, locale, dateLabels.today, dateLabels.yesterday],
+    () => groupNotificationsByDate(mobileNotifs, locale, { today: tp('notifToday'), yesterday: tp('notifYesterday') }),
+    [mobileNotifs, locale, tp],
   );
   const desktopGroups = useMemo(
-    () => groupNotificationsByDate(desktopNotifs, locale, dateLabels),
-    [desktopNotifs, locale, dateLabels.today, dateLabels.yesterday],
+    () => groupNotificationsByDate(desktopNotifs, locale, { today: tp('notifToday'), yesterday: tp('notifYesterday') }),
+    [desktopNotifs, locale, tp],
   );
 
   const typeBreakdown = useMemo(() => {

@@ -12,6 +12,7 @@ export interface Conversation {
   createdById?: string;
   unreadCount: number;
   createdAt: string;
+  archived?: boolean;
 }
 
 export interface MessageReaction {
@@ -40,10 +41,10 @@ export interface PaginatedMessages {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
-export function useConversations() {
+export function useConversations(includeArchived = false) {
   return useQuery<Conversation[]>({
-    queryKey: ['conversations'],
-    queryFn: () => apiRequest<Conversation[]>('/chat/conversations'),
+    queryKey: ['conversations', includeArchived],
+    queryFn: () => apiRequest<Conversation[]>(`/chat/conversations${includeArchived ? '?includeArchived=true' : ''}`),
   });
 }
 

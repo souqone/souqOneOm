@@ -7,6 +7,8 @@ import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
 import { getMainCategories } from '@/lib/constants/categories';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@/providers/auth-provider';
+import { useMyDriverProfile, useMyEmployerProfile } from '@/lib/api/jobs';
 
 const CATEGORY_STYLE: Record<string, { icon: string; bg: string; text: string }> = {
   'vehicles-parts': { icon: 'directions_car', bg: 'bg-sky-50 dark:bg-sky-950/40', text: 'text-sky-600 dark:text-sky-400' },
@@ -23,10 +25,26 @@ export default function AddListingPage() {
   const router = useRouter();
   const tp = useTranslations('pages');
   const tc = useTranslations('categories');
-  const cats = getMainCategories(tc);
+  const { isAuthenticated } = useAuth();
 
-  const available = cats.filter(c => c.subcategories.some(s => s.available));
+  const { data: driverProfile }   = useMyDriverProfile(isAuthenticated);
+  const { data: employerProfile } = useMyEmployerProfile(isAuthenticated);
+
+  const hasDriver   = !!driverProfile;
+  const hasEmployer = !!employerProfile;
+
+  const cats = getMainCategories(tc);
+  const available  = cats.filter(c => c.subcategories.some(s => s.available));
   const comingSoon = cats.filter(c => !c.subcategories.some(s => s.available));
+
+  function getFilteredSubs(cat: ReturnType<typeof getMainCategories>[number]) {
+    const subs = cat.subcategories.filter(s => s.available);
+    if (cat.value !== 'jobs') return subs;
+    if (!hasDriver && !hasEmployer) return subs.map(s => ({ ...s, route: '/jobs/onboarding' }));
+    if (hasDriver  && !hasEmployer) return subs.filter(s => s.value === 'job-offering');
+    if (hasEmployer && !hasDriver)  return subs.filter(s => s.value === 'job-hiring');
+    return subs;
+  }
 
   return (
     <AuthGuard>
@@ -59,7 +77,7 @@ export default function AddListingPage() {
         <div className="space-y-4">
           {available.map((cat) => {
             const style = CATEGORY_STYLE[cat.value] || DEFAULT_STYLE;
-            const availableSubs = cat.subcategories.filter(s => s.available);
+            const availableSubs = getFilteredSubs(cat);
 
             return (
               <div
