@@ -14,6 +14,7 @@ export function ConversationFilters({ active, onChange, inHeader }: Conversation
     { key: 'all', label: tp('chatFilterAll') },
     { key: 'buying', label: tp('chatFilterBuying') },
     { key: 'selling', label: tp('chatFilterSelling') },
+    { key: 'archived', label: tp('chatFilterArchived') },
   ];
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar">

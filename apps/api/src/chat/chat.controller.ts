@@ -18,8 +18,12 @@ export class ChatController {
   }
 
   @Get('conversations')
-  getConversations(@CurrentUser() user: JwtPayload, @Query('search') search?: string) {
-    return this.chatService.getConversations(user.sub, search);
+  getConversations(
+    @CurrentUser() user: JwtPayload,
+    @Query('search') search?: string,
+    @Query('includeArchived') includeArchived?: string,
+  ) {
+    return this.chatService.getConversations(user.sub, search, includeArchived === 'true');
   }
 
   @Get('conversations/:id')

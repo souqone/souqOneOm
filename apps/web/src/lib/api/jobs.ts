@@ -48,6 +48,7 @@ export interface JobItem {
   updatedAt: string;
   user: JobUser;
   _count?: { applications: number };
+  inviteCount?: number;
 }
 
 export interface JobsResponse {
@@ -155,6 +156,44 @@ export function useUpdateApplicationStatus() {
     mutationFn: ({ applicationId, status }: { applicationId: string; status: string }) =>
       apiRequest(`/jobs/applications/${applicationId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['job-applications'] }); },
+  });
+}
+
+export interface EmployerApplicationItem {
+  id: string;
+  message?: string | null;
+  resumeUrl?: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+  jobId: string;
+  applicantId: string;
+  createdAt: string;
+  job: { id: string; title: string };
+  applicant: JobUser & { averageRating?: number | null; governorate?: string | null };
+  driverProfile?: {
+    id: string;
+    licenseTypes: string[];
+    experienceYears?: number | null;
+    isVerified: boolean;
+  } | null;
+  escrow?: EscrowItem | null;
+}
+
+export function useEmployerApplications() {
+  return useQuery<EmployerApplicationItem[]>({
+    queryKey: ['employer-applications'],
+    queryFn: () => apiRequest<EmployerApplicationItem[]>('/jobs/applications/employer'),
+  });
+}
+
+export function useCloseJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      apiRequest(`/jobs/${jobId}/close`, { method: 'PATCH' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['jobs'] });
+      qc.invalidateQueries({ queryKey: ['employer-applications'] });
+    },
   });
 }
 
@@ -282,10 +321,11 @@ export function useUpdateDriverProfile() {
   });
 }
 
-export function useDrivers(params: Record<string, string> = {}) {
+export function useDrivers(params: Record<string, string> = {}, enabled = true) {
   const searchParams = new URLSearchParams(params);
   return useQuery<DriversResponse>({
     queryKey: ['drivers', params],
+    enabled,
     queryFn: () => apiRequest<DriversResponse>(`/jobs/drivers?${searchParams.toString()}`),
   });
 }

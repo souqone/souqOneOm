@@ -148,10 +148,10 @@ export class ChatService {
     };
   }
 
-  async getConversations(userId: string, search?: string) {
+  async getConversations(userId: string, search?: string, includeArchived = false) {
     const conversations = await this.prisma.conversation.findMany({
       where: {
-        participants: { some: { userId, isArchived: false } },
+        participants: { some: { userId, isArchived: includeArchived ? undefined : false } },
         ...(search ? {
           OR: [
             { listing: { title: { contains: search, mode: 'insensitive' } } },
@@ -193,6 +193,7 @@ export class ChatService {
           entityType: conv.entityType,
           entityId: conv.entityId,
           entityTitle,
+          archived: participant?.isArchived ?? false,
           participants: conv.participants.map(p => ({
             ...p.user,
             lastReadAt: p.lastReadAt,

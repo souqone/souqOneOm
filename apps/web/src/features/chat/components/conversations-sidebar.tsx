@@ -42,10 +42,10 @@ export default function ConversationsSidebar() {
   const pathname = usePathname();
   const tp = useTranslations('pages');
   const locale = useLocale();
-  const { data: conversations, isLoading, refetch } = useConversations();
+  const [filter, setFilter] = useState('all');
+  const { data: conversations, isLoading, refetch } = useConversations(filter === 'archived');
   const archiveMutation = useArchiveConversation();
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   const unreadTotal = useMemo(
@@ -98,6 +98,9 @@ export default function ConversationsSidebar() {
         const entityTitle = (conv.entityTitle || conv.listing?.title || '').toLowerCase();
         if (!name.includes(q) && !entityTitle.includes(q)) return false;
       }
+      if (filter === 'archived') return conv.archived === true;
+      // For non-archived filters, exclude archived conversations
+      if (conv.archived) return false;
       if (filter === 'buying') return conv.createdById === user?.id;
       if (filter === 'selling') return conv.createdById !== user?.id;
       return true;
@@ -128,7 +131,7 @@ export default function ConversationsSidebar() {
         </div>
 
         <div className="relative mb-3">
-          <span className="material-symbols-outlined absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-base pointer-events-none">
+          <span className="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-base pointer-events-none">
             search
           </span>
           <input
@@ -136,7 +139,7 @@ export default function ConversationsSidebar() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={tp('sidebarSearchPlaceholder')}
-            className="w-full pe-9 ps-3 py-2.5 bg-surface-container-low rounded-xl text-[12px]
+            className="w-full ps-9 pe-3 py-2.5 bg-surface-container-low rounded-xl text-[12px]
                        border border-outline-variant/10 focus:outline-none focus:ring-2
                        focus:ring-primary/15 focus:border-primary/20 transition-all
                        placeholder:text-on-surface-variant/30"
@@ -276,17 +279,31 @@ export default function ConversationsSidebar() {
                   </div>
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    archiveMutation.mutate({ id: conv.id, archive: true });
-                  }}
-                  className="absolute start-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-8 h-8 rounded-xl bg-surface-container-high/90 hover:bg-surface-container-highest flex items-center justify-center transition-all duration-200 shadow-sm z-[1]"
-                  title={tp('sidebarArchive')}
-                >
-                  <Archive size={14} className="text-on-surface-variant/60" />
-                </button>
+                {filter === 'archived' ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      archiveMutation.mutate({ id: conv.id, archive: false });
+                    }}
+                    className="absolute start-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-8 h-8 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-all duration-200 shadow-sm z-[1]"
+                    title={tp('sidebarUnarchive')}
+                  >
+                    <Archive size={14} className="text-primary" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      archiveMutation.mutate({ id: conv.id, archive: true });
+                    }}
+                    className="absolute start-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-8 h-8 rounded-xl bg-surface-container-high/90 hover:bg-surface-container-highest flex items-center justify-center transition-all duration-200 shadow-sm z-[1]"
+                    title={tp('sidebarArchive')}
+                  >
+                    <Archive size={14} className="text-on-surface-variant/60" />
+                  </button>
+                )}
               </div>
             );
           })
