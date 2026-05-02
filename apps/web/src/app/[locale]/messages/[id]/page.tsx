@@ -6,7 +6,7 @@ import { ChatHeader } from '@/features/chat/components/chat-header';
 import { ChatBubble } from '@/features/chat/components/chat-bubble';
 import { DateSeparator } from '@/features/chat/components/date-separator';
 import { ChatInput } from '@/features/chat/components/chat-input';
-import { WifiOff, Loader2, RefreshCw, MessageCircle, Search } from 'lucide-react';
+import { WifiOff, Loader2, RefreshCw, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export default function ChatRoomPage() {
@@ -54,14 +54,16 @@ export default function ChatRoomPage() {
     return (
       <div className="flex-1 flex items-center justify-center bg-surface-container-low/20">
         <div className="text-center px-6">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
-            <WifiOff size={24} className="text-red-400" />
+          <div className="w-16 h-16 rounded-2xl bg-error/10 flex items-center justify-center mx-auto mb-4">
+            <WifiOff size={24} className="text-error" />
           </div>
-          <p className="text-sm font-semibold text-on-surface/70 mb-1">{tp('msgChatError')}</p>
-          <p className="text-[11px] text-on-surface-variant/40 mb-4">{tp('msgChatErrorDesc')}</p>
+          <p className="text-[14px] font-semibold text-on-surface mb-1">{tp('msgChatError')}</p>
+          <p className="text-[11px] text-on-surface-variant/50 mb-4">{tp('msgChatErrorDesc')}</p>
           <button
+            type="button"
             onClick={() => refetch()}
-            className="bg-primary text-on-primary hover:brightness-110 rounded-xl px-5 py-2.5 text-xs font-bold inline-flex items-center gap-2 active:scale-95 transition-all shadow-sm"
+            className="bg-primary text-on-primary rounded-xl px-5 py-2.5 text-[12px] font-semibold
+              inline-flex items-center gap-2 hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
           >
             <RefreshCw size={13} />
             {tp('msgChatRetry')}
@@ -70,6 +72,18 @@ export default function ChatRoomPage() {
       </div>
     );
   }
+
+  const bannerListing =
+    convInfo &&
+    (convInfo.listing
+      ? {
+          id: convInfo.listing.id,
+          title: convInfo.listing.title,
+          images: convInfo.listing.images,
+        }
+      : convInfo.entityTitle
+        ? { id: convInfo.entityId, title: convInfo.entityTitle, images: [] as { url: string }[] }
+        : null);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -85,8 +99,9 @@ export default function ChatRoomPage() {
       {/* Header */}
       <ChatHeader
         participant={otherParticipant}
-        listing={convInfo?.listing ?? null}
+        listing={bannerListing}
         entityType={convInfo?.entityType}
+        entityId={convInfo?.entityId}
         isOnline={otherOnline}
         isTyping={isTyping}
         searchMode={searchMode}
@@ -119,9 +134,9 @@ export default function ChatRoomPage() {
         {displayMessages.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
             <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center">
-              <MessageCircle size={28} className="text-primary/25" />
+              <span className="material-symbols-outlined text-primary/25 text-3xl">chat</span>
             </div>
-            <p className="text-[12px] text-on-surface-variant/35 font-medium">{tp('msgChatStartConversation')}</p>
+            <p className="text-[12px] text-on-surface-variant/40 font-medium">{tp('msgChatStartConversation')}</p>
           </div>
         )}
 
@@ -142,12 +157,19 @@ export default function ChatRoomPage() {
 
         {/* Typing indicator */}
         {isTyping && (
-          <div className="flex justify-end mb-1 px-1">
-            <div className="bg-surface-container-lowest rounded-2xl rounded-bl-md px-4 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.04)] ring-1 ring-outline-variant/[0.04]">
+          <div className="flex mb-1 px-1 justify-end">
+            <div
+              className="bg-surface-container-lowest border border-outline-variant/[0.08] rounded-2xl rounded-br-sm px-4 py-3
+                        shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
+            >
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-primary/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-primary/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-primary/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                {[0, 150, 300].map((delay) => (
+                  <span
+                    key={delay}
+                    className="w-2 h-2 bg-primary/30 rounded-full animate-bounce"
+                    style={{ animationDelay: `${delay}ms` }}
+                  />
+                ))}
               </div>
             </div>
           </div>

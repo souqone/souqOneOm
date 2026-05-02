@@ -1,19 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
-import { Link, useRouter } from '@/i18n/navigation';
-import { ArrowRight, Search, X, MoreVertical, ExternalLink } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 import { getImageUrl } from '@/lib/image-utils';
 import { useTranslations } from 'next-intl';
+import { ENTITY_KEYS, ENTITY_BADGE_COLORS, ENTITY_NAVIGATE } from '../constants/entity-config';
 
-interface Participant {
+export interface ChatParticipant {
   id: string;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
 }
 
-interface ListingInfo {
+export interface ChatListingBanner {
   id: string;
   title: string;
   price?: number;
@@ -21,110 +22,187 @@ interface ListingInfo {
   images?: { url: string }[];
 }
 
-const ENTITY_SALE_TYPE: Record<string, string> = {
-  LISTING: 'car',
-  BUS_LISTING: 'bus',
-  EQUIPMENT_LISTING: 'equipment',
-  SPARE_PART: 'part',
-  CAR_SERVICE: 'service',
-};
-
 interface ChatHeaderProps {
-  participant: Participant | null;
-  listing: ListingInfo | null;
+  participant: ChatParticipant | null;
+  listing: ChatListingBanner | null;
   entityType?: string;
+  /** Canonical entity id for deep links (same as conversation.entityId). */
+  entityId?: string;
   isOnline: boolean;
   isTyping: boolean;
   searchMode: boolean;
   onToggleSearch: () => void;
 }
 
+function listingBannerIcon(entityType?: string) {
+  if (entityType === 'BUS_LISTING') return 'directions_bus';
+  if (entityType === 'EQUIPMENT_LISTING' || entityType === 'EQUIPMENT_REQUEST') return 'construction';
+  if (entityType === 'JOB') return 'work';
+  if (entityType === 'OPERATOR_LISTING') return 'engineering';
+  if (entityType === 'SPARE_PART') return 'build';
+  if (entityType === 'CAR_SERVICE') return 'car_repair';
+  return 'directions_car';
+}
+
 export function ChatHeader({
   participant,
   listing,
   entityType,
+  entityId,
   isOnline,
   isTyping,
   searchMode,
   onToggleSearch,
 }: ChatHeaderProps) {
-  const router = useRouter();
   const tp = useTranslations('pages');
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   const name = participant?.displayName || participant?.username || tp('chatDefaultUser');
+  const navigateId = entityId ?? listing?.id ?? '';
+  const entityPath =
+    entityType && navigateId ? ENTITY_NAVIGATE[entityType]?.(navigateId) ?? null : null;
+  const badgeKey = entityType ? ENTITY_KEYS[entityType] : undefined;
 
   return (
-    <div className="relative bg-surface-container-lowest/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between z-10 border-b border-outline-variant/10 shrink-0 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
-      {/* top accent line */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#004ac6] via-[#1d4ed8] to-[#004ac6] opacity-60" />
-
-      {/* Left: back + avatar + info */}
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={() => router.push('/messages')}
-          className="lg:hidden w-8 h-8 rounded-xl hover:bg-surface-container-high flex items-center justify-center transition-colors shrink-0"
+    <div className="flex flex-col shrink-0">
+      <div
+        className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/8
+                   bg-surface-container-lowest shadow-[0_1px_0_rgba(0,0,0,0.04)] sticky top-0 z-10"
+      >
+        <Link
+          href="/messages"
+          className="lg:hidden w-8 h-8 rounded-xl bg-surface-container-low flex items-center justify-center
+                     text-on-surface-variant hover:bg-surface-container transition-all flex-shrink-0"
+          aria-label={tp('chatBackToListAria')}
         >
-          <ArrowRight size={18} className="text-on-surface-variant" />
-        </button>
+          <span className="material-symbols-outlined text-base">chevron_right</span>
+        </Link>
 
-        {/* Avatar */}
-        <div className="relative shrink-0">
-          {participant?.avatarUrl ? (
-            <Image src={getImageUrl(participant.avatarUrl) || ''} alt={name} width={44} height={44} className="w-11 h-11 rounded-2xl object-cover ring-2 ring-primary/10" />
-          ) : (
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary via-[#2563eb] to-[#0B2447] flex items-center justify-center text-white font-black text-sm">
-              {name[0]?.toUpperCase() || '?'}
-            </div>
-          )}
-          {isOnline && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-[2.5px] border-surface-container-lowest rounded-full" />
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <h3 className="font-bold text-[14px] text-on-surface truncate leading-tight">{name}</h3>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {isTyping ? (
-              <span className="text-primary text-[11px] font-semibold flex items-center gap-1">
-                <span className="flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                </span>
-                {tp('chatTyping')}
-              </span>
-            ) : isOnline ? (
-              <span className="text-green-600 text-[11px] font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                {tp('chatOnline')}
-              </span>
+        <div className="relative flex-shrink-0">
+          <div
+            className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-[#0B2447]
+                       flex items-center justify-center text-on-primary font-semibold text-base shadow-sm overflow-hidden"
+          >
+            {participant?.avatarUrl ? (
+              <Image
+                src={getImageUrl(participant.avatarUrl) || ''}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="40px"
+              />
             ) : (
-              <span className="text-on-surface-variant/40 text-[11px]">{tp('chatOffline')}</span>
+              <span>{name[0]?.toUpperCase() || '?'}</span>
             )}
           </div>
+          {isOnline && (
+            <div className="absolute -bottom-0.5 -start-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-background" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-on-surface text-[14px] truncate">
+              {name}
+            </p>
+            {entityType && (
+              <span
+                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border flex-shrink-0
+                ${ENTITY_BADGE_COLORS[entityType] ?? 'bg-surface-container-high text-on-surface-variant border-outline-variant/20'}`}
+              >
+                {badgeKey ? tp(badgeKey) : tp('notifTypeOther')}
+              </span>
+            )}
+          </div>
+          <p className={`text-[11px] font-medium ${isOnline ? 'text-green-600' : 'text-on-surface-variant/50'}`}>
+            {isTyping ? (
+              <span className="text-primary">{tp('chatTyping')}</span>
+            ) : isOnline ? (
+              tp('chatOnline')
+            ) : (
+              tp('chatOffline')
+            )}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onToggleSearch}
+            aria-label={tp('chatSearchInThreadAria')}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all
+              ${searchMode ? 'bg-primary/10 text-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-base">{searchMode ? 'close' : 'search'}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={tp('chatMoreAria')}
+            className="w-8 h-8 rounded-xl bg-surface-container-low flex items-center justify-center
+                      text-on-surface-variant hover:bg-surface-container transition-all"
+          >
+            <span className="material-symbols-outlined text-base">more_vert</span>
+          </button>
         </div>
       </div>
 
-      {/* Right: actions */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onToggleSearch}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${searchMode ? 'bg-primary/10 text-primary' : 'hover:bg-surface-container-high text-on-surface-variant/50'}`}
+      {listing && !bannerDismissed && (
+        <div
+          className="mx-3 mt-3 flex items-center gap-3 bg-primary/[0.04] border border-primary/10
+                     rounded-2xl p-3 group/banner"
         >
-          {searchMode ? <X size={17} /> : <Search size={17} />}
-        </button>
-        {listing && (
-          <Link
-            href={`/sale/${ENTITY_SALE_TYPE[entityType || 'LISTING'] || 'car'}/${listing.id}`}
-            className="hidden md:flex items-center gap-1.5 text-primary bg-primary/8 hover:bg-primary/15 px-3 py-2 rounded-xl text-[11px] font-bold transition-all"
+          <div className="w-12 h-12 rounded-xl bg-surface-container-high overflow-hidden flex-shrink-0 relative">
+            {listing.images?.[0]?.url ? (
+              <Image
+                src={getImageUrl(listing.images[0].url) || listing.images[0].url}
+                alt=""
+                width={48}
+                height={48}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="material-symbols-outlined text-on-surface-variant/30 text-xl">
+                  {listingBannerIcon(entityType)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {entityType && (
+              <span
+                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border mb-1 inline-block
+                ${ENTITY_BADGE_COLORS[entityType] ?? 'bg-surface-container-high text-on-surface-variant border-outline-variant/20'}`}
+              >
+                {badgeKey ? tp(badgeKey) : tp('notifTypeOther')}
+              </span>
+            )}
+            <p className="text-[12px] font-semibold text-on-surface truncate">{listing.title}</p>
+
+            {entityPath && (
+              <Link
+                href={entityPath}
+                className="text-[10px] text-primary font-medium hover:underline inline-flex items-center gap-0.5 mt-0.5"
+              >
+                {tp('chatViewListing')}
+                <span className="material-symbols-outlined text-xs">chevron_left</span>
+              </Link>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setBannerDismissed(true)}
+            aria-label={tp('chatDismissBannerAria')}
+            className="w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center
+                      text-on-surface-variant/40 hover:bg-surface-container-low hover:text-on-surface-variant
+                      transition-all flex-shrink-0"
           >
-            <ExternalLink size={13} />
-            {tp('chatViewListing')}
-          </Link>
-        )}
-        <button className="w-9 h-9 rounded-xl hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant/50 transition-colors">
-          <MoreVertical size={17} />
-        </button>
-      </div>
+            <span className="material-symbols-outlined text-xs">close</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

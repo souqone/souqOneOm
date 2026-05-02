@@ -20,6 +20,8 @@ export interface RentalBookingCardProps {
   unavailableDates: string[];
   onBook: (startDate: string, endDate: string) => void;
   isBookingPending: boolean;
+  onContactSeller?: () => void;
+  isContactPending?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -27,6 +29,8 @@ export interface RentalBookingCardProps {
 export function RentalBookingCard({
   listing, isOwner, unavailableDates, onBook,
   isBookingPending,
+  onContactSeller,
+  isContactPending,
 }: RentalBookingCardProps) {
   const tr = useTranslations('rental');
   const locale = useLocale();
@@ -199,6 +203,22 @@ export function RentalBookingCard({
             </p>
           )}
         </div>
+
+        {!isOwner && onContactSeller && (
+          <button
+            type="button"
+            onClick={onContactSeller}
+            disabled={isContactPending}
+            className="w-full h-11 rounded-xl border border-outline-variant/25 text-[13px] font-medium text-on-surface
+                       flex items-center justify-center gap-2 hover:bg-surface-container hover:border-outline-variant/40
+                       transition-all disabled:opacity-50 mt-3"
+          >
+            {isContactPending
+              ? <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+              : <span className="material-symbols-outlined text-base">chat</span>}
+            {tr('contactLandlord')}
+          </button>
+        )}
 
         {/* Report */}
         <div className="pt-4 border-t border-outline-variant/30 mt-4 text-center">

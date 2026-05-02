@@ -79,6 +79,8 @@ export class PushService {
       icon: payload.icon || '/icons/icon-192x192.png',
       badge: '/icons/icon-72x72.png',
       url: payload.url || '/',
+      tag: `souqone-${userId}`,
+      renotify: true,
       data: payload.data,
     });
 

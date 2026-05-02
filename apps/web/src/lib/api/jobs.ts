@@ -158,6 +158,54 @@ export function useUpdateApplicationStatus() {
   });
 }
 
+// ─── Driver Applications (own) ───
+
+export interface EscrowItem {
+  id: string;
+  applicationId: string;
+  amount: number;
+  status: 'HELD' | 'RELEASED' | 'REFUNDED' | 'DISPUTED';
+  paymentId?: string | null;
+  releasedAt?: string | null;
+  createdAt: string;
+}
+
+export interface MyApplicationItem {
+  id: string;
+  message?: string | null;
+  resumeUrl?: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+  jobId: string;
+  applicantId: string;
+  createdAt: string;
+  job: {
+    id: string;
+    title: string;
+    salary?: string | null;
+    salaryPeriod?: string | null;
+    currency: string;
+    governorate: string;
+    status: string;
+    userId: string;
+    user: JobUser;
+  };
+  escrow?: EscrowItem | null;
+}
+
+export function useMyApplications() {
+  return useQuery<MyApplicationItem[]>({
+    queryKey: ['my-applications'],
+    queryFn: () => apiRequest<MyApplicationItem[]>('/jobs/applications/my'),
+  });
+}
+
+export function useMyEscrows() {
+  return useQuery<EscrowItem[]>({
+    queryKey: ['my-escrows'],
+    queryFn: () => apiRequest<EscrowItem[]>('/jobs/escrow/my'),
+  });
+}
+
 // ─── Driver & Employer Profiles ───
 
 export interface DriverProfileItem {
@@ -434,16 +482,6 @@ export function useAdminReviewVerification() {
 }
 
 // ─── Job Escrow ───
-
-export interface EscrowItem {
-  id: string;
-  applicationId: string;
-  amount: number;
-  status: 'HELD' | 'RELEASED' | 'REFUNDED' | 'DISPUTED';
-  paymentId?: string | null;
-  releasedAt?: string | null;
-  createdAt: string;
-}
 
 export function usePayForApplication() {
   const qc = useQueryClient();

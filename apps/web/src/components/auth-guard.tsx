@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useAuthModal } from '@/providers/auth-modal-provider';
-import { useTranslations } from 'next-intl';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -12,8 +11,6 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const { openAuth } = useAuthModal();
-  const tp = useTranslations('pages');
-
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       openAuth('login');
@@ -27,7 +24,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
-        <span className="text-on-surface-variant font-medium">{tp('authGuardChecking')}</span>
       </div>
     );
   }

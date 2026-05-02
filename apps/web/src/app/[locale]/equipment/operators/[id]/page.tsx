@@ -41,7 +41,7 @@ export default function OperatorDetailPage() {
     if (!user) { addToast('error', tp('opDetailLoginFirst')); return; }
     try {
       const conv = await createConv.mutateAsync({ entityType: 'OPERATOR_LISTING', entityId: op!.id });
-      router.push(`/chat/${conv.id}`);
+      router.push(`/messages/${conv.id}`);
     } catch { addToast('error', tp('opDetailErrorConversation')); }
   }
 

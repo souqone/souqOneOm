@@ -85,7 +85,7 @@ export default function EquipmentRequestDetailPage() {
     if (!user) { addToast('error', tp('eqReqDetailLoginFirst')); return; }
     try {
       const conv = await createConv.mutateAsync({ entityType: 'EQUIPMENT_REQUEST', entityId: req!.id });
-      router.push(`/chat/${conv.id}`);
+      router.push(`/messages/${conv.id}`);
     } catch { addToast('error', tp('eqReqDetailError')); }
   }
 
