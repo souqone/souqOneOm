@@ -22,11 +22,12 @@ export function useFilterState(category: ListingCategory): UseFilterStateReturn 
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const config = FILTERS_CONFIG[category] ?? []
-
   const filters = useMemo(
-    () => parseUrlFilters(searchParams, config),
-    [searchParams, config],
+    () => {
+      const config = FILTERS_CONFIG[category] ?? []
+      return parseUrlFilters(searchParams, config)
+    },
+    [searchParams, category],
   )
 
   const setFilter = useCallback(
