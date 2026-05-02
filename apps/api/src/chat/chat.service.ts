@@ -29,6 +29,11 @@ export class ChatService {
         if (!e) throw new NotFoundException('الإعلان غير موجود');
         return { ownerId: e.sellerId, title: e.title };
       }
+      case 'BUS_LISTING': {
+        const e = await this.prisma.busListing.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+        if (!e) throw new NotFoundException('الحافلة غير موجودة');
+        return { ownerId: e.userId, title: e.title };
+      }
       case 'SPARE_PART': {
         const e = await this.prisma.sparePart.findUnique({ where: { id: entityId }, select: { sellerId: true, title: true } });
         if (!e) throw new NotFoundException('قطعة الغيار غير موجودة');

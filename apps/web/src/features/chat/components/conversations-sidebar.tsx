@@ -13,9 +13,14 @@ import { useTranslations, useLocale } from 'next-intl';
 
 const ENTITY_KEYS: Record<string, string> = {
   LISTING: 'entityListing',
+  BUS_LISTING: 'entityBusListing',
   SPARE_PART: 'entitySparePart',
   CAR_SERVICE: 'entityCarService',
+  TRANSPORT: 'entityTransport',
   JOB: 'entityJob',
+  EQUIPMENT_LISTING: 'entityEquipmentListing',
+  EQUIPMENT_REQUEST: 'entityEquipmentRequest',
+  OPERATOR_LISTING: 'entityOperatorListing',
 };
 
 const AVATAR_GRADIENTS = [

@@ -732,6 +732,8 @@ export function RentalPageShell({ listing, config, unavailableDates, onBook, isB
               unavailableDates={unavailableDates}
               onBook={handleBooking}
               isBookingPending={isBookingPending}
+              onContactSeller={handleMessage}
+              isContactPending={createConv.isPending}
             />
           </div>
           {/* ════ END RIGHT COLUMN ════ */}
