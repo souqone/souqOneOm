@@ -162,7 +162,7 @@ export default function JobDetailClient() {
       navigator.clipboard.writeText(url);
       addToast('success', tp('jobDetailLinkCopied'));
     }
-  }, [job?.title, addToast]);
+  }, [job?.title, addToast, tp]);
 
   const handleWhatsApp = useCallback(() => {
     if (!job?.whatsapp) return;

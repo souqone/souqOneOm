@@ -146,7 +146,7 @@ export function BookingCard({ booking, role, onRate, onConfirm, onReject, onCanc
         {isOwner && booking.status === 'PENDING' && (booking.renterNote || booking.notes) && (
           <div className="bg-surface-container-low border border-outline-variant/10 rounded-xl px-3 py-2 mb-3">
             <p className="text-[10px] text-on-surface-variant italic leading-relaxed">
-              "{booking.renterNote || booking.notes}"
+              &ldquo;{booking.renterNote || booking.notes}&rdquo;
             </p>
           </div>
         )}
