@@ -38,7 +38,7 @@ type LucideIcon = React.ComponentType<{ size?: number; className?: string; strok
 const CATEGORY_ICON: Record<ListingCategory, LucideIcon> = {
   cars: Car, buses: Bus, equipment: Wrench,
   'equipment-requests': Wrench, operators: HardHat,
-  parts: Settings, services: Briefcase, jobs: Briefcase,
+  parts: Settings, services: Briefcase,
 }
 
 function CategoryBar({ currentCategory }: { currentCategory: ListingCategory }) {

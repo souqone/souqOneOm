@@ -20,7 +20,7 @@ function useSearchCategories() {
     { value: 'equipment', label: ts('equipment'), placeholder: ts('navEquipmentPlaceholder'), route: '/browse/equipment' },
     { value: 'parts',     label: ts('parts'),     placeholder: ts('navPartsPlaceholder'),     route: '/browse/parts' },
     { value: 'services',  label: ts('services'),  placeholder: ts('navServicesPlaceholder'),  route: '/browse/services' },
-    { value: 'jobs',      label: ts('jobs'),      placeholder: ts('navJobsPlaceholder'),      route: '/browse/jobs' },
+    { value: 'jobs',      label: ts('jobs'),      placeholder: ts('navJobsPlaceholder'),      route: '/jobs' },
   ];
 }
 

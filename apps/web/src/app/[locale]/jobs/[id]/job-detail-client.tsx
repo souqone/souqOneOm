@@ -241,7 +241,7 @@ export default function JobDetailClient() {
           </div>
           <p className="text-2xl font-bold mb-6 text-on-surface">{tp('jobDetailNotFound')}</p>
           <Link
-            href="/browse/jobs"
+            href="/jobs"
             className="inline-flex items-center gap-2 bg-primary text-on-primary px-8 py-3.5 rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
           >
             {tp('jobDetailBackToJobs')}
@@ -278,7 +278,7 @@ export default function JobDetailClient() {
               {tp('jobDetailHome')}
             </Link>
             <span className="material-symbols-outlined text-[14px] opacity-50">chevron_left</span>
-            <Link href="/browse/jobs" className="hover:text-primary transition-colors">{tp('jobDetailBreadcrumb')}</Link>
+            <Link href="/jobs" className="hover:text-primary transition-colors">{tp('jobDetailBreadcrumb')}</Link>
             <span className="material-symbols-outlined text-[14px] opacity-50">chevron_left</span>
             <span className="text-on-surface truncate max-w-[140px] sm:max-w-[200px]">{job.title}</span>
           </nav>

@@ -6,7 +6,6 @@ import { useBusListings } from '@/lib/api/buses'
 import { useEquipmentListings, useEquipmentRequests, useOperatorListings } from '@/lib/api/equipment'
 import { useParts } from '@/lib/api/parts'
 import { useCarServices } from '@/lib/api/services'
-import { useJobs } from '@/lib/api/jobs'
 
 import type { ListingCategory } from '../types/category.types'
 import type { UnifiedListingItem } from '../types/unified-item.types'
@@ -50,8 +49,6 @@ export function useUnifiedListings(
   const operatorsQuery = useOperatorListings(p, category === 'operators')
   const partsQuery     = useParts(p,       category === 'parts')
   const servicesQuery  = useCarServices(p, category === 'services')
-  const jobsQuery      = useJobs(p,        category === 'jobs')
-
   const raw = {
     cars:      carsQuery.data,
     buses:     busesQuery.data,
@@ -60,7 +57,6 @@ export function useUnifiedListings(
     operators:  operatorsQuery.data,
     parts:     partsQuery.data,
     services:  servicesQuery.data,
-    jobs:      jobsQuery.data,
   }[category]
 
   const isLoading = {
@@ -71,7 +67,6 @@ export function useUnifiedListings(
     operators:  operatorsQuery.isLoading,
     parts:     partsQuery.isLoading,
     services:  servicesQuery.isLoading,
-    jobs:      jobsQuery.isLoading,
   }[category]
 
   const isFetching = {
@@ -82,7 +77,6 @@ export function useUnifiedListings(
     operators:  operatorsQuery.isFetching,
     parts:     partsQuery.isFetching,
     services:  servicesQuery.isFetching,
-    jobs:      jobsQuery.isFetching,
   }[category]
 
   const error = {
@@ -93,7 +87,6 @@ export function useUnifiedListings(
     operators:  operatorsQuery.error,
     parts:     partsQuery.error,
     services:  servicesQuery.error,
-    jobs:      jobsQuery.error,
   }[category] as Error | null
 
   const items = useMemo<UnifiedListingItem[]>(() => {

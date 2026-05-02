@@ -6,7 +6,6 @@ export type ListingCategory =
   | 'operators'
   | 'parts'
   | 'services'
-  | 'jobs'
 
 export const VALID_CATEGORIES: ListingCategory[] = [
   'cars',
@@ -16,7 +15,6 @@ export const VALID_CATEGORIES: ListingCategory[] = [
   'operators',
   'parts',
   'services',
-  'jobs',
 ]
 
 export type CategoryColor =
@@ -95,14 +93,6 @@ export const CATEGORY_META: Record<ListingCategory, CategoryMeta> = {
     icon: 'Briefcase',
     color: 'green',
     apiPath: '/services',
-  },
-  jobs: {
-    key: 'jobs',
-    labelAr: 'وظائف',
-    labelEn: 'Jobs',
-    icon: 'Briefcase',
-    color: 'amber',
-    apiPath: '/jobs',
   },
 }
 

@@ -317,45 +317,6 @@ export const FILTERS_CONFIG: Record<ListingCategory, FilterField[]> = {
     GOVERNORATE_FIELD,
   ],
 
-  jobs: [
-    {
-      key: 'jobType',
-      labelAr: 'نوع الإعلان',
-      type: 'select',
-      primary: true,
-      options: [
-        { value: 'OFFERING', labelAr: 'باحث عن عمل' },
-        { value: 'HIRING',   labelAr: 'مطلوب موظف' },
-      ],
-    },
-    {
-      key: 'employmentType',
-      labelAr: 'نوع التوظيف',
-      type: 'select',
-      primary: true,
-      options: [
-        { value: 'FULL_TIME', labelAr: 'دوام كامل' },
-        { value: 'PART_TIME', labelAr: 'دوام جزئي' },
-        { value: 'TEMPORARY', labelAr: 'مؤقت' },
-        { value: 'CONTRACT',  labelAr: 'عقد' },
-      ],
-    },
-    {
-      key: 'licenseType',
-      labelAr: 'رخصة القيادة',
-      type: 'multiselect',
-      primary: false,
-      options: [
-        { value: 'LIGHT',          labelAr: 'خفيفة' },
-        { value: 'HEAVY',          labelAr: 'ثقيلة' },
-        { value: 'MOTORCYCLE',     labelAr: 'دراجة نارية' },
-        { value: 'BUS',            labelAr: 'حافلات' },
-        { value: 'HEAVY_EQUIPMENT', labelAr: 'معدات ثقيلة' },
-      ],
-    },
-    GOVERNORATE_FIELD,
-  ],
-
   services: [
     {
       key: 'serviceType',
@@ -419,11 +380,6 @@ export const SORT_CONFIG: Record<ListingCategory, SortOption[]> = {
     { value: 'price_desc',     labelAr: 'السعر: الأعلى' },
   ],
   services:  [{ value: 'createdAt_desc', labelAr: 'الأحدث' }],
-  jobs: [
-    { value: 'createdAt_desc', labelAr: 'الأحدث' },
-    { value: 'salary_desc',    labelAr: 'الراتب: الأعلى' },
-    { value: 'salary_asc',     labelAr: 'الراتب: الأقل' },
-  ],
 }
 
 export const CATEGORY_FILTERS     = FILTERS_CONFIG

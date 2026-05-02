@@ -14,7 +14,7 @@ import type { ListingCategory } from '../types/category.types'
 
 type LucideIcon = React.ComponentType<{ size?: number; className?: string }>
 
-const CATEGORY_ICON: Record<ListingCategory, LucideIcon> = {
+const CATEGORY_ICON: Record<ListingCategory | 'jobs', LucideIcon> = {
   cars:      Car,
   buses:     Bus,
   equipment: Wrench,

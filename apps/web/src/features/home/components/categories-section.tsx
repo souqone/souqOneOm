@@ -37,7 +37,7 @@ const CAT_META = [
   { labelKey: 'catParts',     descKey: 'catPartsDesc',     image: '/images/categories/parts.webp',         href: '/browse/parts',      color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' },
   { labelKey: 'catServices',  descKey: 'catServicesDesc',  image: '/images/categories/services.webp',            href: '/browse/services',   color: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400' },
   { labelKey: 'catEquipment', descKey: 'catEquipmentDesc', image: '/images/categories/equipment.webp',     href: '/browse/equipment',  color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' },
-  { labelKey: 'catJobs',      descKey: 'catJobsDesc',      image: '/images/categories/jobs.webp',            href: '/browse/jobs',       color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' },
+  { labelKey: 'catJobs',      descKey: 'catJobsDesc',      image: '/images/categories/jobs.webp',            href: '/jobs',       color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' },
   { labelKey: 'catRentals',   descKey: 'catRentalsDesc',   image: '/images/categories/rentals.webp',       href: '/browse/cars?listingType=RENTAL',    color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' },
 ] as const;
 
