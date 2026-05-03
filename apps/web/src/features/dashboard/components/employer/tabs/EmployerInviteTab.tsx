@@ -6,7 +6,7 @@ import { useDrivers } from '@/lib/api/jobs';
 import { getGovernorates } from '@/lib/location-data';
 import { LICENSE_TYPE_CONFIG } from '@/lib/constants/jobs';
 import { Button } from '@/components/ui/button';
-import { DriverProfileCard } from '@/components/drivers/DriverProfileCard';
+import { DriverProfileCard } from '@/features/jobs/components/DriverProfileCard';
 import type { JobItem } from '@/lib/api/jobs';
 
 interface EmployerInviteTabProps {

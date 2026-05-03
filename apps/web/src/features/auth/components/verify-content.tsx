@@ -6,7 +6,7 @@ import { useAuthModal } from '@/providers/auth-modal-provider';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/toast';
 import { apiRequest } from '@/lib/auth';
-import { OtpInput } from '@/components/auth/otp-input';
+import { OtpInput } from './otp-input';
 
 export default function VerifyEmailContent() {
   const { user, isAuthenticated } = useAuth();

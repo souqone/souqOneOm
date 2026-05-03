@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { JobsPageGuard } from '@/components/jobs/jobs-page-guard';
+import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
 import { useMyVerificationStatus, useSubmitVerification, useMyDriverProfile } from '@/lib/api';
 import { useUploadImage } from '@/lib/api/uploads';
 import { useToast } from '@/components/toast';

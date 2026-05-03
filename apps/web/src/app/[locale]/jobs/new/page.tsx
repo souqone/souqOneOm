@@ -5,7 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { JobsPageGuard } from '@/components/jobs/jobs-page-guard';
+import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
 import { useCreateJob } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/toast';

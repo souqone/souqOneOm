@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuthModal } from '@/providers/auth-modal-provider';
-import { InputField } from '@/components/auth/input-field';
+import { InputField } from '@/features/auth/components/input-field';
 import { apiRequest } from '@/lib/auth';
 
 export default function ForgotForm() {

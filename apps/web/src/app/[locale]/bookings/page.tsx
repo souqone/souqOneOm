@@ -1,4 +1,4 @@
-﻿import { BookingsPageClient } from '@/components/bookings/BookingsPageClient';
+﻿import { BookingsPageClient } from '@/features/bookings/components/BookingsPageClient';
 
 export const metadata = {
   title: 'حجوزاتي | سوق وان',

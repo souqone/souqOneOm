@@ -8,9 +8,9 @@ import LoginForm from '@/app/[locale]/login/login-form';
 import RegisterForm from '@/app/[locale]/register/register-form';
 import ForgotForm from '@/app/[locale]/forgot-password/forgot-form';
 import ResetForm from '@/app/[locale]/reset-password/reset-form';
-import VerifyEmailContent from '@/components/auth/verify-content';
-import LogoArIcon from '../icons/logo-ar';
-import LogoEnIcon from '../icons/logo-en';
+import VerifyEmailContent from './verify-content';
+import LogoArIcon from '@/components/icons/logo-ar';
+import LogoEnIcon from '@/components/icons/logo-en';
 import { useHandleOutSide } from '@/hooks/use-handle-outside';
 import { useRouter } from '@/i18n/navigation';
 
