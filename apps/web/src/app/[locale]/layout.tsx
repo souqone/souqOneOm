@@ -10,7 +10,7 @@ import { AuthProvider } from '@/providers/auth-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import { ToastProvider } from '@/components/toast';
 import { AuthModalProvider } from '@/providers/auth-modal-provider';
-import { AuthOverlay } from '@/components/auth/auth-overlay';
+import { AuthOverlay } from '@/features/auth/components/auth-overlay';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { SearchProvider } from '@/providers/search-provider';
 import { FavoritesProvider } from '@/providers/favorites-provider';

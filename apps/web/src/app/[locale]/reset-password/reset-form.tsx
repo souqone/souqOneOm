@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { apiRequest } from '@/lib/auth';
 import { useTranslations } from 'next-intl';
 import { useAuthModal } from '@/providers/auth-modal-provider';
-import { InputField } from '@/components/auth/input-field';
-import { OtpInput } from '@/components/auth/otp-input';
-import { PasswordStrength } from '@/components/auth/password-strength';
+import { InputField } from '@/features/auth/components/input-field';
+import { OtpInput } from '@/features/auth/components/otp-input';
+import { PasswordStrength } from '@/features/auth/components/password-strength';
 
 export default function ResetForm() {
   const t = useTranslations('auth');

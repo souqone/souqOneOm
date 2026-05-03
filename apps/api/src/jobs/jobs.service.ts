@@ -181,7 +181,7 @@ export class JobsService {
         take: limit,
         orderBy,
         include: {
-          user: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
+          user: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, isVerified: true } },
           _count: { select: { applications: true } },
         },
       }),

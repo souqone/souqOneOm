@@ -6,7 +6,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useAuthModal } from '@/providers/auth-modal-provider';
 import { useTranslations } from 'next-intl';
 import { GoogleSignInButton } from '@/components/google-sign-in';
-import { InputField } from '@/components/auth/input-field';
+import { InputField } from '@/features/auth/components/input-field';
 
 export default function LoginForm() {
   const t = useTranslations('auth');

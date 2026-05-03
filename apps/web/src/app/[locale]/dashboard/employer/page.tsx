@@ -1,4 +1,4 @@
-import { EmployerDashboardClient } from '@/components/dashboard/employer/EmployerDashboardClient';
+import { EmployerDashboardClient } from '@/features/dashboard/components/employer/EmployerDashboardClient';
 
 export default function EmployerDashboardPage() {
   return <EmployerDashboardClient />;

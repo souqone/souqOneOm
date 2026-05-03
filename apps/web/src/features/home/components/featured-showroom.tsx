@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, useInView } from 'framer-motion';
-import { CardGrid } from '@/features/listings/components/CardGrid';
+import { CardSlider } from '@/features/listings/components/CardSlider';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { ListingItem } from '@/lib/api/listings';
 
@@ -54,7 +54,7 @@ export function FeaturedShowroom({ items, isLoading }: FeaturedShowroomProps) {
           </motion.div>
 
           <motion.div variants={fadeUp}>
-            <CardGrid
+            <CardSlider
               items={items}
               mapItem={transformCar}
               isLoading={isLoading}

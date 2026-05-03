@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, useInView } from 'framer-motion';
-import { CardGrid } from '@/features/listings/components/CardGrid';
+import { CardSlider } from '@/features/listings/components/CardSlider';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { SparePartItem } from '@/lib/api/parts';
 
@@ -51,7 +51,7 @@ export function PartsShowcase({ items, isLoading }: PartsShowcaseProps) {
           </motion.div>
 
           <motion.div variants={fadeUp}>
-            <CardGrid
+            <CardSlider
               items={items}
               mapItem={transformPart}
               isLoading={isLoading}

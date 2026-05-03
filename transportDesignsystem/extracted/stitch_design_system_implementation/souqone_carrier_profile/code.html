@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>شركة النقل السريع - ملف الناقل</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdbc7",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "background": "#f9f9ff",
+                        "surface-container-highest": "#dce2f7",
+                        "tertiary-container": "#894000",
+                        "outline-variant": "#c3c6d6",
+                        "on-tertiary-fixed": "#311300",
+                        "dark-price-green": "#34d399",
+                        "surface-container-high": "#e1e8fd",
+                        "brand-amber": "#E8781E",
+                        "brand-green": "#16a34a",
+                        "on-surface-variant": "#434654",
+                        "brand-navy": "#0B2447",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-fixed": "#dbe1ff",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#652e00",
+                        "price-green": "#16a34a",
+                        "on-primary-fixed": "#00174b",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#b8c8ff",
+                        "inverse-primary": "#b4c5ff",
+                        "dark-surface": "#0a1628",
+                        "primary-container": "#004ac6",
+                        "inverse-on-surface": "#edf0ff",
+                        "tertiary-fixed-dim": "#ffb689",
+                        "inverse-surface": "#293040",
+                        "outline": "#737685",
+                        "on-background": "#141b2b",
+                        "on-primary": "#ffffff",
+                        "primary": "#003594",
+                        "secondary": "#515f74",
+                        "surface-container-low": "#f1f3ff",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#733500",
+                        "surface-tint": "#004ac6",
+                        "surface-variant": "#dce2f7",
+                        "surface-dim": "#d3daef",
+                        "secondary-container": "#d5e3fc",
+                        "dark-background": "#060e1e",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#d5e3fc",
+                        "surface": "#f9f9ff",
+                        "on-tertiary-container": "#ffbb90",
+                        "surface-container": "#e9edff",
+                        "on-secondary-container": "#57657a",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-surface": "#141b2b",
+                        "surface-bright": "#f9f9ff",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter-sm": "12px",
+                        "gutter-lg": "40px",
+                        "page-max": "1280px",
+                        "nav-bottom": "46px",
+                        "page-padding-x-md": "24px",
+                        "nav-top": "56px",
+                        "mobile-bottom-nav": "80px",
+                        "sidebar-width": "288px",
+                        "nav-total": "102px",
+                        "page-padding-x-sm": "12px",
+                        "page-padding-x-lg": "40px",
+                        "page-max-width": "1280px",
+                        "base": "4px",
+                        "base-unit": "4px",
+                        "gutter-md": "24px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Almarai"],
+                        "label-sm": ["Almarai"],
+                        "body-sm": ["Almarai"],
+                        "hero-sm": ["Almarai"],
+                        "hero-md": ["Almarai"],
+                        "hero-lg": ["Almarai"],
+                        "title-md": ["Almarai"],
+                        "body-md": ["Almarai"],
+                        "title-lg": ["Almarai"],
+                        "body-lg": ["Almarai"]
+                    },
+                    "fontSize": {
+                        "label-md": ["11px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "700" }],
+                        "label-sm": ["10px", { "lineHeight": "1.2", "fontWeight": "800" }],
+                        "body-sm": ["12px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "hero-sm": ["24px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "hero-md": ["30px", { "lineHeight": "1.4", "fontWeight": "800" }],
+                        "hero-lg": ["36px", { "lineHeight": "1.4", "fontWeight": "800" }],
+                        "title-md": ["17px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "title-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "1.7", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Almarai', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background pb-mobile-bottom-nav md:pb-0 min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="hidden md:flex flex-row-reverse justify-between items-center h-[102px] px-4 md:px-10 max-w-[1280px] mx-auto w-full docked full-width top-0 border-b border-slate-200/10 shadow-sm bg-white/80 backdrop-blur-md sticky z-40">
+<div class="flex items-center gap-6">
+<span class="text-2xl font-black text-blue-900">سوق وان</span>
+<div class="flex gap-4 mr-8">
+<a class="text-slate-600 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 transition-all px-3 py-2 rounded-xl scale-95 active:scale-100 transition-transform" href="#">الرئيسية</a>
+<a class="text-slate-600 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 transition-all px-3 py-2 rounded-xl scale-95 active:scale-100 transition-transform" href="#">سوق المعدات</a>
+<a class="text-slate-600 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 transition-all px-3 py-2 rounded-xl scale-95 active:scale-100 transition-transform" href="#">طلباتي</a>
+<a class="text-slate-600 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 transition-all px-3 py-2 rounded-xl scale-95 active:scale-100 transition-transform" href="#">عروضي</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-600 hover:bg-slate-50/50 rounded-full scale-95 active:scale-100 transition-transform">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-600 hover:bg-slate-50/50 rounded-full scale-95 active:scale-100 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="صورة الملف الشخصي" class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover" data-alt="A professional studio portrait of an Arabic male logistics manager in his 40s. He is wearing a sharp navy blue corporate uniform with subtle branding. The lighting is soft and flattering, highlighting his trustworthy and experienced demeanor. The background is a slightly blurred, high-tech warehouse setting. The overall aesthetic is clean, authoritative, and aligns with a premium B2B logistics platform's visual identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBixQpdtaFmHLUPoHspog2LnBUk29_BB8Y5NB5Gzsv9IiYImq3iVp6x9S4b4LAueagcnRyvLF5D2sE5-okw_dGWmoFHWiSddJqVeD25979DD2kzZNj8uOBvhk4uQ5r6wccC2qI_3rzikc5vMjRbkyjiFkrZiurkinsG4R2RBmihFJmJHcUG__vJLmnS_RGY1c2MhF1yLwBkJiV2gTHIn8-b7KpX1Akb2nnsNDWncjae4Ll29aYY7ev_RTc2I-UWirT5iRPO2scoBT4"/>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-page-max mx-auto px-page-padding-x-sm md:px-page-padding-x-lg py-8 space-y-6">
+<!-- Hero Banner Profile -->
+<div class="relative bg-surface-container-lowest rounded-xl shadow-sm outline outline-1 outline-outline-variant/10 overflow-hidden">
+<div class="h-48 md:h-64 bg-gradient-to-r from-brand-navy to-primary-container relative">
+<!-- Cover Image overlay pattern -->
+<div class="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('https://images.unsplash.com/photo-1586528116311-ad8ed7c83a7a?q=80&amp;w=2070&amp;auto=format&amp;fit=crop')] bg-cover bg-center" data-alt="A dynamic, wide-angle shot of a modern logistics fleet. Several pristine white semi-trucks are parked in a perfectly aligned row at a large distribution center. The scene is illuminated by the golden hour sunlight, casting long shadows and creating a warm, professional atmosphere. The composition emphasizes scale, reliability, and institutional authority, fitting for a premium Arabic automotive and logistics marketplace."></div>
+</div>
+<div class="px-6 pb-6 relative z-10 flex flex-col md:flex-row gap-6 md:items-end -mt-16 md:-mt-20">
+<div class="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-surface-container-lowest overflow-hidden bg-white shrink-0 shadow-lg">
+<img alt="شعار شركة النقل السريع" class="w-full h-full object-cover" data-alt="A sleek, modern corporate logo design for a logistics company. The logo features a stylized, abstract representation of a moving truck forming an arrow, rendered in deep navy blue and bright amber orange. The design is set against a clean, stark white background. The aesthetic is highly professional, trustworthy, and minimal, perfectly suited for a high-end B2B platform profile picture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBz76RfZBMHS2mQV5jCe3P9MpN4m_Hs_JXLkEETqrJFTUYiNWq2zQOwBS97rETC3iAePn4cGprPKfQFLkPX0lkAAuu5HGdA2kcWfpVJLSLnWtna2EOQxe87qFo3qk89Xfm1YLWZDJT_YWjMritjtzZko1UgNTyrDNd5hOXpJGG30j4CfeOkzgS8ljEiN_Ud_L0SzUbk7FALRajTzQNrLt2FNODJCMUbzmARlHO_jyLIFo_RDKehCven8jp1kRE45u2lMXjWDgGnFFs"/>
+</div>
+<div class="flex-grow flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h1 class="font-hero-sm text-hero-sm text-on-background">شركة النقل السريع</h1>
+<span class="material-symbols-outlined text-primary-container text-xl" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<span class="inline-flex items-center gap-1 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full font-label-md text-label-md">
+<span class="w-2 h-2 rounded-full bg-brand-green"></span>
+                                متاح للعمل
+                            </span>
+<span class="text-secondary font-body-sm text-body-sm">ترخيص رقم: 459028</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Stats Row -->
+<div class="border-t border-outline-variant/20 bg-surface-container-low/50">
+<div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-outline-variant/20 p-4">
+<div class="text-center px-2">
+<p class="font-body-sm text-body-sm text-secondary mb-1">الرحلات المكتملة</p>
+<p class="font-title-lg text-title-lg text-on-background">1,245</p>
+</div>
+<div class="text-center px-2">
+<p class="font-body-sm text-body-sm text-secondary mb-1">التقييم</p>
+<div class="flex items-center justify-center gap-1">
+<span class="font-title-lg text-title-lg text-on-background">4.8</span>
+<span class="material-symbols-outlined text-brand-amber text-lg" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<div class="text-center px-2">
+<p class="font-body-sm text-body-sm text-secondary mb-1">مناطق التغطية</p>
+<p class="font-title-md text-title-md text-on-background">المملكة والخليج</p>
+</div>
+<div class="text-center px-2">
+<p class="font-body-sm text-body-sm text-secondary mb-1">عضو منذ</p>
+<p class="font-title-md text-title-md text-on-background">2019</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Left Sidebar (Actions) -->
+<div class="md:col-span-4 space-y-4 order-1 md:order-2">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm outline outline-1 outline-outline-variant/10 flex flex-col gap-4 sticky top-32">
+<button class="w-full bg-brand-green text-white rounded-xl py-3 px-4 font-title-md text-title-md flex justify-center items-center gap-2 hover:shadow-lg transition-all">
+<span class="material-symbols-outlined">chat</span>
+                        تواصل عبر واتساب
+                    </button>
+<button class="w-full bg-surface-container-low text-primary rounded-xl py-3 px-4 font-title-md text-title-md flex justify-center items-center gap-2 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">call</span>
+                        050 123 4567
+                    </button>
+<button class="w-full border-2 border-brand-amber text-brand-amber rounded-xl py-3 px-4 font-title-md text-title-md flex justify-center items-center gap-2 hover:bg-brand-amber/5 transition-all">
+<span class="material-symbols-outlined">request_quote</span>
+                        طلب تسعيرة
+                    </button>
+<div class="pt-4 mt-2 border-t border-outline-variant/20">
+<p class="font-body-sm text-body-sm text-secondary mb-2">معلومات إضافية</p>
+<ul class="space-y-3">
+<li class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">location_on</span>
+<span class="font-body-md text-body-md">المقر الرئيسي: الرياض، حي السلي</span>
+</li>
+<li class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">schedule</span>
+<span class="font-body-md text-body-md">ساعات العمل: 8 ص - 6 م</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Right Main Column -->
+<div class="md:col-span-8 space-y-6 order-2 md:order-1">
+<!-- About Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm outline outline-1 outline-outline-variant/10">
+<h2 class="font-title-lg text-title-lg text-on-background mb-4">نبذة عن الشركة</h2>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                        شركة النقل السريع هي واحدة من الشركات الرائدة في مجال النقل والخدمات اللوجستية في المملكة العربية السعودية. نتميز بتقديم خدمات نقل موثوقة وآمنة لكافة أنواع البضائع والمعدات الثقيلة. يضم أسطولنا أحدث الشاحنات والمقطورات المجهزة بأحدث تقنيات التتبع لضمان وصول شحناتكم في الوقت المحدد.
+                    </p>
+</div>
+<!-- Bento Grid for Capabilities -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- Vehicle Types -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm outline outline-1 outline-outline-variant/10 hover:outline-outline-variant/20 transition-all">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary-container bg-primary-container/10 p-2 rounded-lg">local_shipping</span>
+<h3 class="font-title-md text-title-md text-on-background">أنواع المركبات</h3>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">سطحات هيدروليك</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">لوابد (Lowbed)</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">شاحنات تبريد</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">تريلات جوانب</span>
+</div>
+</div>
+<!-- Service Types -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm outline outline-1 outline-outline-variant/10 hover:outline-outline-variant/20 transition-all">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-brand-amber bg-brand-amber/10 p-2 rounded-lg">handyman</span>
+<h3 class="font-title-md text-title-md text-on-background">الخدمات المقدمة</h3>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">نقل المعدات الثقيلة</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">نقل البضائع المبردة</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">النقل بين المدن</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg font-body-sm text-body-sm border border-outline-variant/10">التخليص الجمركي</span>
+</div>
+</div>
+</div>
+<!-- Image Gallery Preview (Bento Style) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm outline outline-1 outline-outline-variant/10">
+<h3 class="font-title-md text-title-md text-on-background mb-4">صور الأسطول والمعدات</h3>
+<div class="grid grid-cols-3 gap-2">
+<div class="col-span-2 row-span-2 rounded-lg overflow-hidden h-48 md:h-64">
+<img alt="شاحنة نقل ثقيل" class="w-full h-full object-cover" data-alt="A highly detailed close-up shot of a heavy-duty yellow semi-truck cab pulling a massive lowbed trailer loaded with industrial construction equipment. The truck is driving on a modern highway under a clear blue sky. The lighting is bright and realistic, emphasizing the metallic textures and the sheer power of the vehicle. The visual style is crisp and professional, suited for a corporate logistics portfolio." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmJb4uM6-ueTVgGhwgVwW-x6foC9WJAXn7S6k-_U0dBMczdSUZsJGvBw4DapwMNdoonokQ4iaQond8OyFV8Cgc_8aJtH35CxgVIgOh_Q6wMHYFc0Cj36Vit3IPS9Qkv7aRC37Sym5IY77qt9RVl7hcPr09G76WH-LZUgveCYNwsBgO_gKXdAldBxe8VV55cvqB_31e_UGJUz9PI1OMFVc7qp9awXHmaK3FzO9MsUDmkvLrKemQ0YWk6ZniETK_UlUr32BmHLkNrgE"/>
+</div>
+<div class="rounded-lg overflow-hidden h-24 md:h-32">
+<img alt="مستودع" class="w-full h-full object-cover" data-alt="An expansive interior view of a state-of-the-art logistics warehouse. The space is vast, featuring towering racks perfectly organized with neatly wrapped pallets. Bright, even, high-key LED lighting illuminates the facility, reflecting off the clean concrete floor. A modern forklift is subtly visible in the background. The mood conveys extreme efficiency, order, and institutional reliability in a light-mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYhsjCtdtLhRoHNv-cmCox3ENakjZR4Buf7fR7yt3SJ4dgYn6cWdoghFgBCiBUMmrRfUnbtve-VlVq7Zt6zA78o-yg_vpNj18HCNd8mJmnHR32eZ6OVV_Bsh-u4qZPGFTkrdVv6hLG3JA1zQ45QRVFPtlG4JEDUa5-M5lubIzn8zubuW_WKukag4-qXS_oO3Otoqs8_6ZkUQ-QXKM8sLocQRETeF-gscikvxdSftMzihXuPzx_vgqM1rrfRATcDNR470Ql436hA_g"/>
+</div>
+<div class="rounded-lg overflow-hidden h-24 md:h-32 relative group cursor-pointer">
+<img alt="أسطول شاحنات" class="w-full h-full object-cover" data-alt="A scenic aerial drone shot overlooking a fleet of white transport trucks lined up symmetrically at a logistics hub. The shot is taken during twilight, with soft, cool lighting dominating the scene. The trucks' headlights are gently glowing, adding depth. The composition highlights scale and organized infrastructure, reflecting a premium, highly capable transport enterprise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlirgcBYfeezr8X4V7VMYJIf7tgao1Yck2wLjUkFwwLUtlaYqRYYsMD1URHSvi-St3JqPbXOihglcn-dQskQa2P1IDRzfibcRZ4ghgoiUrWVSMzfpjQjSNKHEgdCWTRcL2uWSMHc1SVwqksoOOPHE_czYwPLjkwWUx2c5seHB-1uMWjd5JeI8vTje_pXkRwaJ4c9VxArHHCB820bCZybdht6b4Il_pqNN3B2IrAyJC0wcdoscmAbY_UailyOc1EnAcQYjgMlUoDAo"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="font-title-md text-title-md text-white">+5 صور</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center px-4 pb-safe bg-white border-t border-slate-100 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-50 h-[80px]">
+<a class="flex flex-col items-center justify-center text-slate-400" href="#">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="text-[11px] font-medium">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400" href="#">
+<span class="material-symbols-outlined mb-1">list_alt</span>
+<span class="text-[11px] font-medium">طلباتي</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400" href="#">
+<span class="material-symbols-outlined mb-1">local_shipping</span>
+<span class="text-[11px] font-medium">عروضي</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-amber-50 text-amber-700 rounded-2xl px-3 py-1" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-[11px] font-medium">حسابي</span>
+</a>
+</nav>
+<!-- Footer -->
+<footer class="w-full py-12 border-t border-slate-200 bg-slate-50 mt-auto hidden md:block">
+<div class="max-w-[1280px] mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="flex flex-col gap-4">
+<span class="text-lg font-bold text-blue-900">سوق وان</span>
+<p class="text-sm text-right text-slate-500">© ٢٠٢٤ سوق وان للمعدات والخدمات اللوجستية. جميع الحقوق محفوظة.</p>
+</div>
+<div class="flex justify-end gap-6 text-sm text-right">
+<a class="text-slate-500 hover:text-blue-700 underline" href="#">عن سوق وان</a>
+<a class="text-slate-500 hover:text-blue-700 underline" href="#">الشروط والأحكام</a>
+<a class="text-slate-500 hover:text-blue-700 underline" href="#">سياسة الخصوصية</a>
+<a class="text-slate-500 hover:text-blue-700 underline" href="#">اتصل بنا</a>
+</div>
+</div>
+</footer>
+</body></html>

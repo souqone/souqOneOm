@@ -9,7 +9,7 @@ import { Footer } from '@/components/layout/footer';
 import { useJobs, useRecommendedJobs, useCreateConversation, useApplyToJob, useMyApplications } from '@/lib/api';
 import { useRequireJobProfile } from '@/hooks/use-require-job-profile';
 import { useAuth } from '@/providers/auth-provider';
-import { getGovernorates, resolveLocationLabel } from '@/lib/location-data';
+import { getGovernorates, getCities, resolveLocationLabel } from '@/lib/location-data';
 import { employmentOptionsT, employmentLabelsT } from '@/lib/constants/jobs';
 import { getImageUrl } from '@/lib/image-utils';
 import { useToast } from '@/components/toast';
@@ -132,7 +132,7 @@ function JobCard({ job }: { job: JobItem }) {
                              bg-primary text-white rounded-full
                              w-5 h-5 flex items-center justify-center shadow-sm
                              ring-2 ring-surface-container-lowest">
-                <span className="material-symbols-outlined text-[11px]"
+                <span className="material-symbols-outlined text-[6px]"
                   style={{ fontVariationSettings: "'FILL' 1" }}>
                   verified
                 </span>
@@ -170,7 +170,7 @@ function JobCard({ job }: { job: JobItem }) {
           <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70
                           bg-surface-container-low border border-outline-variant/[0.08]
                           px-2 py-0.5 rounded-lg">
-            <span className="material-symbols-outlined text-[11px]">location_on</span>
+            <span className="material-symbols-outlined text-[6px]">location_on</span>
             {resolveLocationLabel(job.governorate, locale) || job.governorate}
           </span>
 
@@ -187,7 +187,7 @@ function JobCard({ job }: { job: JobItem }) {
                 className="flex items-center gap-0.5 text-[9px] font-bold
                           bg-primary/8 text-primary border border-primary/15
                           px-2 py-0.5 rounded-full">
-                <span className="material-symbols-outlined text-[10px]">
+                <span className="material-symbols-outlined text-[5px]">
                   {opt?.icon ?? 'badge'}
                 </span>
                 {opt ? tp(opt.labelKey as any) : lt}
@@ -218,15 +218,15 @@ function JobCard({ job }: { job: JobItem }) {
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-[10px] text-on-surface-variant/40">
+          <div className="flex items-center gap-1.5 text-[7px] text-on-surface-variant/40">
             {job._count?.applications != null && (
               <span className="flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[12px]">group</span>
+                <span className="material-symbols-outlined text-[4px]">group</span>
                 {job._count.applications}
               </span>
             )}
             <span className="flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[12px]">visibility</span>
+              <span className="material-symbols-outlined text-[4px]">visibility</span>
               {job.viewCount.toLocaleString('ar-OM')}
             </span>
           </div>
@@ -238,11 +238,12 @@ function JobCard({ job }: { job: JobItem }) {
           {/* OWNER */}
           {isOwner && (
             <Link href={`/jobs/${job.slug || job.id}`}
-              className="flex-1 h-9 rounded-xl bg-primary/8 border border-primary/20
-                         text-primary text-[11px] font-bold
-                         flex items-center justify-center gap-1.5
+              className="flex-1 flex items-center justify-center gap-1.5
+                         px-3 py-1.5 rounded-lg
+                         bg-primary/8 border border-primary/20 text-primary
+                         text-[12px] font-semibold
                          hover:bg-primary/12 transition-all">
-              <span className="material-symbols-outlined text-base">people</span>
+              <span className="material-symbols-outlined text-[7px]">people</span>
               {tp('myJobsApplications')} ({job._count?.applications ?? 0})
             </Link>
           )}
@@ -250,15 +251,15 @@ function JobCard({ job }: { job: JobItem }) {
           {/* DRIVER — already applied */}
           {!isOwner && myApplication && (
             <div className={clsx(
-              'flex-1 h-9 rounded-xl border text-[11px] font-bold',
-              'flex items-center justify-center gap-1.5',
+              'flex-1 flex items-center justify-center gap-1.5',
+              'px-3 py-1.5 rounded-lg border text-[12px] font-semibold',
               myApplication.status === 'ACCEPTED'
                 ? 'bg-green-50 border-green-200 text-green-700'
                 : myApplication.status === 'REJECTED'
                 ? 'bg-red-50 border-red-200 text-red-700'
                 : 'bg-yellow-50 border-yellow-200 text-yellow-700'
             )}>
-              <span className="material-symbols-outlined text-base"
+              <span className="material-symbols-outlined text-[8px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}>
                 {myApplication.status === 'ACCEPTED' ? 'check_circle'
                   : myApplication.status === 'REJECTED' ? 'cancel'
@@ -273,13 +274,14 @@ function JobCard({ job }: { job: JobItem }) {
           {/* DRIVER — not applied yet + active */}
           {!isOwner && !myApplication && user && isActive && (
             <button onClick={handleApply} disabled={applyMutation.isPending}
-              className="flex-1 h-9 rounded-xl bg-primary text-on-primary
-                         text-[11px] font-bold flex items-center justify-center gap-1.5
-                         shadow-sm shadow-primary/20 hover:brightness-105
-                         active:scale-[0.98] transition-all disabled:opacity-50">
+              className="flex-1 flex items-center justify-center gap-1.5
+                         px-3 py-1.5 rounded-lg
+                         bg-primary text-on-primary
+                         text-[12px] font-semibold
+                         hover:brightness-105 active:scale-[0.98] transition-all disabled:opacity-50">
               {applyMutation.isPending
                 ? <div className="w-3.5 h-3.5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
-                : <span className="material-symbols-outlined text-base">assignment</span>
+                : <span className="material-symbols-outlined text-[8px]">assignment</span>
               }
               {tp('jobDetailApply')}
             </button>
@@ -288,21 +290,23 @@ function JobCard({ job }: { job: JobItem }) {
           {/* VISITOR — not logged in */}
           {!isOwner && !user && (
             <Link href={`/jobs/${job.slug || job.id}`}
-              className="flex-1 h-9 rounded-xl bg-primary text-on-primary
-                         text-[11px] font-bold flex items-center justify-center gap-1.5
-                         shadow-sm shadow-primary/20 hover:brightness-105 transition-all">
-              <span className="material-symbols-outlined text-base">open_in_new</span>
-              {tp('jobDetailBreadcrumb')}
+              className="flex-1 flex items-center justify-center gap-1.5
+                         px-3 py-1.5 rounded-lg
+                         bg-primary text-on-primary
+                         text-[12px] font-semibold
+                         hover:brightness-105 transition-all">
+              <span className="material-symbols-outlined text-[7px]">open_in_new</span>
+              {tp('jobsViewDetails')}
             </Link>
           )}
 
           {/* Closed / Expired */}
           {!isOwner && user && !myApplication && !isActive && (
-            <div className="flex-1 h-9 rounded-xl bg-surface-container-high
-                           border border-outline-variant/15
-                           flex items-center justify-center gap-1.5
-                           text-on-surface-variant/50 text-[11px] font-medium">
-              <span className="material-symbols-outlined text-base">block</span>
+            <div className="flex-1 flex items-center justify-center gap-1.5
+                           px-3 py-1.5 rounded-lg
+                           bg-surface-container-high border border-outline-variant/15
+                           text-on-surface-variant/50 text-[12px] font-medium">
+              <span className="material-symbols-outlined text-[8px]">block</span>
               {job.status === 'CLOSED' ? tp('jobDetailClosedAd') : tp('jobDetailExpired')}
             </div>
           )}
@@ -310,12 +314,14 @@ function JobCard({ job }: { job: JobItem }) {
           {/* Chat — everyone except owner */}
           {!isOwner && (
             <button onClick={handleChat} disabled={createConv.isPending}
-              aria-label={tp('jobDetailChat')}
-              className="w-9 h-9 flex-shrink-0 rounded-xl border border-outline-variant/15
-                         text-on-surface-variant flex items-center justify-center
+              className="flex-1 flex items-center justify-center gap-1.5
+                         px-3 py-1.5 rounded-lg
+                         border border-outline-variant/15 text-on-surface-variant
+                         text-[12px] font-semibold
                          hover:text-primary hover:border-primary/20 hover:bg-primary/5
                          transition-all disabled:opacity-50">
-              <span className="material-symbols-outlined text-base">chat</span>
+              <span className="material-symbols-outlined text-[7px]">chat</span>
+              {tp('jobDetailChat')}
             </button>
           )}
 
@@ -330,10 +336,10 @@ function JobCard({ job }: { job: JobItem }) {
 ═══════════════════════════════════ */
 
 function FilterContent({
-  governorate, employmentType, licenseType, sortBy,
+  governorate, city, employmentType, licenseType, sortBy,
   onUpdate, onClear, activeCount,
 }: {
-  governorate: string; employmentType: string;
+  governorate: string; city: string; employmentType: string;
   licenseType: string; sortBy: string;
   onUpdate: (key: string, value: string) => void;
   onClear: () => void;
@@ -346,81 +352,100 @@ function FilterContent({
   const empOpts = employmentOptionsT(tm);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-on-surface text-sm flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-primary text-base">tune</span>
+        <h3 className="font-bold text-on-surface text-sm">
           {tp('filters')}
         </h3>
         {activeCount > 0 && (
           <button onClick={onClear}
-            className="text-[11px] text-red-500 hover:text-red-600 font-bold
-                      flex items-center gap-0.5 transition-colors">
-            <span className="material-symbols-outlined text-xs">close</span>
+            className="text-[11px] text-red-500 hover:text-red-600 font-bold transition-colors">
             {tp('clearAll')}
           </button>
         )}
       </div>
 
-      {/* Sort */}
-      <div>
-        <p className="text-[11px] text-on-surface-variant font-bold mb-2 uppercase tracking-wide">
-          {tp('sortLabel')}
-        </p>
-        <select value={sortBy} onChange={e => onUpdate('sortBy', e.target.value)}
-          className="w-full bg-surface-container-low dark:bg-surface-container
-                     border border-outline-variant/15 rounded-xl px-3 py-2.5
-                     text-[12px] text-on-surface outline-none
-                     focus:border-primary/40 transition-colors">
-          <option value="">{tp('sortNewest')}</option>
-          {SORT_OPTS.map(o => (
-            <option key={o.value} value={o.value}>{tp(o.labelKey as any)}</option>
-          ))}
-        </select>
-      </div>
+      {/* Selects — 2 per row */}
+      <div className="grid grid-cols-2 gap-2">
 
-      {/* Governorate */}
-      <div>
-        <p className="text-[11px] text-on-surface-variant font-bold mb-2 uppercase tracking-wide">
-          {tp('allGovernorates')}
-        </p>
-        <select value={governorate} onChange={e => onUpdate('governorate', e.target.value)}
-          className="w-full bg-surface-container-low dark:bg-surface-container
-                     border border-outline-variant/15 rounded-xl px-3 py-2.5
-                     text-[12px] text-on-surface outline-none
-                     focus:border-primary/40 transition-colors">
-          <option value="">{tp('allGovernorates')}</option>
-          {govs.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
-        </select>
+        {/* Sort */}
+        <div>
+          <p className="text-[11px] text-on-surface-variant font-bold mb-1.5 uppercase tracking-wide">
+            {tp('sortLabel')}
+          </p>
+          <select value={sortBy} onChange={e => onUpdate('sortBy', e.target.value)}
+            className="w-full bg-surface-container-low dark:bg-surface-container
+                       border border-outline-variant/15 rounded-xl px-2 py-2
+                       text-[11px] text-on-surface outline-none
+                       focus:border-primary/40 transition-colors">
+            <option value="">{tp('sortNewest')}</option>
+            {SORT_OPTS.map(o => (
+              <option key={o.value} value={o.value}>{tp(o.labelKey as any)}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Governorate */}
+        <div>
+          <p className="text-[11px] text-on-surface-variant font-bold mb-1.5 uppercase tracking-wide">
+            {tp('allGovernorates')}
+          </p>
+          <select value={governorate} onChange={e => { onUpdate('governorate', e.target.value); onUpdate('city', ''); }}
+            className="w-full bg-surface-container-low dark:bg-surface-container
+                       border border-outline-variant/15 rounded-xl px-2 py-2
+                       text-[11px] text-on-surface outline-none
+                       focus:border-primary/40 transition-colors">
+            <option value="">الكل</option>
+            {govs.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+          </select>
+        </div>
+
+        {/* City / Wilaya */}
+        <div className="col-span-2">
+          <p className="text-[11px] text-on-surface-variant font-bold mb-1.5 uppercase tracking-wide">
+            الولاية
+          </p>
+          <select value={city} onChange={e => onUpdate('city', e.target.value)}
+            className="w-full bg-surface-container-low dark:bg-surface-container
+                       border border-outline-variant/15 rounded-xl px-2 py-2
+                       text-[11px] text-on-surface outline-none
+                       focus:border-primary/40 transition-colors">
+            <option value="">كل الولايات</option>
+            {governorate
+              ? getCities('OM', governorate, locale).map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))
+              : govs.map(g => (
+                  <optgroup key={g.value} label={g.label}>
+                    {getCities('OM', g.value, locale).map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </optgroup>
+                ))
+            }
+          </select>
+        </div>
+
       </div>
 
       {/* Employment Type */}
       <div>
-        <p className="text-[11px] text-on-surface-variant font-bold mb-2 uppercase tracking-wide flex items-center gap-1">
-          <span className="material-symbols-outlined text-[12px]">work</span>
+        <p className="text-[11px] text-on-surface-variant font-bold mb-1.5 uppercase tracking-wide">
           {tp('jobsEmploymentType')}
         </p>
-        <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {empOpts.map(o => (
             <button key={o.value}
               onClick={() => onUpdate('employmentType', employmentType === o.value ? '' : o.value)}
               className={clsx(
-                'flex items-center gap-2 w-full px-3 py-2 rounded-xl text-[12px]',
-                'font-medium transition-all text-start',
+                'flex items-center justify-center w-full px-2 py-1.5 rounded-xl text-[11px]',
+                'font-medium transition-all text-center',
                 employmentType === o.value
                   ? 'bg-primary text-on-primary shadow-sm'
                   : 'bg-surface-container-low text-on-surface-variant hover:bg-primary/8 hover:text-primary'
               )}>
-              <div className={clsx(
-                'w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                employmentType === o.value ? 'border-on-primary' : 'border-outline-variant/40'
-              )}>
-                {employmentType === o.value && (
-                  <div className="w-2 h-2 rounded-full bg-on-primary" />
-                )}
-              </div>
               {o.label}
             </button>
           ))}
@@ -429,22 +454,20 @@ function FilterContent({
 
       {/* License Type */}
       <div>
-        <p className="text-[11px] text-on-surface-variant font-bold mb-2 uppercase tracking-wide flex items-center gap-1">
-          <span className="material-symbols-outlined text-[12px]">card_membership</span>
+        <p className="text-[11px] text-on-surface-variant font-bold mb-1.5 uppercase tracking-wide">
           {tp('jobsLicenseType')}
         </p>
-        <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {LICENSE_OPTS.map(o => (
             <button key={o.value}
               onClick={() => onUpdate('licenseType', licenseType === o.value ? '' : o.value)}
               className={clsx(
-                'flex items-center gap-2 w-full px-3 py-2 rounded-xl text-[12px]',
-                'font-medium transition-all text-start',
+                'flex items-center justify-center w-full px-2 py-1.5 rounded-xl text-[11px]',
+                'font-medium transition-all text-center',
                 licenseType === o.value
                   ? 'bg-primary text-on-primary shadow-sm'
                   : 'bg-surface-container-low text-on-surface-variant hover:bg-primary/8 hover:text-primary'
               )}>
-              <span className="material-symbols-outlined text-sm">{o.icon}</span>
               {tp(o.labelKey as any)}
             </button>
           ))}
@@ -461,11 +484,11 @@ function FilterContent({
 
 function MobileFilterSheet({
   open, onClose,
-  governorate, employmentType, licenseType, sortBy,
+  governorate, city, employmentType, licenseType, sortBy,
   onUpdate, onClear, activeCount, totalResults,
 }: {
   open: boolean; onClose: () => void;
-  governorate: string; employmentType: string;
+  governorate: string; city: string; employmentType: string;
   licenseType: string; sortBy: string;
   onUpdate: (k: string, v: string) => void;
   onClear: () => void;
@@ -492,12 +515,12 @@ function MobileFilterSheet({
           <button onClick={onClose}
             className="w-8 h-8 rounded-xl bg-surface-container-low
                       flex items-center justify-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-base">close</span>
+            <span className="material-symbols-outlined text-[8px]">close</span>
           </button>
         </div>
         <div className="px-4 py-5">
           <FilterContent
-            governorate={governorate} employmentType={employmentType}
+            governorate={governorate} city={city} employmentType={employmentType}
             licenseType={licenseType} sortBy={sortBy}
             onUpdate={onUpdate} onClear={onClear} activeCount={activeCount}
           />
@@ -586,13 +609,14 @@ function JobsContent() {
   const jobType        = searchParams.get('jobType') || '';
   const employmentType = searchParams.get('employmentType') || '';
   const governorate    = searchParams.get('governorate') || '';
+  const city           = searchParams.get('city') || '';
   const licenseType    = searchParams.get('licenseType') || '';
   const sortBy         = searchParams.get('sortBy') || '';
 
   const [searchInput, setSearchInput]         = useState(search);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const activeFilterCount = [employmentType, licenseType, governorate, sortBy].filter(Boolean).length;
+  const activeFilterCount = [employmentType, licenseType, governorate, city, sortBy].filter(Boolean).length;
 
   function updateParam(key: string, value: string) {
     const sp = new URLSearchParams(searchParams);
@@ -619,6 +643,7 @@ function JobsContent() {
     if (jobType)        p.jobType        = jobType;
     if (employmentType) p.employmentType = employmentType;
     if (governorate)    p.governorate    = governorate;
+    if (city)           p.city           = city;
     if (licenseType)    p.licenseType    = licenseType;
     if (sortBy) {
       const [field, order] = sortBy.split('_');
@@ -626,7 +651,7 @@ function JobsContent() {
       if (order) p.sortOrder = order;
     }
     return p;
-  }, [page, search, jobType, employmentType, governorate, licenseType, sortBy]);
+  }, [page, search, jobType, employmentType, governorate, city, licenseType, sortBy]);
 
   const { data, isLoading, isError, refetch } = useJobs(params);
   const items = data?.items ?? [];
@@ -645,127 +670,137 @@ function JobsContent() {
       {/* ════════════════════════════════
           HERO SECTION
       ════════════════════════════════ */}
-      <section className="relative overflow-hidden min-h-[300px] md:min-h-[380px]">
+      <section>
 
-        <div className="absolute inset-0 bg-gradient-to-br from-[#004ac6] via-[#2563eb] to-[#0B2447]" />
-
-        <div className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20v20H0zm20 20h20v20H20z\' fill=\'%23fff\' fill-opacity=\'.4\'/%3E%3C/svg%3E")',
-            backgroundSize: '40px 40px',
-          }}
-        />
-
-        <div className="absolute top-[-20%] right-0 w-[60vw] md:w-[500px] h-[60vw] md:h-[500px] rounded-full bg-white/[0.05] blur-3xl pointer-events-none" />
-        <div className="absolute bottom-[-20%] left-0 w-[50vw] md:w-[400px] h-[50vw] md:h-[400px] rounded-full bg-blue-300/[0.08] blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 pt-16 pb-8 sm:pt-24 sm:pb-10 md:pt-28 md:pb-14">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-
-            {/* Icon badge */}
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl
-                           bg-white/10 backdrop-blur-sm mb-4 border border-white/10">
-              <span className="material-symbols-outlined text-white text-3xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}>badge</span>
+        {/* Search bar — above banner */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container
+                           rounded-full border border-outline-variant/20 ps-3 pe-1.5 py-1 shadow-sm">
+              <span className="material-symbols-outlined text-on-surface-variant/50 text-[18px] shrink-0">search</span>
+              <input
+                type="text" value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                placeholder={tp('jobsSearch')}
+                className="flex-1 h-8 sm:h-9 bg-transparent text-xs sm:text-sm text-on-surface
+                          placeholder:text-on-surface-variant/50 focus:outline-none min-w-0"
+              />
+              {searchInput && (
+                <button onClick={() => setSearchInput('')}
+                  className="text-on-surface-variant/40 hover:text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[8px]">close</span>
+                </button>
+              )}
+              {/* Mobile filter trigger */}
+              <button onClick={() => setShowMobileFilters(true)}
+                className={clsx(
+                  'md:hidden shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all relative',
+                  activeFilterCount > 0
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                )}>
+                <span className="material-symbols-outlined text-[8px]">tune</span>
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -end-1 w-4 h-4 bg-red-500 text-white text-[9px]
+                                 font-black rounded-full flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              <button onClick={handleSearch}
+                className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-primary rounded-full
+                          flex items-center justify-center hover:brightness-110
+                          active:scale-95 transition-all">
+                <span className="material-symbols-outlined text-on-primary text-[8px] sm:text-[9px]">search</span>
+              </button>
             </div>
+          </div>
+        </div>
 
-            <h1 className="text-2xl sm:text-3xl md:text-[2.5rem] font-black text-white mb-2 drop-shadow-sm">
-              {tp('jobsTitle')}
-            </h1>
-            <p className="text-white/70 text-xs sm:text-sm mb-6 max-w-md mx-auto">
-              {tp('jobsSubtitle')}
-            </p>
+        {/* Hero Banner Image */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
+          <div className="relative w-full overflow-hidden
+                         aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5]
+                         rounded-2xl sm:rounded-3xl">
+            <Image
+              src="/images/categories/jobs.webp"
+              alt="وظائف السائقين — سوق وان"
+              fill priority
+              className="object-cover"
+            />
 
-            {/* Glass Search Box */}
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20
-                           rounded-2xl p-2.5 md:p-3 shadow-[0_8px_40px_rgba(0,0,0,0.2)]">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B2447] via-[#0B2447]/60 to-transparent" />
 
-              <div className="flex items-center gap-2">
-                <div className="flex-1 flex items-center gap-2 bg-white rounded-xl
-                               px-3 py-2.5 focus-within:ring-2 focus-within:ring-white/40">
-                  <span className="material-symbols-outlined text-primary/50 text-xl shrink-0">search</span>
-                  <input
-                    type="text" value={searchInput}
-                    onChange={e => setSearchInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    placeholder={tp('jobsSearch')}
-                    className="flex-1 bg-transparent text-sm font-medium text-on-surface
-                              placeholder:text-on-surface-variant/50 focus:outline-none min-w-0"
-                  />
-                  {searchInput && (
-                    <button onClick={() => setSearchInput('')}
-                      className="text-on-surface-variant/40 hover:text-on-surface-variant">
-                      <span className="material-symbols-outlined text-lg">close</span>
-                    </button>
-                  )}
-                </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center
+                           text-center px-4 sm:px-8 lg:px-12 text-white">
 
-                <button onClick={handleSearch}
-                  className="shrink-0 bg-white text-primary px-4 sm:px-6 py-2.5 font-black
-                            text-xs sm:text-sm rounded-xl hover:bg-white/90
-                            active:scale-[0.97] transition-all shadow-lg
-                            flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-base">search</span>
-                  <span className="hidden sm:inline">{tp('rentalsSearchBtn')}</span>
-                </button>
-
-                {/* Mobile filter button — md:hidden */}
-                <button onClick={() => setShowMobileFilters(true)}
-                  className={clsx(
-                    'md:hidden shrink-0 px-3 py-2.5 rounded-xl text-sm font-black',
-                    'transition-all flex items-center gap-1 relative border',
-                    activeFilterCount > 0
-                      ? 'bg-white/30 text-white border-white/40'
-                      : 'bg-white/10 text-white/70 border-white/10 hover:bg-white/20'
-                  )}>
-                  <span className="material-symbols-outlined text-sm">tune</span>
-                  {activeFilterCount > 0 && (
-                    <span className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-white
-                                   text-primary text-[10px] font-black rounded-full
-                                   flex items-center justify-center shadow-sm">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
+              {/* Count badge */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5
+                             rounded-full bg-white/15 backdrop-blur-sm border border-white/10
+                             text-white/80 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
+                <span className="material-symbols-outlined text-[7px] sm:text-[8px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                <span>
+                  {meta?.total
+                    ? `${meta.total.toLocaleString('ar-EG')} ${tp('jobsCount')}`
+                    : tp('jobsTitle')
+                  }
+                </span>
               </div>
 
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl font-black
+                            leading-tight mb-1 sm:mb-2 lg:mb-3">
+                {tp('jobsTitle')}
+              </h1>
+              <p className="text-[11px] sm:text-sm md:text-base text-white/80
+                           leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-md">
+                {tp('jobsSubtitle')}
+              </p>
+
               {/* Job type tabs */}
-              <div className="flex overflow-x-auto gap-1.5 mt-2.5 pt-2.5
-                             border-t border-white/10"
-                style={{ scrollbarWidth: 'none' }}>
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 lg:mb-5
+                             flex-wrap">
                 {JOB_TYPE_TABS.map(tab => (
                   <button key={tab.value}
                     onClick={() => updateParam('jobType', tab.value)}
                     className={clsx(
-                      'shrink-0 flex items-center gap-1.5 px-3 py-1.5',
-                      'text-[11px] font-bold rounded-lg whitespace-nowrap transition-all',
+                      'flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 lg:px-4',
+                      'py-1 sm:py-1.5 text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl',
+                      'whitespace-nowrap transition-all border',
                       jobType === tab.value
-                        ? 'bg-white text-primary shadow-sm'
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                        ? 'bg-white text-primary border-white shadow-sm'
+                        : 'bg-white/15 text-white border-white/20 hover:bg-white/25 backdrop-blur-sm'
                     )}>
-                    <span className="material-symbols-outlined text-xs">{tab.icon}</span>
+                    <span className="material-symbols-outlined text-[6px] sm:text-[7px]">{tab.icon}</span>
                     {tp(tab.labelKey as any)}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Stats row */}
-            <div className="flex justify-center items-center gap-4 mt-5">
-              <div className="flex items-center gap-1.5 text-white/60">
-                <span className="material-symbols-outlined text-sm">work</span>
-                <span className="text-xs font-black text-white">{meta?.total ?? '...'}</span>
-                <span className="text-xs">{tp('jobsCount')}</span>
+              {/* CTAs */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                <button
+                  onClick={() => updateParam('jobType', '')}
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5
+                            bg-primary text-on-primary
+                            px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3
+                            text-[10px] sm:text-sm lg:text-base font-black
+                            rounded-lg sm:rounded-xl hover:brightness-110 transition-all shadow-lg">
+                  <span className="material-symbols-outlined text-[7px] sm:text-[9px]">work</span>
+                  {tp('jobsBrowseAll')}
+                </button>
+                <button
+                  onClick={() => requireProfile('employer', () => router.push('/jobs/new'))}
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5
+                            px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3
+                            text-[10px] sm:text-sm lg:text-base font-bold
+                            rounded-lg sm:rounded-xl border border-white/30
+                            text-white hover:bg-white/10 transition-all">
+                  <span className="material-symbols-outlined text-[7px] sm:text-[9px]">add</span>
+                  {tp('jobsAddJob')}
+                </button>
               </div>
-              <span className="w-px h-4 bg-white/20" />
-              <button
-                onClick={() => requireProfile('employer', () => router.push('/jobs/new'))}
-                className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors group">
-                <span className="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">
-                  add_circle
-                </span>
-                <span className="text-xs font-bold">{tp('jobsAddJob')}</span>
-              </button>
             </div>
           </div>
         </div>
@@ -785,7 +820,7 @@ function JobsContent() {
                 {['local_shipping', 'business'].map(icon => (
                   <div key={icon} className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm
                                             flex items-center justify-center border border-white/10">
-                    <span className="material-symbols-outlined text-white text-2xl">{icon}</span>
+                    <span className="material-symbols-outlined text-white text-[12px]">{icon}</span>
                   </div>
                 ))}
               </div>
@@ -802,7 +837,7 @@ function JobsContent() {
                           font-black text-sm shadow-lg hover:shadow-xl
                           hover:scale-[1.02] active:scale-[0.98] transition-all
                           flex items-center gap-2">
-                <span className="material-symbols-outlined text-base">person_add</span>
+                <span className="material-symbols-outlined text-[8px]">person_add</span>
                 {tp('jobsCreateProfile')}
               </Link>
             </div>
@@ -822,6 +857,7 @@ function JobsContent() {
                            border border-outline-variant/10 rounded-2xl p-5 shadow-sm">
               <FilterContent
                 governorate={governorate}
+                city={city}
                 employmentType={employmentType}
                 licenseType={licenseType}
                 sortBy={sortBy}
@@ -845,7 +881,7 @@ function JobsContent() {
                 <button onClick={clearFilters}
                   className="text-xs text-primary hover:text-primary/80 font-bold
                             flex items-center gap-1 transition-colors">
-                  <span className="material-symbols-outlined text-sm">filter_alt_off</span>
+                  <span className="material-symbols-outlined text-[7px]">filter_alt_off</span>
                   {tp('clearFilters')}
                 </button>
               )}
@@ -945,6 +981,7 @@ function JobsContent() {
         open={showMobileFilters}
         onClose={() => setShowMobileFilters(false)}
         governorate={governorate}
+        city={city}
         employmentType={employmentType}
         licenseType={licenseType}
         sortBy={sortBy}

@@ -1,5 +1,5 @@
 ﻿import type { Metadata } from 'next';
-import { ProfilePageClient } from '@/components/profile/ProfilePageClient';
+import { ProfilePageClient } from '@/features/profile/components/ProfilePageClient';
 
 export const metadata: Metadata = {
   title: 'حسابي',

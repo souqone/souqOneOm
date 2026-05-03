@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>عروضي - سوق وان</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed": "#ffdbc7",
+                      "on-secondary-fixed": "#0d1c2e",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "background": "#f9f9ff",
+                      "surface-container-highest": "#dce2f7",
+                      "tertiary-container": "#894000",
+                      "outline-variant": "#c3c6d6",
+                      "on-tertiary-fixed": "#311300",
+                      "dark-price-green": "#34d399",
+                      "surface-container-high": "#e1e8fd",
+                      "brand-amber": "#E8781E",
+                      "brand-green": "#16a34a",
+                      "on-surface-variant": "#434654",
+                      "brand-navy": "#0B2447",
+                      "error-container": "#ffdad6",
+                      "secondary-fixed-dim": "#b9c7df",
+                      "primary-fixed": "#dbe1ff",
+                      "on-error-container": "#93000a",
+                      "tertiary": "#652e00",
+                      "price-green": "#16a34a",
+                      "on-primary-fixed": "#00174b",
+                      "error": "#ba1a1a",
+                      "on-primary-container": "#b8c8ff",
+                      "inverse-primary": "#b4c5ff",
+                      "dark-surface": "#0a1628",
+                      "primary-container": "#004ac6",
+                      "inverse-on-surface": "#edf0ff",
+                      "tertiary-fixed-dim": "#ffb689",
+                      "inverse-surface": "#293040",
+                      "outline": "#737685",
+                      "on-background": "#141b2b",
+                      "on-primary": "#ffffff",
+                      "primary": "#003594",
+                      "secondary": "#515f74",
+                      "surface-container-low": "#f1f3ff",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-fixed-variant": "#733500",
+                      "surface-tint": "#004ac6",
+                      "surface-variant": "#dce2f7",
+                      "surface-dim": "#d3daef",
+                      "secondary-container": "#d5e3fc",
+                      "dark-background": "#060e1e",
+                      "on-tertiary": "#ffffff",
+                      "secondary-fixed": "#d5e3fc",
+                      "surface": "#f9f9ff",
+                      "on-tertiary-container": "#ffbb90",
+                      "surface-container": "#e9edff",
+                      "on-secondary-container": "#57657a",
+                      "on-secondary-fixed-variant": "#3a485b",
+                      "on-surface": "#141b2b",
+                      "surface-bright": "#f9f9ff",
+                      "on-secondary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter-sm": "12px",
+                      "gutter-lg": "40px",
+                      "page-max": "1280px",
+                      "nav-bottom": "46px",
+                      "page-padding-x-md": "24px",
+                      "nav-top": "56px",
+                      "mobile-bottom-nav": "80px",
+                      "sidebar-width": "288px",
+                      "nav-total": "102px",
+                      "page-padding-x-sm": "12px",
+                      "page-padding-x-lg": "40px",
+                      "page-max-width": "1280px",
+                      "base": "4px",
+                      "base-unit": "4px",
+                      "gutter-md": "24px"
+              },
+              "fontFamily": {
+                      "label-md": ["Almarai"],
+                      "label-sm": ["Almarai"],
+                      "body-sm": ["Almarai"],
+                      "hero-sm": ["Almarai"],
+                      "hero-md": ["Almarai"],
+                      "hero-lg": ["Almarai"],
+                      "title-md": ["Almarai"],
+                      "body-md": ["Almarai"],
+                      "title-lg": ["Almarai"],
+                      "body-lg": ["Almarai"]
+              },
+              "fontSize": {
+                      "label-md": ["11px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                      "label-sm": ["10px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                      "body-sm": ["12px", {"lineHeight": "1.7", "fontWeight": "400"}],
+                      "hero-sm": ["24px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                      "hero-md": ["30px", {"lineHeight": "1.4", "fontWeight": "800"}],
+                      "hero-lg": ["36px", {"lineHeight": "1.4", "fontWeight": "800"}],
+                      "title-md": ["17px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                      "body-md": ["14px", {"lineHeight": "1.7", "fontWeight": "400"}],
+                      "title-lg": ["20px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                      "body-lg": ["16px", {"lineHeight": "1.7", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { font-family: 'Almarai', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background pb-mobile-bottom-nav md:pb-0 min-h-screen flex flex-col">
+<!-- TopNavBar (Web) -->
+<header class="hidden md:flex flex-row-reverse justify-between items-center h-[102px] px-4 md:px-10 max-w-[1280px] mx-auto w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md docked full-width top-0 border-b border-slate-200/10 shadow-sm border-b border-slate-200/10 dark:border-slate-800/20 sticky z-50">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-black text-blue-900 dark:text-white">سوق وان</span>
+</div>
+<nav class="flex gap-8">
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all px-3 py-2 rounded-md" href="#">الرئيسية</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all px-3 py-2 rounded-md" href="#">سوق المعدات</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-700 font-bold text-right leading-tight hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all px-3 py-2 rounded-md" href="#">طلباتي</a>
+<a class="text-amber-600 dark:text-amber-500 border-b-2 border-amber-600 pb-1 font-bold text-right leading-tight hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all px-3 py-2" href="#">عروضي</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors scale-95 active:scale-100 transition-transform">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors scale-95 active:scale-100 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm cursor-pointer">
+<img alt="صورة الملف الشخصي" class="w-full h-full object-cover" data-alt="Professional headshot of a middle-eastern man in a sharp suit, warm natural lighting, corporate environment, shallow depth of field, conveying trust and authority in a modern light-mode business setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaqDMw300s6QqZ0SMH-y0vDgNP-c2B8HxFr6C1a0vCM4D10STvFuvw0gLPVKnk65DD3nRCyL9LmFmFP1uMUwP1W2e2oHu-GWvmnVqOmez2M3e0_zOVnobRG7kxPA24kdCSCd_F1Br4dpQF3I0iwWI4jKZnBYRarUtrLvRbMk9aY6iXu5powLpX3hLMq6_hvfwGYZzTyyjTcWw4F-8LoLn_RY9cP4SCYCc1ctz0ar7UlKWaE1pOnWfWPP8XPRSn6mbCfiU6zbv11-4"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow max-w-page-max mx-auto w-full px-page-padding-x-sm md:px-page-padding-x-lg py-8">
+<!-- Page Header -->
+<div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+<div>
+<h1 class="font-hero-lg text-hero-lg text-brand-navy mb-2">عروضي</h1>
+<p class="font-body-lg text-body-lg text-secondary">إدارة وتتبع جميع عروض الأسعار التي قدمتها لطلبات النقل.</p>
+</div>
+<!-- Quick Stats Bento -->
+<div class="flex gap-4 w-full md:w-auto">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 shadow-sm flex-1 md:w-[140px] text-center">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">قيد الانتظار</span>
+<span class="font-hero-md text-hero-md text-brand-amber">12</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 shadow-sm flex-1 md:w-[140px] text-center">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">تم القبول</span>
+<span class="font-hero-md text-hero-md text-price-green">8</span>
+</div>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex overflow-x-auto pb-4 mb-6 hide-scrollbar gap-2">
+<button class="px-6 py-2 rounded-full bg-primary-container text-on-primary-container font-title-md text-title-md whitespace-nowrap transition-colors">
+                الكل
+            </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-secondary border border-outline-variant/30 hover:bg-surface-container-low font-title-md text-title-md whitespace-nowrap transition-colors">
+                قيد الانتظار
+            </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-secondary border border-outline-variant/30 hover:bg-surface-container-low font-title-md text-title-md whitespace-nowrap transition-colors">
+                مقبولة
+            </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-secondary border border-outline-variant/30 hover:bg-surface-container-low font-title-md text-title-md whitespace-nowrap transition-colors">
+                مرفوضة
+            </button>
+</div>
+<!-- Quote Cards Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Pending Card -->
+<div class="bg-surface-container-lowest rounded-xl p-5 border border-outline-variant/10 hover:border-outline-variant/20 shadow-sm hover:shadow-lg transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="bg-amber-50 text-brand-amber p-2 rounded-lg">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<div>
+<span class="inline-block px-2 py-1 rounded bg-amber-100 text-brand-amber font-label-md text-label-md uppercase mb-1">قيد الانتظار</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">طلب نقل #TR-8492</h3>
+</div>
+</div>
+<div class="text-left">
+<span class="font-body-sm text-body-sm text-secondary block">سعري</span>
+<span class="font-hero-sm text-hero-sm text-primary">4,500 <span class="font-body-md text-body-md">ر.س</span></span>
+</div>
+</div>
+<div class="flex items-center gap-4 py-3 border-y border-outline-variant/10">
+<div class="flex-1">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">من</span>
+<div class="font-title-md text-title-md text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">location_on</span>
+                            الرياض، المنطقة الصناعية
+                        </div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">arrow_left_alt</span>
+<div class="flex-1">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">إلى</span>
+<div class="font-title-md text-title-md text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">flag</span>
+                            جدة، ميناء جدة الإسلامي
+                        </div>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg flex gap-3 items-start">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">chat</span>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">"يمكننا توفير شاحنتين مبردتين لهذا المسار مع تأمين شامل للحمولة. السعر يشمل التحميل والتنزيل."</p>
+</div>
+<div class="flex gap-3 mt-auto pt-2">
+<button class="flex-1 py-2.5 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-secondary font-title-md text-title-md hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+                        عرض الطلب
+                    </button>
+<button class="flex-1 py-2.5 px-4 rounded-xl bg-error-container text-error font-title-md text-title-md hover:bg-error hover:text-on-error transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">cancel</span>
+                        سحب العرض
+                    </button>
+</div>
+</div>
+<!-- Accepted Card -->
+<div class="bg-surface-container-lowest rounded-xl p-5 border border-outline-variant/10 hover:border-outline-variant/20 shadow-sm hover:shadow-lg transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="bg-green-50 text-price-green p-2 rounded-lg">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div>
+<span class="inline-block px-2 py-1 rounded bg-green-100 text-price-green font-label-md text-label-md uppercase mb-1">مقبول</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">طلب نقل #TR-8105</h3>
+</div>
+</div>
+<div class="text-left">
+<span class="font-body-sm text-body-sm text-secondary block">سعري</span>
+<span class="font-hero-sm text-hero-sm text-price-green">12,000 <span class="font-body-md text-body-md">ر.س</span></span>
+</div>
+</div>
+<div class="flex items-center gap-4 py-3 border-y border-outline-variant/10">
+<div class="flex-1">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">من</span>
+<div class="font-title-md text-title-md text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">location_on</span>
+                            الدمام، الصناعية الثانية
+                        </div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">arrow_left_alt</span>
+<div class="flex-1">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">إلى</span>
+<div class="font-title-md text-title-md text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">flag</span>
+                            تبوك، مركز المدينة
+                        </div>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg flex gap-3 items-start">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">chat</span>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">"جاهزون للتحميل في أي وقت. السطحة متوفرة وجاهزة للتحرك فوراً."</p>
+</div>
+<div class="flex gap-3 mt-auto pt-2">
+<button class="flex-1 py-2.5 px-4 rounded-xl bg-price-green text-white font-title-md text-title-md hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">local_shipping</span>
+                        عرض الحجز
+                    </button>
+<button class="flex-1 py-2.5 px-4 rounded-xl bg-transparent border-2 border-primary text-primary font-title-md text-title-md hover:bg-primary-container hover:text-on-primary-container transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">call</span>
+                        تواصل مع الشاحن
+                    </button>
+</div>
+</div>
+<!-- Rejected Card -->
+<div class="bg-surface-container-lowest opacity-75 rounded-xl p-5 border border-outline-variant/10 hover:border-outline-variant/20 shadow-sm transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="bg-red-50 text-error p-2 rounded-lg">
+<span class="material-symbols-outlined">cancel</span>
+</div>
+<div>
+<span class="inline-block px-2 py-1 rounded bg-red-100 text-error font-label-md text-label-md uppercase mb-1">مرفوض</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">طلب نقل #TR-7922</h3>
+</div>
+</div>
+<div class="text-left">
+<span class="font-body-sm text-body-sm text-secondary block">سعري</span>
+<span class="font-hero-sm text-hero-sm text-secondary line-through">2,800</span> <span class="font-body-md text-body-md text-secondary">ر.س</span>
+</div>
+</div>
+<div class="flex items-center gap-4 py-3 border-y border-outline-variant/10">
+<div class="flex-1">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">من</span>
+<div class="font-title-md text-title-md text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">location_on</span>
+                            مكة المكرمة
+                        </div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">arrow_left_alt</span>
+<div class="flex-1">
+<span class="font-body-sm text-body-sm text-secondary block mb-1">إلى</span>
+<div class="font-title-md text-title-md text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">flag</span>
+                            المدينة المنورة
+                        </div>
+</div>
+</div>
+<div class="flex gap-3 mt-auto pt-2">
+<button class="w-full py-2.5 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-secondary font-title-md text-title-md hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+                        عرض الطلب (مغلق)
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center px-4 pb-safe bg-white dark:bg-slate-950 z-50 h-[80px] border-t border-slate-200 dark:border-slate-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t border-slate-100 dark:border-slate-800">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[11px] font-medium mt-1">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="text-[11px] font-medium mt-1">طلباتي</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-2xl px-3 py-1 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<span class="text-[11px] font-medium mt-1">عروضي</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[11px] font-medium mt-1">حسابي</span>
+</a>
+</nav>
+<!-- Footer -->
+<footer class="w-full py-12 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 hidden md:block">
+<div class="max-w-[1280px] mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="flex flex-col gap-4">
+<span class="text-lg font-bold text-blue-900 dark:text-white">سوق وان</span>
+<p class="text-sm text-right text-blue-900 dark:text-slate-200">© ٢٠٢٤ سوق وان للمعدات والخدمات اللوجستية. جميع الحقوق محفوظة.</p>
+</div>
+<div class="flex flex-wrap gap-6 justify-end items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 underline text-sm text-right" href="#">عن سوق وان</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 underline text-sm text-right" href="#">الشروط والأحكام</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 underline text-sm text-right" href="#">سياسة الخصوصية</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 underline text-sm text-right" href="#">اتصل بنا</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -11,7 +11,6 @@ type MeiliClient = any;
 export const INDEXES = {
   LISTINGS: 'listings',
   PARTS: 'parts',
-  TRANSPORT: 'transport',
   SERVICES: 'services',
   JOBS: 'jobs',
   BUSES: 'buses',
@@ -37,11 +36,6 @@ const INDEX_CONFIGS: Record<IndexName, IndexConfig> = {
     searchableAttributes: ['title', 'description', 'partNumber', 'compatibleMakes', 'governorate', 'city'],
     filterableAttributes: ['price', 'partCategory', 'condition', 'governorate', 'city', 'status', 'isOriginal'],
     sortableAttributes: ['price', 'createdAt'],
-  },
-  transport: {
-    searchableAttributes: ['title', 'description', 'providerName', 'governorate', 'city', 'coverageAreas'],
-    filterableAttributes: ['transportType', 'providerType', 'governorate', 'city', 'status', 'basePrice', 'hasInsurance', 'hasTracking'],
-    sortableAttributes: ['basePrice', 'createdAt'],
   },
   services: {
     searchableAttributes: ['title', 'description', 'providerName', 'governorate', 'city'],
@@ -382,35 +376,6 @@ export class SearchService implements OnModuleInit {
     }
     counts.parts = partDocs.length;
 
-    // ── Transport ──
-    const transport = await this.prisma.transportService.findMany({
-      where: { status: 'ACTIVE' },
-      include: { images: { take: 1, orderBy: { order: 'asc' } } },
-    });
-    const transportDocs = transport.map(t => this.serializeDocument({
-      id: t.id,
-      title: t.title,
-      slug: t.slug,
-      description: t.description,
-      transportType: t.transportType,
-      providerName: t.providerName,
-      providerType: t.providerType,
-      basePrice: t.basePrice ? Number(t.basePrice) : null,
-      currency: t.currency,
-      governorate: t.governorate,
-      city: t.city,
-      coverageAreas: t.coverageAreas,
-      hasInsurance: t.hasInsurance,
-      hasTracking: t.hasTracking,
-      status: t.status,
-      imageUrl: t.images[0]?.url || null,
-      createdAt: t.createdAt.getTime(),
-    }));
-    if (transportDocs.length > 0) {
-      await this.meili.index(INDEXES.TRANSPORT).addDocuments(transportDocs);
-    }
-    counts.transport = transportDocs.length;
-
     // ── Services ──
     const services = await this.prisma.carService.findMany({
       where: { status: 'ACTIVE' },
@@ -481,7 +446,7 @@ export class SearchService implements OnModuleInit {
     if (dto.category) {
       // category maps to different fields per entity
       // Use OR across possible category fields
-      filters.push(`(partCategory = "${dto.category}" OR transportType = "${dto.category}" OR serviceType = "${dto.category}")`);
+      filters.push(`(partCategory = "${dto.category}" OR serviceType = "${dto.category}")`);
     }
     if (dto.city) {
       filters.push(`city = "${dto.city}"`);
@@ -525,8 +490,6 @@ export class SearchService implements OnModuleInit {
    */
   private getPriceSortField(entityType?: string, direction: 'asc' | 'desc' = 'asc'): string[] {
     switch (entityType) {
-      case 'transport':
-        return [`basePrice:${direction}`];
       case 'services':
         return [`priceFrom:${direction}`];
       default:

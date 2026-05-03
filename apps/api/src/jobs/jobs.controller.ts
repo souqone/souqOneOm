@@ -139,7 +139,7 @@ export class JobsController {
     @Body('message') message: string | undefined,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.jobInviteService.invite(jobId, user.sub, driverId, message);
+    return this.jobInviteService.invite(decodeURIComponent(jobId), user.sub, driverId, message);
   }
 
   // ─── Verification ───
@@ -215,31 +215,31 @@ export class JobsController {
 
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request) {
-    return this.jobsService.findOne(id, req.ip);
+    return this.jobsService.findOne(decodeURIComponent(id), req.ip);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateJobDto, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.update(id, user.sub, dto);
+    return this.jobsService.update(decodeURIComponent(id), user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.remove(id, user.sub);
+    return this.jobsService.remove(decodeURIComponent(id), user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/apply')
   apply(@Param('id') jobId: string, @Body() dto: ApplyJobDto, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.apply(jobId, user.sub, dto);
+    return this.jobsService.apply(decodeURIComponent(jobId), user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/applications')
   getApplications(@Param('id') jobId: string, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.getApplications(jobId, user.sub);
+    return this.jobsService.getApplications(decodeURIComponent(jobId), user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

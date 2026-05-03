@@ -46,8 +46,7 @@ import type { ListingCategory } from '../types/category.types'
 function hitToUnified(hit: SearchHit, locale: string): UnifiedListingItem {
   const entityType = (hit._entityType ?? '').toLowerCase() as MeiliEntityType
   const rawCategory = ENTITY_TO_CATEGORY[entityType] ?? 'cars'
-  // Cast to ListingCategory (transport → services fallback for UI purposes)
-  const category = (rawCategory === 'transport' ? 'services' : rawCategory) as ListingCategory
+  const category = rawCategory as ListingCategory
 
   const price = (hit.price ?? hit.basePrice ?? hit.priceFrom ?? null) as number | null
   const image = hit.imageUrl ? getImageUrl(hit.imageUrl) ?? null : null

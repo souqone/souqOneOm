@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { JobsPageGuard } from '@/components/jobs/jobs-page-guard';
+import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
 import { useMyJobs, useJobApplications, useUpdateApplicationStatus, useUpdateJob, useDeleteJob } from '@/lib/api';
 import type { JobItem } from '@/lib/api';
 import { useToast } from '@/components/toast';

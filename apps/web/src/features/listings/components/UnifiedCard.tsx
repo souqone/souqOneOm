@@ -1,9 +1,9 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
-import { MapPin, Heart, Car, Bus, Wrench, Settings, Briefcase, HardHat } from 'lucide-react'
+import { MapPin, Heart, Car, Bus, Wrench, Settings, Briefcase, HardHat, Phone, MessageCircle } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { getCountryLabel, resolveLocationLabel } from '@/lib/location-data'
 import { useAuth } from '@/providers/auth-provider'
@@ -206,13 +206,13 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '' }: U
             {item.title}
           </h3>
           {item.sellerVerified && (
-            <TrustBadge type="verified" variant="badge" className="shrink-0" />
+            <TrustBadge type="verified" variant="badge" className="shrink-0 scale-[85%] origin-center" />
           )}
         </div>
 
         {/* Details */}
         {visibleDetails.length > 0 && (
-          <div className="mb-1.5 flex max-h-[58px] flex-wrap items-center gap-1.5 overflow-hidden">
+          <div className="mb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {visibleDetails.map((detail, i) => (
               <DetailChip key={i} icon={detail.icon} value={detail.value} />
             ))}
@@ -222,47 +222,68 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '' }: U
         <div className="flex-1" />
 
         {/* Divider */}
-        <hr className="border-outline-variant/20 mb-2" />
+        <hr className="border-outline-variant/15 mb-2.5" />
 
-        {/* Price row */}
-        <div className="flex items-end justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1 text-[11px] text-on-surface-variant">
-            <MapPin size={10} className="shrink-0 text-on-surface-variant/40" />
+        {/* Price + Location row */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Location */}
+          <div className="flex min-w-0 items-center gap-1 text-[11px] text-on-surface-variant/60">
+            <MapPin size={10} className="shrink-0 text-primary/40" />
             <span className="truncate">{locationText}</span>
           </div>
 
           {/* Price */}
           {fallbackPriceText ? (
-            <span className="shrink-0 text-left text-[14px] font-black text-red-500">
+            <span className="shrink-0 text-[20px] font-black text-primary leading-none">
               {fallbackPriceText}
             </span>
           ) : item.price && item.price > 0 ? (
-            <span className="shrink-0 text-left text-[14px] font-black text-red-500">
-              {item.primaryBadge?.label === 'مطلوب' ? (
-                <>
-                  <span className="text-[13px] font-semibold text-red-500">الميزانية: </span>
-                  {item.price.toLocaleString('en-US')}
-                  <span className="mr-0.5 text-[11px] font-semibold text-red-500/70">
-                    {item.currency === 'OMR' ? ' ر.ع' : ` ${item.currency}`}
-                  </span>
-                </>
-              ) : (
-                <>
-                  {item.price.toLocaleString('en-US')}
-                  <span className="mr-0.5 text-[11px] font-semibold text-red-500/70">
-                    {item.currency === 'OMR' ? ' ر.ع' : ` ${item.currency}`}
-                    {item.priceLabel && ` / ${item.priceLabel}`}
-                  </span>
-                </>
+            <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
+              {item.primaryBadge?.label === 'مطلوب' && (
+                <span className="text-[10px] font-bold opacity-60">الميزانية</span>
               )}
+              <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
+                {item.price.toLocaleString('en-US')}
+              </span>
+              <span className="text-[10px] font-bold opacity-60">
+                {item.currency === 'OMR' ? ' ر.ع' : ` ${item.currency}`}
+                {item.priceLabel && ` / ${item.priceLabel}`}
+              </span>
             </span>
           ) : (
-            <span className="shrink-0 text-left text-[12px] font-bold text-red-500">
+            <span className="shrink-0 text-[11px] font-bold text-on-surface-variant">
               {t('contactForPrice')}
             </span>
           )}
-
         </div>
+
+        {/* Contact buttons — only shown if data exists */}
+        {(item.phoneNumber || item.whatsappNumber) && (
+          <div className="flex gap-2 mt-2 pt-2 border-t border-outline-variant/20">
+            {item.phoneNumber && (
+              <a
+                href={`tel:${item.phoneNumber}`}
+                onClick={e => e.stopPropagation()}
+                className="flex flex-1 items-center justify-center gap-1.5 h-8 rounded-lg bg-primary text-on-primary text-[12px] font-bold hover:brightness-110 transition-all duration-150 active:scale-95"
+              >
+                <Phone size={13} />
+                <span>اتصال</span>
+              </a>
+            )}
+            {item.whatsappNumber && (
+              <a
+                href={`https://wa.me/${item.whatsappNumber.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="flex flex-1 items-center justify-center gap-1.5 h-8 rounded-lg bg-[#25D366] text-white text-[12px] font-bold hover:brightness-110 transition-all duration-150 active:scale-95"
+              >
+                <MessageCircle size={13} />
+                <span>واتساب</span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

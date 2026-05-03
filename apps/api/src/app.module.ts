@@ -21,13 +21,13 @@ import { BookingsModule } from './bookings/bookings.module';
 import { JobsModule } from './jobs/jobs.module';
 import { PartsModule } from './parts/parts.module';
 import { ServicesModule } from './services/services.module';
-import { TransportModule } from './transport/transport.module';
 import { SearchModule } from './search/search.module';
 import { BusesModule } from './buses/buses.module';
 import { EquipmentModule } from './equipment/equipment.module';
 import { OperatorsModule } from './operators/operators.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { PaymentsModule } from './payments/payments.module';
+import { TransportModule } from './transport/transport.module';
 import { ListingNotificationListener } from './common/listeners/listing-notification.listener';
 
 @Module({
@@ -51,13 +51,13 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     JobsModule,
     PartsModule,
     ServicesModule,
-    TransportModule,
     SearchModule,
     BusesModule,
     EquipmentModule,
     OperatorsModule,
     ReviewsModule,
     PaymentsModule,
+    TransportModule,
   ],
   controllers: [AppController],
   providers: [

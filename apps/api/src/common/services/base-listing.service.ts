@@ -34,8 +34,8 @@ const DETAIL_CACHE_TTL = 600;  // 10 minutes
 // Use centralised constants — see common/constants/user-select.constant.ts
 
 /**
- * Abstract base class for the 2 marketplace listing services:
- * Services, Transport.
+ * Abstract base class for marketplace listing services:
+ * Services.
  *
  * Subclasses only need to:
  *  1. Define `config` (model name, meili index, entity type, etc.)

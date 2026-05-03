@@ -94,6 +94,12 @@
   --radius-3xl: 16px;
   --radius-4xl: 16px;
   --radius-5xl: 16px;
+
+  /* ── Stitch Design System — Page Spacing ── */
+  --spacing-page-padding-x-sm: 12px;
+  --spacing-page-padding-x-md: 24px;
+  --spacing-page-padding-x-lg: 40px;
+  --spacing-sidebar-width: 288px;
 }
 
 /* ── Dark Mode Override (DEEP_NAVY) ── */
@@ -697,3 +703,18 @@
     animation-play-state: paused;
   }
 }
+
+/* ── Stitch Design System — Typography Scale ── */
+@utility text-hero-lg  { font-size: 36px; line-height: 1.4; font-weight: 800; }
+@utility text-hero-md  { font-size: 30px; line-height: 1.4; font-weight: 800; }
+@utility text-hero-sm  { font-size: 24px; line-height: 1.4; font-weight: 700; }
+@utility text-title-lg { font-size: 20px; line-height: 1.4; font-weight: 700; }
+@utility text-title-md { font-size: 17px; line-height: 1.4; font-weight: 700; }
+@utility text-body-lg  { font-size: 16px; line-height: 1.7; font-weight: 400; }
+@utility text-body-md  { font-size: 14px; line-height: 1.7; font-weight: 400; }
+@utility text-body-sm  { font-size: 12px; line-height: 1.7; font-weight: 400; }
+@utility text-label-md { font-size: 11px; line-height: 1.2; font-weight: 700; letter-spacing: 0.02em; }
+@utility text-label-sm { font-size: 10px; line-height: 1.2; font-weight: 800; }
+@utility max-w-page-max-width { max-width: 1280px; }
+@utility max-w-page-max      { max-width: 1280px; }
+

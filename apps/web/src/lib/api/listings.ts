@@ -49,6 +49,8 @@ export interface ListingItem {
   status: string;
   createdAt: string;
   images: { id: string; url: string; isPrimary: boolean }[];
+  whatsapp?: string | null;
+  contactPhone?: string | null;
   seller: {
     id: string;
     username: string;
