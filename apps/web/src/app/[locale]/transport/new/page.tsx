@@ -1,15 +1,10 @@
-'use client'
-
-import { Navbar } from '@/components/layout/navbar'
-import { Footer } from '@/components/layout/footer'
-import { CreateRequestFlow } from '@/features/transport/CreateRequestFlow'
+import { AuthGuard } from '@/components/auth-guard'
+import CreateRequestWizard from '@/features/transport/CreateRequestWizard'
 
 export default function NewTransportRequestPage() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <CreateRequestFlow />
-      <Footer />
-    </div>
+    <AuthGuard>
+      <CreateRequestWizard />
+    </AuthGuard>
   )
 }

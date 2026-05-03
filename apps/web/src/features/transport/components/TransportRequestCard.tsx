@@ -1,142 +1,113 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
-import { SERVICE_TYPE_ICONS, REQUEST_STATUS_COLORS } from '../constants'
+import Link from 'next/link'
 import type { TransportRequest } from '../types'
 
-// ─── Helpers ──────────────────────────────────────
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins} د`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} س`
-  const days = Math.floor(hours / 24)
-  return `${days} ي`
+const SERVICE_ICONS: Record<string, string> = {
+  GOODS: 'inventory_2',
+  FURNITURE: 'chair',
+  CONSTRUCTION: 'construction',
+  HEAVY: 'precision_manufacturing',
+  BACKLOAD: 'swap_horiz',
+  EQUIPMENT: 'agriculture',
 }
 
-// ─── Card ─────────────────────────────────────────
+const STATUS_CLASSES: Record<string, string> = {
+  OPEN: 'bg-brand-green/10 text-brand-green border border-brand-green/20',
+  QUOTED: 'bg-primary/10 text-primary border border-primary/20',
+  ACCEPTED: 'bg-primary/10 text-primary border border-primary/20',
+  IN_PROGRESS: 'bg-brand-amber/10 text-brand-amber border border-brand-amber/20',
+  COMPLETED: 'bg-brand-green/10 text-brand-green border border-brand-green/20',
+  CANCELLED: 'bg-error/10 text-error border border-error/20',
+  EXPIRED: 'bg-on-surface-variant/10 text-on-surface-variant border border-outline-variant',
+}
 
-interface TransportRequestCardProps {
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: 'مفتوح',
+  QUOTED: 'وصلت عروض',
+  ACCEPTED: 'تم القبول',
+  IN_PROGRESS: 'جارٍ التنفيذ',
+  COMPLETED: 'مكتمل',
+  CANCELLED: 'ملغى',
+  EXPIRED: 'منتهي',
+}
+
+interface Props {
   request: TransportRequest
-  showActions?: boolean
-  onCancel?: (id: string) => void
 }
 
-export function TransportRequestCard({ request, showActions, onCancel }: TransportRequestCardProps) {
-  const t = useTranslations('transport')
+export default function TransportRequestCard({ request }: Props) {
+  const icon = SERVICE_ICONS[request.serviceType] ?? 'local_shipping'
+  const statusClass = STATUS_CLASSES[request.status] ?? STATUS_CLASSES.OPEN
+  const statusLabel = STATUS_LABELS[request.status] ?? request.status
 
-  const icon = SERVICE_TYPE_ICONS[request.serviceType] ?? 'local_shipping'
-  const statusColor = REQUEST_STATUS_COLORS[request.status] ?? 'bg-gray-100 text-gray-600'
+  const scheduledLabel = request.scheduledAt
+    ? new Date(request.scheduledAt).toLocaleDateString('ar-OM', { month: 'short', day: 'numeric' })
+    : request.isFlexible
+      ? 'مرن'
+      : 'أسرع وقت'
 
   return (
     <Link
       href={`/transport/requests/${request.id}`}
-      className="block bg-surface-container-lowest dark:bg-surface-container rounded-2xl border border-outline-variant/10 p-4 hover:border-primary/20 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all duration-200"
+      className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 p-5 shadow-sm hover:shadow-lg hover:border-outline-variant/20 transition-all flex flex-col gap-4"
     >
-      {/* Top row: service icon + status */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-amber-600 text-[18px]">{icon}</span>
+      <div className="flex justify-between items-start">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary-container/10 p-2 rounded-lg text-primary">
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>
+              route
+            </span>
           </div>
-          <span className="text-[13px] font-bold text-on-surface">
-            {t(`serviceTypes.${request.serviceType}`)}
+          <div className="flex flex-col">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">المسار</span>
+            <span className="font-title-md text-title-md text-on-surface">
+              من {request.fromGovernorate} ← إلى {request.toGovernorate}
+            </span>
+          </div>
+        </div>
+        <span className={`font-label-md text-label-md px-3 py-1 rounded-full ${statusClass}`}>
+          {statusLabel}
+        </span>
+      </div>
+
+      <hr className="border-outline-variant/20 my-2" />
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1 text-on-surface-variant">
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
+              {icon}
+            </span>
+            <span className="font-label-sm text-label-sm">النوع</span>
+          </div>
+          <span className="font-body-sm text-body-sm text-on-surface">
+            {request.cargoDescription.slice(0, 20)}
           </span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusColor}`}>
-          {t(`status.${request.status}`)}
-        </span>
-      </div>
 
-      {/* Route */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className="material-symbols-outlined text-on-surface-variant/60 text-[16px]">location_on</span>
-        <span className="text-[13px] text-on-surface truncate">
-          {request.fromGovernorate}
-        </span>
-        <span className="material-symbols-outlined text-on-surface-variant/40 text-[14px]">arrow_forward</span>
-        <span className="text-[13px] text-on-surface truncate">
-          {request.toGovernorate}
-        </span>
-      </div>
-
-      {/* Cargo description */}
-      <p className="text-[12px] text-on-surface-variant line-clamp-1 mb-3">
-        {request.cargoDescription}
-      </p>
-
-      {/* Bottom row: budget + time + offers */}
-      <div className="flex items-center justify-between text-[11px] text-on-surface-variant">
-        <div className="flex items-center gap-3">
-          {(request.budgetMin || request.budgetMax) && (
-            <span className="flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[14px]">payments</span>
-              {request.budgetMin && request.budgetMax
-                ? `${request.budgetMin}-${request.budgetMax}`
-                : request.budgetMax
-                  ? `≤${request.budgetMax}`
-                  : `≥${request.budgetMin}`}
-              <span className="text-[10px]">ر.ع.</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1 text-on-surface-variant">
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
+              scale
             </span>
-          )}
-          {request.weightTons && (
-            <span className="flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[14px]">scale</span>
-              {request.weightTons} {t('fields.tons')}
-            </span>
-          )}
+            <span className="font-label-sm text-label-sm">الوزن</span>
+          </div>
+          <span className="font-body-sm text-body-sm text-on-surface">
+            {request.weightTons ? `${request.weightTons} طن` : '—'}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {typeof request.quotesCount === 'number' && request.quotesCount > 0 && (
-            <span className="flex items-center gap-0.5 text-primary font-medium">
-              <span className="material-symbols-outlined text-[14px]">request_quote</span>
-              {request.quotesCount}
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1 text-on-surface-variant">
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
+              calendar_month
             </span>
-          )}
-          <span>{timeAgo(request.createdAt)}</span>
+            <span className="font-label-sm text-label-sm">التوقيت</span>
+          </div>
+          <span className="font-body-sm text-body-sm text-on-surface">{scheduledLabel}</span>
         </div>
       </div>
-
-      {/* Optional actions for my-requests page */}
-      {showActions && request.status === 'OPEN' && onCancel && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-outline-variant/10">
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onCancel(request.id)
-            }}
-            className="px-3 py-1.5 rounded-full border border-red-300 text-red-600 text-[11px] font-semibold hover:bg-red-50 transition-colors"
-          >
-            {t('actions.cancelRequest')}
-          </button>
-        </div>
-      )}
     </Link>
-  )
-}
-
-// ─── Skeleton ─────────────────────────────────────
-
-export function TransportRequestCardSkeleton() {
-  return (
-    <div className="bg-surface-container-lowest dark:bg-surface-container rounded-2xl border border-outline-variant/10 p-4 animate-pulse">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-surface-container-high" />
-          <div className="h-3.5 w-20 bg-surface-container-high rounded" />
-        </div>
-        <div className="h-5 w-14 bg-surface-container-high rounded-full" />
-      </div>
-      <div className="h-3 w-3/4 bg-surface-container-high rounded mb-2" />
-      <div className="h-3 w-1/2 bg-surface-container-high rounded mb-3" />
-      <div className="flex items-center justify-between">
-        <div className="h-3 w-20 bg-surface-container-high rounded" />
-        <div className="h-3 w-12 bg-surface-container-high rounded" />
-      </div>
-    </div>
   )
 }

@@ -3653,7 +3653,8 @@
       "createProfile": "إنشاء البروفايل",
       "updateProfile": "تحديث البروفايل",
       "viewBooking": "عرض الحجز",
-      "whatsapp": "واتساب"
+      "whatsapp": "واتساب",
+      "requestQuote": "طلب تسعيرة"
     },
     "steps": {
       "serviceType": "نوع الخدمة",
@@ -3671,6 +3672,12 @@
     },
     "filters": "الفلاتر",
     "sortBy": "ترتيب",
+    "sortNewest": "الأحدث",
+    "sortOldest": "الأقدم",
+    "sortBudgetHigh": "الأعلى ميزانية",
+    "sortBudgetLow": "الأقل ميزانية",
+    "requestsCount": "{count} طلب",
+    "browseTitle": "طلبات النقل",
     "loadMore": "تحميل المزيد",
     "remaining": "{n} متبقي",
     "noResults": "لا توجد نتائج",
@@ -3721,6 +3728,7 @@
     "cargoDetails": "تفاصيل الحمولة",
     "timingAndBudget": "التوقيت والميزانية",
     "requestOwner": "صاحب الطلب",
+    "quotesReceived": "العروض الواصلة",
     "acceptedQuote": "العرض المقبول",
     "submitYourQuote": "قدّم عرضك",
     "yourQuote": "عرضك",

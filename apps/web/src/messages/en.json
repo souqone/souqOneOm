@@ -3624,7 +3624,8 @@
       "createProfile": "Create Profile",
       "updateProfile": "Update Profile",
       "viewBooking": "View Booking",
-      "whatsapp": "WhatsApp"
+      "whatsapp": "WhatsApp",
+      "requestQuote": "Request Quote"
     },
     "steps": {
       "serviceType": "Service Type",
@@ -3642,6 +3643,12 @@
     },
     "filters": "Filters",
     "sortBy": "Sort",
+    "sortNewest": "Newest",
+    "sortOldest": "Oldest",
+    "sortBudgetHigh": "Highest Budget",
+    "sortBudgetLow": "Lowest Budget",
+    "requestsCount": "{count} requests",
+    "browseTitle": "Transport Requests",
     "loadMore": "Load More",
     "remaining": "{n} remaining",
     "noResults": "No results",
@@ -3692,6 +3699,7 @@
     "cargoDetails": "Cargo Details",
     "timingAndBudget": "Timing & Budget",
     "requestOwner": "Request Owner",
+    "quotesReceived": "Quotes Received",
     "acceptedQuote": "Accepted Quote",
     "submitYourQuote": "Submit Your Quote",
     "yourQuote": "Your Quote",

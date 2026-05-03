@@ -1,281 +1,413 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
-import { clsx } from 'clsx'
-import { ChevronLeft, Loader2, SlidersHorizontal, X } from 'lucide-react'
-import { Navbar } from '@/components/layout/navbar'
-import { Footer } from '@/components/layout/footer'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { transportApi } from './api'
-import { SERVICE_TYPES, SERVICE_TYPE_ICONS, OMAN_GOVERNORATES } from './constants'
-import { TransportRequestCard, TransportRequestCardSkeleton } from './components/TransportRequestCard'
-import type { TransportRequest, TransportServiceType, TransportRequestStatus } from './types'
+import type { TransportRequest, TransportRequestStatus, TransportServiceType } from './types'
+import { OMAN_GOVERNORATES, SERVICE_TYPES } from './constants'
 
-const STATUS_TABS: { key: TransportRequestStatus | 'ALL'; labelKey: string }[] = [
-  { key: 'ALL', labelKey: 'all' },
-  { key: 'OPEN', labelKey: 'open' },
-  { key: 'QUOTED', labelKey: 'quoted' },
-]
+// ─── Status config (matches Stitch HTML) ─────────────────────────────────────
 
-export function TransportBrowseShell() {
-  const t = useTranslations('transport')
-  const searchParams = useSearchParams()
+const STATUS_CONFIG: Record<
+  TransportRequestStatus,
+  { textClass: string; icon: string }
+> = {
+  OPEN:        { textClass: 'text-price-green', icon: 'fiber_manual_record' },
+  QUOTED:      { textClass: 'text-primary',     icon: 'chat_bubble'         },
+  ACCEPTED:    { textClass: 'text-primary',     icon: 'check_circle'        },
+  IN_PROGRESS: { textClass: 'text-brand-amber', icon: 'local_shipping'      },
+  COMPLETED:   { textClass: 'text-price-green', icon: 'done_all'            },
+  CANCELLED:   { textClass: 'text-error',       icon: 'cancel'              },
+  EXPIRED:     { textClass: 'text-outline',     icon: 'lock'                },
+}
 
-  // Filters from URL
-  const initialServiceType = searchParams.get('serviceType') as TransportServiceType | null
-  const initialQ = searchParams.get('q') || ''
-  const initialGov = searchParams.get('governorate') || ''
+const ACTIONABLE: TransportRequestStatus[] = ['OPEN', 'QUOTED']
 
-  const [items, setItems] = useState<TransportRequest[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
+// ─── Request Card ─────────────────────────────────────────────────────────────
 
-  // Filter state
-  const [serviceType, setServiceType] = useState<TransportServiceType | null>(initialServiceType)
-  const [statusTab, setStatusTab] = useState<TransportRequestStatus | 'ALL'>('ALL')
-  const [governorate, setGovernorate] = useState(initialGov)
-  const [query, setQuery] = useState(initialQ)
-  const [showMobileFilters, setShowMobileFilters] = useState(false)
+function RequestCard({ request, t }: {
+  request: TransportRequest
+  t: ReturnType<typeof useTranslations<'transport'>>
+}) {
+  const cfg = STATUS_CONFIG[request.status]
+  const isActionable = ACTIONABLE.includes(request.status)
 
-  const fetchData = useCallback(async (pageNum = 1, append = false) => {
-    if (!append) setIsLoading(true)
-    else setLoadingMore(true)
+  const timeAgo = (() => {
+    const h = Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 3_600_000)
+    if (h < 1) return 'منذ قليل'
+    if (h < 24) return `منذ ${h} ساعة`
+    return `منذ ${Math.floor(h / 24)} يوم`
+  })()
 
-    try {
-      const params: Record<string, string> = {
-        page: String(pageNum),
-        limit: '12',
-      }
-      if (serviceType) params.serviceType = serviceType
-      if (statusTab !== 'ALL') params.status = statusTab
-      if (governorate) params.fromGovernorate = governorate
-      if (query) params.q = query
+  return (
+    <Link
+      href={`/transport/requests/${request.id}`}
+      className={`bg-surface-container-lowest rounded-xl p-5 outline outline-1 outline-outline-variant/10 hover:outline-outline-variant/20 hover:shadow-lg transition-all duration-300 group cursor-pointer flex flex-col md:flex-row gap-6 items-start md:items-center${!isActionable ? ' opacity-70' : ''}`}
+    >
+      {/* Left — main content */}
+      <div className="flex-grow">
+        {/* Status + time row */}
+        <div className="flex items-center gap-3 mb-2">
+          <span className={`text-body-sm font-body-sm ${cfg.textClass} flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded-md`}>
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
+              {cfg.icon}
+            </span>
+            {t(`status.${request.status}`)}
+          </span>
+          <span className="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>schedule</span>
+            {timeAgo}
+          </span>
+        </div>
 
-      const res = await transportApi.getRequests(params)
-      if (append) {
-        setItems(prev => [...prev, ...(res.items ?? [])])
-      } else {
-        setItems(res.items ?? [])
-      }
-      setHasMore((res.meta?.totalPages ?? 1) > pageNum)
-      setPage(pageNum)
-    } catch {
-      /* silent */
-    } finally {
-      setIsLoading(false)
-      setLoadingMore(false)
-    }
-  }, [serviceType, statusTab, governorate, query])
+        {/* Title */}
+        <h3 className="text-title-lg font-title-lg text-on-surface mb-1 group-hover:text-primary transition-colors line-clamp-1">
+          {request.cargoDescription}
+        </h3>
 
-  useEffect(() => {
-    fetchData(1)
-  }, [fetchData])
+        {/* Route */}
+        <div className="text-body-md font-body-md text-on-surface-variant flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0" }}>location_on</span>
+          {t('fields.from')} {request.fromGovernorate}
+          <span className="material-symbols-outlined text-[18px]">arrow_left_alt</span>
+          {t('fields.to')} {request.toGovernorate}
+        </div>
 
-  const handleLoadMore = () => {
-    fetchData(page + 1, true)
-  }
-
-  const clearFilters = () => {
-    setServiceType(null)
-    setStatusTab('ALL')
-    setGovernorate('')
-    setQuery('')
-  }
-
-  const hasFilters = !!serviceType || statusTab !== 'ALL' || !!governorate || !!query
-
-  const inputClass = 'w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors'
-
-  // ── Filter Sidebar (desktop) ──────────────────────
-
-  const FilterPanel = () => (
-    <div className="space-y-5">
-      {/* Search */}
-      <div>
-        <label className="text-[12px] font-medium text-on-surface-variant mb-1.5 block">{t('filters')}</label>
-        <div className="relative">
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder={t('landing.searchPlaceholder')}
-            className={inputClass}
-          />
+        {/* Chips */}
+        <div className="flex flex-wrap gap-2">
+          {request.weightTons != null && (
+            <span className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-label-md font-label-md flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 0" }}>scale</span>
+              {request.weightTons} {t('fields.tons')}
+            </span>
+          )}
+          {(request.scheduledAt != null || request.isFlexible) && (
+            <span className="bg-surface-container-high text-on-surface px-3 py-1 rounded-full text-label-md font-label-md flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 0" }}>calendar_today</span>
+              {request.isFlexible
+                ? t('fields.flexible')
+                : request.scheduledAt
+                  ? new Date(request.scheduledAt).toLocaleDateString('ar-OM', { month: 'short', day: 'numeric' })
+                  : t('fields.asap')}
+            </span>
+          )}
+          {(request.budgetMin != null || request.budgetMax != null) && (
+            <span className="bg-tertiary-fixed text-on-tertiary-fixed px-3 py-1 rounded-full text-label-md font-label-md flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 0" }}>payments</span>
+              {request.budgetMin != null && request.budgetMax != null
+                ? `${request.budgetMin}–${request.budgetMax} ر.ع.`
+                : `${request.budgetMin ?? request.budgetMax} ر.ع.`}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Service Type */}
-      <div>
-        <label className="text-[12px] font-medium text-on-surface-variant mb-2 block">{t('whatToTransport')}</label>
-        <div className="space-y-1">
-          {SERVICE_TYPES.map(st => (
-            <button
-              key={st}
-              onClick={() => setServiceType(serviceType === st ? null : st)}
-              className={clsx(
-                'w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] transition-colors',
-                serviceType === st
-                  ? 'bg-primary/10 text-primary font-bold'
-                  : 'text-on-surface-variant hover:bg-surface-container',
-              )}
-            >
-              <span className="material-symbols-outlined text-[16px]">{SERVICE_TYPE_ICONS[st]}</span>
-              {t(`serviceTypes.${st}`)}
-            </button>
+      {/* Right — quotes count + action */}
+      <div className="shrink-0 flex flex-col items-end gap-3 border-t md:border-t-0 md:border-r border-outline-variant/20 pt-4 md:pt-0 md:pr-6 w-full md:w-auto">
+        <div className={`text-center w-full md:w-auto p-3 rounded-lg border border-outline-variant/10 ${isActionable ? 'bg-surface' : 'bg-surface-variant'}`}>
+          <div className={`text-hero-sm font-hero-sm ${isActionable ? 'text-primary' : 'text-on-surface-variant'}`}>
+            {request.quotesCount ?? 0}
+          </div>
+          <div className="text-body-sm font-body-sm text-on-surface-variant">عروض</div>
+        </div>
+        {isActionable ? (
+          <div className="w-full md:w-auto bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container px-6 py-2 rounded-lg text-body-md font-body-md font-bold transition-colors text-center">
+            {t('actions.submitQuote')}
+          </div>
+        ) : (
+          <div className="w-full md:w-auto bg-surface-dim text-on-surface-variant px-6 py-2 rounded-lg text-body-md font-body-md font-bold text-center">
+            {t(`status.${request.status}`)}
+          </div>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+// ─── Skeleton card ────────────────────────────────────────────────────────────
+
+function CardSkeleton() {
+  return (
+    <div className="bg-surface-container-lowest rounded-xl p-5 outline outline-1 outline-outline-variant/10 flex flex-col md:flex-row gap-6 animate-pulse h-36" />
+  )
+}
+
+// ─── Browse Shell ─────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { value: 'newest',     tKey: 'sortNewest'     },
+  { value: 'oldest',     tKey: 'sortOldest'     },
+  { value: 'budgetHigh', tKey: 'sortBudgetHigh' },
+  { value: 'budgetLow',  tKey: 'sortBudgetLow'  },
+] as const
+
+export default function TransportBrowseShell() {
+  const t = useTranslations('transport')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // ── Filter state from URL ──────────────────────────────────────────────────
+  const [selectedTypes, setSelectedTypes] = useState<TransportServiceType[]>(() => {
+    const v = searchParams.get('type')
+    return v ? (v.split(',') as TransportServiceType[]) : []
+  })
+  const [fromGov,  setFromGov]  = useState(searchParams.get('from') ?? '')
+  const [toGov,    setToGov]    = useState(searchParams.get('to') ?? '')
+  const [sort,     setSort]     = useState(searchParams.get('sort') ?? 'newest')
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+
+  // ── Data state ────────────────────────────────────────────────────────────
+  const [requests, setRequests] = useState<TransportRequest[]>([])
+  const [total,    setTotal]    = useState(0)
+  const [page,     setPage]     = useState(1)
+  const [loading,  setLoading]  = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const LIMIT = 10
+
+  // ── Sync URL ──────────────────────────────────────────────────────────────
+  const pushUrl = useCallback((
+    types: TransportServiceType[],
+    from: string,
+    to: string,
+    s: string,
+  ) => {
+    const p = new URLSearchParams()
+    if (types.length) p.set('type', types.join(','))
+    if (from) p.set('from', from)
+    if (to)   p.set('to',   to)
+    if (s !== 'newest') p.set('sort', s)
+    router.replace(`?${p.toString()}`, { scroll: false })
+  }, [router])
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+  const fetchPage = useCallback(async (pg: number, append = false) => {
+    if (!append) setLoading(true); else setLoadingMore(true)
+    try {
+      const sortParam = sort === 'budgetHigh' ? 'budgetDesc'
+        : sort === 'budgetLow' ? 'budgetAsc'
+        : sort === 'oldest'    ? 'asc'
+        : 'desc'
+      const res = await transportApi.getRequests({
+        page: pg,
+        limit: LIMIT,
+        ...(selectedTypes.length === 1 ? { serviceType: selectedTypes[0] } : {}),
+        ...(fromGov ? { fromGovernorate: fromGov } : {}),
+        ...(toGov   ? { toGovernorate:   toGov   } : {}),
+        sort: sortParam,
+      })
+      setTotal(res.meta.total)
+      setRequests(prev => append ? [...prev, ...res.items] : res.items)
+    } catch {
+      if (!append) setRequests([])
+    } finally {
+      if (!append) setLoading(false); else setLoadingMore(false)
+    }
+  }, [selectedTypes, fromGov, toGov, sort])
+
+  useEffect(() => {
+    setPage(1)
+    fetchPage(1, false)
+  }, [fetchPage])
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  function toggleType(type: TransportServiceType) {
+    const next = selectedTypes.includes(type)
+      ? selectedTypes.filter(t => t !== type)
+      : [...selectedTypes, type]
+    setSelectedTypes(next)
+    pushUrl(next, fromGov, toGov, sort)
+  }
+
+  function handleFrom(v: string) { setFromGov(v); pushUrl(selectedTypes, v, toGov, sort) }
+  function handleTo(v: string)   { setToGov(v);   pushUrl(selectedTypes, fromGov, v, sort) }
+  function handleSort(v: string) { setSort(v);    pushUrl(selectedTypes, fromGov, toGov, v) }
+
+  function resetFilters() {
+    setSelectedTypes([]); setFromGov(''); setToGov(''); setSort('newest')
+    router.replace('?', { scroll: false })
+  }
+
+  function loadMore() {
+    const next = page + 1
+    setPage(next)
+    fetchPage(next, true)
+  }
+
+  const hasMore = requests.length < total
+
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  const Sidebar = (
+    <div className="bg-surface-container-lowest rounded-xl p-6 outline outline-1 outline-outline-variant/10 shadow-sm sticky top-[120px]">
+      <h2 className="text-title-lg font-title-lg text-on-surface mb-6 border-b border-outline-variant/20 pb-4">
+        {t('filters')}
+      </h2>
+
+      {/* Service type checkboxes */}
+      <div className="mb-6">
+        <h3 className="text-body-lg font-body-lg text-on-surface mb-3">نوع الخدمة</h3>
+        <div className="space-y-2">
+          {SERVICE_TYPES.map(type => (
+            <label key={type} className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={selectedTypes.includes(type)}
+                onChange={() => toggleType(type)}
+                className="form-checkbox h-5 w-5 text-primary rounded border-outline-variant focus:ring-primary focus:ring-offset-0 bg-surface"
+              />
+              <span className="text-body-md font-body-md text-on-surface group-hover:text-primary transition-colors">
+                {t(`serviceTypes.${type}`)}
+              </span>
+            </label>
           ))}
         </div>
       </div>
 
-      {/* Governorate */}
-      <div>
-        <label className="text-[12px] font-medium text-on-surface-variant mb-1.5 block">{t('fields.governorate')}</label>
+      {/* From governorate */}
+      <div className="mb-6">
+        <h3 className="text-body-lg font-body-lg text-on-surface mb-3">{t('fields.from')} محافظة</h3>
         <select
-          value={governorate}
-          onChange={e => setGovernorate(e.target.value)}
-          className={inputClass}
+          value={fromGov}
+          onChange={e => handleFrom(e.target.value)}
+          className="form-select w-full rounded-lg border-outline-variant/50 bg-surface-bright text-body-md font-body-md text-on-surface focus:ring-primary focus:border-primary h-[40px] px-3"
         >
-          <option value="">{t('all')}</option>
+          <option value="">الكل</option>
           {OMAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
       </div>
 
-      {/* Clear */}
-      {hasFilters && (
-        <button
-          onClick={clearFilters}
-          className="w-full py-2 rounded-xl border border-outline-variant/40 text-[13px] text-on-surface-variant font-medium hover:bg-surface-container transition-colors"
+      {/* To governorate */}
+      <div className="mb-6">
+        <h3 className="text-body-lg font-body-lg text-on-surface mb-3">{t('fields.to')} محافظة</h3>
+        <select
+          value={toGov}
+          onChange={e => handleTo(e.target.value)}
+          className="form-select w-full rounded-lg border-outline-variant/50 bg-surface-bright text-body-md font-body-md text-on-surface focus:ring-primary focus:border-primary h-[40px] px-3"
         >
-          {t('clearFilters')}
-        </button>
-      )}
+          <option value="">الكل</option>
+          {OMAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+
+      {/* Sort */}
+      <div>
+        <h3 className="text-body-lg font-body-lg text-on-surface mb-3">{t('sortBy')}</h3>
+        <div className="space-y-2">
+          {SORT_OPTIONS.map(opt => (
+            <label key={opt.value} className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="radio"
+                name="sort"
+                checked={sort === opt.value}
+                onChange={() => handleSort(opt.value)}
+                className="form-radio h-5 w-5 text-primary border-outline-variant focus:ring-primary focus:ring-offset-0 bg-surface"
+              />
+              <span className="text-body-md font-body-md text-on-surface group-hover:text-primary transition-colors">
+                {t(opt.tKey)}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={resetFilters}
+        className="w-full mt-8 bg-surface-variant text-on-surface px-4 py-2 rounded-lg text-body-md font-body-md font-bold hover:bg-surface-dim transition-colors"
+      >
+        {t('clearFilters')}
+      </button>
     </div>
   )
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6 flex-1 w-full">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-[13px] text-on-surface-variant/70 mb-5">
-          <Link href="/transport" className="hover:text-primary transition-colors">{t('home')}</Link>
-          <ChevronLeft size={14} className="text-outline-variant/60" />
-          <span className="text-on-surface/90">{t('browseRequests')}</span>
-        </nav>
+    <main className="flex-grow max-w-page-max-width w-full mx-auto px-page-padding-x-sm md:px-page-padding-x-md lg:px-page-padding-x-lg py-8">
 
-        {/* Page header */}
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-lg sm:text-2xl font-bold text-on-surface">{t('browseRequests')}</h1>
-          <Link
-            href="/transport/new"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary text-[13px] font-bold hover:bg-primary/90 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            {t('newRequest')}
-          </Link>
+      {/* Page header */}
+      <div className="mb-8">
+        <div className="text-body-sm font-body-sm text-on-surface-variant mb-2">
+          <Link href="/transport" className="hover:text-primary transition-colors">الرئيسية</Link>
+          {' › '}
+          <Link href="/transport" className="hover:text-primary transition-colors">{t('title')}</Link>
+          {' › '}
+          {t('browseTitle')}
         </div>
-
-        {/* Status tabs */}
-        <div className="flex items-center gap-2 mb-5 overflow-x-auto">
-          {STATUS_TABS.map(({ key, labelKey }) => (
-            <button
-              key={key}
-              onClick={() => setStatusTab(key)}
-              className={clsx(
-                'px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors',
-                statusTab === key
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high',
-              )}
-            >
-              {t(labelKey)}
-            </button>
-          ))}
-        </div>
-
-        {/* Main layout: sidebar + content */}
-        <div className="flex gap-6">
-          {/* Desktop sidebar */}
-          <aside className="hidden lg:block w-64 shrink-0">
-            <div className="sticky top-24 bg-surface-container-lowest dark:bg-surface-container rounded-2xl border border-outline-variant/10 p-5">
-              <FilterPanel />
-            </div>
-          </aside>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <TransportRequestCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <span className="material-symbols-outlined text-5xl text-on-surface-variant/20 mb-4">local_shipping</span>
-                <h3 className="text-[16px] font-bold text-on-surface mb-1">{t('noResults')}</h3>
-                <p className="text-[13px] text-on-surface-variant mb-4">{t('tryChangeFilters')}</p>
-                {hasFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="px-5 py-2 rounded-full bg-primary text-on-primary text-[13px] font-bold hover:bg-primary/90 transition-colors"
-                  >
-                    {t('clearFilters')}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {items.map(r => (
-                    <TransportRequestCard key={r.id} request={r} />
-                  ))}
-                </div>
-
-                {hasMore && (
-                  <div className="flex justify-center mt-6">
-                    <button
-                      onClick={handleLoadMore}
-                      disabled={loadingMore}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-outline-variant/60 text-[13px] text-on-surface font-medium hover:bg-surface-container/50 disabled:opacity-50 transition-all"
-                    >
-                      {loadingMore ? <Loader2 size={14} className="animate-spin" /> : t('loadMore')}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+        <div className="flex items-baseline gap-4">
+          <h1 className="text-hero-md font-hero-md text-on-surface">{t('browseTitle')}</h1>
+          {!loading && (
+            <span className="text-title-md font-title-md text-on-surface-variant">
+              ({t('requestsCount', { count: total })})
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Mobile filter FAB */}
+      {/* Mobile filter toggle */}
       <button
-        onClick={() => setShowMobileFilters(true)}
-        className="lg:hidden fixed bottom-20 end-4 z-40 w-12 h-12 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+        onClick={() => setShowMobileFilters(v => !v)}
+        className="md:hidden mb-4 flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-2 text-body-md font-body-md text-on-surface"
       >
-        <SlidersHorizontal size={20} />
+        <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 0" }}>tune</span>
+        {t('filters')}
+        {(selectedTypes.length > 0 || fromGov || toGov) && (
+          <span className="bg-primary text-on-primary text-label-sm font-label-sm rounded-full px-2 py-0.5">
+            {selectedTypes.length + (fromGov ? 1 : 0) + (toGov ? 1 : 0)}
+          </span>
+        )}
       </button>
 
-      {/* Mobile filter sheet */}
+      {/* Mobile filters panel */}
       {showMobileFilters && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilters(false)} />
-          <div className="absolute bottom-0 start-0 end-0 bg-background rounded-t-3xl p-6 pb-8 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[16px] font-bold text-on-surface">{t('filters')}</h3>
-              <button onClick={() => setShowMobileFilters(false)}>
-                <X size={20} className="text-on-surface-variant" />
-              </button>
-            </div>
-            <FilterPanel />
-          </div>
-        </div>
+        <div className="md:hidden mb-6">{Sidebar}</div>
       )}
 
-      <Footer />
-    </div>
+      {/* Main layout */}
+      <div className="flex flex-col md:flex-row gap-8">
+
+        {/* Desktop sidebar */}
+        <aside className="hidden md:block w-sidebar-width shrink-0">
+          {Sidebar}
+        </aside>
+
+        {/* Listings */}
+        <div className="flex-grow space-y-4">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
+          ) : requests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[64px] opacity-30" style={{ fontVariationSettings: "'FILL' 0" }}>
+                local_shipping
+              </span>
+              <p className="text-title-lg font-title-lg">{t('noResults')}</p>
+              <p className="text-body-md font-body-md">{t('tryChangeFilters')}</p>
+              <button onClick={resetFilters} className="mt-2 text-primary text-body-md font-body-md hover:opacity-80 underline underline-offset-2">
+                {t('clearFilters')}
+              </button>
+            </div>
+          ) : (
+            <>
+              {requests.map(r => <RequestCard key={r.id} request={r} t={t} />)}
+
+              {hasMore && (
+                <div className="pt-8 flex justify-center">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="bg-surface-container border border-primary/20 text-primary hover:bg-primary/5 px-8 py-3 rounded-lg text-title-md font-title-md transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                    ) : (
+                      <span className="material-symbols-outlined">expand_more</span>
+                    )}
+                    {t('loadMore')}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </main>
   )
 }
