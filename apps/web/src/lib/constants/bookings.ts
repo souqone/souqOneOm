@@ -41,7 +41,6 @@ export const LISTING_TYPE_CONFIG = {
   CAR:       { icon: 'directions_car', labelKey: 'typeCar',       badgeColor: 'bg-primary/10 text-primary border-primary/20' },
   BUS:       { icon: 'directions_bus', labelKey: 'typeBus',       badgeColor: 'bg-indigo-500/10 text-indigo-600 border-indigo-200' },
   EQUIPMENT: { icon: 'construction',   labelKey: 'typeEquipment', badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-200' },
-  TRANSPORT: { icon: 'local_shipping', labelKey: 'typeTransport', badgeColor: 'bg-red-500/10 text-red-600 border-red-200' },
 } as const;
 
 export const BOOKING_TABS = [

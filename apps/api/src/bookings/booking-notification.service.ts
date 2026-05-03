@@ -5,7 +5,6 @@ const ENTITY_LABELS: Record<string, string> = {
   CAR: 'سيارة',
   BUS: 'باص',
   EQUIPMENT: 'معدة',
-  TRANSPORT: 'خدمة نقل',
 };
 
 @Injectable()

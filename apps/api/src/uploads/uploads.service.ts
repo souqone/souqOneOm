@@ -66,12 +66,6 @@ export class UploadsService {
     return this.images.addImageToBus(busId, userId, url, isPrimary);
   }
 
-  // ─── Transport Images ───
-
-  async addImageToTransport(transportId: string, userId: string, url: string, isPrimary: boolean) {
-    return this.images.addImageToTransport(transportId, userId, url, isPrimary);
-  }
-
   // ─── Equipment Images ───
 
   async addImageToEquipment(equipmentId: string, userId: string, url: string, isPrimary: boolean) {

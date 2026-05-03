@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>سوق وان - لوحة التحكم</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "brand-amber": "#E8781E",
+                        "tertiary-fixed-dim": "#ffb689",
+                        "tertiary": "#652e00",
+                        "outline": "#737685",
+                        "surface-container-low": "#f1f3ff",
+                        "primary": "#003594",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "surface-container-high": "#e1e8fd",
+                        "secondary": "#515f74",
+                        "on-primary-fixed": "#00174b",
+                        "on-surface": "#141b2b",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "outline-variant": "#c3c6d6",
+                        "surface-container-highest": "#dce2f7",
+                        "on-tertiary-fixed-variant": "#733500",
+                        "primary-fixed": "#dbe1ff",
+                        "on-primary-container": "#b8c8ff",
+                        "brand-green": "#16a34a",
+                        "surface-container": "#e9edff",
+                        "surface-bright": "#f9f9ff",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#d5e3fc",
+                        "inverse-surface": "#293040",
+                        "tertiary-fixed": "#ffdbc7",
+                        "surface-tint": "#1b55d0",
+                        "surface-dim": "#d3daef",
+                        "price-green": "#16a34a",
+                        "error": "#ba1a1a",
+                        "dark-surface": "#0a1628",
+                        "inverse-primary": "#b4c5ff",
+                        "on-tertiary-fixed": "#311300",
+                        "on-tertiary-container": "#ffbb90",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-container": "#894000",
+                        "surface": "#f9f9ff",
+                        "on-secondary-container": "#57657a",
+                        "on-primary": "#ffffff",
+                        "dark-price-green": "#34d399",
+                        "background": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "dark-background": "#060e1e",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-background": "#141b2b",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-variant": "#dce2f7",
+                        "brand-navy": "#0B2447",
+                        "primary-container": "#004ac6",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-surface-variant": "#434654",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#003ea8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter-md": "24px",
+                        "page-padding-x-sm": "12px",
+                        "nav-bottom": "46px",
+                        "mobile-bottom-nav": "80px",
+                        "page-max": "1280px",
+                        "base-unit": "4px",
+                        "sidebar-width": "288px",
+                        "page-padding-x-md": "24px",
+                        "base": "4px",
+                        "page-max-width": "1280px",
+                        "gutter-sm": "12px",
+                        "page-padding-x-lg": "40px",
+                        "gutter-lg": "40px",
+                        "nav-total": "102px",
+                        "nav-top": "56px"
+                    },
+                    "fontFamily": {
+                        "hero-sm": ["Almarai"],
+                        "body-md": ["Almarai"],
+                        "body-lg": ["Almarai"],
+                        "title-lg": ["Almarai"],
+                        "hero-lg": ["Almarai"],
+                        "label-sm": ["Almarai"],
+                        "body-sm": ["Almarai"],
+                        "hero-md": ["Almarai"],
+                        "title-md": ["Almarai"],
+                        "label-md": ["Almarai"]
+                    },
+                    "fontSize": {
+                        "hero-sm": ["24px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "title-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "hero-lg": ["36px", { "lineHeight": "1.4", "fontWeight": "800" }],
+                        "label-sm": ["10px", { "lineHeight": "1.2", "fontWeight": "800" }],
+                        "body-sm": ["12px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "hero-md": ["30px", { "lineHeight": "1.4", "fontWeight": "800" }],
+                        "title-md": ["17px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "label-md": ["11px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Almarai', sans-serif; background-color: #F8F9FA; }
+    </style>
+</head>
+<body class="bg-[#F8F9FA] text-on-surface antialiased min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl docked full-width top-0 z-50 h-[64px] shadow-sm flex items-center justify-between px-4 md:px-10 max-w-[1280px] mx-auto w-full rtl">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-black text-blue-900 dark:text-blue-100">سوق وان</span>
+</div>
+<div class="flex items-center gap-6 font-sans text-sm font-medium">
+<!-- Navigation items for web -->
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-blue-700 dark:text-blue-400 border-b-2 border-orange-500 pb-2 active:scale-95 duration-150" href="#">لوحة التحكم</a>
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-95 duration-150 py-2 px-1 rounded-md" href="#">الطلبات</a>
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-95 duration-150 py-2 px-1 rounded-md" href="#">الرسائل</a>
+</nav>
+</div>
+<div class="flex items-center gap-4 text-blue-700 dark:text-blue-400">
+<button class="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">chat</span>
+</button>
+<button class="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<div class="flex max-w-[1280px] mx-auto w-full pt-[64px]">
+<!-- SideNavBar -->
+<aside class="hidden lg:flex flex-col p-4 gap-2 rtl bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-lg h-[calc(100vh-64px)] w-64 border-l border-slate-200 dark:border-slate-800 sticky top-[64px] right-0 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+<div class="pb-6 px-2 text-center pt-4">
+<div class="w-20 h-20 mx-auto rounded-full bg-surface-variant overflow-hidden mb-3 border-2 border-white shadow-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant">person</span>
+</div>
+<h2 class="font-title-md text-title-md text-on-surface">مركز الشريك</h2>
+<p class="font-body-sm text-body-sm text-secondary mt-1">مزود خدمة معتمد</p>
+<button class="mt-4 w-full bg-gradient-to-r from-brand-amber to-[#FF9D5C] text-white font-title-md text-title-md py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all scale-102">
+                    إضافة مركبة
+                </button>
+</div>
+<nav class="pt-4 flex flex-col gap-2 font-sans text-base antialiased">
+<a class="flex items-center gap-3 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 rounded-lg p-3 border-r-4 border-orange-500 shadow-sm scale-102 transition-transform" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>لوحة التحكم</span>
+</a>
+<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span>الطلبات النشطة</span>
+</a>
+<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">request_quote</span>
+<span>العروض المقدمة</span>
+</a>
+<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">group_work</span>
+<span>أسطولي</span>
+</a>
+<a class="flex items-center gap-3 text-slate-600 dark:text-slate-400 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span>التقارير</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-4 md:p-8 lg:p-10 pb-mobile-bottom-nav lg:pb-10 w-full overflow-x-hidden">
+<!-- Availability Toggle Card -->
+<section class="bg-brand-navy rounded-2xl p-6 md:p-8 shadow-lg mb-8 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-6 outline outline-1 outline-white/10 relative overflow-hidden">
+<!-- Decorative background elements -->
+<div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at 10% 20%, rgb(255, 255, 255) 0%, transparent 40%);"></div>
+<div class="relative z-10 flex flex-col gap-2 max-w-md">
+<h1 class="font-hero-md text-hero-md text-white">أنا متاح الآن</h1>
+<p class="font-body-lg text-body-lg text-white/70">عندما تكون متاحاً ستظهر للعملاء بشكل بارز وستتلقى طلبات نقل مباشرة في منطقتك.</p>
+</div>
+<div class="relative z-10 bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 border border-white/10">
+<span class="font-title-md text-title-md text-brand-amber font-bold">متاح الآن •</span>
+<!-- Custom Toggle Switch ON State -->
+<div class="w-16 h-8 bg-brand-amber rounded-full relative cursor-pointer shadow-inner">
+<div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform"></div>
+</div>
+</div>
+</section>
+<!-- Stats Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+<!-- Stat Card 1 -->
+<div class="bg-surface-container-lowest rounded-[16px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="font-title-md text-title-md text-secondary">عروض مقدمة</span>
+<div class="p-2 bg-surface-container rounded-lg text-primary">
+<span class="material-symbols-outlined">request_quote</span>
+</div>
+</div>
+<div class="flex items-end gap-3">
+<span class="font-hero-lg text-hero-lg text-on-surface">48</span>
+<span class="font-label-md text-label-md text-price-green flex items-center mb-2">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                            +12%
+                        </span>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-surface-container-lowest rounded-[16px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="font-title-md text-title-md text-secondary">عروض مقبولة</span>
+<div class="p-2 bg-brand-amber/10 rounded-lg text-brand-amber">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+</div>
+<div class="flex items-end gap-3">
+<span class="font-hero-lg text-hero-lg text-on-surface">12</span>
+<span class="font-body-sm text-body-sm text-secondary mb-2">هذا الأسبوع</span>
+</div>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-surface-container-lowest rounded-[16px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="font-title-md text-title-md text-secondary">رحلات مكتملة</span>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+</div>
+<div class="flex items-end gap-3">
+<span class="font-hero-lg text-hero-lg text-on-surface">156</span>
+</div>
+</div>
+<!-- Stat Card 4 -->
+<div class="bg-surface-container-lowest rounded-[16px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="font-title-md text-title-md text-secondary">متوسط التقييم</span>
+<div class="p-2 bg-brand-amber/10 rounded-lg text-brand-amber">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<div class="flex items-end gap-2">
+<span class="font-hero-lg text-hero-lg text-on-surface">4.8</span>
+<span class="font-body-lg text-body-lg text-secondary mb-1">/ 5</span>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Nearby Requests (Takes up 2 columns on lg) -->
+<div class="lg:col-span-2 space-y-4">
+<div class="flex justify-between items-end mb-4">
+<h2 class="font-hero-sm text-hero-sm text-on-surface">طلبات في منطقتك</h2>
+<a class="font-title-md text-title-md text-primary hover:text-primary-fixed-variant transition-colors" href="#">عرض الكل</a>
+</div>
+<!-- Request Card 1 -->
+<article class="bg-surface-container-lowest rounded-[16px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="flex items-center gap-4 w-full sm:w-auto">
+<div class="p-3 bg-surface-container rounded-xl text-primary shrink-0">
+<span class="material-symbols-outlined text-3xl">inventory_2</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="font-title-md text-title-md text-on-surface">من مسقط</span>
+<span class="material-symbols-outlined text-secondary text-sm">arrow_left_alt</span>
+<span class="font-title-md text-title-md text-on-surface">إلى صلالة</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary">مواد بناء • حمولة 10 طن • اليوم</p>
+</div>
+</div>
+<button class="w-full sm:w-auto bg-gradient-to-r from-brand-amber to-[#FF9D5C] text-white font-title-md text-title-md py-2.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 whitespace-nowrap">
+                            قدّم عرضاً
+                        </button>
+</article>
+<!-- Request Card 2 -->
+<article class="bg-surface-container-lowest rounded-[16px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="flex items-center gap-4 w-full sm:w-auto">
+<div class="p-3 bg-surface-container rounded-xl text-primary shrink-0">
+<span class="material-symbols-outlined text-3xl">ac_unit</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="font-title-md text-title-md text-on-surface">من صحار</span>
+<span class="material-symbols-outlined text-secondary text-sm">arrow_left_alt</span>
+<span class="font-title-md text-title-md text-on-surface">إلى نزوى</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary">مواد غذائية مبردة • حمولة 5 طن • غداً</p>
+</div>
+</div>
+<button class="w-full sm:w-auto bg-gradient-to-r from-brand-amber to-[#FF9D5C] text-white font-title-md text-title-md py-2.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 whitespace-nowrap">
+                            قدّم عرضاً
+                        </button>
+</article>
+<!-- Request Card 3 -->
+<article class="bg-surface-container-lowest rounded-[16px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 hover:border-outline-variant/20 hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="flex items-center gap-4 w-full sm:w-auto">
+<div class="p-3 bg-surface-container rounded-xl text-primary shrink-0">
+<span class="material-symbols-outlined text-3xl">airport_shuttle</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="font-title-md text-title-md text-on-surface">من المعبيلة</span>
+<span class="material-symbols-outlined text-secondary text-sm">arrow_left_alt</span>
+<span class="font-title-md text-title-md text-on-surface">إلى السيب</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary">أثاث منزلي • نقل خفيف • عاجل</p>
+</div>
+</div>
+<button class="w-full sm:w-auto bg-gradient-to-r from-brand-amber to-[#FF9D5C] text-white font-title-md text-title-md py-2.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 whitespace-nowrap">
+                            قدّم عرضاً
+                        </button>
+</article>
+</div>
+<!-- Recent Quotes List (Takes up 1 column on lg) -->
+<div class="space-y-4">
+<h2 class="font-hero-sm text-hero-sm text-on-surface mb-4">آخر عروضي</h2>
+<div class="bg-surface-container-lowest rounded-[16px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/10 overflow-hidden">
+<!-- List Item 1 -->
+<div class="p-4 border-b border-outline-variant/10 flex flex-col gap-3 hover:bg-surface-container-low transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface">صحار</span>
+<span class="material-symbols-outlined text-secondary text-xs">arrow_left_alt</span>
+<span class="font-title-md text-title-md text-on-surface">مسقط</span>
+</div>
+<span class="bg-green-100 text-green-800 font-label-md text-label-md py-1 px-2.5 rounded-full uppercase">مقبول</span>
+</div>
+<div class="flex justify-between items-center mt-1">
+<span class="font-body-sm text-body-sm text-secondary">مواد بناء - 12 طن</span>
+<span class="font-title-lg text-title-lg text-primary">120 ر.ع</span>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="p-4 border-b border-outline-variant/10 flex flex-col gap-3 hover:bg-surface-container-low transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface">نزوى</span>
+<span class="material-symbols-outlined text-secondary text-xs">arrow_left_alt</span>
+<span class="font-title-md text-title-md text-on-surface">عبري</span>
+</div>
+<span class="bg-amber-100 text-amber-800 font-label-md text-label-md py-1 px-2.5 rounded-full uppercase">منتظر</span>
+</div>
+<div class="flex justify-between items-center mt-1">
+<span class="font-body-sm text-body-sm text-secondary">أعلاف - 5 طن</span>
+<span class="font-title-lg text-title-lg text-primary">65 ر.ع</span>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="p-4 flex flex-col gap-3 hover:bg-surface-container-low transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface">صلالة</span>
+<span class="material-symbols-outlined text-secondary text-xs">arrow_left_alt</span>
+<span class="font-title-md text-title-md text-on-surface">الدقم</span>
+</div>
+<span class="bg-red-100 text-red-800 font-label-md text-label-md py-1 px-2.5 rounded-full uppercase">مرفوض</span>
+</div>
+<div class="flex justify-between items-center mt-1">
+<span class="font-body-sm text-body-sm text-secondary">معدات ثقيلة</span>
+<span class="font-title-lg text-title-lg text-primary text-opacity-50 line-through">450 ر.ع</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-safe rtl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md h-[80px] z-50 rounded-t-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)] border-t border-slate-200 dark:border-slate-800 tap-highlight-transparent">
+<a class="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-xl px-4 py-2" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-[10px] font-bold">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:bg-slate-100 dark:active:bg-slate-800 px-4 py-2 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">list_alt</span>
+<span class="text-[10px] font-bold">طلباتي</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:bg-slate-100 dark:active:bg-slate-800 px-4 py-2 rounded-xl transition-colors relative" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">notifications</span>
+<span class="absolute top-2 right-4 w-2 h-2 bg-brand-amber rounded-full"></span>
+<span class="text-[10px] font-bold">التنبيهات</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:bg-slate-100 dark:active:bg-slate-800 px-4 py-2 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">person</span>
+<span class="text-[10px] font-bold">حسابي</span>
+</a>
+</nav>
+</body></html>

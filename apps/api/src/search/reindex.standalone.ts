@@ -69,22 +69,6 @@ async function main() {
   if (partDocs.length > 0) await meili.index('parts').addDocuments(partDocs);
   counts.parts = partDocs.length;
 
-  // ── Transport ──
-  const transport = await prisma.transportService.findMany({
-    where: { status: 'ACTIVE' },
-    include: { images: { take: 1, orderBy: { order: 'asc' } } },
-  });
-  const transportDocs = transport.map(t => serialize({
-    id: t.id, title: t.title, slug: t.slug, description: t.description,
-    transportType: t.transportType, providerName: t.providerName, providerType: t.providerType,
-    basePrice: t.basePrice ? Number(t.basePrice) : null, currency: t.currency,
-    governorate: t.governorate, city: t.city, coverageAreas: t.coverageAreas,
-    hasInsurance: t.hasInsurance, hasTracking: t.hasTracking, status: t.status,
-    imageUrl: t.images[0]?.url || null, createdAt: t.createdAt,
-  }));
-  if (transportDocs.length > 0) await meili.index('transport').addDocuments(transportDocs);
-  counts.transport = transportDocs.length;
-
   // ── Services ──
   const services = await prisma.carService.findMany({
     where: { status: 'ACTIVE' },

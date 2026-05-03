@@ -8,7 +8,6 @@ const mockPrisma = {
   driverJob: { findUnique: jest.fn() },
   sparePart: { findUnique: jest.fn() },
   carService: { findUnique: jest.fn() },
-  transportService: { findUnique: jest.fn() },
   favorite: {
     findUnique: jest.fn(),
     findMany: jest.fn(),

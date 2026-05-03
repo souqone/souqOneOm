@@ -52,7 +52,6 @@ model User {
   messageReactions MessageReaction[]
   spareParts        SparePart[]        @relation("UserSpareParts")
   carServices       CarService[]       @relation("UserCarServices")
-  transportServices TransportService[] @relation("UserTransportServices")
   busListings       BusListing[]       @relation("UserBusListings")
   busOffers         BusListingOffer[]  @relation("UserBusOffers")
   equipmentListings  EquipmentListing[]  @relation("UserEquipmentListings")
@@ -69,6 +68,8 @@ model User {
   loginAudits        LoginAudit[]
   driverProfile      DriverProfile?
   employerProfile    EmployerProfile?
+  carrierProfile     CarrierProfile?
+  transportRequests  TransportRequest[] @relation("UserTransportRequests")
 
   @@index([email])
   @@index([username])
@@ -205,7 +206,7 @@ model Listing {
 model Booking {
   id                 String             @id @default(cuid())
 
-  entityType         String             @default("CAR") // CAR, BUS, EQUIPMENT, TRANSPORT
+  entityType         String             @default("CAR") // CAR, BUS, EQUIPMENT
 
   listingId          String?
   listing            Listing?           @relation(fields: [listingId], references: [id], onDelete: Cascade)
@@ -216,8 +217,6 @@ model Booking {
   equipmentListingId String?
   equipmentListing   EquipmentListing?  @relation(fields: [equipmentListingId], references: [id], onDelete: Cascade)
 
-  transportServiceId String?
-  transportService   TransportService?  @relation(fields: [transportServiceId], references: [id], onDelete: Cascade)
 
   renterId           String
   renter             User               @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
@@ -252,7 +251,6 @@ model Booking {
   @@index([listingId])
   @@index([busListingId])
   @@index([equipmentListingId])
-  @@index([transportServiceId])
   @@index([entityType])
   @@index([renterId])
   @@index([ownerId])
@@ -287,7 +285,7 @@ model ListingImage {
 model Conversation {
   id         String   @id @default(cuid())
 
-  entityType String   // LISTING | SPARE_PART | CAR_SERVICE | TRANSPORT | JOB
+  entityType String   // LISTING | SPARE_PART | CAR_SERVICE | JOB
   entityId   String   // ID of the related entity
 
   // Backward compat — optional relation kept for existing listing conversations
@@ -385,7 +383,7 @@ model Favorite {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  entityType String   @default("LISTING") // LISTING | JOB | SPARE_PART | CAR_SERVICE | TRANSPORT
+  entityType String   @default("LISTING") // LISTING | JOB | SPARE_PART | CAR_SERVICE
   entityId   String
 
   // Keep optional relation for listing queries
@@ -913,23 +911,6 @@ enum ProviderType {
   COMPANY
 }
 
-// ── تعدادات خدمات النقل ──
-enum TransportType {
-  CARGO
-  FURNITURE
-  DELIVERY
-  HEAVY_TRANSPORT
-  TRUCK_RENTAL
-  OTHER_TRANSPORT
-}
-
-enum PricingType {
-  FIXED
-  PER_KM
-  PER_TRIP
-  HOURLY
-  NEGOTIABLE_PRICE
-}
 
 // ── تعدادات المركبات الموسعة ──
 enum VehicleCategory {
@@ -1053,63 +1034,6 @@ model CarServiceImage {
   @@map("car_service_images")
 }
 
-// ──────────────────────────────────────
-// خدمات النقل واللوجستيك — TransportService
-// ──────────────────────────────────────
-model TransportService {
-  id              String        @id @default(cuid())
-  title           String
-  slug            String        @unique
-  description     String
-  transportType   TransportType
-  vehicleType     String?
-  vehicleCapacity String?
-  coverageAreas   String[]
-  pricingType     PricingType   @default(NEGOTIABLE_PRICE)
-  basePrice       Decimal?      @db.Decimal(12, 2)
-  pricePerKm      Decimal?      @db.Decimal(12, 2)
-  currency        String        @default("OMR")
-  hasInsurance    Boolean        @default(false)
-  hasTracking     Boolean        @default(false)
-  providerName    String
-  providerType    ProviderType
-  governorate     String
-  city            String?
-  latitude        Float?
-  longitude       Float?
-  contactPhone    String?
-  whatsapp        String?
-  status          ListingStatus  @default(ACTIVE)
-  viewCount       Int            @default(0)
-
-  userId          String
-  user            User           @relation("UserTransportServices", fields: [userId], references: [id], onDelete: Cascade)
-  images          TransportImage[]
-  bookings        Booking[]
-
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  @@index([userId])
-  @@index([transportType])
-  @@index([governorate])
-  @@index([status])
-  @@index([slug])
-  @@map("transport_services")
-}
-
-model TransportImage {
-  id                 String           @id @default(cuid())
-  url                String
-  isPrimary          Boolean          @default(false)
-  order              Int              @default(0)
-  transportServiceId String
-  transportService   TransportService @relation(fields: [transportServiceId], references: [id], onDelete: Cascade)
-  createdAt          DateTime         @default(now())
-
-  @@index([transportServiceId])
-  @@map("transport_images")
-}
 
 // ══════════════════════════════════════════════════
 // قسم الحافلات — Bus Marketplace
@@ -1693,4 +1617,166 @@ model Subscription {
   @@index([status])
   @@index([endDate])
   @@map("subscriptions")
+}
+
+// ══════════════════════════════════════════════════
+// سوق النقل — Transport Marketplace
+// ══════════════════════════════════════════════════
+
+enum TransportServiceType {
+  GOODS
+  FURNITURE
+  CONSTRUCTION
+  HEAVY
+  BACKLOAD
+  EQUIPMENT
+}
+
+enum TransportRequestStatus {
+  OPEN
+  QUOTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum VehicleType {
+  PICKUP
+  VAN
+  TRUCK_SMALL
+  TRUCK_LARGE
+  TRAILER
+  EXCAVATOR
+  TIPPER
+  CRANE
+  OTHER
+}
+
+model CarrierProfile {
+  id              String      @id @default(cuid())
+  userId          String      @unique
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName     String?
+  bio             String?
+  vehicleTypes    VehicleType[]
+  serviceTypes    TransportServiceType[]
+  governorate     String
+  city            String?
+  contactPhone    String?
+  whatsapp        String?
+
+  isAvailable     Boolean     @default(false)
+  isVerified      Boolean     @default(false)
+
+  completedTrips  Int         @default(0)
+  averageRating   Float       @default(0)
+  reviewCount     Int         @default(0)
+
+  quotes          TransportQuote[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([governorate, isAvailable])
+  @@map("carrier_profiles")
+}
+
+model TransportRequest {
+  id              String                  @id @default(cuid())
+  userId          String
+  user            User                    @relation("UserTransportRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  serviceType     TransportServiceType
+  status          TransportRequestStatus  @default(OPEN)
+
+  fromGovernorate String
+  fromCity        String?
+  fromAddress     String
+  fromLat         Float?
+  fromLng         Float?
+
+  toGovernorate   String
+  toCity          String?
+  toAddress       String
+  toLat           Float?
+  toLng           Float?
+
+  cargoDescription String
+  weightTons      Float?
+  requiresHelper  Boolean     @default(false)
+  notes           String?
+
+  scheduledAt     DateTime?
+  isFlexible      Boolean     @default(false)
+
+  budgetMin       Decimal?    @db.Decimal(10, 3)
+  budgetMax       Decimal?    @db.Decimal(10, 3)
+  currency        String      @default("OMR")
+
+  viewCount       Int         @default(0)
+  expiresAt       DateTime?
+
+  quotes          TransportQuote[]
+  booking         TransportBooking?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([status, fromGovernorate])
+  @@index([userId])
+  @@index([serviceType, status])
+  @@map("transport_requests")
+}
+
+model TransportQuote {
+  id              String        @id @default(cuid())
+  requestId       String
+  request         TransportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  carrierId       String
+  carrier         CarrierProfile   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  status          QuoteStatus   @default(PENDING)
+
+  price           Decimal       @db.Decimal(10, 3)
+  currency        String        @default("OMR")
+  estimatedHours  Float?
+  message         String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  booking         TransportBooking?
+
+  @@unique([requestId, carrierId])
+  @@index([requestId, status])
+  @@index([carrierId])
+  @@map("transport_quotes")
+}
+
+model TransportBooking {
+  id              String        @id @default(cuid())
+  requestId       String        @unique
+  request         TransportRequest @relation(fields: [requestId], references: [id])
+  quoteId         String        @unique
+  quote           TransportQuote   @relation(fields: [quoteId], references: [id])
+
+  status          TransportRequestStatus @default(IN_PROGRESS)
+  confirmedAt     DateTime      @default(now())
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancellationReason String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("transport_bookings")
 }

@@ -198,25 +198,6 @@ export class UploadImageManagerService {
     });
   }
 
-  async addImageToTransport(transportId: string, userId: string, url: string, isPrimary: boolean) {
-    const transport = await this.prisma.transportService.findUnique({ where: { id: transportId } });
-    if (!transport) throw new NotFoundException('خدمة النقل غير موجودة');
-    if (transport.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
-
-    const maxOrder = await this.prisma.transportImage.aggregate({ where: { transportServiceId: transportId }, _max: { order: true } });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
-
-    if (isPrimary) {
-      await this.prisma.transportImage.updateMany({ where: { transportServiceId: transportId }, data: { isPrimary: false } });
-    }
-    const imageCount = await this.prisma.transportImage.count({ where: { transportServiceId: transportId } });
-    const shouldBePrimary = isPrimary || imageCount === 0;
-
-    return this.prisma.transportImage.create({
-      data: { url, order: nextOrder, isPrimary: shouldBePrimary, transportServiceId: transportId },
-    });
-  }
-
   async addImageToEquipment(equipmentId: string, userId: string, url: string, isPrimary: boolean) {
     const equipment = await this.prisma.equipmentListing.findUnique({ where: { id: equipmentId } });
     if (!equipment) throw new NotFoundException('إعلان المعدة غير موجود');

@@ -20,8 +20,8 @@ import { GOVERNORATE_OPTIONS } from './shared'
 // categories (e.g. `cars` + `real-estate`), you must add a discriminator
 // field (e.g. `listingCategory`) inside the index and filter on it.
 
-export type SearchCategory = 'cars' | 'buses' | 'parts' | 'services' | 'jobs' | 'transport'
-export type MeiliEntityType = 'listings' | 'buses' | 'parts' | 'services' | 'jobs' | 'transport'
+export type SearchCategory = 'cars' | 'buses' | 'parts' | 'services' | 'jobs'
+export type MeiliEntityType = 'listings' | 'buses' | 'parts' | 'services' | 'jobs'
 
 export const CATEGORY_TO_ENTITY: Record<SearchCategory, MeiliEntityType> = {
   cars:      'listings',
@@ -29,7 +29,6 @@ export const CATEGORY_TO_ENTITY: Record<SearchCategory, MeiliEntityType> = {
   parts:     'parts',
   services:  'services',
   jobs:      'jobs',
-  transport: 'transport',
 }
 
 export const ENTITY_TO_CATEGORY: Record<MeiliEntityType, SearchCategory> = {
@@ -38,7 +37,6 @@ export const ENTITY_TO_CATEGORY: Record<MeiliEntityType, SearchCategory> = {
   parts:     'parts',
   services:  'services',
   jobs:      'jobs',
-  transport: 'transport',
 }
 
 export const ALL_SEARCH_CATEGORIES: SearchCategory[] = [
@@ -53,7 +51,6 @@ export const CATEGORY_FILTERABLE_FIELDS: Record<SearchCategory, string[]> = {
   parts:     ['partCategory', 'condition', 'isOriginal'],
   services:  ['serviceType', 'providerType', 'isHomeService'],
   jobs:      ['jobType', 'employmentType'],
-  transport: ['transportType', 'providerType'],
 }
 
 /** Filters available on ALL categories */
@@ -83,7 +80,6 @@ export const CATEGORY_META: Record<SearchCategory, SearchCategoryMeta> = {
   parts:     { labelAr: 'قطع غيار',   labelEn: 'Parts',      icon: 'settings',         color: 'from-amber-500 to-amber-600' },
   services:  { labelAr: 'خدمات',      labelEn: 'Services',   icon: 'build',            color: 'from-purple-500 to-purple-600' },
   jobs:      { labelAr: 'وظائف',      labelEn: 'Jobs',       icon: 'work',             color: 'from-rose-500 to-rose-600' },
-  transport: { labelAr: 'نقل',        labelEn: 'Transport',  icon: 'local_shipping',   color: 'from-cyan-500 to-cyan-600' },
 }
 
 // ── Shared Filter Fields for FilterSidebar ──────────────────────────────────
@@ -115,7 +111,6 @@ export const FAVORITE_ENTITY_TYPE: Record<SearchCategory, string> = {
   parts:     'SPARE_PART',
   services:  'CAR_SERVICE',
   jobs:      'JOB',
-  transport: 'TRANSPORT',
 }
 
 // ── Detail Page Href Builder ────────────────────────────────────────────────
@@ -127,7 +122,6 @@ export function buildDetailHref(category: SearchCategory, id: string, slug?: str
     case 'parts':     return `/sale/part/${id}`
     case 'services':  return `/sale/service/${id}`
     case 'jobs':      return `/jobs/${slug || id}`
-    case 'transport': return `/transport/${id}`
     default:          return `/sale/car/${id}`
   }
 }

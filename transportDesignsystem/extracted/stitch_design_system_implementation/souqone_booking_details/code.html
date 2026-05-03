@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>تتبع الحجز - سوق ون</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-secondary-fixed-variant": "#3a485b",
+                "tertiary-fixed-dim": "#ffb689",
+                "brand-amber": "#E8781E",
+                "secondary-container": "#d5e3fc",
+                "price-green": "#16a34a",
+                "primary-container": "#004ac6",
+                "secondary-fixed": "#d5e3fc",
+                "on-tertiary-container": "#ffbb90",
+                "brand-navy": "#0B2447",
+                "secondary": "#515f74",
+                "dark-background": "#060e1e",
+                "error": "#ba1a1a",
+                "surface-container": "#e9edff",
+                "inverse-surface": "#293040",
+                "secondary-fixed-dim": "#b9c7df",
+                "inverse-on-surface": "#edf0ff",
+                "surface-container-low": "#f1f3ff",
+                "tertiary": "#652e00",
+                "on-primary-fixed": "#00174b",
+                "inverse-primary": "#b4c5ff",
+                "on-primary-fixed-variant": "#003ea8",
+                "outline-variant": "#c3c6d6",
+                "background": "#f9f9ff",
+                "dark-price-green": "#34d399",
+                "surface-dim": "#d3daef",
+                "surface-container-lowest": "#ffffff",
+                "surface-tint": "#1b55d0",
+                "on-error": "#ffffff",
+                "surface-container-high": "#e1e8fd",
+                "on-primary-container": "#b8c8ff",
+                "on-tertiary-fixed-variant": "#733500",
+                "primary-fixed": "#dbe1ff",
+                "on-tertiary-fixed": "#311300",
+                "dark-surface": "#0a1628",
+                "tertiary-container": "#894000",
+                "on-surface-variant": "#434654",
+                "on-secondary": "#ffffff",
+                "primary": "#003594",
+                "on-tertiary": "#ffffff",
+                "surface-bright": "#f9f9ff",
+                "on-surface": "#141b2b",
+                "surface-variant": "#dce2f7",
+                "on-secondary-fixed": "#0d1c2e",
+                "outline": "#737685",
+                "primary-fixed-dim": "#b4c5ff",
+                "error-container": "#ffdad6",
+                "surface": "#f9f9ff",
+                "on-error-container": "#93000a",
+                "on-secondary-container": "#57657a",
+                "surface-container-highest": "#dce2f7",
+                "on-background": "#141b2b",
+                "on-primary": "#ffffff",
+                "brand-green": "#16a34a",
+                "tertiary-fixed": "#ffdbc7"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "nav-top": "56px",
+                "page-max": "1280px",
+                "base-unit": "4px",
+                "base": "4px",
+                "gutter-lg": "40px",
+                "gutter-sm": "12px",
+                "gutter-md": "24px",
+                "sidebar-width": "288px",
+                "page-max-width": "1280px",
+                "nav-total": "102px",
+                "page-padding-x-lg": "40px",
+                "page-padding-x-md": "24px",
+                "page-padding-x-sm": "12px",
+                "nav-bottom": "46px",
+                "mobile-bottom-nav": "80px"
+        },
+        "fontFamily": {
+                "title-md": [
+                        "Almarai"
+                ],
+                "hero-lg": [
+                        "Almarai"
+                ],
+                "label-md": [
+                        "Almarai"
+                ],
+                "body-sm": [
+                        "Almarai"
+                ],
+                "label-sm": [
+                        "Almarai"
+                ],
+                "hero-sm": [
+                        "Almarai"
+                ],
+                "hero-md": [
+                        "Almarai"
+                ],
+                "body-md": [
+                        "Almarai"
+                ],
+                "body-lg": [
+                        "Almarai"
+                ],
+                "title-lg": [
+                        "Almarai"
+                ]
+        },
+        "fontSize": {
+                "title-md": [
+                        "17px",
+                        {
+                                "lineHeight": "1.4",
+                                "fontWeight": "700"
+                        }
+                ],
+                "hero-lg": [
+                        "36px",
+                        {
+                                "lineHeight": "1.4",
+                                "fontWeight": "800"
+                        }
+                ],
+                "label-md": [
+                        "11px",
+                        {
+                                "lineHeight": "1.2",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "1.7",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "10px",
+                        {
+                                "lineHeight": "1.2",
+                                "fontWeight": "800"
+                        }
+                ],
+                "hero-sm": [
+                        "24px",
+                        {
+                                "lineHeight": "1.4",
+                                "fontWeight": "700"
+                        }
+                ],
+                "hero-md": [
+                        "30px",
+                        {
+                                "lineHeight": "1.4",
+                                "fontWeight": "800"
+                        }
+                ],
+                "body-md": [
+                        "14px",
+                        {
+                                "lineHeight": "1.7",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-lg": [
+                        "16px",
+                        {
+                                "lineHeight": "1.7",
+                                "fontWeight": "400"
+                        }
+                ],
+                "title-lg": [
+                        "20px",
+                        {
+                                "lineHeight": "1.4",
+                                "fontWeight": "700"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body { font-family: 'Almarai', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased min-h-screen pb-mobile-bottom-nav md:pb-0">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 h-[64px] border-b border-slate-200/50 bg-white/80 backdrop-blur-xl shadow-sm hidden md:block">
+<div class="flex flex-row-reverse justify-between items-center px-6 max-w-[1280px] mx-auto w-full h-full">
+<div class="flex items-center gap-6">
+<span class="text-2xl font-black text-blue-900 font-hero-sm">سوق ون</span>
+<div class="flex gap-4">
+<a class="text-slate-600 hover:text-blue-600 font-title-md transition-colors hover:bg-slate-50 rounded-lg px-3 py-2" href="#">الطلبات</a>
+<a class="text-blue-700 border-b-2 border-blue-700 font-bold pb-1 font-title-md" href="#">الشحنات</a>
+<a class="text-slate-600 hover:text-blue-600 font-title-md transition-colors hover:bg-slate-50 rounded-lg px-3 py-2" href="#">المعدات</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-blue-700 hover:bg-slate-50 rounded-full p-2 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">notifications</span>
+</button>
+<button class="text-blue-700 hover:bg-slate-50 rounded-full p-2 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-nav-top md:pt-nav-total px-page-padding-x-sm md:px-page-padding-x-md lg:px-page-padding-x-lg max-w-[700px] mx-auto w-full">
+<div class="flex flex-col gap-6 py-8">
+<!-- Booking Status Header -->
+<div class="flex flex-col items-center justify-center text-center space-y-4 pt-4">
+<div class="w-20 h-20 bg-brand-amber/10 rounded-full flex items-center justify-center border-2 border-brand-amber">
+<span class="material-symbols-outlined text-4xl text-brand-amber">local_shipping</span>
+</div>
+<div>
+<h1 class="text-brand-navy font-hero-md">جارٍ التنفيذ</h1>
+<p class="text-outline font-body-md mt-1">رقم الحجز: #BK-8821</p>
+</div>
+</div>
+<!-- Horizontal Timeline -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-outline-variant/10">
+<div class="relative flex items-center justify-between w-full max-w-md mx-auto">
+<!-- Connecting Lines -->
+<div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-outline-variant/30 -z-10 w-[calc(100%-2rem)] mx-auto"></div>
+<div class="absolute right-[1rem] top-1/2 -translate-y-1/2 h-1 bg-brand-amber -z-10 w-1/2"></div>
+<!-- Step 1: Past -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-brand-amber text-white flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+<span class="font-label-sm text-brand-amber">تم القبول</span>
+</div>
+<!-- Step 2: Current -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-white border-4 border-brand-amber flex items-center justify-center shadow-md">
+<div class="w-2.5 h-2.5 bg-brand-amber rounded-full"></div>
+</div>
+<span class="font-label-sm text-brand-navy font-bold">جارٍ التنفيذ</span>
+</div>
+<!-- Step 3: Future -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-white border-2 border-outline-variant flex items-center justify-center">
+</div>
+<span class="font-label-sm text-outline">مكتمل</span>
+</div>
+</div>
+</div>
+<!-- Trip Details Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-outline-variant/10 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary bg-primary-container/20 p-2 rounded-lg">route</span>
+<div class="flex items-center gap-2 font-title-md text-brand-navy">
+<span>من مسقط</span>
+<span class="material-symbols-outlined text-brand-amber font-bold">arrow_left_alt</span>
+<span>إلى صلالة</span>
+</div>
+</div>
+</div>
+<hr class="border-outline-variant/20"/>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-outline">نوع الخدمة</span>
+<span class="font-body-md text-on-surface font-bold">أثاث</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-outline">الحمولة</span>
+<span class="font-body-md text-on-surface font-bold">نقل أثاث منزلي كامل</span>
+</div>
+</div>
+</div>
+<!-- Carrier / Driver Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-outline-variant/10 flex flex-col md:flex-row gap-6 items-center justify-between">
+<div class="flex items-center gap-4 w-full md:w-auto">
+<img alt="سالم الشحي" class="w-16 h-16 rounded-full object-cover border-2 border-brand-amber/20" data-alt="Portrait of an experienced Middle Eastern male truck driver smiling warmly, wearing a neat casual shirt. Bright, optimistic lighting, professional headshot style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdhAvVI2lfzek_lX_HkU5ULHgviFf4ZqaOseERDOj5FT3v3MKYcV0whgca1UXXTLq1ysEChV--G8OP36w9BzTaK_ww2ro7swSljF6zs7kALJk7syqNy8ITZoLz-OnTK4N2NfOIje4SvVOSyfLFVDbuv1v5EG2ntjub7TZixHkx1r8oqWbiM50ywqRyQM-8Sn6tlMscDbHsRJH8Y8thSPoFsOC1qWFq-Ih5rKWwIu7kxxESEUQ9TC3dtj-pJFHzEqgWU267lqV4U7M"/>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-title-lg text-brand-navy">سالم الشحي</span>
+<span class="material-symbols-outlined text-brand-amber text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div class="flex items-center gap-1 text-outline">
+<span class="material-symbols-outlined text-brand-amber text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md">4.8 (23 رحلة مكتملة)</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-center md:items-end w-full md:w-auto gap-3">
+<div class="font-hero-sm text-brand-amber font-black">١٥٠.٠٠٠ ر.ع.</div>
+<button class="bg-[#25D366] hover:bg-[#128C7E] text-white font-title-md py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors w-full shadow-sm">
+<span>تواصل عبر واتساب</span>
+<span class="material-symbols-outlined">chat</span>
+</button>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3 mt-4">
+<button class="bg-gradient-to-l from-brand-amber to-[#FF8C42] text-white font-title-lg py-4 px-6 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-[0.98] w-full flex justify-center items-center gap-2">
+                    بدأت التحميل
+                    <span class="material-symbols-outlined font-bold">check</span>
+</button>
+<button class="bg-gradient-to-l from-price-green to-[#22c55e] text-white font-title-lg py-4 px-6 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-[0.98] w-full flex justify-center items-center gap-2">
+                    استلمت — اكتمل
+                    <span class="material-symbols-outlined font-bold">done_all</span>
+</button>
+<button class="text-error font-title-md py-3 text-center w-full hover:underline mt-2">
+                    إلغاء الطلب
+                </button>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation (Hidden on Desktop) -->
+<nav class="fixed bottom-0 left-0 w-full flex flex-row-reverse justify-around items-center px-4 pb-2 h-20 z-50 border-t border-slate-100 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
+<a class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-600 transition-all" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[11px] font-bold mt-1">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-blue-50 text-blue-700 rounded-xl px-3 py-1.5 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<span class="text-[11px] font-bold mt-1">حجوزاتي</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-600 transition-all" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-[11px] font-bold mt-1">الإشعارات</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-600 transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[11px] font-bold mt-1">حسابي</span>
+</a>
+</nav>
+</body></html>

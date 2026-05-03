@@ -237,8 +237,9 @@ export function BusesLandingClient({ buses, totalBuses: _totalBuses }: Props) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
       <Navbar />
+      <main className="min-h-screen bg-background">
 
       {/* ═══════════════════ 1. HERO ═══════════════════ */}
       <section>
@@ -366,9 +367,29 @@ export function BusesLandingClient({ buses, totalBuses: _totalBuses }: Props) {
               <p className="text-on-surface-variant text-xs sm:text-sm">{t('typesSubtitle')}</p>
             </motion.div>
 
+            {/* Mobile: horizontal slider — Desktop: single row */}
+            <div className="sm:hidden flex gap-3 overflow-x-auto scrollbar-hide -mx-3 px-3 pb-2 snap-x snap-mandatory">
+              {BUS_TYPES.map(type => {
+                const Icon = type.icon;
+                const nameKey = `types${type.key.charAt(0).toUpperCase() + type.key.slice(1)}` as any;
+                return (
+                  <Link
+                    key={type.key}
+                    href={`/browse/buses?busType=${type.filter}`}
+                    className="flex-shrink-0 snap-start w-28 flex flex-col items-center gap-2 p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/20 transition-all"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${type.color} flex items-center justify-center shadow-md`}>
+                      <Icon size={22} className="text-white" strokeWidth={2} />
+                    </div>
+                    <h3 className="font-bold text-[11px] text-on-surface text-center leading-tight">{t(nameKey)}</h3>
+                  </Link>
+                );
+              })}
+            </div>
+
             <motion.div
               variants={stagger}
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4"
+              className="hidden sm:grid sm:grid-cols-6 gap-4"
             >
               {BUS_TYPES.map(type => {
                 const Icon = type.icon;
@@ -378,14 +399,14 @@ export function BusesLandingClient({ buses, totalBuses: _totalBuses }: Props) {
                   <motion.div key={type.key} variants={fadeUp}>
                     <Link
                       href={`/browse/buses?busType=${type.filter}`}
-                      className="group flex flex-col items-center gap-3 p-5 sm:p-6 rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
+                      className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/20 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
                     >
-                      <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${type.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                        <Icon size={28} className="text-white" strokeWidth={2} />
+                      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${type.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                        <Icon size={26} className="text-white" strokeWidth={2} />
                       </div>
                       <div className="text-center">
-                        <h3 className="font-bold text-sm sm:text-[15px] text-on-surface mb-0.5">{t(nameKey)}</h3>
-                        <p className="text-[10px] sm:text-[11px] text-on-surface-variant/70 leading-relaxed">{t(descKey)}</p>
+                        <h3 className="font-bold text-sm text-on-surface mb-0.5">{t(nameKey)}</h3>
+                        <p className="text-[10px] text-on-surface-variant/70 leading-relaxed">{t(descKey)}</p>
                       </div>
                     </Link>
                   </motion.div>
@@ -536,6 +557,7 @@ export function BusesLandingClient({ buses, totalBuses: _totalBuses }: Props) {
       </section>
 
       <Footer />
-    </div>
+      </main>
+    </>
   );
 }

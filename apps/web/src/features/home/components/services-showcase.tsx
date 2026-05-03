@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, useInView } from 'framer-motion';
-import { CardGrid } from '@/features/listings/components/CardGrid';
+import { CardSlider } from '@/features/listings/components/CardSlider';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { CarServiceItem } from '@/lib/api/services';
 
@@ -51,8 +51,8 @@ export function ServicesShowcase({ items, isLoading }: ServicesShowcaseProps) {
           </motion.div>
 
           <motion.div variants={fadeUp}>
-            <CardGrid
-              items={items.slice(0, 4)}
+            <CardSlider
+              items={items.slice(0, 8)}
               mapItem={transformService}
               isLoading={isLoading}
               emptyIcon="build"

@@ -170,21 +170,6 @@ export class UploadsController {
     return this.uploadsService.addImageToBus(busId, user.sub, url, isPrimary === 'true');
   }
 
-  // ─── Transport Image Management ───
-
-  @UseGuards(JwtAuthGuard)
-  @Post('transport/:transportId/images')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  async addTransportImage(
-    @Param('transportId') transportId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('isPrimary') isPrimary: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    const { url } = await this.uploadsService.uploadFile(file);
-    return this.uploadsService.addImageToTransport(transportId, user.sub, url, isPrimary === 'true');
-  }
-
   // ─── Equipment Image Management ───
 
   @UseGuards(JwtAuthGuard)

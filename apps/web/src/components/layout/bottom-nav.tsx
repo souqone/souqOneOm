@@ -10,11 +10,11 @@ export function BottomNav() {
   const t = useTranslations('common');
 
   const NAV_ITEMS = [
-    { href: '/', label: t('home'), icon: 'home' },
-    { href: '#search', label: t('search'), icon: 'search', isSearch: true },
-    { href: '/add-listing', label: t('addListing'), icon: 'add_circle', accent: true },
+    { href: '/notifications', label: t('notifications'), icon: 'notifications', authRequired: true },
     { href: '/messages', label: t('messages'), icon: 'chat', authRequired: true },
-    { href: '/profile', label: t('myAccount'), icon: 'person', authRequired: true },
+    { href: '/add-listing', label: t('addListing'), icon: 'add_circle', accent: true },
+    { href: '/favorites', label: t('favorites'), icon: 'favorite', authRequired: true },
+    { href: '/', label: t('home'), icon: 'home' },
   ];
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();

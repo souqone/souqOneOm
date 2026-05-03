@@ -1,62 +1,173 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, Req,
+  Controller, Get, Post, Patch, Body, Param, Query, Req,
+  UseGuards, ParseIntPipe, DefaultValuePipe,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
-import { TransportService } from './transport.service';
-import { CreateTransportDto } from './dto/create-transport.dto';
-import { QueryTransportDto } from './dto/query-transport.dto';
+import { CarrierProfileService } from './carrier-profile.service';
+import { TransportRequestService } from './transport-request.service';
+import { TransportQuoteService } from './transport-quote.service';
+import { TransportBookingService } from './transport-booking.service';
+import { CreateCarrierProfileDto } from './dto/create-carrier-profile.dto';
+import { UpdateCarrierProfileDto } from './dto/update-carrier-profile.dto';
+import { CreateTransportRequestDto } from './dto/create-transport-request.dto';
+import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
+import { CreateQuoteDto } from './dto/create-quote.dto';
+import { QueryCarriersDto } from './dto/query-carriers.dto';
+import { Request } from 'express';
 
 @Controller('transport')
 export class TransportController {
-  constructor(private readonly transportService: TransportService) {}
+  constructor(
+    private readonly carrierProfileService: CarrierProfileService,
+    private readonly transportRequestService: TransportRequestService,
+    private readonly transportQuoteService: TransportQuoteService,
+    private readonly transportBookingService: TransportBookingService,
+  ) {}
+
+  // ─── Carrier Profile ───
 
   @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@Body() dto: CreateTransportDto, @CurrentUser() user: JwtPayload) {
-    return this.transportService.create(dto, user.sub);
-  }
-
-  @Get()
-  findAll(@Query() query: QueryTransportDto) {
-    return this.transportService.findAll(query);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('my')
-  myTransport(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
-    return this.transportService.myListings(user.sub, query.page ?? 1, query.limit ?? 20);
-  }
-
-  @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string, @Req() req: Request) {
-    return this.transportService.findBySlug(slug, req.ip);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
-    return this.transportService.findOne(id, req.ip);
+  @Post('carrier-profile')
+  createCarrierProfile(@CurrentUser() user: JwtPayload, @Body() dto: CreateCarrierProfileDto) {
+    return this.carrierProfileService.create(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':id/status')
-  toggleStatus(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.transportService.toggleStatus(id, user.sub);
+  @Get('carrier-profile/me')
+  getMyCarrierProfile(@CurrentUser() user: JwtPayload) {
+    return this.carrierProfileService.getMyProfile(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateTransportDto>, @CurrentUser() user: JwtPayload) {
-    return this.transportService.update(id, user.sub, dto);
+  @Patch('carrier-profile')
+  updateCarrierProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateCarrierProfileDto) {
+    return this.carrierProfileService.update(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.transportService.remove(id, user.sub);
+  @Patch('carrier-profile/availability')
+  setAvailability(@CurrentUser() user: JwtPayload, @Body('isAvailable') isAvailable: boolean) {
+    return this.carrierProfileService.setAvailability(user.sub, isAvailable);
+  }
+
+  @Get('carriers')
+  findAllCarriers(@Query() query: QueryCarriersDto) {
+    return this.carrierProfileService.findAll(query);
+  }
+
+  @Get('carriers/:id')
+  findOneCarrier(@Param('id') id: string) {
+    return this.carrierProfileService.findOne(id);
+  }
+
+  // ─── Transport Requests ───
+
+  @UseGuards(JwtAuthGuard)
+  @Post('requests')
+  createRequest(@CurrentUser() user: JwtPayload, @Body() dto: CreateTransportRequestDto) {
+    return this.transportRequestService.create(user.sub, dto);
+  }
+
+  @Get('requests')
+  findAllRequests(@Query() query: QueryTransportRequestsDto) {
+    return this.transportRequestService.findAll(query);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('requests/my')
+  myRequests(
+    @CurrentUser() user: JwtPayload,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
+  ) {
+    return this.transportRequestService.myRequests(user.sub, page, limit);
+  }
+
+  @Get('requests/:id')
+  findOneRequest(@Param('id') id: string, @Req() req: Request) {
+    return this.transportRequestService.findOne(id, req.ip);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('requests/:id/cancel')
+  cancelRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportRequestService.cancel(id, user.sub);
+  }
+
+  // ─── Quotes ───
+
+  @UseGuards(JwtAuthGuard)
+  @Post('requests/:id/quotes')
+  submitQuote(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateQuoteDto,
+  ) {
+    return this.transportQuoteService.submitQuote(id, user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('requests/:id/quotes')
+  getQuotesForRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportQuoteService.getQuotesForRequest(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('quotes/:id/accept')
+  acceptQuote(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportQuoteService.acceptQuote(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('quotes/:id/withdraw')
+  withdrawQuote(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportQuoteService.withdrawQuote(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('quotes/my')
+  getMyQuotes(
+    @CurrentUser() user: JwtPayload,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
+  ) {
+    return this.transportQuoteService.getMyQuotes(user.sub, page, limit);
+  }
+
+  // ─── Bookings ───
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('bookings/:id/start')
+  markInProgress(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportBookingService.markInProgress(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('bookings/:id/complete')
+  completeBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportBookingService.complete(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('bookings/:id/cancel')
+  cancelBooking(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body('reason') reason?: string,
+  ) {
+    return this.transportBookingService.cancel(id, user.sub, reason);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('bookings/my')
+  getMyBookings(
+    @CurrentUser() user: JwtPayload,
+    @Query('role') role: 'shipper' | 'carrier' = 'shipper',
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
+  ) {
+    return this.transportBookingService.getMyBookings(user.sub, role, page, limit);
   }
 }

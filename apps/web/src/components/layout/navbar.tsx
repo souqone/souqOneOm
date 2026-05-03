@@ -31,6 +31,7 @@ function useNavLinks() {
     { href: '/motors', label: t('cars') },
     { href: '/buses', label: t('buses') },
     { href: '/equipment', label: t('equipment') },
+    { href: '/transport', label: t('transportRequests') },
     { href: '/jobs', label: t('jobs') },
   ];
 
@@ -41,6 +42,7 @@ function useNavLinks() {
     { href: '/browse/services', label: t('carServices') },
     { href: '/buses', label: t('buses') },
     { href: '/equipment', label: t('equipment') },
+    { href: '/transport', label: t('transportRequests') },
     { href: '/jobs', label: t('jobs') },
   ];
 
@@ -140,16 +142,39 @@ export function Navbar() {
               </Link>
             </div>
 
-            {/* Physical RIGHT: Notifications, Chat, Favorites */}
+            {/* Physical RIGHT: Profile Avatar */}
             <div className="flex justify-end">
               <div className="flex items-center gap-0.5">
-                <Link href="/notifications" className="w-9 h-9 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-all relative">
-                  <span className="material-symbols-outlined text-[20px]">notifications</span>
-                  {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
-                </Link>
-                <Link href="/favorites" className="w-9 h-9 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-all">
-                  <span className="material-symbols-outlined text-[20px]">favorite</span>
-                </Link>
+
+                {/* Profile Avatar */}
+                {isAuthenticated && user ? (
+                  <Link
+                    href="/profile"
+                    className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary/20 hover:ring-primary/50 transition-all shrink-0 ms-0.5"
+                  >
+                    {user.avatarUrl ? (
+                      <Image
+                        src={user.avatarUrl}
+                        alt={user.displayName || user.username || ''}
+                        width={32} height={32}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                        <span className="text-[12px] font-black text-primary">
+                          {(user.displayName || user.username || '?')[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => openAuth('login')}
+                    className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center ms-0.5 hover:bg-primary/20 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-primary text-[16px]">person</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

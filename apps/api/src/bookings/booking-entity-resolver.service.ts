@@ -5,8 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 type BookingEntityConnectField =
   | { listing: { connect: { id: string } } }
   | { busListing: { connect: { id: string } } }
-  | { equipmentListing: { connect: { id: string } } }
-  | { transportService: { connect: { id: string } } };
+  | { equipmentListing: { connect: { id: string } } };
 
 export interface ResolvedBookingEntity {
   title: string;
@@ -88,26 +87,6 @@ export class BookingEntityResolverService {
           currency: eq.currency,
           cancellationPolicy: CancellationPolicy.FREE,
           connectField: { equipmentListing: { connect: { id: entityId } } },
-        };
-      }
-      case 'TRANSPORT': {
-        const ts = await this.prisma.transportService.findUnique({
-          where: { id: entityId },
-          include: { user: { select: { id: true, displayName: true, username: true } } },
-        });
-        if (!ts) throw new NotFoundException('خدمة النقل غير موجودة');
-        if (ts.status !== 'ACTIVE') throw new BadRequestException('الخدمة غير متاحة حالياً');
-        return {
-          title: ts.title,
-          ownerId: ts.userId,
-          dailyPrice: ts.basePrice ? Number(ts.basePrice) : null,
-          weeklyPrice: null,
-          monthlyPrice: null,
-          minRentalDays: null,
-          depositAmount: null,
-          currency: ts.currency,
-          cancellationPolicy: CancellationPolicy.FREE,
-          connectField: { transportService: { connect: { id: entityId } } },
         };
       }
       default:

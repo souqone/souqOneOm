@@ -44,11 +44,6 @@ export class ChatService {
         if (!e) throw new NotFoundException('الخدمة غير موجودة');
         return { ownerId: e.userId, title: e.title };
       }
-      case 'TRANSPORT': {
-        const e = await this.prisma.transportService.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
-        if (!e) throw new NotFoundException('خدمة النقل غير موجودة');
-        return { ownerId: e.userId, title: e.title };
-      }
       case 'JOB': {
         const e = await this.prisma.driverJob.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
         if (!e) throw new NotFoundException('الوظيفة غير موجودة');

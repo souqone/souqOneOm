@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, useInView } from 'framer-motion';
-import { CardGrid } from '@/features/listings/components/CardGrid';
+import { CardSlider } from '@/features/listings/components/CardSlider';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { JobItem } from '@/lib/api';
 
@@ -50,14 +50,12 @@ export function JobsSection({ items, isLoading }: JobsSectionProps) {
           </motion.div>
 
           <motion.div variants={fadeUp}>
-            <CardGrid
-              items={items.slice(0, 4)}
+            <CardSlider
+              items={items.slice(0, 8)}
               mapItem={transformJob}
               isLoading={isLoading}
-              cols={4}
               emptyIcon="work_off"
               emptyMessage={t('noJobsNow')}
-              emptyAction={{ label: t('addJobListing'), href: '/jobs/new' }}
             />
           </motion.div>
         </AnimatedSection>
