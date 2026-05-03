@@ -11,6 +11,7 @@ const mockPrisma = {
   driverJob: {
     create: jest.fn(),
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
@@ -93,7 +94,7 @@ describe('JobsService', () => {
   describe('findOne', () => {
     it('should return a job by id', async () => {
       const mockJob = { id: '1', title: 'Test Job', status: 'ACTIVE' };
-      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      mockPrisma.driverJob.findFirst.mockResolvedValue(mockJob);
 
       const result = await service.findOne('1');
 
@@ -101,7 +102,7 @@ describe('JobsService', () => {
     });
 
     it('should throw NotFoundException for non-existent job', async () => {
-      mockPrisma.driverJob.findUnique.mockResolvedValue(null);
+      mockPrisma.driverJob.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
@@ -160,7 +161,7 @@ describe('JobsService', () => {
     const mockJob = { id: 'job1', userId: 'owner1', status: 'ACTIVE', title: 'Driver needed' };
 
     it('should create an application', async () => {
-      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      mockPrisma.driverJob.findFirst.mockResolvedValue(mockJob);
       mockPrisma.jobApplication.findUnique.mockResolvedValue(null);
       mockPrisma.jobApplication.create.mockResolvedValue({
         id: 'app1',
@@ -176,7 +177,7 @@ describe('JobsService', () => {
     });
 
     it('should throw ConflictException for duplicate application', async () => {
-      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      mockPrisma.driverJob.findFirst.mockResolvedValue(mockJob);
       mockPrisma.jobApplication.create.mockRejectedValue({ code: 'P2002', meta: { target: ['jobId_applicantId'] } });
 
       await expect(
@@ -185,7 +186,7 @@ describe('JobsService', () => {
     });
 
     it('should throw ForbiddenException for self-application', async () => {
-      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      mockPrisma.driverJob.findFirst.mockResolvedValue(mockJob);
 
       await expect(
         service.apply('job1', 'owner1', {} as any),
@@ -194,7 +195,7 @@ describe('JobsService', () => {
 
     it('should throw ForbiddenException for closed job', async () => {
       const closedJob = { ...mockJob, status: 'CLOSED' };
-      mockPrisma.driverJob.findUnique.mockResolvedValue(closedJob);
+      mockPrisma.driverJob.findFirst.mockResolvedValue(closedJob);
 
       await expect(
         service.apply('job1', 'applicant1', {} as any),
