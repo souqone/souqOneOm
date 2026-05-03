@@ -23,12 +23,7 @@
       "cache": false
     },
     "db:generate": {
-      "inputs": ["prisma/schema.prisma"],
-      "outputs": [
-        "node_modules/.prisma/**",
-        "node_modules/@prisma/client/**"
-      ],
-      "cache": true
+      "cache": false
     },
     "db:push": {
       "cache": false
