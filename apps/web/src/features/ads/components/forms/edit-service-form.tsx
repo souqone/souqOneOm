@@ -13,21 +13,21 @@ export function EditServiceForm() {
   const tp = useTranslations('pages');
 
   const fields = [
-    { name: 'title', label: 'Title', required: true },
-    { name: 'serviceType', label: 'Service Type', type: 'select' as const, options: [
-      { value: 'MAINTENANCE', label: 'Maintenance' },
-      { value: 'REPAIR', label: 'Repair' },
-      { value: 'DETAILING', label: 'Detailing' },
-      { value: 'TINTING', label: 'Tinting' },
-      { value: 'ACCESSORIES', label: 'Accessories' },
-      { value: 'INSPECTION', label: 'Inspection' },
-      { value: 'INSURANCE_SERVICE', label: 'Insurance Service' },
-      { value: 'OTHER', label: 'Other' },
+    { name: 'title', label: 'عنوان الإعلان', required: true },
+    { name: 'serviceType', label: 'نوع الخدمة', type: 'select' as const, options: [
+      { value: 'MAINTENANCE', label: 'صيانة' },
+      { value: 'REPAIR', label: 'تصليح' },
+      { value: 'DETAILING', label: 'تلميع وتنظيف' },
+      { value: 'TINTING', label: 'تظليل' },
+      { value: 'ACCESSORIES', label: 'إكسسوارات' },
+      { value: 'INSPECTION', label: 'فحص' },
+      { value: 'INSURANCE_SERVICE', label: 'خدمة تأمين' },
+      { value: 'OTHER', label: 'أخرى' },
     ]},
-    { name: 'price', label: 'Price', type: 'number' as const },
-    { name: 'governorate', label: 'Governorate' },
-    { name: 'phone', label: 'Phone' },
-    { name: 'description', label: 'Description', type: 'textarea' as const },
+    { name: 'price', label: 'السعر', type: 'number' as const },
+    { name: 'governorate', label: 'المحافظة' },
+    { name: 'phone', label: 'رقم الهاتف' },
+    { name: 'description', label: 'الوصف', type: 'textarea' as const },
   ];
 
   return (

@@ -13,28 +13,28 @@ export function EditPartsForm() {
   const tp = useTranslations('pages');
 
   const fields = [
-    { name: 'title', label: 'Title', required: true },
-    { name: 'partCategory', label: 'Category', type: 'select' as const, options: [
-      { value: 'ENGINE', label: 'Engine' },
-      { value: 'TRANSMISSION', label: 'Transmission' },
-      { value: 'BRAKES', label: 'Brakes' },
-      { value: 'SUSPENSION', label: 'Suspension' },
-      { value: 'ELECTRICAL', label: 'Electrical' },
-      { value: 'BODY', label: 'Body' },
-      { value: 'INTERIOR', label: 'Interior' },
-      { value: 'TIRES_WHEELS', label: 'Tires & Wheels' },
-      { value: 'OTHER', label: 'Other' },
+    { name: 'title', label: 'عنوان الإعلان', required: true },
+    { name: 'partCategory', label: 'فئة القطعة', type: 'select' as const, options: [
+      { value: 'ENGINE', label: 'محرك' },
+      { value: 'TRANSMISSION', label: 'ناقل الحركة' },
+      { value: 'BRAKES', label: 'فرامل' },
+      { value: 'SUSPENSION', label: 'تعليق' },
+      { value: 'ELECTRICAL', label: 'كهرباء' },
+      { value: 'BODY', label: 'هيكل' },
+      { value: 'INTERIOR', label: 'داخلية' },
+      { value: 'TIRES_WHEELS', label: 'إطارات وجنوط' },
+      { value: 'OTHER', label: 'أخرى' },
     ]},
-    { name: 'condition', label: 'Condition', type: 'select' as const, options: [
-      { value: 'NEW', label: 'New' },
-      { value: 'USED', label: 'Used' },
-      { value: 'REFURBISHED', label: 'Refurbished' },
+    { name: 'condition', label: 'الحالة', type: 'select' as const, options: [
+      { value: 'NEW', label: 'جديد' },
+      { value: 'USED', label: 'مستعمل' },
+      { value: 'REFURBISHED', label: 'مجدد' },
     ]},
-    { name: 'compatibleMake', label: 'Compatible Make' },
-    { name: 'compatibleModel', label: 'Compatible Model' },
-    { name: 'price', label: 'Price', type: 'number' as const },
-    { name: 'governorate', label: 'Governorate' },
-    { name: 'description', label: 'Description', type: 'textarea' as const },
+    { name: 'compatibleMake', label: 'ماركة متوافقة' },
+    { name: 'compatibleModel', label: 'موديل متوافق' },
+    { name: 'price', label: 'السعر', type: 'number' as const },
+    { name: 'governorate', label: 'المحافظة' },
+    { name: 'description', label: 'الوصف', type: 'textarea' as const },
   ];
 
   return (

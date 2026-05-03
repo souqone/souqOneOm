@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
-import { FormErrorOverlay } from '@/components/form-error-overlay';
+import { FormErrorDisplay } from '@/features/ads/components/forms/shared';
 import { useCreateOperatorListing } from '@/lib/api/equipment';
 import { useToast } from '@/components/toast';
 import { getGovernorates, type LocationOption } from '@/lib/location-data';
@@ -100,7 +100,7 @@ export function AddOperatorForm() {
       addToast('success', tp('opSuccess'));
       router.push(`/equipment/operators/${result.id}`);
     } catch (e: any) {
-      addToast('error', e?.message || tp('opError'));
+      setErrors([e?.message || tp('opError')]);
     }
   }
 
@@ -181,7 +181,7 @@ export function AddOperatorForm() {
                   <label className={labelCls}>{tp('opLabelGov')}</label>
                   <select className={inputCls} value={governorate} onChange={e => setGovernorate(e.target.value)}>
                     <option value="">{tp('opSelectGov')}</option>
-                    {governorateOptions.map((g: LocationOption) => <option key={g.value} value={g.label}>{g.label}</option>)}
+                    {governorateOptions.map((g: LocationOption) => <option key={g.value} value={g.value}>{g.label}</option>)}
                   </select>
                 </div>
                 <div><label className={labelCls}>{tp('opLabelCity')}</label><input className={inputCls} value={city} onChange={e => setCity(e.target.value)} /></div>
@@ -206,7 +206,7 @@ export function AddOperatorForm() {
         )}
       </MultiStepForm>
 
-      {errors.length > 0 && <FormErrorOverlay messages={errors} onClose={() => setErrors([])} />}
+      <FormErrorDisplay errors={errors} onClose={() => setErrors([])} />
     </>
   );
 }

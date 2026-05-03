@@ -12,17 +12,17 @@ export function EditOperatorForm() {
   const tp = useTranslations('pages');
 
   const fields = [
-    { name: 'title', label: 'Title', required: true },
-    { name: 'operatorType', label: 'Operator Type', type: 'select' as const, options: [
-      { value: 'DRIVER', label: 'Driver' },
-      { value: 'OPERATOR', label: 'Operator' },
-      { value: 'TECHNICIAN', label: 'Technician' },
+    { name: 'title', label: 'عنوان الإعلان', required: true },
+    { name: 'operatorType', label: 'نوع المشغّل', type: 'select' as const, options: [
+      { value: 'DRIVER', label: 'سائق' },
+      { value: 'OPERATOR', label: 'مشغّل' },
+      { value: 'TECHNICIAN', label: 'فني' },
     ]},
-    { name: 'experienceYears', label: 'Experience (Years)', type: 'number' as const },
-    { name: 'dailyRate', label: 'Daily Rate', type: 'number' as const },
-    { name: 'governorate', label: 'Governorate' },
-    { name: 'phone', label: 'Phone' },
-    { name: 'description', label: 'Description', type: 'textarea' as const },
+    { name: 'experienceYears', label: 'سنوات الخبرة', type: 'number' as const },
+    { name: 'dailyRate', label: 'الأجر اليومي', type: 'number' as const },
+    { name: 'governorate', label: 'المحافظة' },
+    { name: 'phone', label: 'رقم الهاتف' },
+    { name: 'description', label: 'الوصف', type: 'textarea' as const },
   ];
 
   return (

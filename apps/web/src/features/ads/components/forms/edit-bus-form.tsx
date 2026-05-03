@@ -14,21 +14,24 @@ export function EditBusForm() {
 
   const fields = [
     { name: 'title', label: tp('editListingTitle'), required: true },
-    { name: 'busType', label: tp('sectionBuses') + ' - Type', type: 'select' as const, options: [
-      { value: 'MINI_BUS', label: 'Mini Bus' },
-      { value: 'MEDIUM_BUS', label: 'Medium Bus' },
-      { value: 'LARGE_BUS', label: 'Large Bus' },
-      { value: 'COASTER', label: 'Coaster' },
-      { value: 'SCHOOL_BUS', label: 'School Bus' },
+    { name: 'busType', label: 'نوع الباص', type: 'select' as const, options: [
+      { value: 'MINI_BUS', label: 'ميني باص' },
+      { value: 'MEDIUM_BUS', label: 'باص متوسط' },
+      { value: 'LARGE_BUS', label: 'باص كبير' },
+      { value: 'COASTER', label: 'كوستر' },
+      { value: 'SCHOOL_BUS', label: 'حافلة مدرسية' },
     ]},
-    { name: 'make', label: 'Make' },
-    { name: 'model', label: 'Model' },
-    { name: 'year', label: 'Year', type: 'number' as const },
-    { name: 'price', label: 'Price', type: 'number' as const },
-    { name: 'passengerCapacity', label: 'Passenger Capacity', type: 'number' as const },
-    { name: 'governorate', label: 'Governorate' },
-    { name: 'description', label: 'Description', type: 'textarea' as const },
+    { name: 'make', label: 'الماركة' },
+    { name: 'model', label: 'الموديل' },
+    { name: 'year', label: 'سنة الصنع', type: 'number' as const },
+    { name: 'price', label: 'السعر', type: 'number' as const },
+    { name: 'passengerCapacity', label: 'عدد الركاب', type: 'number' as const },
+    { name: 'governorate', label: 'المحافظة' },
+    { name: 'description', label: 'الوصف', type: 'textarea' as const },
   ];
+
+  const redirectPath =
+    data?.busListingType === 'BUS_RENT' ? `/rental/bus/${id}` : `/sale/bus/${id}`;
 
   return (
     <GenericEditForm
@@ -41,7 +44,7 @@ export function EditBusForm() {
       fields={fields}
       updateFn={(payload) => update.mutateAsync({ id, data: payload })}
       isUpdating={update.isPending}
-      redirectPath={`/sale/bus/${id}`}
+      redirectPath={redirectPath}
       uploadEndpoint={`/uploads/buses/${id}/images`}
       deleteImageFn={(imageId) => removeBusImage.mutateAsync(imageId)}
     />

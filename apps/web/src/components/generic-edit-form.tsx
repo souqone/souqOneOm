@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
@@ -62,14 +62,14 @@ export function GenericEditForm({
   const [initialized, setInitialized] = useState(false);
   const initialImageIdsRef = useRef<string[]>([]);
 
-  // Initialize form data from item
-  if (item && !initialized) {
+  // Initialize form data from item once it loads
+  useEffect(() => {
+    if (!item || initialized) return;
     const initial: Record<string, any> = {};
     fields.forEach((f) => {
       initial[f.name] = item[f.name] ?? '';
     });
     setFormData(initial);
-    // Initialize images
     if (item.images?.length) {
       const sorted = item.images
         .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
@@ -83,7 +83,8 @@ export function GenericEditForm({
       initialImageIdsRef.current = sorted.map((img: any) => img.id).filter(Boolean);
     }
     setInitialized(true);
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item, initialized]);
 
   function handleChange(name: string, value: any) {
     setFormData((prev) => ({ ...prev, [name]: value }));

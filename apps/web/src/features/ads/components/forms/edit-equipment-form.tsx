@@ -13,31 +13,36 @@ export function EditEquipmentForm() {
   const tp = useTranslations('pages');
 
   const fields = [
-    { name: 'title', label: 'Title', required: true },
-    { name: 'equipmentType', label: 'Equipment Type', type: 'select' as const, options: [
-      { value: 'EXCAVATOR', label: 'Excavator' },
-      { value: 'LOADER', label: 'Loader' },
-      { value: 'BULLDOZER', label: 'Bulldozer' },
-      { value: 'CRANE', label: 'Crane' },
-      { value: 'FORKLIFT', label: 'Forklift' },
-      { value: 'GENERATOR', label: 'Generator' },
-      { value: 'COMPRESSOR', label: 'Compressor' },
-      { value: 'CONCRETE_MIXER', label: 'Concrete Mixer' },
-      { value: 'DUMP_TRUCK', label: 'Dump Truck' },
-      { value: 'OTHER', label: 'Other' },
+    { name: 'title', label: 'عنوان الإعلان', required: true },
+    { name: 'equipmentType', label: 'نوع المعدة', type: 'select' as const, options: [
+      { value: 'EXCAVATOR', label: 'حفار' },
+      { value: 'LOADER', label: 'لودر' },
+      { value: 'BULLDOZER', label: 'جرافة' },
+      { value: 'CRANE', label: 'رافعة' },
+      { value: 'FORKLIFT', label: 'رافعة شوكية' },
+      { value: 'GENERATOR', label: 'مولد كهربائي' },
+      { value: 'COMPRESSOR', label: 'كمبريسور' },
+      { value: 'CONCRETE_MIXER', label: 'خلاطة خرسانة' },
+      { value: 'DUMP_TRUCK', label: 'شاحنة قلاب' },
+      { value: 'OTHER', label: 'أخرى' },
     ]},
-    { name: 'make', label: 'Make' },
-    { name: 'model', label: 'Model' },
-    { name: 'year', label: 'Year', type: 'number' as const },
-    { name: 'price', label: 'Price', type: 'number' as const },
-    { name: 'condition', label: 'Condition', type: 'select' as const, options: [
-      { value: 'NEW', label: 'New' },
-      { value: 'USED', label: 'Used' },
-      { value: 'REFURBISHED', label: 'Refurbished' },
+    { name: 'make', label: 'الماركة' },
+    { name: 'model', label: 'الموديل' },
+    { name: 'year', label: 'سنة الصنع', type: 'number' as const },
+    { name: 'price', label: 'السعر', type: 'number' as const },
+    { name: 'condition', label: 'الحالة', type: 'select' as const, options: [
+      { value: 'NEW', label: 'جديد' },
+      { value: 'USED', label: 'مستعمل' },
+      { value: 'REFURBISHED', label: 'مجدد' },
     ]},
-    { name: 'governorate', label: 'Governorate' },
-    { name: 'description', label: 'Description', type: 'textarea' as const },
+    { name: 'governorate', label: 'المحافظة' },
+    { name: 'description', label: 'الوصف', type: 'textarea' as const },
   ];
+
+  const redirectPath =
+    data?.listingType === 'EQUIPMENT_RENT'
+      ? `/rental/equipment/${id}`
+      : `/sale/equipment/${id}`;
 
   return (
     <GenericEditForm
@@ -50,7 +55,7 @@ export function EditEquipmentForm() {
       fields={fields}
       updateFn={(payload) => update.mutateAsync({ id, data: payload })}
       isUpdating={update.isPending}
-      redirectPath={`/sale/equipment/${id}`}
+      redirectPath={redirectPath}
       uploadEndpoint={`/uploads/equipment/${id}/images`}
       deleteImageFn={(imageId) => removeEquipImage.mutateAsync(imageId)}
     />

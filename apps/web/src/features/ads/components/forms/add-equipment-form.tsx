@@ -5,10 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
-import { FormErrorOverlay } from '@/components/form-error-overlay';
+import { FormErrorDisplay } from '@/features/ads/components/forms/shared';
 import { useCreateEquipmentListing } from '@/lib/api/equipment';
 import { useToast } from '@/components/toast';
-import { getGovernorates, type LocationOption } from '@/lib/location-data';
+import { getGovernorates, getCities, type LocationOption } from '@/lib/location-data';
 import { apiFetch } from '@/lib/auth';
 import { inputCls, labelCls, sectionCls, sectionTitleCls, chipCls, checkboxLabelCls, checkboxCls, checkboxTextCls } from '@/lib/constants/form-styles';
 import { useTranslations, useLocale } from 'next-intl';
@@ -95,6 +95,7 @@ export function AddEquipmentForm() {
 
   const locale = useLocale();
   const governorateOptions = getGovernorates('OM', locale);
+  const cityOptions = governorate ? getCities('OM', governorate, locale) : [];
 
   const steps = [
     { label: tp('eqStepType'), icon: 'category' },
@@ -157,7 +158,7 @@ export function AddEquipmentForm() {
       addToast('success', tp('eqSuccess'));
       router.push(`${result.listingType === 'EQUIPMENT_RENT' ? '/rental' : '/sale'}/equipment/${result.id}`);
     } catch (e: any) {
-      addToast('error', e?.message || tp('eqError'));
+      setErrors([e?.message || tp('eqError')]);
     }
   }
 
@@ -303,10 +304,16 @@ export function AddEquipmentForm() {
                   <label className={labelCls}>{tp('eqLabelGovernorate')}</label>
                   <select className={inputCls} value={governorate} onChange={e => setGovernorate(e.target.value)}>
                     <option value="">{tp('eqSelectGovernorate')}</option>
-                    {governorateOptions.map((g: LocationOption) => <option key={g.value} value={g.label}>{g.label}</option>)}
+                    {governorateOptions.map((g: LocationOption) => <option key={g.value} value={g.value}>{g.label}</option>)}
                   </select>
                 </div>
-                <div><label className={labelCls}>{tp('eqLabelCity')}</label><input className={inputCls} value={city} onChange={e => setCity(e.target.value)} placeholder={tp('eqPlaceholderCity')} /></div>
+                <div>
+                  <label className={labelCls}>{tp('eqLabelCity')}</label>
+                  <select className={inputCls} value={city} onChange={e => setCity(e.target.value)} disabled={!governorate}>
+                    <option value="">{tp('eqPlaceholderCity')}</option>
+                    {cityOptions.map((c: LocationOption) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
                 <div>
                   <label className={labelCls}>{tp('eqLabelPhone')}</label>
                   <div className="flex items-center gap-0">
@@ -336,7 +343,7 @@ export function AddEquipmentForm() {
         )}
       </MultiStepForm>
 
-      {errors.length > 0 && <FormErrorOverlay messages={errors} onClose={() => setErrors([])} />}
+      <FormErrorDisplay errors={errors} onClose={() => setErrors([])} />
     </>
   );
 }
