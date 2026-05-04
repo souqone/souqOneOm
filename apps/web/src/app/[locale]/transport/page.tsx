@@ -89,7 +89,7 @@ export default function TransportLandingPage() {
       </section>
 
       {/* ── Service Types Grid ── */}
-      <section className="max-w-page-max-width mx-auto px-page-padding-x-md lg:px-page-padding-x-lg py-16 md:py-24">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 py-16 md:py-24">
         <div className="flex flex-col gap-4 mb-12">
           <h2 className="font-hero-md text-hero-md text-on-surface">{t('whatToTransport')}</h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant">
@@ -121,7 +121,7 @@ export default function TransportLandingPage() {
 
       {/* ── Latest Requests ── */}
       <section className="bg-surface-container-low py-16 md:py-24">
-        <div className="max-w-page-max-width mx-auto px-page-padding-x-md lg:px-page-padding-x-lg">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6">
           <div className="flex justify-between items-end mb-10">
             <div>
               <h2 className="font-hero-md text-hero-md text-on-surface mb-2">
@@ -176,7 +176,7 @@ export default function TransportLandingPage() {
       </section>
 
       {/* ── Carrier CTA ── */}
-      <section className="max-w-page-max-width mx-auto px-page-padding-x-md lg:px-page-padding-x-lg py-20">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 py-20">
         <div className="bg-gradient-to-r from-surface-container-high to-surface-variant rounded-3xl p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8 border border-outline-variant/20 shadow-sm relative overflow-hidden">
           <div className="absolute -right-20 -top-20 opacity-5">
             <span className="material-symbols-outlined text-[300px]" style={{ fontVariationSettings: "'FILL' 1" }}>

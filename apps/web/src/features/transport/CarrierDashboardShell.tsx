@@ -40,7 +40,7 @@ export default function CarrierDashboardShell() {
   }
 
   if (loading) return (
-    <main className="flex-1 p-4 md:p-8 pb-mobile-bottom-nav lg:pb-10 w-full">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
       <div className="space-y-6">
         {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-surface-dim rounded-xl animate-pulse" />)}
       </div>
@@ -48,7 +48,7 @@ export default function CarrierDashboardShell() {
   )
 
   if (!profile) return (
-    <main className="flex-1 p-8 text-center">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8 text-center">
       <p className="text-title-lg text-on-surface-variant mb-4">ليس لديك بروفايل مزود بعد.</p>
       <Link href="/transport/carrier/register"
         className="bg-gradient-to-br from-brand-amber to-amber-600 text-white px-6 py-3 rounded-xl font-title-md">
@@ -58,7 +58,7 @@ export default function CarrierDashboardShell() {
   )
 
   return (
-    <main className="flex-1 p-4 md:p-8 lg:p-10 pb-mobile-bottom-nav lg:pb-10 w-full overflow-x-hidden">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
       {/* Availability toggle */}
       <section className="bg-brand-navy rounded-2xl p-6 md:p-8 shadow-lg mb-8 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-6 outline outline-1 outline-white/10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none"

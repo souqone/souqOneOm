@@ -75,7 +75,7 @@ export default function BookingDetailShell({ id }: { id: string }) {
   useEffect(() => { load() }, [id])
 
   if (loading) return (
-    <main className="max-w-[700px] mx-auto px-page-padding-x-sm md:px-page-padding-x-md py-8">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
       <div className="space-y-6">
         {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-surface-dim rounded-xl animate-pulse" />)}
       </div>
@@ -83,7 +83,7 @@ export default function BookingDetailShell({ id }: { id: string }) {
   )
 
   if (!booking) return (
-    <main className="max-w-[700px] mx-auto px-page-padding-x-sm py-16 text-center text-on-surface-variant">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-16 text-center text-on-surface-variant">
       الحجز غير موجود
     </main>
   )
@@ -96,7 +96,7 @@ export default function BookingDetailShell({ id }: { id: string }) {
   const canCancel   = booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS'
 
   return (
-    <main className="max-w-[700px] mx-auto px-page-padding-x-sm md:px-page-padding-x-md py-8">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
       <div className="flex flex-col gap-6">
         {/* Status header */}
         <div className="flex flex-col items-center justify-center text-center space-y-4 pt-4">

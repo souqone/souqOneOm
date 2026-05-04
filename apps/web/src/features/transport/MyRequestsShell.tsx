@@ -61,7 +61,7 @@ export default function MyRequestsShell() {
   }
 
   return (
-    <main className="max-w-page-max-width mx-auto px-page-padding-x-sm md:px-page-padding-x-lg py-8">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <h1 className="font-hero-lg text-hero-lg text-on-background">{t('myRequests')}</h1>

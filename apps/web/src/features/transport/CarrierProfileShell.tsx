@@ -30,7 +30,7 @@ export default function CarrierProfileShell({ id }: { id: string }) {
   }, [id])
 
   if (loading) return (
-    <main className="max-w-page-max-width mx-auto px-page-padding-x-sm md:px-page-padding-x-lg py-8 space-y-6">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-6">
       <div className="h-64 bg-surface-dim rounded-xl animate-pulse" />
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-4 h-48 bg-surface-dim rounded-xl animate-pulse" />
@@ -40,7 +40,7 @@ export default function CarrierProfileShell({ id }: { id: string }) {
   )
 
   if (!carrier) return (
-    <main className="max-w-page-max-width mx-auto px-page-padding-x-sm py-16 text-center text-on-surface-variant">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-16 text-center text-on-surface-variant">
       <span className="material-symbols-outlined text-6xl text-outline mb-4 block">person_off</span>
       <p className="text-title-lg">لم يتم العثور على البروفايل</p>
     </main>
@@ -49,7 +49,7 @@ export default function CarrierProfileShell({ id }: { id: string }) {
   const displayName = carrier.companyName ?? carrier.user?.displayName ?? carrier.user?.username
 
   return (
-    <main className="flex-grow w-full max-w-page-max-width mx-auto px-page-padding-x-sm md:px-page-padding-x-lg py-8 space-y-6">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-6">
       {/* Hero banner */}
       <div className="relative bg-surface-container-lowest rounded-xl shadow-sm outline outline-1 outline-outline-variant/10 overflow-hidden">
         {/* Cover */}

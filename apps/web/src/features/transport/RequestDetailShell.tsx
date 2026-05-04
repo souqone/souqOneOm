@@ -169,7 +169,7 @@ export default function RequestDetailShell({ id }: { id: string }) {
   }
 
   if (loading) return (
-    <main className="max-w-page-max-width mx-auto px-6 md:px-10 pt-8 pb-16">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-8 pb-16">
       <div className="animate-pulse space-y-4">
         {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-surface-dim rounded-xl" />)}
       </div>
@@ -177,7 +177,7 @@ export default function RequestDetailShell({ id }: { id: string }) {
   )
 
   if (!req) return (
-    <main className="max-w-page-max-width mx-auto px-6 pt-16 text-center text-on-surface-variant">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-16 text-center text-on-surface-variant">
       الطلب غير موجود
     </main>
   )
@@ -189,7 +189,7 @@ export default function RequestDetailShell({ id }: { id: string }) {
     : req.budgetMin ? `من ${req.budgetMin} ر.ع.` : req.budgetMax ? `حتى ${req.budgetMax} ر.ع.` : t('fields.budgetNotSet')
 
   return (
-    <main className="max-w-page-max-width mx-auto px-6 md:px-10 pt-8 pb-16">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-8 pb-16">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-body-sm text-secondary mb-6">
         <Link href="/transport" className="hover:text-primary transition-colors">{t('title')}</Link>
