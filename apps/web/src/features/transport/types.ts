@@ -19,11 +19,16 @@ export type TransportRequestStatus =
   | 'CANCELLED'
   | 'EXPIRED'
 
+/** Alias for freighthub compatibility */
+export type RequestStatus = TransportRequestStatus
+
 export type QuoteStatus =
   | 'PENDING'
   | 'ACCEPTED'
   | 'REJECTED'
   | 'WITHDRAWN'
+
+export type BookingStatus = 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
 export type VehicleType =
   | 'PICKUP'
@@ -99,6 +104,7 @@ export interface TransportRequest {
   expiresAt?: string
   quotes?: TransportQuote[]
   quotesCount?: number
+  _count?: { quotes: number }
   booking?: TransportBooking
   createdAt: string
   updatedAt: string
@@ -189,4 +195,18 @@ export interface CreateCarrierProfileDto {
   city?: string
   contactPhone?: string
   whatsapp?: string
+}
+
+/** Alias for freighthub compatibility */
+export type CreateRequestDto = CreateTransportRequestDto
+
+export interface GetRequestsParams {
+  page?: number
+  limit?: number
+  serviceType?: TransportServiceType
+  status?: TransportRequestStatus
+  fromGovernorate?: string
+  toGovernorate?: string
+  sortBy?: 'createdAt' | 'budgetMax' | 'scheduledAt'
+  sortOrder?: 'asc' | 'desc'
 }

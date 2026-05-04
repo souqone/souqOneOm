@@ -10,6 +10,8 @@ export type EntityType =
   | 'BUS_LISTING'
   | 'EQUIPMENT_LISTING'
   | 'OPERATOR_LISTING'
+  | 'TRANSPORT_REQUEST'
+  | 'CARRIER_PROFILE'
 ;
 
 export interface FavoriteEntity {

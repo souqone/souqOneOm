@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMyListings as useMyListingsHook } from '@/features/shared/hooks/useMyListings';
+import { useDeleteListing as useDeleteListingHook } from '@/features/shared/hooks/useDeleteListing';
 import { apiRequest } from '../auth';
 
 // ═══════════════════════════════════════
@@ -170,10 +172,7 @@ export function useEquipmentListing(id: string) {
 }
 
 export function useMyEquipmentListings() {
-  return useQuery<EquipmentListingItem[]>({
-    queryKey: ['equipment', 'my'],
-    queryFn: () => apiRequest('/equipment/my'),
-  });
+  return useMyListingsHook<EquipmentListingItem>('equipment', '/equipment/my');
 }
 
 export function useEquipmentListingBySlug(slug: string) {
@@ -221,11 +220,7 @@ export function useUpdateEquipmentListing() {
 }
 
 export function useDeleteEquipmentListing() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiRequest(`/equipment/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment'] }); },
-  });
+  return useDeleteListingHook('equipment', (id) => `/equipment/${id}`);
 }
 
 // ═══════════════════════════════════════
@@ -250,10 +245,7 @@ export function useEquipmentRequest(id: string) {
 }
 
 export function useMyEquipmentRequests() {
-  return useQuery<EquipmentRequestItem[]>({
-    queryKey: ['equipment-requests', 'my'],
-    queryFn: () => apiRequest('/equipment-requests/my'),
-  });
+  return useMyListingsHook<EquipmentRequestItem>('equipment-requests', '/equipment-requests/my');
 }
 
 export function useCreateEquipmentRequest() {
@@ -284,11 +276,7 @@ export function useChangeRequestStatus() {
 }
 
 export function useDeleteEquipmentRequest() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiRequest(`/equipment-requests/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
+  return useDeleteListingHook('equipment-requests', (id) => `/equipment-requests/${id}`);
 }
 
 // ═══════════════════════════════════════
@@ -344,10 +332,7 @@ export function useOperatorListing(id: string) {
 }
 
 export function useMyOperatorListings() {
-  return useQuery<OperatorListingItem[]>({
-    queryKey: ['operators', 'my'],
-    queryFn: () => apiRequest('/operators/my'),
-  });
+  return useMyListingsHook<OperatorListingItem>('operators', '/operators/my');
 }
 
 export function useCreateOperatorListing() {
@@ -369,9 +354,5 @@ export function useUpdateOperatorListing() {
 }
 
 export function useDeleteOperatorListing() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiRequest(`/operators/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['operators'] }); },
-  });
+  return useDeleteListingHook('operators', (id) => `/operators/${id}`);
 }

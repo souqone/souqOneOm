@@ -1,113 +1,136 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import type { TransportRequest } from '../types'
+import Link from 'next/link';
+import {
+  Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
+  MapPin, Weight, Calendar, MessageSquare, Clock, ChevronLeft,
+} from 'lucide-react';
+import type { TransportRequest, TransportServiceType } from '../types';
+import {
+  SERVICE_TYPE_LABELS,
+  SERVICE_TYPE_COLORS,
+  SERVICE_TYPE_BG_COLORS,
+  REQUEST_STATUS_LABELS,
+} from '../constants';
+import {
+  formatBudgetRange,
+  formatScheduledDate,
+  formatRelativeDate,
+  getRequestStatusBadgeClass,
+  getStatusDotColor,
+} from '@/lib/utils';
 
-const SERVICE_ICONS: Record<string, string> = {
-  GOODS: 'inventory_2',
-  FURNITURE: 'chair',
-  CONSTRUCTION: 'construction',
-  HEAVY: 'precision_manufacturing',
-  BACKLOAD: 'swap_horiz',
-  EQUIPMENT: 'agriculture',
-}
-
-const STATUS_CLASSES: Record<string, string> = {
-  OPEN: 'bg-brand-green/10 text-brand-green border border-brand-green/20',
-  QUOTED: 'bg-primary/10 text-primary border border-primary/20',
-  ACCEPTED: 'bg-primary/10 text-primary border border-primary/20',
-  IN_PROGRESS: 'bg-brand-amber/10 text-brand-amber border border-brand-amber/20',
-  COMPLETED: 'bg-brand-green/10 text-brand-green border border-brand-green/20',
-  CANCELLED: 'bg-error/10 text-error border border-error/20',
-  EXPIRED: 'bg-on-surface-variant/10 text-on-surface-variant border border-outline-variant',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  OPEN: 'مفتوح',
-  QUOTED: 'وصلت عروض',
-  ACCEPTED: 'تم القبول',
-  IN_PROGRESS: 'جارٍ التنفيذ',
-  COMPLETED: 'مكتمل',
-  CANCELLED: 'ملغى',
-  EXPIRED: 'منتهي',
-}
+const SERVICE_ICONS: Record<TransportServiceType, React.ElementType> = {
+  GOODS: Package,
+  FURNITURE: Sofa,
+  CONSTRUCTION: HardHat,
+  HEAVY: Container,
+  BACKLOAD: ArrowLeftRight,
+  EQUIPMENT: Wrench,
+};
 
 interface Props {
-  request: TransportRequest
+  request: TransportRequest;
 }
 
 export default function TransportRequestCard({ request }: Props) {
-  const icon = SERVICE_ICONS[request.serviceType] ?? 'local_shipping'
-  const statusClass = STATUS_CLASSES[request.status] ?? STATUS_CLASSES.OPEN
-  const statusLabel = STATUS_LABELS[request.status] ?? request.status
-
-  const scheduledLabel = request.scheduledAt
-    ? new Date(request.scheduledAt).toLocaleDateString('ar-OM', { month: 'short', day: 'numeric' })
-    : request.isFlexible
-      ? 'مرن'
-      : 'أسرع وقت'
+  const ServiceIcon = SERVICE_ICONS[request.serviceType] ?? Package;
+  const iconColor = SERVICE_TYPE_COLORS[request.serviceType] ?? '#9ca3af';
+  const iconBg = SERVICE_TYPE_BG_COLORS[request.serviceType] ?? '#f3f4f6';
+  const statusBadgeClass = getRequestStatusBadgeClass(request.status);
+  const statusLabel = REQUEST_STATUS_LABELS[request.status] ?? request.status;
+  const dotColor = getStatusDotColor(request.status);
+  const quotesCount = request.quotesCount ?? request._count?.quotes ?? 0;
 
   return (
     <Link
       href={`/transport/requests/${request.id}`}
-      className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 p-5 shadow-sm hover:shadow-lg hover:border-outline-variant/20 transition-all flex flex-col gap-4"
+      className="card-base card-hover block p-4"
+      dir="rtl"
     >
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary-container/10 p-2 rounded-lg text-primary">
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>
-              route
-            </span>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: iconBg }}
+          >
+            <ServiceIcon size={18} style={{ color: iconColor }} />
           </div>
-          <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-on-surface-variant">المسار</span>
-            <span className="font-title-md text-title-md text-on-surface">
-              من {request.fromGovernorate} ← إلى {request.toGovernorate}
-            </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[var(--color-on-surface)] truncate" style={{ fontWeight: 700 }}>
+              {SERVICE_TYPE_LABELS[request.serviceType]}
+            </p>
+            <p className="text-[11px] text-[var(--color-on-surface-muted)]">
+              {formatRelativeDate(request.createdAt)}
+            </p>
           </div>
         </div>
-        <span className={`font-label-md text-label-md px-3 py-1 rounded-full ${statusClass}`}>
+        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${statusBadgeClass}`}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dotColor }} />
           {statusLabel}
         </span>
       </div>
 
-      <hr className="border-outline-variant/20 my-2" />
-
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
-              {icon}
-            </span>
-            <span className="font-label-sm text-label-sm">النوع</span>
-          </div>
-          <span className="font-body-sm text-body-sm text-on-surface">
-            {request.cargoDescription.slice(0, 20)}
-          </span>
+      {/* Route */}
+      <div className="flex gap-2.5 mb-3">
+        <div className="flex flex-col items-center pt-1 flex-shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full border-2 border-green-500 bg-green-50" />
+          <div className="w-0 border-r-2 border-dashed border-amber-400 h-6 my-0.5" />
+          <div className="w-2.5 h-2.5 rounded-full border-2 border-amber-500 bg-amber-50" />
         </div>
-
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
-              scale
+        <div className="flex flex-col justify-between gap-1.5 min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <MapPin size={12} className="text-green-600 flex-shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-on-surface)] truncate">
+              {request.fromGovernorate}
+              {request.fromCity ? ` — ${request.fromCity}` : ''}
             </span>
-            <span className="font-label-sm text-label-sm">الوزن</span>
           </div>
-          <span className="font-body-sm text-body-sm text-on-surface">
-            {request.weightTons ? `${request.weightTons} طن` : '—'}
-          </span>
+          <div className="flex items-center gap-1">
+            <MapPin size={12} className="text-amber-600 flex-shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-on-surface)] truncate">
+              {request.toGovernorate}
+              {request.toCity ? ` — ${request.toCity}` : ''}
+            </span>
+          </div>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0" }}>
-              calendar_month
+      {/* Cargo */}
+      <div className="bg-[var(--color-surface-container)] rounded-xl px-3 py-2 mb-3">
+        <p className="text-xs text-[var(--color-on-surface-variant)] line-clamp-2 leading-relaxed">
+          {request.cargoDescription}
+        </p>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          {request.weightTons && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--color-on-surface-muted)]">
+              <Weight size={12} />
+              {request.weightTons} طن
             </span>
-            <span className="font-label-sm text-label-sm">التوقيت</span>
-          </div>
-          <span className="font-body-sm text-body-sm text-on-surface">{scheduledLabel}</span>
+          )}
+          <span className="inline-flex items-center gap-1 text-[11px] text-[var(--color-on-surface-muted)]">
+            {request.scheduledAt ? <Calendar size={12} /> : <Clock size={12} />}
+            {formatScheduledDate(request.scheduledAt)}
+          </span>
+          {quotesCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-brand-navy)]">
+              <MessageSquare size={12} />
+              {quotesCount} عرض
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-bold text-[var(--color-brand-navy)]">
+            {formatBudgetRange(request.budgetMin, request.budgetMax)}
+          </span>
+          <ChevronLeft size={14} className="text-[var(--color-on-surface-muted)]" />
         </div>
       </div>
     </Link>
-  )
+  );
 }

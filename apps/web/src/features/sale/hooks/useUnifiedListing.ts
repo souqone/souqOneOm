@@ -16,11 +16,15 @@ import type { BusListingItem } from '@/lib/api/buses';
 import type { EquipmentListingItem } from '@/lib/api/equipment';
 import type { SparePartItem } from '@/lib/api/parts';
 import type { CarServiceItem } from '@/lib/api/services';
-import { getImageUrl } from '@/lib/image-utils';
+import {
+  isValidPrice,
+  parsePriceRequired as parsePrice,
+  normalizeImages,
+  normalizeSeller,
+} from '@/features/shared/utils/listing-normalizers';
 import type {
   SaleEntityType,
   UnifiedListing,
-  UnifiedSeller,
   CarSpecificData,
   BusSpecificData,
   EquipmentSpecificData,
@@ -28,67 +32,6 @@ import type {
   ServiceSpecificData,
   UseUnifiedListingResult,
 } from '../types/unified.types';
-
-/** Check if a value is a valid numeric price */
-function isValidPrice(value: unknown): value is number {
-  if (typeof value === 'number') return !Number.isNaN(value) && value >= 0;
-  if (typeof value === 'string') {
-    const num = Number(value);
-    return !Number.isNaN(num) && num >= 0;
-  }
-  return false;
-}
-
-/** Parse price to number, return 0 if invalid */
-function parsePrice(value: unknown): number {
-  if (!isValidPrice(value)) return 0;
-  return typeof value === 'number' ? value : Number(value);
-}
-
-/** Normalize seller/user object to UnifiedSeller */
-function normalizeSeller(
-  seller: unknown,
-  fallbackGovernorate: string | null | undefined,
-  contactOverride?: { phone?: string | null; whatsapp?: string | null },
-): UnifiedSeller {
-  const s = seller as Record<string, unknown> | undefined | null;
-  const governorate = (s?.governorate as string) || fallbackGovernorate || '';
-  const name = (s?.displayName as string) || (s?.username as string) || 'مستخدم';
-  const createdAt = s?.createdAt as string | undefined;
-  const phone = contactOverride?.phone || (s?.phone as string) || undefined;
-  const whatsapp = contactOverride?.whatsapp || contactOverride?.phone || (s?.whatsapp as string) || (s?.phone as string) || undefined;
-
-  const countObj = s?._count as Record<string, number> | undefined;
-  const listingCount = countObj?.listings ?? countObj?.listing ?? (s?.listingCount as number) ?? undefined;
-
-  return {
-    id: (s?.id as string) || '',
-    name,
-    image: (s?.avatarUrl as string) || undefined,
-    phone: phone || undefined,
-    whatsapp: whatsapp || undefined,
-    governorate,
-    verified: Boolean(s?.isVerified),
-    memberSince: createdAt || new Date().toISOString(),
-    listingCount,
-  };
-}
-
-/** Normalize images array to string URLs */
-function normalizeImages(images: unknown): string[] {
-  if (!Array.isArray(images)) return [];
-
-  return images
-    .map((img) => {
-      if (typeof img === 'string') return getImageUrl(img) || '';
-      if (img && typeof img === 'object') {
-        const url = (img as Record<string, unknown>).url;
-        return getImageUrl(url as string) || '';
-      }
-      return '';
-    })
-    .filter((url): url is string => url.length > 0);
-}
 
 /** Transform car listing API response to UnifiedListing */
 function transformCar(raw: ListingItem): UnifiedListing {

@@ -1,0 +1,263 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Almarai", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Brand Colors */
+  --color-primary: #004ac6;
+  --color-primary-foreground: #ffffff;
+  --color-brand-navy: #0B2447;
+  --color-brand-navy-light: #1a3a6e;
+  --color-brand-amber: #E8781E;
+  --color-brand-amber-light: #f59e4a;
+  --color-brand-amber-dark: #c45e0a;
+  --color-brand-green: #16a34a;
+  --color-brand-green-light: #22c55e;
+
+  /* Surface */
+  --color-surface: #f5f7fa;
+  --color-surface-lowest: #ffffff;
+  --color-surface-container: #f0f2f6;
+  --color-surface-container-high: #e8eaf0;
+
+  /* On-surface */
+  --color-on-surface: #111827;
+  --color-on-surface-variant: #4b5563;
+  --color-on-surface-muted: #9ca3af;
+
+  /* Semantic */
+  --color-error: #dc2626;
+  --color-error-light: #fee2e2;
+  --color-warning: #d97706;
+  --color-warning-light: #fef3c7;
+  --color-success: #16a34a;
+  --color-success-light: #dcfce7;
+  --color-info: #2563eb;
+  --color-info-light: #dbeafe;
+
+  /* Outline */
+  --color-outline: #d1d5db;
+  --color-outline-variant: #e2e6ec;
+
+  /* Status Colors */
+  --color-status-open: #16a34a;
+  --color-status-quoted: #2563eb;
+  --color-status-accepted: #7c3aed;
+  --color-status-in-progress: #d97706;
+  --color-status-completed: #374151;
+  --color-status-cancelled: #dc2626;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 8px 25px -5px rgb(0 0 0 / 0.12), 0 4px 10px -3px rgb(0 0 0 / 0.08);
+  --shadow-modal: 0 20px 60px -10px rgb(0 0 0 / 0.25);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--color-outline-variant);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    direction: rtl;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+
+  input, textarea, select {
+    font-family: var(--font-sans);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-navy {
+    background: linear-gradient(135deg, var(--color-brand-navy) 0%, #0d3060 50%, #1a4a8a 100%);
+  }
+
+  .gradient-amber {
+    background: linear-gradient(135deg, var(--color-brand-amber) 0%, var(--color-brand-amber-light) 100%);
+  }
+
+  .card-base {
+    background-color: var(--color-surface-lowest);
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--color-outline-variant);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-hover {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  }
+
+  .card-hover:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-outline);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-brand-amber) 0%, var(--color-brand-amber-light) 100%);
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    padding: 0.75rem 1.75rem;
+    transition: all 0.15s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-brand-amber-dark) 0%, var(--color-brand-amber) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px -4px rgb(232 120 30 / 0.5);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .btn-outline-white {
+    background: transparent;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    padding: 0.75rem 1.75rem;
+    transition: all 0.15s ease;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-outline-white:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #ffffff;
+  }
+
+  .btn-navy {
+    background-color: var(--color-brand-navy);
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    padding: 0.75rem 1.75rem;
+    transition: all 0.15s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-navy:hover {
+    background-color: var(--color-brand-navy-light);
+    transform: translateY(-1px);
+  }
+
+  .btn-navy:active {
+    transform: scale(0.97);
+  }
+
+  .input-base {
+    width: 100%;
+    background-color: var(--color-surface-lowest);
+    border: 1.5px solid var(--color-outline);
+    border-radius: var(--radius-xl);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    color: var(--color-on-surface);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+  }
+
+  .input-base:focus {
+    border-color: var(--color-brand-amber);
+    box-shadow: 0 0 0 3px rgb(232 120 30 / 0.15);
+  }
+
+  .input-base::placeholder {
+    color: var(--color-on-surface-muted);
+  }
+
+  .badge-open {
+    background: rgba(22, 163, 74, 0.12);
+    color: var(--color-status-open);
+    border: 1px solid rgba(22, 163, 74, 0.2);
+  }
+
+  .badge-quoted {
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--color-status-quoted);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+  }
+
+  .badge-accepted {
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--color-status-accepted);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+  }
+
+  .badge-in-progress {
+    background: rgba(217, 119, 6, 0.12);
+    color: var(--color-status-in-progress);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+  }
+
+  .badge-completed {
+    background: rgba(55, 65, 81, 0.1);
+    color: var(--color-status-completed);
+    border: 1px solid rgba(55, 65, 81, 0.15);
+  }
+
+  .badge-cancelled {
+    background: rgba(220, 38, 38, 0.1);
+    color: var(--color-status-cancelled);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+  }
+
+  .route-line-dashed {
+    border-right: 2px dashed var(--color-brand-amber);
+    height: 2rem;
+    margin-right: 0.35rem;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

@@ -14,6 +14,8 @@ export const INDEXES = {
   SERVICES: 'services',
   JOBS: 'jobs',
   BUSES: 'buses',
+  EQUIPMENT: 'equipment',
+  OPERATORS: 'operators',
 } as const;
 
 type IndexName = (typeof INDEXES)[keyof typeof INDEXES];
@@ -51,6 +53,16 @@ const INDEX_CONFIGS: Record<IndexName, IndexConfig> = {
     searchableAttributes: ['title', 'description', 'make', 'model', 'governorate'],
     filterableAttributes: ['price', 'busListingType', 'busType', 'make', 'governorate', 'status', 'capacity', 'isPremium'],
     sortableAttributes: ['price', 'createdAt', 'viewCount', 'capacity'],
+  },
+  equipment: {
+    searchableAttributes: ['title', 'description', 'make', 'model', 'governorate', 'city'],
+    filterableAttributes: ['price', 'dailyPrice', 'equipmentType', 'listingType', 'condition', 'governorate', 'status', 'isPremium'],
+    sortableAttributes: ['price', 'dailyPrice', 'createdAt', 'viewCount'],
+  },
+  operators: {
+    searchableAttributes: ['title', 'description', 'governorate', 'city'],
+    filterableAttributes: ['operatorType', 'governorate', 'status', 'dailyRate', 'hourlyRate'],
+    sortableAttributes: ['dailyRate', 'hourlyRate', 'createdAt', 'viewCount'],
   },
 };
 
@@ -402,6 +414,116 @@ export class SearchService implements OnModuleInit {
       await this.meili.index(INDEXES.SERVICES).addDocuments(serviceDocs);
     }
     counts.services = serviceDocs.length;
+
+    // ── Jobs ──
+    const jobs = await this.prisma.driverJob.findMany({
+      where: { status: 'ACTIVE' },
+    });
+    const jobDocs = jobs.map(j => this.serializeDocument({
+      id: j.id,
+      title: j.title,
+      slug: j.slug,
+      description: j.description,
+      jobType: j.jobType,
+      employmentType: j.employmentType,
+      salary: j.salary ? Number(j.salary) : null,
+      salaryPeriod: j.salaryPeriod,
+      currency: j.currency,
+      governorate: j.governorate,
+      city: j.city,
+      status: j.status,
+      viewCount: j.viewCount,
+      createdAt: j.createdAt.getTime(),
+    }));
+    if (jobDocs.length > 0) {
+      await this.meili.index(INDEXES.JOBS).addDocuments(jobDocs);
+    }
+    counts.jobs = jobDocs.length;
+
+    // ── Buses ──
+    const buses = await this.prisma.busListing.findMany({
+      where: { status: 'ACTIVE', deletedAt: null },
+      include: { images: { take: 1, orderBy: { order: 'asc' } } },
+    });
+    const busDocs = buses.map(b => this.serializeDocument({
+      id: b.id,
+      title: b.title,
+      slug: b.slug,
+      description: b.description,
+      busListingType: b.busListingType,
+      busType: b.busType,
+      make: b.make,
+      model: b.model,
+      year: b.year,
+      capacity: b.capacity,
+      price: b.price ? Number(b.price) : null,
+      currency: b.currency,
+      isPremium: b.isPremium,
+      governorate: b.governorate,
+      status: b.status,
+      viewCount: b.viewCount,
+      imageUrl: b.images[0]?.url || null,
+      createdAt: b.createdAt.getTime(),
+    }));
+    if (busDocs.length > 0) {
+      await this.meili.index(INDEXES.BUSES).addDocuments(busDocs);
+    }
+    counts.buses = busDocs.length;
+
+    // ── Equipment ──
+    const equipment = await this.prisma.equipmentListing.findMany({
+      where: { status: 'ACTIVE' },
+      include: { images: { take: 1, orderBy: { order: 'asc' } } },
+    });
+    const equipmentDocs = equipment.map(e => this.serializeDocument({
+      id: e.id,
+      title: e.title,
+      slug: e.slug,
+      description: e.description,
+      equipmentType: e.equipmentType,
+      listingType: e.listingType,
+      make: e.make,
+      model: e.model,
+      condition: e.condition,
+      price: e.price ? Number(e.price) : null,
+      dailyPrice: e.dailyPrice ? Number(e.dailyPrice) : null,
+      currency: e.currency,
+      isPremium: e.isPremium,
+      governorate: e.governorate,
+      city: e.city,
+      status: e.status,
+      viewCount: e.viewCount,
+      imageUrl: e.images[0]?.url || null,
+      createdAt: e.createdAt.getTime(),
+    }));
+    if (equipmentDocs.length > 0) {
+      await this.meili.index(INDEXES.EQUIPMENT).addDocuments(equipmentDocs);
+    }
+    counts.equipment = equipmentDocs.length;
+
+    // ── Operators ──
+    const operators = await this.prisma.operatorListing.findMany({
+      where: { status: 'ACTIVE' },
+    });
+    const operatorDocs = operators.map(o => this.serializeDocument({
+      id: o.id,
+      title: o.title,
+      slug: o.slug,
+      description: o.description,
+      operatorType: o.operatorType,
+      dailyRate: o.dailyRate ? Number(o.dailyRate) : null,
+      hourlyRate: o.hourlyRate ? Number(o.hourlyRate) : null,
+      currency: o.currency,
+      governorate: o.governorate,
+      city: o.city,
+      status: o.status,
+      viewCount: o.viewCount,
+      createdAt: o.createdAt.getTime(),
+    }));
+    if (operatorDocs.length > 0) {
+      await this.meili.index(INDEXES.OPERATORS).addDocuments(operatorDocs);
+    }
+    counts.operators = operatorDocs.length;
 
     this.logger.log(`🔄 Reindex complete: ${JSON.stringify(counts)}`);
     return { message: 'Reindex complete', counts };

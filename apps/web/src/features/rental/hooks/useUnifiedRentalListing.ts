@@ -7,61 +7,18 @@ import { useEquipmentListing } from '@/lib/api/equipment';
 import type { ListingItem } from '@/lib/api/listings';
 import type { BusListingItem } from '@/lib/api/buses';
 import type { EquipmentListingItem } from '@/lib/api/equipment';
-import { getImageUrl } from '@/lib/image-utils';
+import {
+  parsePrice,
+  normalizeImages,
+  normalizeSeller,
+} from '@/features/shared/utils/listing-normalizers';
 import type {
   RentalEntityType,
   UnifiedRentalListing,
-  UnifiedRentalSeller,
   RentalCarData,
   RentalBusData,
   RentalEquipmentData,
 } from '../types/unified-rental.types';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function parsePrice(value: unknown): number | undefined {
-  if (value == null) return undefined;
-  const num = typeof value === 'number' ? value : Number(value);
-  return Number.isNaN(num) || num < 0 ? undefined : num;
-}
-
-function normalizeSeller(
-  seller: unknown,
-  fallbackGovernorate: string | null | undefined,
-  contactOverride?: { phone?: string | null; whatsapp?: string | null },
-): UnifiedRentalSeller {
-  const s = seller as Record<string, unknown> | undefined | null;
-  const governorate = (s?.governorate as string) || fallbackGovernorate || '';
-  const name = (s?.displayName as string) || (s?.username as string) || 'مستخدم';
-  const createdAt = s?.createdAt as string | undefined;
-  const phone = contactOverride?.phone || (s?.phone as string) || undefined;
-  const whatsapp = contactOverride?.whatsapp || contactOverride?.phone || (s?.whatsapp as string) || (s?.phone as string) || undefined;
-
-  return {
-    id: (s?.id as string) || '',
-    name,
-    image: (s?.avatarUrl as string) || undefined,
-    phone: phone || undefined,
-    whatsapp: whatsapp || undefined,
-    governorate,
-    verified: Boolean(s?.isVerified),
-    memberSince: createdAt || new Date().toISOString(),
-  };
-}
-
-function normalizeImages(images: unknown): string[] {
-  if (!Array.isArray(images)) return [];
-  return images
-    .map((img) => {
-      if (typeof img === 'string') return getImageUrl(img) || '';
-      if (img && typeof img === 'object') {
-        const url = (img as Record<string, unknown>).url;
-        return getImageUrl(url as string) || '';
-      }
-      return '';
-    })
-    .filter((url): url is string => url.length > 0);
-}
 
 // ─── Rental type guards ──────────────────────────────────────────────────────
 

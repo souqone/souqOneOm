@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMyListings as useMyListingsHook } from '@/features/shared/hooks/useMyListings';
+import { useDeleteListing as useDeleteListingHook } from '@/features/shared/hooks/useDeleteListing';
 import { apiRequest } from '../auth';
 
 export interface BusListingItem {
@@ -88,10 +90,7 @@ export function useBusListing(id: string) {
 }
 
 export function useMyBusListings() {
-  return useQuery<BusListingItem[]>({
-    queryKey: ['buses', 'my'],
-    queryFn: () => apiRequest('/buses/my'),
-  });
+  return useMyListingsHook<BusListingItem>('buses', '/buses/my');
 }
 
 export function useBusListingBySlug(slug: string) {
@@ -139,10 +138,5 @@ export function useUpdateBusListing() {
 }
 
 export function useDeleteBusListing() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiRequest(`/buses/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['buses'] }); },
-  });
+  return useDeleteListingHook('buses', (id) => `/buses/${id}`);
 }

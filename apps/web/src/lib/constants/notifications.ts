@@ -152,6 +152,42 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     labelKey: 'notifTypeJob',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : '/jobs'),
   },
+  TRANSPORT_QUOTE_RECEIVED: {
+    icon: Tag,
+    bg: 'bg-teal-500/10',
+    text: 'text-teal-600',
+    strip: 'bg-teal-500',
+    border: 'border-teal-200',
+    labelKey: 'notifTypeTransport',
+    navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-requests'),
+  },
+  TRANSPORT_BOOKING_CONFIRMED: {
+    icon: CheckCheck,
+    bg: 'bg-teal-500/10',
+    text: 'text-teal-600',
+    strip: 'bg-teal-500',
+    border: 'border-teal-200',
+    labelKey: 'notifTypeTransport',
+    navigateTo: (d) => (d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-requests'),
+  },
+  TRANSPORT_BOOKING_CANCELLED: {
+    icon: AlertCircle,
+    bg: 'bg-orange-500/10',
+    text: 'text-orange-500',
+    strip: 'bg-orange-500',
+    border: 'border-orange-200',
+    labelKey: 'notifTypeTransport',
+    navigateTo: (d) => (d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-requests'),
+  },
+  TRANSPORT_REQUEST_CLOSED: {
+    icon: CheckCheck,
+    bg: 'bg-green-500/10',
+    text: 'text-green-600',
+    strip: 'bg-green-500',
+    border: 'border-green-200',
+    labelKey: 'notifTypeTransport',
+    navigateTo: (d) => (d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-requests'),
+  },
 };
 
 export const DEFAULT_NOTIF_CONFIG: NotifTypeConfig = {

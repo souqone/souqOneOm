@@ -76,7 +76,7 @@ export class TransportQuoteService {
 
     // Notify shipper
     await this.notifications.create({
-      type: 'SYSTEM',
+      type: 'TRANSPORT_QUOTE_RECEIVED',
       title: 'عرض سعر جديد',
       body: `وصلك عرض بسعر ${dto.price} ر.ع.`,
       userId: request.userId,
@@ -162,7 +162,7 @@ export class TransportQuoteService {
 
     // Notify accepted carrier
     await this.notifications.create({
-      type: 'SYSTEM',
+      type: 'TRANSPORT_BOOKING_CONFIRMED',
       title: 'تم قبول عرضك',
       body: 'تم قبول عرضك على طلب النقل',
       userId: quote.carrier.userId,
