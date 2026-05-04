@@ -32,48 +32,58 @@ export default function TransportLandingPage() {
   return (
     <>
       {/* ── Hero Section ── */}
-      <section className="relative bg-gradient-to-br from-brand-navy to-[#1a3a6b] overflow-hidden pt-12 pb-24 md:py-32">
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%)' }}
-        />
-        <div className="max-w-page-max-width mx-auto px-page-padding-x-md lg:px-page-padding-x-lg relative z-10 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          {/* Text */}
-          <div className="flex flex-col gap-8 text-on-primary order-2 md:order-1 text-right">
-            <h1 className="font-hero-lg text-hero-lg text-on-primary">
-              {t('subtitle')}
-            </h1>
-            <p className="font-title-lg text-title-lg text-primary-fixed-dim opacity-90 max-w-lg leading-relaxed">
-              {t('carrierCta').split('—')[0]?.trim() ?? t('subtitle')}
-            </p>
-            <div className="flex flex-wrap gap-4 mt-4">
-              <Link
-                href="/transport/new"
-                className="bg-gradient-to-br from-brand-amber to-orange-600 text-on-primary font-title-md text-title-md px-8 py-4 rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-95 duration-200 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  add_circle
-                </span>
-                {t('newRequest')}
-              </Link>
-              <Link
-                href="/transport/carrier/register"
-                className="bg-transparent border-2 border-outline-variant text-on-primary font-title-md text-title-md px-8 py-4 rounded-xl hover:bg-white/10 transition-all active:scale-95 duration-200 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>
-                  local_shipping
-                </span>
-                {t('becomeCarrier')}
-              </Link>
-            </div>
-          </div>
+      <section>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
+          <div className="relative w-full aspect-[16/9] sm:aspect-[16/5] rounded-2xl sm:rounded-3xl overflow-hidden">
 
-          {/* Image placeholder */}
-          <div className="order-1 md:order-2 rounded-2xl overflow-hidden shadow-2xl relative h-64 md:h-96 w-full outline outline-1 outline-white/10 bg-brand-navy/60 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[120px] text-white/20" style={{ fontVariationSettings: "'FILL' 1" }}>
-              local_shipping
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/80 to-transparent" />
+            {/* Background — navy gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0a1e52] via-[#102a6e] to-[#1a3a6b]" />
+
+            {/* Subtle radial overlay */}
+            <div
+              className="absolute inset-0 opacity-10"
+              style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #ffffff22 0%, transparent 60%)' }}
+            />
+
+            {/* Dark gradient overlay — same as home */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e52]/90 via-[#0a1e52]/30 to-transparent" />
+
+            {/* Decorative icon — top-left (non-text side) */}
+            <div className="absolute top-4 left-4 sm:top-8 sm:left-8 opacity-20 pointer-events-none">
+              <span
+                className="material-symbols-outlined text-white"
+                style={{ fontSize: 'clamp(80px, 15vw, 160px)', fontVariationSettings: "'FILL' 1" }}
+              >
+                local_shipping
+              </span>
+            </div>
+
+            {/* Content pinned to bottom — same positioning as home hero */}
+            <div className="absolute bottom-0 inset-x-0 px-4 sm:px-8 lg:px-12 pb-3 sm:pb-6 lg:pb-10 text-right">
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-tight mb-1 sm:mb-2 lg:mb-3">
+                {t('subtitle')}
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-xl ms-auto">
+                {t('carrierCta').split('—')[0]?.trim() ?? t('subtitle')}
+              </p>
+              <div className="flex flex-wrap gap-2 sm:gap-3 justify-end">
+                <Link
+                  href="/transport/new"
+                  className="btn-brand shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl hover:brightness-110 transition-all"
+                >
+                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>add_circle</span>
+                  {t('newRequest')}
+                </Link>
+                <Link
+                  href="/transport/carrier/register"
+                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
+                >
+                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>local_shipping</span>
+                  {t('becomeCarrier')}
+                </Link>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
