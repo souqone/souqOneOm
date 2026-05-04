@@ -1721,6 +1721,8 @@
 
     "busTitle": "Add Bus Listing",
     "busSubmit": "Publish Listing",
+    "busEditTitle": "Edit Bus Listing",
+    "busEditSubmit": "Save Changes",
     "busSuccess": "Bus listing published successfully!",
     "busError": "An error occurred",
     "busUnspecified": "Unspecified",
@@ -1844,6 +1846,8 @@
 
     "eqTitle": "Add Equipment Listing",
     "eqSubmit": "Publish Listing",
+    "eqEditTitle": "Edit Equipment Listing",
+    "eqEditSubmit": "Save Changes",
     "eqSuccess": "Equipment listing published successfully",
     "eqError": "An error occurred",
     "eqErrTitle": "Title is required",
@@ -1921,6 +1925,8 @@
 
     "svcTitle": "Add Car Service",
     "svcSubmit": "Publish Listing",
+    "svcEditTitle": "Edit Service Listing",
+    "svcEditSubmit": "Save Changes",
     "svcSuccess": "Service listing published successfully!",
     "svcError": "An error occurred",
     "svcStepBasic": "Basic Info",
@@ -1980,6 +1986,8 @@
 
     "partTitle": "Add Spare Part",
     "partSubmit": "Publish Listing",
+    "partEditTitle": "Edit Spare Part Listing",
+    "partEditSubmit": "Save Changes",
     "partSuccess": "Part listing published successfully!",
     "partError": "An error occurred",
     "partStepBasic": "Basic Info",
@@ -2031,6 +2039,8 @@
     "partLabelWhatsapp": "WhatsApp",
     "opTitle": "Register as Operator/Technician",
     "opSubmit": "Publish Listing",
+    "opEditTitle": "Edit Operator Listing",
+    "opEditSubmit": "Save Changes",
     "opSuccess": "Listing published successfully",
     "opError": "An error occurred",
     "opErrTitle": "Title is required",
@@ -2065,6 +2075,7 @@
     "opLabelLocationContact": "Location & Contact",
     "opLabelGov": "Governorate",
     "opSelectGov": "Select Governorate",
+    "opSelectCity": "Select City",
     "opLabelCity": "City",
     "opLabelPhone": "Phone Number",
     "opLabelWhatsapp": "WhatsApp",

@@ -1751,6 +1751,8 @@
 
     "busTitle": "إضافة إعلان حافلة",
     "busSubmit": "نشر الإعلان",
+    "busEditTitle": "تعديل إعلان الحافلة",
+    "busEditSubmit": "حفظ التعديلات",
     "busSuccess": "تم نشر إعلان الحافلة بنجاح!",
     "busError": "حدث خطأ",
     "busUnspecified": "غير محدد",
@@ -1874,6 +1876,8 @@
 
     "eqTitle": "إضافة إعلان معدة",
     "eqSubmit": "نشر الإعلان",
+    "eqEditTitle": "تعديل إعلان المعدة",
+    "eqEditSubmit": "حفظ التعديلات",
     "eqSuccess": "تم نشر إعلان المعدة بنجاح",
     "eqError": "حدث خطأ",
     "eqErrTitle": "العنوان مطلوب",
@@ -1951,6 +1955,8 @@
 
     "svcTitle": "إضافة خدمة سيارات",
     "svcSubmit": "نشر الإعلان",
+    "svcEditTitle": "تعديل إعلان الخدمة",
+    "svcEditSubmit": "حفظ التعديلات",
     "svcSuccess": "تم نشر إعلان الخدمة بنجاح!",
     "svcError": "حدث خطأ",
     "svcStepBasic": "البيانات الأساسية",
@@ -2010,6 +2016,8 @@
 
     "partTitle": "إضافة قطعة غيار",
     "partSubmit": "نشر الإعلان",
+    "partEditTitle": "تعديل إعلان القطعة",
+    "partEditSubmit": "حفظ التعديلات",
     "partSuccess": "تم نشر إعلان القطعة بنجاح!",
     "partError": "حدث خطأ",
     "partStepBasic": "البيانات الأساسية",
@@ -2062,6 +2070,8 @@
 
     "opTitle": "تسجيل كمشغل/فني",
     "opSubmit": "نشر الإعلان",
+    "opEditTitle": "تعديل إعلان المشغل",
+    "opEditSubmit": "حفظ التعديلات",
     "opSuccess": "تم نشر الإعلان بنجاح",
     "opError": "حدث خطأ",
     "opErrTitle": "العنوان مطلوب",
@@ -2096,6 +2106,7 @@
     "opLabelLocationContact": "الموقع والتواصل",
     "opLabelGov": "المحافظة",
     "opSelectGov": "اختر المحافظة",
+    "opSelectCity": "اختر المدينة",
     "opLabelCity": "المدينة",
     "opLabelPhone": "رقم الهاتف",
     "opLabelWhatsapp": "واتساب",

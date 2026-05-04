@@ -230,6 +230,7 @@ export function EquipmentForm({ mode, initialData, id }: EquipmentFormProps) {
           if (img.file) {
             const fd = new FormData();
             fd.append('file', img.file);
+            fd.append('isPrimary', String(img.isPrimary));
             await apiFetch(`/uploads/equipment/${result.id}/images`, { method: 'POST', body: fd });
           }
         }
