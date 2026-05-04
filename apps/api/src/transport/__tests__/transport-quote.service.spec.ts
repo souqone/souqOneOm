@@ -99,7 +99,7 @@ describe('TransportQuoteService', () => {
         carrier: { userId: 'carrier1', id: 'c1' },
       });
       const booking = { id: 'b1', requestId: 'r1', quoteId: 'q1' };
-      mockPrisma.$transaction.mockImplementation(async (fn: any) => {
+      mockPrisma.$transaction.mockImplementation(async () => {
         return booking;
       });
 

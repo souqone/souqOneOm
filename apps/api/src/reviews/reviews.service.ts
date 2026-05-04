@@ -62,6 +62,8 @@ export class ReviewsService {
       await this.recalculateDriverProfileRating(dto.entityId);
     } else if (dto.entityType === 'EMPLOYER_PROFILE') {
       await this.recalculateEmployerProfileRating(dto.entityId);
+    } else if (dto.entityType === 'CARRIER_PROFILE') {
+      await this.recalculateCarrierProfileRating(dto.entityId);
     }
 
     // Notify the reviewee
@@ -218,6 +220,22 @@ export class ReviewsService {
       data: {
         averageRating: result._avg.rating ? Math.round(result._avg.rating * 10) / 10 : null,
         reviewCount: result._count,
+      },
+    });
+  }
+
+  private async recalculateCarrierProfileRating(profileId: string) {
+    const result = await this.prisma.review.aggregate({
+      where: { entityType: 'CARRIER_PROFILE', entityId: profileId },
+      _avg: { rating: true },
+      _count: true,
+    });
+
+    await this.prisma.carrierProfile.update({
+      where: { id: profileId },
+      data: {
+        averageRating: result._avg?.rating ? Math.round(result._avg.rating * 10) / 10 : 0,
+        reviewCount: result._count as unknown as number,
       },
     });
   }

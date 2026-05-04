@@ -58,7 +58,7 @@ export class TransportBookingService {
 
     // Notify shipper
     await this.notifications.create({
-      type: 'SYSTEM',
+      type: 'TRANSPORT_BOOKING_CONFIRMED',
       title: 'بدأ النقل',
       body: 'الناقل بدأ في تنفيذ طلبك',
       userId: booking.request.userId,
@@ -106,7 +106,7 @@ export class TransportBookingService {
 
     // Notify carrier
     await this.notifications.create({
-      type: 'SYSTEM',
+      type: 'TRANSPORT_REQUEST_CLOSED',
       title: 'تم إتمام الطلب',
       body: 'تم تأكيد إتمام طلب النقل بنجاح',
       userId: booking.quote.carrier.userId,
@@ -158,7 +158,7 @@ export class TransportBookingService {
       ? booking.quote.carrier.userId
       : booking.request.userId;
     await this.notifications.create({
-      type: 'SYSTEM',
+      type: 'TRANSPORT_BOOKING_CANCELLED',
       title: 'تم إلغاء الحجز',
       body: reason ? `تم إلغاء الحجز: ${reason}` : 'تم إلغاء حجز النقل',
       userId: otherUserId,

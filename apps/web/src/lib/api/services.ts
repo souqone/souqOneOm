@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMyListings as useMyListingsHook } from '@/features/shared/hooks/useMyListings';
+import { useDeleteListing as useDeleteListingHook } from '@/features/shared/hooks/useDeleteListing';
 import { apiRequest } from '../auth';
 
 export interface CarServiceItem {
@@ -58,10 +60,7 @@ export function useCarService(id: string) {
 }
 
 export function useMyCarServices() {
-  return useQuery<CarServiceItem[]>({
-    queryKey: ['services', 'my'],
-    queryFn: () => apiRequest('/services/my'),
-  });
+  return useMyListingsHook<CarServiceItem>('services', '/services/my');
 }
 
 export function useCarServiceBySlug(slug: string) {
@@ -111,10 +110,5 @@ export function useRemoveServiceImage() {
 }
 
 export function useDeleteCarService() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiRequest(`/services/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['services'] }); },
-  });
+  return useDeleteListingHook('services', (id) => `/services/${id}`);
 }

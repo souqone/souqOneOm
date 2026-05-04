@@ -7,8 +7,8 @@ import { useBrands, useCarModels, useCarYears } from '@/lib/api';
 import { getGovernorates, getCities } from '@/lib/location-data';
 import { fuelLabels as fuelLabelsT, transmissionLabels as transLabelsT, conditionLabels as condLabelsT, cancelLabels as cancelLabelsT, exteriorColors as exteriorColorsT, interiorColors as interiorColorsT, BODY_OPTIONS, DRIVE_OPTIONS, CANCEL_OPTIONS } from '@/lib/constants/mappings';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
-import { FormErrorOverlay } from '@/components/form-error-overlay';
-import { inputCls, labelCls, sectionCls, sectionTitleCls, chipCls, checkboxLabelCls, checkboxCls, checkboxTextCls } from '@/lib/constants/form-styles';
+import { FormSection, FormErrorDisplay, FormToggle, FormTextarea, FormInput } from '@/features/ads/components/forms/shared';
+import { inputCls, labelCls, sectionCls, sectionTitleCls, chipCls } from '@/lib/constants/form-styles';
 import { useTranslations, useLocale } from 'next-intl';
 
 const LocationPicker = dynamic(() => import('@/components/map/location-picker'), { ssr: false });
@@ -256,8 +256,7 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
       {step === 0 && (
         <div className="space-y-8">
           {/* Listing Type Toggle */}
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">sell</span>{tp('lfSectionLabel')}</h2>
+          <FormSection icon="sell" title={tp('lfSectionLabel')}>
             <div className="flex items-center gap-3 bg-surface-container-low rounded-xl px-4 py-3">
               <span className="text-primary text-lg">🚗</span>
               <span className="text-sm text-on-surface-variant">{tp('lfCategoryName')}</span>
@@ -285,18 +284,16 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                 </button>
               ))}
             </div>
-          </section>
+          </FormSection>
 
           {/* Images */}
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">add_photo_alternate</span>{tp('lfUploadTitle')}</h2>
+          <FormSection icon="add_photo_alternate" title={tp('lfUploadTitle')}>
             <ImageUploader images={images} onChange={setImages} disabled={isLoading} />
             <p className="text-xs text-on-surface-variant mt-3">{tp('lfUploadHint')}</p>
-          </section>
+          </FormSection>
 
           {/* Basic Info */}
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">directions_car</span>{tp('lfBasicInfoTitle')}</h2>
+          <FormSection icon="directions_car" title={tp('lfBasicInfoTitle')}>
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -352,15 +349,14 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                 </div>
               </div>
             </div>
-          </section>
+          </FormSection>
         </div>
       )}
 
       {/* ═══ Step 2: تفاصيل السيارة والملكية ═══ */}
       {step === 1 && (
         <div className="space-y-8">
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">tune</span>{tp('lfCarDetailsTitle')}</h2>
+          <FormSection icon="tune" title={tp('lfCarDetailsTitle')}>
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -438,7 +434,7 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                 </div>
               </div>
             </div>
-          </section>
+          </FormSection>
 
           {/* Features / Amenities */}
           <section className={sectionCls}>
@@ -470,8 +466,7 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
 
           {/* Rental-specific fields */}
           {form.listingType === 'RENTAL' && (
-            <section className={sectionCls}>
-              <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">car_rental</span>{tp('lfRentalDetailsTitle')}</h2>
+            <FormSection icon="car_rental" title={tp('lfRentalDetailsTitle')}>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -491,21 +486,12 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <label className={`${checkboxLabelCls} bg-surface-container-low dark:bg-surface-container-high/30 rounded-xl p-3`}>
-                    <input type="checkbox" checked={form.withDriver} onChange={(e) => set('withDriver', e.target.checked)} className={checkboxCls} />
-                    <span className={checkboxTextCls}>{tp('lfWithDriver')}</span>
-                  </label>
-                  <label className={`${checkboxLabelCls} bg-surface-container-low dark:bg-surface-container-high/30 rounded-xl p-3`}>
-                    <input type="checkbox" checked={form.deliveryAvailable} onChange={(e) => set('deliveryAvailable', e.target.checked)} className={checkboxCls} />
-                    <span className={checkboxTextCls}>{tp('lfDeliveryAvailable')}</span>
-                  </label>
-                  <label className={`${checkboxLabelCls} bg-surface-container-low dark:bg-surface-container-high/30 rounded-xl p-3`}>
-                    <input type="checkbox" checked={form.insuranceIncluded} onChange={(e) => set('insuranceIncluded', e.target.checked)} className={checkboxCls} />
-                    <span className={checkboxTextCls}>{tp('lfInsuranceIncluded')}</span>
-                  </label>
+                  <FormToggle name="withDriver" label={tp('lfWithDriver')} checked={form.withDriver} onChange={(v) => set('withDriver', v)} />
+                  <FormToggle name="deliveryAvailable" label={tp('lfDeliveryAvailable')} checked={form.deliveryAvailable} onChange={(v) => set('deliveryAvailable', v)} />
+                  <FormToggle name="insuranceIncluded" label={tp('lfInsuranceIncluded')} checked={form.insuranceIncluded} onChange={(v) => set('insuranceIncluded', v)} />
                 </div>
               </div>
-            </section>
+            </FormSection>
           )}
         </div>
       )}
@@ -513,23 +499,15 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
       {/* ═══ Step 3: تفاصيل الإعلان وبيانات الاتصال ═══ */}
       {step === 2 && (
         <div className="space-y-8">
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">edit_note</span>{tp('lfAdDetailsTitle')}</h2>
+          <FormSection icon="edit_note" title={tp('lfAdDetailsTitle')}>
             <div className="space-y-5">
-              <div>
-                <label className={labelCls}>{tp('lfAdTitle')}</label>
-                <input type="text" required value={form.title} onChange={(e) => set('title', e.target.value)} placeholder={tp('lfAdTitlePlaceholder')} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{tp('lfDescription')}</label>
-                <textarea rows={4} value={form.description} onChange={(e) => set('description', e.target.value)} placeholder={tp('lfDescriptionPlaceholder')} className={inputCls + ' resize-none'} />
-              </div>
+              <FormInput label={tp('lfAdTitle')} name="title" value={form.title} onChange={(v) => set('title', v)} type="text" required placeholder={tp('lfAdTitlePlaceholder')} />
+              <FormTextarea label={tp('lfDescription')} name="description" value={form.description} onChange={(v) => set('description', v)} placeholder={tp('lfDescriptionPlaceholder')} rows={4} />
             </div>
-          </section>
+          </FormSection>
 
           {/* Pricing */}
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">payments</span>{form.listingType === 'RENTAL' ? tp('lfPricingRental') : form.listingType === 'WANTED' ? tp('lfPricingWanted') : tp('lfPricingSale')}</h2>
+          <FormSection icon="payments" title={form.listingType === 'RENTAL' ? tp('lfPricingRental') : form.listingType === 'WANTED' ? tp('lfPricingWanted') : tp('lfPricingSale')}>
             {form.listingType === 'WANTED' ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -548,10 +526,7 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                     <input type="number" required step="0.01" value={form.price} onChange={(e) => set('price', e.target.value)} placeholder="0.000" className={inputCls} />
                   </div>
                 </div>
-                <label className={checkboxLabelCls}>
-                  <input type="checkbox" checked={form.isPriceNegotiable} onChange={(e) => set('isPriceNegotiable', e.target.checked)} className={checkboxCls} />
-                  <span className={checkboxTextCls}>{tp('lfNegotiable')}</span>
-                </label>
+                <FormToggle name="isPriceNegotiable" label={tp('lfNegotiable')} checked={form.isPriceNegotiable} onChange={(v) => set('isPriceNegotiable', v)} />
               </div>
             ) : (
               <div className="space-y-4">
@@ -575,11 +550,10 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                 </div>
               </div>
             )}
-          </section>
+          </FormSection>
 
           {/* Location */}
-          <section className={sectionCls}>
-            <h2 className={sectionTitleCls}><span className="material-symbols-outlined text-primary text-lg">location_on</span>{tp('lfLocationTitle')}</h2>
+          <FormSection icon="location_on" title={tp('lfLocationTitle')}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>{tp('lfGovernorate')}</label>
@@ -611,12 +585,12 @@ export function ListingForm({ initialData, initialImages, onSubmit, isLoading, e
                 }}
               />
             </div>
-          </section>
+          </FormSection>
 
         </div>
       )}
 
-      {errorMessages.length > 0 && <FormErrorOverlay messages={errorMessages} onClose={onClearErrors} />}
+      <FormErrorDisplay errors={errorMessages} onClose={onClearErrors} />
     </MultiStepForm>
   );
 }

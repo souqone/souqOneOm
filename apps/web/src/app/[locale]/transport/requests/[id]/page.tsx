@@ -1,13 +1,613 @@
-import { Suspense } from 'react'
-import RequestDetailShell from '@/features/transport/RequestDetailShell'
+'use client';
 
-interface Props { params: Promise<{ id: string }> }
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  MapPin,
+  Package,
+  Calendar,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Star,
+  Truck,
+  MessageSquare,
+  Banknote,
+  Clock,
+  Shield,
+  Send,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+} from 'lucide-react';
+import type {
+  TransportRequest,
+  TransportQuote,
+  CreateQuoteDto,
+} from '@/features/transport/types';
+import { transportApi } from '@/features/transport/api';
+import {
+  SERVICE_TYPE_LABELS,
+  SERVICE_TYPE_COLORS,
+  SERVICE_TYPE_BG_COLORS,
+  REQUEST_STATUS_LABELS,
+  CURRENCY_LABEL,
+} from '@/features/transport/constants';
+import {
+  formatRelativeDate,
+  formatBudgetRange,
+  getRequestStatusBadgeClass,
+} from '@/lib/utils';
+import { useAuth } from '@/providers/auth-provider';
 
-export default async function RequestDetailPage({ params }: Props) {
-  const { id } = await params
+/* ─── Quote Card ──────────────────────────────────────────────── */
+
+interface QuoteCardProps {
+  quote: TransportQuote;
+  isOwner: boolean;
+  requestStatus: string;
+  onAccept: (quoteId: string) => Promise<void>;
+  accepting: string | null;
+}
+
+function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: QuoteCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const isAccepted = quote.status === 'ACCEPTED';
+  const canAccept = isOwner && requestStatus === 'QUOTED' && quote.status === 'PENDING';
+
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    PENDING: { bg: 'var(--color-warning-light)', text: 'var(--color-warning)' },
+    ACCEPTED: { bg: 'var(--color-success-light)', text: 'var(--color-success)' },
+    REJECTED: { bg: 'var(--color-error-light)', text: 'var(--color-error)' },
+    WITHDRAWN: { bg: 'var(--color-surface-container)', text: 'var(--color-on-surface-muted)' },
+  };
+  const sc = statusColors[quote.status] ?? statusColors['PENDING'];
+
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse bg-surface-dim rounded-xl m-8" />}>
-      <RequestDetailShell id={id} />
-    </Suspense>
-  )
+    <div
+      className={`card-base p-4 flex flex-col gap-3 transition-all ${
+        isAccepted ? 'ring-2 ring-[var(--color-success)]' : ''
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-container)] flex items-center justify-center flex-shrink-0">
+            <Truck size={18} className="text-[var(--color-brand-navy)]" />
+          </div>
+          <div>
+            <Link
+              href={`/transport/carriers/${quote.carrierId}`}
+              className="text-sm font-bold text-[var(--color-on-surface)] hover:text-[var(--color-brand-navy)] transition-colors"
+            >
+              {quote.carrier?.companyName ?? quote.carrier?.user?.displayName ?? 'ناقل'}
+            </Link>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {(quote.carrier?.averageRating ?? 0) > 0 && (
+                <span className="flex items-center gap-0.5 text-xs text-[var(--color-brand-amber)]">
+                  <Star size={10} fill="currentColor" />
+                  {quote.carrier?.averageRating?.toFixed(1)}
+                </span>
+              )}
+              {quote.carrier?.isVerified && (
+                <span className="flex items-center gap-0.5 text-xs text-[var(--color-info)] font-semibold">
+                  <Shield size={10} />
+                  موثّق
+                </span>
+              )}
+              {quote.carrier?.completedTrips != null && (
+                <span className="text-xs text-[var(--color-on-surface-muted)]">
+                  {quote.carrier.completedTrips} رحلة
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <span
+          className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+          style={{ backgroundColor: sc.bg, color: sc.text }}
+        >
+          {quote.status === 'PENDING' ? 'بانتظار الرد'
+            : quote.status === 'ACCEPTED' ? 'مقبول'
+            : quote.status === 'REJECTED' ? 'مرفوض'
+            : 'مسحوب'}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Banknote size={18} className="text-[var(--color-brand-navy)]" />
+          <span className="text-xl font-bold text-[var(--color-brand-navy)]">
+            {quote.price} {CURRENCY_LABEL}
+          </span>
+          {quote.estimatedHours && (
+            <span className="text-xs text-[var(--color-on-surface-muted)] flex items-center gap-1">
+              <Clock size={11} />
+              {quote.estimatedHours} ساعة
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-[var(--color-on-surface-muted)]">
+          {formatRelativeDate(quote.createdAt)}
+        </span>
+      </div>
+
+      {quote.message && (
+        <div>
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            className="flex items-center gap-1 text-xs text-[var(--color-brand-navy)] font-semibold"
+          >
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expanded ? 'إخفاء الرسالة' : 'عرض رسالة الناقل'}
+          </button>
+          {expanded && (
+            <p className="text-sm text-[var(--color-on-surface-variant)] bg-[var(--color-surface-container)] rounded-xl px-3 py-2 mt-2">
+              {quote.message}
+            </p>
+          )}
+        </div>
+      )}
+
+      {canAccept && (
+        <button
+          onClick={() => onAccept(quote.id)}
+          disabled={accepting === quote.id}
+          className="btn-primary w-full justify-center text-sm disabled:opacity-60"
+        >
+          {accepting === quote.id ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : (
+            <CheckCircle size={15} />
+          )}
+          قبول هذا العرض
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Submit Quote Form ───────────────────────────────────────── */
+
+interface SubmitQuoteFormProps {
+  requestId: string;
+  onSubmitted: (quote: TransportQuote) => void;
+}
+
+function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
+  const [price, setPrice] = useState('');
+  const [estimatedHours, setEstimatedHours] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!price || Number(price) <= 0) {
+      setError('يرجى إدخال سعر صحيح');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      const dto: CreateQuoteDto = {
+        price: Number(price),
+        estimatedHours: estimatedHours ? Number(estimatedHours) : undefined,
+        message: message.trim() || undefined,
+      };
+      const quote = await transportApi.submitQuote(requestId, dto);
+      onSubmitted(quote);
+    } catch {
+      setError('تعذّر إرسال العرض. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="card-base p-5 flex flex-col gap-4" dir="rtl">
+      <h3 className="text-base font-bold text-[var(--color-on-surface)]">قدّم عرضك</h3>
+
+      {error && (
+        <div className="flex items-center gap-2 text-sm text-[var(--color-error)] bg-[var(--color-error-light)] rounded-xl px-3 py-2">
+          <AlertCircle size={14} />
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+          السعر المقترح ({CURRENCY_LABEL}) *
+        </label>
+        <input
+          type="number"
+          min="1"
+          step="0.1"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="e.g. 150"
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]/30"
+          required
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+          الوقت المتوقع (ساعات)
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={estimatedHours}
+          onChange={(e) => setEstimatedHours(e.target.value)}
+          placeholder="اختياري"
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+          رسالة للعميل
+        </label>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="اكتب رسالة تعريفية أو تفاصيل إضافية..."
+          rows={3}
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]/30 resize-none"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="btn-primary justify-center disabled:opacity-60"
+      >
+        {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        {submitting ? 'جارٍ الإرسال...' : 'إرسال العرض'}
+      </button>
+    </form>
+  );
+}
+
+/* ─── Main Page ───────────────────────────────────────────────── */
+
+export default function RequestDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const id = params?.id as string;
+
+  const [request, setRequest] = useState<TransportRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [accepting, setAccepting] = useState<string | null>(null);
+  const [quoteSent, setQuoteSent] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const req = await transportApi.getRequest(id);
+      setRequest(req);
+    } catch {
+      setError('تعذّر تحميل تفاصيل الطلب');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id) load();
+  }, [id]);
+
+  const handleAcceptQuote = async (quoteId: string) => {
+    setAccepting(quoteId);
+    try {
+      const booking = await transportApi.acceptQuote(quoteId);
+      router.push(`/transport/bookings/${booking.id}`);
+    } finally {
+      setAccepting(null);
+    }
+  };
+
+  const handleQuoteSubmitted = (quote: TransportQuote) => {
+    setQuoteSent(true);
+    setRequest((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        quotes: [...(prev.quotes ?? []), quote],
+        status: 'QUOTED',
+      };
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" dir="rtl">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={32} className="animate-spin text-[var(--color-brand-navy)]" />
+          <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !request) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" dir="rtl">
+        <div className="flex flex-col items-center gap-4 text-center px-4">
+          <AlertCircle size={40} className="text-[var(--color-error)]" />
+          <p className="text-base font-semibold">{error || 'الطلب غير موجود'}</p>
+          <Link href="/transport/browse" className="btn-primary">
+            <ArrowRight size={16} />
+            العودة للتصفح
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwner = user?.id === request.userId;
+  const isCarrier = user?.role === 'CARRIER' || !!user?.id;
+  const quotes = request.quotes ?? [];
+  const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
+  const hasAlreadyQuoted = quotes.some((q) => q.carrierId === user?.id);
+  const canSubmitQuote =
+    !isOwner &&
+    isCarrier &&
+    request.status === 'OPEN' &&
+    !hasAlreadyQuoted &&
+    !quoteSent;
+
+  const serviceColor = SERVICE_TYPE_COLORS[request.serviceType] ?? '#0B2447';
+  const serviceBg = SERVICE_TYPE_BG_COLORS[request.serviceType] ?? 'rgba(11,36,71,0.08)';
+
+  return (
+    <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        {/* Back */}
+        <div className="mb-4">
+          <Link
+            href="/transport/browse"
+            className="inline-flex items-center gap-2 text-sm text-[var(--color-on-surface-variant)] hover:text-[var(--color-brand-navy)] font-semibold transition-colors"
+          >
+            <ArrowRight size={16} />
+            العودة للتصفح
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+          {/* Left: Request Details */}
+          <div className="flex flex-col gap-5">
+
+            {/* Header Card */}
+            <div className="card-base p-5 flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: serviceBg }}
+                  >
+                    <Package size={22} style={{ color: serviceColor }} />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-[var(--color-on-surface)]">
+                      {SERVICE_TYPE_LABELS[request.serviceType]}
+                    </h1>
+                    <p className="text-xs text-[var(--color-on-surface-muted)] font-mono mt-0.5">
+                      #{request.id.slice(0, 8)}
+                    </p>
+                  </div>
+                </div>
+                <span className={`badge ${getRequestStatusBadgeClass(request.status)} text-xs font-bold px-3 py-1.5 rounded-full`}>
+                  {REQUEST_STATUS_LABELS[request.status]}
+                </span>
+              </div>
+
+              {/* Route */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col items-center gap-1 mt-1">
+                    <div className="w-3 h-3 rounded-full bg-[var(--color-success)]" />
+                    <div className="w-0.5 h-8 bg-[var(--color-outline-variant)]" />
+                    <div className="w-3 h-3 rounded-full bg-[var(--color-error)]" />
+                  </div>
+                  <div className="flex flex-col gap-3 flex-1">
+                    <div>
+                      <p className="text-xs font-semibold text-[var(--color-on-surface-muted)] mb-0.5">نقطة الانطلاق</p>
+                      <p className="text-sm font-bold text-[var(--color-on-surface)]">
+                        <MapPin size={13} className="inline me-1 text-[var(--color-success)]" />
+                        {request.fromGovernorate}{request.fromCity ? ` — ${request.fromCity}` : ''}
+                      </p>
+                      <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{request.fromAddress}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[var(--color-on-surface-muted)] mb-0.5">الوجهة</p>
+                      <p className="text-sm font-bold text-[var(--color-on-surface)]">
+                        <MapPin size={13} className="inline me-1 text-[var(--color-error)]" />
+                        {request.toGovernorate}{request.toCity ? ` — ${request.toCity}` : ''}
+                      </p>
+                      <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{request.toAddress}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cargo Details */}
+            <div className="card-base p-5 flex flex-col gap-3">
+              <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+                تفاصيل البضاعة
+              </h2>
+              <p className="text-sm text-[var(--color-on-surface)]">{request.cargoDescription}</p>
+              <div className="grid grid-cols-2 gap-3">
+                {request.weightTons && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Package size={14} className="text-[var(--color-brand-navy)]" />
+                    <span className="text-[var(--color-on-surface-variant)]">
+                      الوزن: <span className="font-semibold">{request.weightTons} طن</span>
+                    </span>
+                  </div>
+                )}
+                {request.requiresHelper && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle size={14} className="text-[var(--color-success)]" />
+                    <span className="text-[var(--color-on-surface-variant)]">يتطلب مساعد</span>
+                  </div>
+                )}
+              </div>
+              {request.notes && (
+                <p className="text-sm text-[var(--color-on-surface-variant)] bg-[var(--color-surface-container)] rounded-xl px-3 py-2">
+                  {request.notes}
+                </p>
+              )}
+            </div>
+
+            {/* Timing & Budget */}
+            <div className="card-base p-5 flex flex-col gap-3">
+              <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+                الموعد والميزانية
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar size={14} className="text-[var(--color-brand-navy)]" />
+                  <span className="text-[var(--color-on-surface-variant)]">
+                    {request.scheduledAt
+                      ? new Date(request.scheduledAt).toLocaleDateString('ar-OM', {
+                          weekday: 'short', day: 'numeric', month: 'short',
+                        })
+                      : 'في أقرب وقت'}
+                    {request.isFlexible && ' (مرن)'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Banknote size={14} className="text-[var(--color-brand-navy)]" />
+                  <span className="text-[var(--color-on-surface-variant)] font-semibold">
+                    {formatBudgetRange(request.budgetMin, request.budgetMax)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Accepted Quote / Booking */}
+            {acceptedQuote && request.booking && (
+              <div className="card-base p-5 flex flex-col gap-3 border-2 border-[var(--color-success)]">
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={18} className="text-[var(--color-success)]" />
+                  <h2 className="text-base font-bold text-[var(--color-success)]">تم قبول العرض</h2>
+                </div>
+                <Link
+                  href={`/transport/bookings/${request.booking.id}`}
+                  className="btn-primary w-full justify-center"
+                >
+                  <ExternalLink size={15} />
+                  عرض تفاصيل الحجز
+                </Link>
+              </div>
+            )}
+
+            {/* Quotes */}
+            {(isOwner || quotes.length > 0) && (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-[var(--color-on-surface)]">
+                    العروض المقدمة
+                  </h2>
+                  <span className="text-xs text-[var(--color-on-surface-muted)] font-semibold bg-[var(--color-surface-container)] px-2.5 py-1 rounded-full">
+                    {quotes.length} عرض
+                  </span>
+                </div>
+                {quotes.length === 0 ? (
+                  <div className="card-base p-8 flex flex-col items-center gap-3 text-center">
+                    <MessageSquare size={28} className="text-[var(--color-on-surface-muted)]" />
+                    <p className="text-sm text-[var(--color-on-surface-muted)]">
+                      لا توجد عروض بعد
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {quotes.map((quote) => (
+                      <QuoteCard
+                        key={quote.id}
+                        quote={quote}
+                        isOwner={isOwner}
+                        requestStatus={request.status}
+                        onAccept={handleAcceptQuote}
+                        accepting={accepting}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Sidebar */}
+          <div className="flex flex-col gap-5">
+
+            {/* Request Meta */}
+            <div className="card-base p-5 flex flex-col gap-3">
+              <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+                معلومات الطلب
+              </h2>
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar size={13} className="text-[var(--color-brand-navy)]" />
+                <span className="text-[var(--color-on-surface-variant)]">
+                  نُشر {formatRelativeDate(request.createdAt)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <MessageSquare size={13} className="text-[var(--color-brand-navy)]" />
+                <span className="text-[var(--color-on-surface-variant)]">
+                  {quotes.length} عرض مقدم
+                </span>
+              </div>
+            </div>
+
+            {/* Carrier CTA */}
+            {!isOwner && request.status === 'OPEN' && (
+              <div className="card-base p-5 flex flex-col gap-3">
+                {quoteSent ? (
+                  <div className="flex flex-col items-center gap-2 text-center py-2">
+                    <CheckCircle size={28} className="text-[var(--color-success)]" />
+                    <p className="text-sm font-bold text-[var(--color-success)]">
+                      تم إرسال عرضك بنجاح!
+                    </p>
+                    <p className="text-xs text-[var(--color-on-surface-muted)]">
+                      سيتم إشعارك عند قبول العرض
+                    </p>
+                  </div>
+                ) : hasAlreadyQuoted ? (
+                  <div className="flex flex-col items-center gap-2 text-center py-2">
+                    <CheckCircle size={24} className="text-[var(--color-info)]" />
+                    <p className="text-sm font-semibold text-[var(--color-on-surface)]">
+                      لقد قدمت عرضاً مسبقاً
+                    </p>
+                  </div>
+                ) : !user ? (
+                  <div className="flex flex-col gap-3 text-center">
+                    <p className="text-sm text-[var(--color-on-surface-muted)]">
+                      سجّل دخولك لتقديم عرض سعر
+                    </p>
+                    <Link href="/transport/carriers/register" className="btn-primary w-full justify-center">
+                      <Truck size={15} />
+                      سجّل كناقل
+                    </Link>
+                  </div>
+                ) : (
+                  canSubmitQuote && (
+                    <SubmitQuoteForm requestId={id} onSubmitted={handleQuoteSubmitted} />
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

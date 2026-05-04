@@ -50,7 +50,7 @@ describe('TransportBookingService', () => {
         request: { userId: 'shipper' },
         quote: { carrier: { userId: 'carrier1' } },
       });
-      mockPrisma.$transaction.mockImplementation(async (fn: any) => ({ id: 'b1', status: 'IN_PROGRESS' }));
+      mockPrisma.$transaction.mockImplementation(async () => ({ id: 'b1', status: 'IN_PROGRESS' }));
 
       const result = await service.markInProgress('b1', 'carrier1');
       expect(result.status).toBe('IN_PROGRESS');
@@ -74,7 +74,7 @@ describe('TransportBookingService', () => {
         request: { userId: 'shipper' },
         quote: { carrier: { userId: 'carrier1' }, carrierId: 'c1' },
       });
-      mockPrisma.$transaction.mockImplementation(async (fn: any) => ({ id: 'b1', status: 'COMPLETED' }));
+      mockPrisma.$transaction.mockImplementation(async () => ({ id: 'b1', status: 'COMPLETED' }));
 
       const result = await service.complete('b1', 'shipper');
       expect(result.status).toBe('COMPLETED');
@@ -107,7 +107,7 @@ describe('TransportBookingService', () => {
         request: { userId: 'shipper' },
         quote: { carrier: { userId: 'carrier1' } },
       });
-      mockPrisma.$transaction.mockImplementation(async (fn: any) => ({ id: 'b1', status: 'CANCELLED' }));
+      mockPrisma.$transaction.mockImplementation(async () => ({ id: 'b1', status: 'CANCELLED' }));
 
       const result = await service.cancel('b1', 'shipper', 'تغيرت الخطة');
       expect(result.status).toBe('CANCELLED');

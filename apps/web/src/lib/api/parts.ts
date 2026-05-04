@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMyListings as useMyListingsHook } from '@/features/shared/hooks/useMyListings';
+import { useDeleteListing as useDeleteListingHook } from '@/features/shared/hooks/useDeleteListing';
 import { apiRequest } from '../auth';
 
 export interface SparePartItem {
@@ -56,10 +58,7 @@ export function usePart(id: string) {
 }
 
 export function useMyParts() {
-  return useQuery<SparePartItem[]>({
-    queryKey: ['parts', 'my'],
-    queryFn: () => apiRequest('/parts/my'),
-  });
+  return useMyListingsHook<SparePartItem>('parts', '/parts/my');
 }
 
 export function useCreatePart() {
@@ -90,10 +89,5 @@ export function useRemovePartImage() {
 }
 
 export function useDeletePart() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiRequest(`/parts/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['parts'] }); },
-  });
+  return useDeleteListingHook('parts', (id) => `/parts/${id}`);
 }

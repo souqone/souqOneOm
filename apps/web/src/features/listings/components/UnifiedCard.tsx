@@ -11,6 +11,7 @@ import { useFavContext } from '@/providers/favorites-provider'
 import { DetailChip, RibbonBadge, TrustBadge, type BadgeIntent } from '@/components/ui/badges'
 import type { BadgeColor, UnifiedListingItem } from '../types/unified-item.types'
 import type { ListingCategory } from '../types/category.types'
+import { ELITE_FRAME_CLS, PREMIUM_FRAME_CLS, ELITE_SHINE_CLS, PREMIUM_SHINE_CLS } from '../constants/card-styles'
 
 type LucideIcon = React.ComponentType<{ size?: number; className?: string }>
 
@@ -72,16 +73,8 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '' }: U
   const plan = typeof item.attributes?.plan === 'string' ? item.attributes.plan.toUpperCase() : null
   const isElite = plan === 'ELITE'
   const isPremium = isElite || plan === 'PREMIUM' || plan === 'FEATURED' || item.attributes?.isPremium === true
-  const frameClass = isElite
-    ? 'border-amber-200/60 shadow-[0_0_0_1px_rgba(245,158,11,0.10),0_6px_18px_rgba(245,158,11,0.08)] hover:border-amber-300/70 hover:shadow-[0_0_0_1px_rgba(245,158,11,0.16),0_10px_26px_rgba(245,158,11,0.12)]'
-    : isPremium
-    ? 'border-slate-200/80 shadow-[0_0_0_1px_rgba(148,163,184,0.10),0_6px_18px_rgba(148,163,184,0.08)] hover:border-slate-300/80 hover:shadow-[0_0_0_1px_rgba(148,163,184,0.16),0_10px_26px_rgba(148,163,184,0.12)]'
-    : 'border-outline-variant/20 hover:border-outline-variant/40 hover:shadow-md'
-  const shineClass = isElite
-    ? 'before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-gradient-to-br before:from-amber-100/12 before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100'
-    : isPremium
-    ? 'before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-gradient-to-br before:from-white/18 before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100'
-    : ''
+  const frameClass = isElite ? ELITE_FRAME_CLS : isPremium ? PREMIUM_FRAME_CLS : 'border-outline-variant/20 hover:border-outline-variant/40 hover:shadow-md'
+  const shineClass = isElite ? ELITE_SHINE_CLS : isPremium ? PREMIUM_SHINE_CLS : ''
 
   useEffect(() => {
     setSelectedImageIndex(0)

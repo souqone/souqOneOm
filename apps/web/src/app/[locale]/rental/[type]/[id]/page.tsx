@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { serverFetch } from '@/lib/server-fetch';
-import { getImageUrl } from '@/lib/image-utils';
+import { getPrimaryImage } from '@/lib/utils/get-primary-image';
 import RentalDetailClient from './rental-detail-client';
 
 const API_PATHS: Record<string, string> = {
@@ -29,12 +29,6 @@ interface RentalOgData {
   currency?: string;
   governorate?: string;
   images?: { url: string; isPrimary?: boolean }[];
-}
-
-function getPrimaryImage(images?: { url: string; isPrimary?: boolean }[]): string | null {
-  if (!images || images.length === 0) return null;
-  const primary = images.find((img) => img.isPrimary) ?? images[0];
-  return getImageUrl(primary?.url) ?? null;
 }
 
 export async function generateMetadata({

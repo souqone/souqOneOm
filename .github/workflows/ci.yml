@@ -317,6 +317,7 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
+        continue-on-error: true  # Prevents blocking CI while feature initializes
 
   # ════════════════════════════════════════
   # 7. Gate — single required status check

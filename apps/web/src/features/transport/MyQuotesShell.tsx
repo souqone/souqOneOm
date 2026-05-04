@@ -62,7 +62,7 @@ export default function MyQuotesShell() {
   })
 
   return (
-    <main className="flex-grow max-w-page-max-width mx-auto w-full px-page-padding-x-sm md:px-page-padding-x-lg py-8">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
       {/* Header */}
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>

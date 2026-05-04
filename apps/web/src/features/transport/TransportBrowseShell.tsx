@@ -321,7 +321,7 @@ export default function TransportBrowseShell() {
   )
 
   return (
-    <main className="flex-grow max-w-page-max-width w-full mx-auto px-page-padding-x-sm md:px-page-padding-x-md lg:px-page-padding-x-lg py-8">
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
 
       {/* Page header */}
       <div className="mb-8">

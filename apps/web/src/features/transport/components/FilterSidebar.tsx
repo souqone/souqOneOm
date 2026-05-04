@@ -1,0 +1,150 @@
+'use client';
+
+import { X, SlidersHorizontal } from 'lucide-react';
+import {
+  OMAN_GOVERNORATES,
+  SERVICE_TYPE_LABELS,
+  SERVICE_TYPES,
+  REQUEST_STATUS_LABELS,
+  BROWSE_SORT_OPTIONS,
+} from '../constants';
+import type { BrowseFilters } from './BrowseContent';
+
+interface FilterSidebarProps {
+  filters: BrowseFilters;
+  onChange: (filters: BrowseFilters) => void;
+}
+
+export default function FilterSidebar({ filters, onChange }: FilterSidebarProps) {
+  const hasActiveFilters =
+    !!filters.serviceType ||
+    !!filters.status ||
+    !!filters.fromGovernorate ||
+    !!filters.toGovernorate ||
+    !!filters.sortBy;
+
+  function clearAll() {
+    onChange({});
+  }
+
+  return (
+    <aside className="w-64 flex-shrink-0" dir="rtl">
+      <div className="card-base p-4 sticky top-24">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={16} className="text-[var(--color-brand-navy)]" />
+            <span className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
+              التصفية
+            </span>
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={clearAll}
+              className="text-xs text-[var(--color-brand-amber)] font-bold hover:text-[var(--color-brand-amber-dark)] transition-colors flex items-center gap-1"
+            >
+              <X size={12} />
+              مسح الكل
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-5">
+          {/* Service Type */}
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
+              نوع الخدمة
+            </p>
+            <div className="space-y-1.5">
+              {SERVICE_TYPES.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => onChange({ ...filters, serviceType: filters.serviceType === type ? undefined : type })}
+                  className={`w-full text-right px-3 py-2 rounded-xl text-sm transition-all duration-150 ${
+                    filters.serviceType === type
+                      ? 'bg-[var(--color-brand-navy)] text-white font-bold'
+                      : 'text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)]'
+                  }`}
+                >
+                  {SERVICE_TYPE_LABELS[type]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
+              الحالة
+            </p>
+            <div className="space-y-1.5">
+              {(['OPEN', 'QUOTED', 'IN_PROGRESS'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => onChange({ ...filters, status: filters.status === status ? undefined : status })}
+                  className={`w-full text-right px-3 py-2 rounded-xl text-sm transition-all duration-150 ${
+                    filters.status === status
+                      ? 'bg-[var(--color-brand-navy)] text-white font-bold'
+                      : 'text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)]'
+                  }`}
+                >
+                  {REQUEST_STATUS_LABELS[status]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* From Governorate */}
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
+              من محافظة
+            </p>
+            <select
+              value={filters.fromGovernorate ?? ''}
+              onChange={(e) => onChange({ ...filters, fromGovernorate: e.target.value || undefined })}
+              className="input-base text-sm"
+            >
+              <option value="">الكل</option>
+              {OMAN_GOVERNORATES.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* To Governorate */}
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
+              إلى محافظة
+            </p>
+            <select
+              value={filters.toGovernorate ?? ''}
+              onChange={(e) => onChange({ ...filters, toGovernorate: e.target.value || undefined })}
+              className="input-base text-sm"
+            >
+              <option value="">الكل</option>
+              {OMAN_GOVERNORATES.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
+              الترتيب
+            </p>
+            <select
+              value={filters.sortBy ?? ''}
+              onChange={(e) => onChange({ ...filters, sortBy: e.target.value || undefined })}
+              className="input-base text-sm"
+            >
+              <option value="">افتراضي</option>
+              {BROWSE_SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
