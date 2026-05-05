@@ -6,17 +6,15 @@ interface DriverStatsGridProps {
   totalApps: number;
   pendingApps: number;
   acceptedApps: number;
-  pendingInvites: number;
 }
 
-export function DriverStatsGrid({ totalApps, pendingApps, acceptedApps, pendingInvites }: DriverStatsGridProps) {
+export function DriverStatsGrid({ totalApps, pendingApps, acceptedApps }: DriverStatsGridProps) {
   const tp = useTranslations('pages');
 
   const stats = [
     { label: tp('statTotalApps'), value: totalApps, icon: 'list_alt', color: 'text-primary' },
     { label: tp('statPendingApps'), value: pendingApps, icon: 'hourglass_empty', color: 'text-yellow-600' },
     { label: tp('statAcceptedApps'), value: acceptedApps, icon: 'check_circle', color: 'text-green-600' },
-    { label: tp('statPendingInvites'), value: pendingInvites, icon: 'mail', color: 'text-violet-600' },
   ];
 
   return (

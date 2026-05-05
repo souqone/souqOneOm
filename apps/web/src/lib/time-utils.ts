@@ -21,5 +21,5 @@ export function relativeTimeT(dateStr: string, t: TimeT, locale?: string): strin
   if (weeks < 4) return t('weeksAgo', { count: weeks });
   if (months === 1) return t('monthAgo');
   if (months < 12) return t('monthsAgo', { count: months });
-  return new Date(dateStr).toLocaleDateString(locale === 'en' ? 'en-US' : 'ar-OM');
+  return new Date(dateStr).toLocaleDateString(locale === 'en' ? 'en-US' : 'ar-OM-u-nu-latn');
 }

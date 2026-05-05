@@ -18,7 +18,7 @@ function formatTimeAgo(dateStr: string, tp: (key: string, values?: Record<string
   if (diff < 3600) return tp('sidebarTimeMin', { value: Math.floor(diff / 60) });
   if (diff < 86400) return tp('sidebarTimeHour', { value: Math.floor(diff / 3600) });
   if (diff < 604800) return tp('sidebarTimeDay', { value: Math.floor(diff / 86400) });
-  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US');
+  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US');
 }
 
 function RowSkeleton() {

@@ -1340,10 +1340,9 @@
 
     "licenseLight": "Light",
     "licenseHeavy": "Heavy",
+    "licenseTransport": "Transport",
     "licenseBus": "Bus",
-    "licenseTaxi": "Taxi",
     "licenseMotorcycle": "Motorcycle",
-    "licenseEquipment": "Equipment",
 
     "appStatusPending": "Pending",
     "appStatusAccepted": "Accepted",

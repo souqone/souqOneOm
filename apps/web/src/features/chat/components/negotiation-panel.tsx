@@ -29,7 +29,7 @@ export function NegotiationPanel({ offer, timeline, onAccept, onCounter }: Negot
   if (!offer) return null;
 
   const diff = offer.proposedPrice - offer.listingPrice;
-  const diffLabel = diff < 0 ? `-${Math.abs(diff).toLocaleString()}` : `+${diff.toLocaleString()}`;
+  const diffLabel = diff < 0 ? `-${Math.abs(diff).toLocaleString('en-US')}` : `+${diff.toLocaleString('en-US')}`;
 
   return (
     <aside className="w-[340px] bg-surface-container-lowest border-r border-surface-variant/30 flex-col hidden xl:flex">
@@ -49,7 +49,7 @@ export function NegotiationPanel({ offer, timeline, onAccept, onCounter }: Negot
           </p>
           <div className="flex items-baseline gap-1 mb-4">
             <span className="text-3xl font-headline font-extrabold">
-              {offer.proposedPrice.toLocaleString()}
+              {offer.proposedPrice.toLocaleString('en-US')}
             </span>
             <span className="text-xs text-outline">{offer.currency || tp('negoCurrency')}</span>
           </div>
@@ -57,7 +57,7 @@ export function NegotiationPanel({ offer, timeline, onAccept, onCounter }: Negot
           <div className="space-y-3 mb-6">
             <div className="flex justify-between text-xs">
               <span className="text-outline">{tp('negoListingPrice')}</span>
-              <span className="font-bold">{offer.listingPrice.toLocaleString()}</span>
+              <span className="font-bold">{offer.listingPrice.toLocaleString('en-US')}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-outline">{tp('negoDifference')}</span>

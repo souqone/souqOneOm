@@ -10,10 +10,7 @@ import type { JwtPayload } from '../auth/auth.types';
 import { JobsService } from './jobs.service';
 import { DriverProfileService } from './driver-profile.service';
 import { EmployerProfileService } from './employer-profile.service';
-import { JobInviteService } from './job-invite.service';
 import { DriverVerificationService } from './driver-verification.service';
-import { JobEscrowService } from './job-escrow.service';
-import { JobRecommendationService } from './job-recommendation.service';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -33,10 +30,7 @@ export class JobsController {
     private readonly jobsService: JobsService,
     private readonly driverProfileService: DriverProfileService,
     private readonly employerProfileService: EmployerProfileService,
-    private readonly jobInviteService: JobInviteService,
     private readonly verificationService: DriverVerificationService,
-    private readonly escrowService: JobEscrowService,
-    private readonly recommendationService: JobRecommendationService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -48,12 +42,6 @@ export class JobsController {
   @Get()
   findAll(@Query() query: QueryJobsDto) {
     return this.jobsService.findAll(query);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('recommended')
-  getRecommended(@CurrentUser() user: JwtPayload) {
-    return this.recommendationService.getRecommended(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -124,23 +112,6 @@ export class JobsController {
     return this.employerProfileService.findOne(id);
   }
 
-  // ─── Invites ───
-  @UseGuards(JwtAuthGuard)
-  @Get('invites/my')
-  getMyInvites(@CurrentUser() user: JwtPayload) {
-    return this.jobInviteService.getMyInvites(user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/invite/:driverId')
-  inviteDriver(
-    @Param('id') jobId: string,
-    @Param('driverId') driverId: string,
-    @Body('message') message: string | undefined,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.jobInviteService.invite(decodeURIComponent(jobId), user.sub, driverId, message);
-  }
 
   // ─── Verification ───
   @UseGuards(JwtAuthGuard)
@@ -176,42 +147,6 @@ export class JobsController {
     return this.verificationService.adminReview(id, user.sub, body.decision, body.rejectionReason);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Patch('invites/:id')
-  respondToInvite(
-    @Param('id') inviteId: string,
-    @Body('status') status: 'ACCEPTED' | 'DECLINED',
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.jobInviteService.respond(inviteId, user.sub, status);
-  }
-
-  // ─── Escrow ───
-  @UseGuards(JwtAuthGuard)
-  @Post('applications/:id/pay')
-  payForApplication(
-    @Param('id') id: string,
-    @Body('amount') amount: number,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.escrowService.pay(id, user.sub, amount);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('escrow/:id/release')
-  releaseEscrow(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.escrowService.release(id, user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('escrow/:id/dispute')
-  disputeEscrow(
-    @Param('id') id: string,
-    @Body('reason') reason: string | undefined,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.escrowService.dispute(id, user.sub, reason);
-  }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request) {

@@ -1345,10 +1345,9 @@
 
     "licenseLight": "خفيفة",
     "licenseHeavy": "ثقيلة",
+    "licenseTransport": "نقل",
     "licenseBus": "حافلة",
-    "licenseTaxi": "تاكسي",
     "licenseMotorcycle": "دراجة",
-    "licenseEquipment": "معدات",
 
     "appStatusPending": "قيد الانتظار",
     "appStatusAccepted": "مقبول",
@@ -3239,6 +3238,7 @@
     "similarTitle": "إعلانات مشابهة",
     "viewAll": "عرض الكل",
     "contactForPrice": "تواصل للسعر",
+    "currencyUnit": "ر.ع",
     "contractMonthlyLabel": "شهرياً (عقد)",
 
     "infoType": "النوع",

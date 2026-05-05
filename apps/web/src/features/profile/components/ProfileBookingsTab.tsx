@@ -53,7 +53,7 @@ export function ProfileBookingsTab({ bookings, labels }: ProfileBookingsTabProps
                   {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
                 </p>
                 <p className="text-[12px] text-primary font-bold mt-1">
-                  {Number(booking.totalPrice).toLocaleString()} {booking.currency || labels.currency}
+                  {Number(booking.totalPrice).toLocaleString('en-US')} {booking.currency || labels.currency}
                 </p>
               </div>
             </div>

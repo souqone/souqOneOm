@@ -9,12 +9,7 @@ import { Footer } from '@/components/layout/footer';
 import {
   useMyDriverProfile,
   useMyApplications,
-  useMyInvites,
-  useMyEscrows,
-  useRecommendedJobs,
-  useRespondToInvite,
   useWithdrawApplication,
-  useDisputeEscrow,
 } from '@/lib/api/jobs';
 import { DriverProfileStrip } from './DriverProfileStrip';
 import { DriverProfileStripSkeleton } from './DriverProfileStripSkeleton';
@@ -24,9 +19,6 @@ import { DriverVerificationBanner } from './DriverVerificationBanner';
 import { DriverNoProfileBanner } from './DriverNoProfileBanner';
 import { DriverOverviewTab } from './tabs/DriverOverviewTab';
 import { DriverApplicationsTab } from './tabs/DriverApplicationsTab';
-import { DriverInvitesTab } from './tabs/DriverInvitesTab';
-import { DriverEscrowTab } from './tabs/DriverEscrowTab';
-import { DriverRecommendationsTab } from './tabs/DriverRecommendationsTab';
 import type { DriverTab } from './DriverNavTabs';
 
 export function DriverDashboardClient() {
@@ -36,23 +28,13 @@ export function DriverDashboardClient() {
 
   const { data: driverProfile, isLoading: loadingProfile } = useMyDriverProfile(!!user);
   const { data: applications = [], isLoading: loadingApps } = useMyApplications();
-  const { data: invites = [], isLoading: loadingInvites } = useMyInvites();
-  const { data: escrows = [], isLoading: loadingEscrows } = useMyEscrows();
-  const { data: recommendations = [], isLoading: loadingRecs } = useRecommendedJobs();
 
   const withdrawMutation = useWithdrawApplication();
-  const respondMutation = useRespondToInvite();
-  const disputeMutation = useDisputeEscrow();
 
   const pendingAppsCount = applications.filter((a) => a.status === 'PENDING').length;
-  const pendingInvitesCount = invites.filter((i) => i.status === 'PENDING').length;
-  const heldEscrowCount = escrows.filter((e) => e.status === 'HELD').length;
 
   const counts = {
     apps: pendingAppsCount,
-    invites: pendingInvitesCount,
-    escrow: heldEscrowCount,
-    recs: recommendations.length,
   };
 
   const handleWithdraw = useCallback((id: string) => {
@@ -62,14 +44,6 @@ export function DriverDashboardClient() {
   const handleChat = useCallback((userId: string) => {
     router.push(`/messages?user=${userId}`);
   }, [router]);
-
-  const handleDispute = useCallback((escrowId: string) => {
-    disputeMutation.mutate({ escrowId });
-  }, [disputeMutation]);
-
-  const handleRespondInvite = useCallback((inviteId: string, status: 'ACCEPTED' | 'DECLINED') => {
-    respondMutation.mutate({ inviteId, status });
-  }, [respondMutation]);
 
   const userInfo = user
     ? { displayName: user.displayName, username: user.username, avatarUrl: user.avatarUrl }
@@ -121,11 +95,8 @@ export function DriverDashboardClient() {
                 {tab === 'overview' && (
                   <DriverOverviewTab
                     applications={applications}
-                    recommendations={recommendations}
-                    pendingInvitesCount={pendingInvitesCount}
                     onWithdraw={handleWithdraw}
                     onChat={handleChat}
-                    onDispute={handleDispute}
                     setTab={setTab}
                   />
                 )}
@@ -135,28 +106,6 @@ export function DriverDashboardClient() {
                     isLoading={loadingApps}
                     onWithdraw={handleWithdraw}
                     onChat={handleChat}
-                    onDispute={handleDispute}
-                  />
-                )}
-                {tab === 'invites' && (
-                  <DriverInvitesTab
-                    invites={invites}
-                    isLoading={loadingInvites}
-                    onRespond={handleRespondInvite}
-                    isResponding={respondMutation.isPending}
-                  />
-                )}
-                {tab === 'escrow' && (
-                  <DriverEscrowTab
-                    escrows={escrows}
-                    isLoading={loadingEscrows}
-                    onDispute={handleDispute}
-                  />
-                )}
-                {tab === 'recs' && (
-                  <DriverRecommendationsTab
-                    recommendations={recommendations}
-                    isLoading={loadingRecs}
                   />
                 )}
               </>

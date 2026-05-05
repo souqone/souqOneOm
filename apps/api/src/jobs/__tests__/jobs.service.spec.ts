@@ -23,9 +23,6 @@ const mockPrisma = {
     findMany: jest.fn(),
     update: jest.fn(),
   },
-  driverProfile: {
-    findMany: jest.fn().mockResolvedValue([]),
-  },
 };
 
 const mockRedis = {
@@ -246,70 +243,6 @@ describe('JobsService', () => {
       await expect(
         service.withdrawApplication('nonexistent', 'user1'),
       ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  // ─── Smart Notifications ───
-  describe('notifyMatchingDrivers (via create)', () => {
-    it('should notify matching drivers when creating a HIRING job', async () => {
-      mockPrisma.driverJob.create.mockResolvedValue({
-        id: 'job1', title: 'Test Job', governorate: 'Muscat', licenseTypes: ['HEAVY'], userId: 'employer1',
-      });
-      mockPrisma.driverProfile.findMany.mockResolvedValue([
-        { userId: 'driver1' },
-        { userId: 'driver2' },
-      ]);
-
-      await service.create('employer1', {
-        title: 'Test Job', description: 'desc', jobType: 'HIRING', employmentType: 'FULL_TIME',
-        governorate: 'Muscat', licenseTypes: ['HEAVY'],
-      } as any);
-
-      // Wait for async notification
-      await new Promise((r) => setTimeout(r, 100));
-
-      expect(mockPrisma.driverProfile.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            governorate: 'Muscat',
-            licenseTypes: { hasSome: ['HEAVY'] },
-          }),
-        }),
-      );
-      expect(mockNotifications.create).toHaveBeenCalled();
-    });
-
-    it('should not notify if no matching drivers', async () => {
-      mockPrisma.driverJob.create.mockResolvedValue({
-        id: 'job2', title: 'Test', governorate: 'Dhofar', licenseTypes: ['LIGHT'], userId: 'emp1',
-      });
-      mockPrisma.driverProfile.findMany.mockResolvedValue([]);
-
-      await service.create('emp1', {
-        title: 'Test', description: 'desc', jobType: 'HIRING', employmentType: 'FULL_TIME',
-        governorate: 'Dhofar', licenseTypes: ['LIGHT'],
-      } as any);
-
-      await new Promise((r) => setTimeout(r, 100));
-
-      // notifyMatchingDrivers called but no notifications sent since no matching drivers
-      expect(mockPrisma.driverProfile.findMany).toHaveBeenCalled();
-    });
-
-    it('should not notify for non-HIRING jobs', async () => {
-      mockPrisma.driverJob.create.mockResolvedValue({
-        id: 'job3', title: 'Looking for work', governorate: 'Muscat', licenseTypes: ['HEAVY'], userId: 'user1',
-      });
-
-      await service.create('user1', {
-        title: 'Looking for work', description: 'desc', jobType: 'LOOKING', employmentType: 'FULL_TIME',
-        governorate: 'Muscat', licenseTypes: ['HEAVY'],
-      } as any);
-
-      await new Promise((r) => setTimeout(r, 100));
-
-      // driverProfile.findMany should NOT have been called for LOOKING job type
-      expect(mockPrisma.driverProfile.findMany).not.toHaveBeenCalled();
     });
   });
 });

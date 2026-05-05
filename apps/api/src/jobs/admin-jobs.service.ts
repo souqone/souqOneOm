@@ -74,8 +74,6 @@ export class AdminJobsService {
       verifiedDrivers,
       totalEmployers,
       pendingVerifications,
-      totalEscrows,
-      heldEscrows,
     ] = await Promise.all([
       this.prisma.driverJob.count(),
       this.prisma.driverJob.count({ where: { status: 'ACTIVE' } }),
@@ -87,8 +85,6 @@ export class AdminJobsService {
       this.prisma.driverProfile.count({ where: { isVerified: true } }),
       this.prisma.employerProfile.count(),
       this.prisma.driverVerification.count({ where: { status: 'PENDING' } }),
-      this.prisma.jobEscrow.count(),
-      this.prisma.jobEscrow.count({ where: { status: 'HELD' } }),
     ]);
 
     return {
@@ -97,7 +93,6 @@ export class AdminJobsService {
       drivers: { total: totalDrivers, verified: verifiedDrivers },
       employers: { total: totalEmployers },
       verifications: { pending: pendingVerifications },
-      escrows: { total: totalEscrows, held: heldEscrows },
     };
   }
 

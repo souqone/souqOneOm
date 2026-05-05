@@ -15,15 +15,12 @@ interface EmployerOverviewTabProps {
   onCloseJob: (jobId: string) => void;
   onViewApps: (jobId: string) => void;
   onUpdateStatus: (appId: string, status: 'ACCEPTED' | 'REJECTED') => void;
-  onRelease: (escrowId: string) => void;
-  onDispute: (escrowId: string) => void;
-  onOpenPay: (app: EmployerApplicationItem) => void;
   isUpdating: boolean;
 }
 
 export function EmployerOverviewTab({
   jobs, applications, onTabChange, onCloseJob, onViewApps,
-  onUpdateStatus, onRelease, onDispute, onOpenPay, isUpdating,
+  onUpdateStatus, isUpdating,
 }: EmployerOverviewTabProps) {
   const tp = useTranslations('pages');
 
@@ -70,7 +67,7 @@ export function EmployerOverviewTab({
           </div>
           <div className="space-y-3">
             {activeJobs.slice(0, 3).map((job) => (
-              <JobManagementCard key={job.id} job={job} onClose={onCloseJob} onViewApps={onViewApps} setTab={onTabChange} />
+              <JobManagementCard key={job.id} job={job} onClose={onCloseJob} onViewApps={onViewApps} />
             ))}
           </div>
         </div>
@@ -89,8 +86,7 @@ export function EmployerOverviewTab({
           </div>
           <div className="space-y-3">
             {recentApps.map((app) => (
-              <ApplicantCard key={app.id} app={app} onUpdateStatus={onUpdateStatus} onRelease={onRelease}
-                onDispute={onDispute} onOpenPay={onOpenPay} isUpdating={isUpdating} />
+              <ApplicantCard key={app.id} app={app} onUpdateStatus={onUpdateStatus} isUpdating={isUpdating} />
             ))}
           </div>
         </div>

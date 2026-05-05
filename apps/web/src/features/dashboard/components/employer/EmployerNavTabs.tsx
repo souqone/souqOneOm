@@ -2,14 +2,14 @@
 
 import { useTranslations } from 'next-intl';
 
-export type EmployerTab = 'overview' | 'jobs' | 'apps' | 'escrow' | 'invite';
+export type EmployerTab = 'overview' | 'jobs' | 'apps';
 
 interface TabDef { key: EmployerTab; label: string; icon: string; count: number }
 
 interface EmployerNavTabsProps {
   active: EmployerTab;
   onChange: (tab: EmployerTab) => void;
-  counts: { jobs: number; apps: number; escrow: number };
+  counts: { jobs: number; apps: number };
   variant?: 'tabs' | 'sidebar';
   className?: string;
 }
@@ -21,8 +21,6 @@ export function EmployerNavTabs({ active, onChange, counts, variant = 'tabs', cl
     { key: 'overview', label: tp('tabOverview'),  icon: 'grid_view',  count: 0 },
     { key: 'jobs',     label: tp('tabMyJobs'),    icon: 'work',       count: counts.jobs },
     { key: 'apps',     label: tp('tabApps'),      icon: 'people',     count: counts.apps },
-    { key: 'escrow',   label: tp('tabPayments'),  icon: 'payments',   count: counts.escrow },
-    { key: 'invite',   label: tp('tabInvite'),    icon: 'person_add', count: 0 },
   ];
 
   if (variant === 'sidebar') {

@@ -284,7 +284,7 @@ export function BusesLandingClient({ buses, totalBuses: _totalBuses }: Props) {
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10 text-white/80 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
                 <span className="material-symbols-outlined text-brand-amber text-[14px] sm:text-[16px]">verified</span>
-                <span>{_totalBuses > 0 ? `${_totalBuses.toLocaleString('ar-EG')} حافلة متاحة` : 'حافلات للبيع والإيجار'}</span>
+                <span>{_totalBuses > 0 ? `${_totalBuses.toLocaleString('en-US')} حافلة متاحة` : 'حافلات للبيع والإيجار'}</span>
               </div>
 
               <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-2 lg:mb-3">

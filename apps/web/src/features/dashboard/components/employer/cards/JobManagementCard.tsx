@@ -5,7 +5,6 @@ import { useRouter } from '@/i18n/navigation';
 import { JOB_STATUS_CONFIG, SALARY_PERIOD_CONFIG } from '@/lib/constants/jobs';
 import { Button } from '@/components/ui/button';
 import type { JobItem } from '@/lib/api/jobs';
-import type { EmployerTab } from '../EmployerNavTabs';
 
 function timeAgo(dateStr: string, tp: (key: string, values?: any) => string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -21,10 +20,9 @@ interface JobManagementCardProps {
   job: JobItem;
   onClose: (jobId: string) => void;
   onViewApps: (jobId: string) => void;
-  setTab: (tab: EmployerTab) => void;
 }
 
-export function JobManagementCard({ job, onClose, onViewApps, setTab }: JobManagementCardProps) {
+export function JobManagementCard({ job, onClose, onViewApps }: JobManagementCardProps) {
   const tp = useTranslations('pages');
   const router = useRouter();
   const statusCfg = JOB_STATUS_CONFIG[job.status] ?? JOB_STATUS_CONFIG.ACTIVE;
@@ -45,7 +43,7 @@ export function JobManagementCard({ job, onClose, onViewApps, setTab }: JobManag
       {/* Salary */}
       {job.salary && (
         <div className="flex items-baseline gap-1 mb-3">
-          <span className="font-black text-primary text-base">{Number(job.salary).toLocaleString('ar-OM')}</span>
+          <span className="font-black text-primary text-base">{Number(job.salary).toLocaleString('en-US')}</span>
           <span className="text-[11px] text-primary/60">{tp('currencyOMR')}</span>
           {job.salaryPeriod && SALARY_PERIOD_CONFIG[job.salaryPeriod] && (
             <span className="text-[10px] text-on-surface-variant/50">{tp(SALARY_PERIOD_CONFIG[job.salaryPeriod].labelKey)}</span>
@@ -54,14 +52,13 @@ export function JobManagementCard({ job, onClose, onViewApps, setTab }: JobManag
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 gap-2 mb-3">
         {[
           { label: tp('jobApplicants'), value: job._count?.applications ?? 0, icon: 'group' },
           { label: tp('jobViews'),      value: job.viewCount,                 icon: 'visibility' },
-          { label: tp('jobInvites'),    value: job.inviteCount ?? 0,          icon: 'mail' },
         ].map((s) => (
           <div key={s.label} className="bg-surface-container-low rounded-xl p-2 text-center border border-outline-variant/[0.06]">
-            <p className="font-black text-on-surface text-sm leading-none">{s.value.toLocaleString('ar-OM')}</p>
+            <p className="font-black text-on-surface text-sm leading-none">{s.value.toLocaleString('en-US')}</p>
             <p className="text-[9px] text-on-surface-variant/50 mt-0.5 flex items-center justify-center gap-0.5">
               <span className="material-symbols-outlined text-[10px]">{s.icon}</span>
               {s.label}
@@ -81,15 +78,6 @@ export function JobManagementCard({ job, onClose, onViewApps, setTab }: JobManag
           >
             <span className="material-symbols-outlined text-base">people</span>
             {tp('viewApps')} ({job._count?.applications ?? 0})
-          </Button>
-          <Button
-            onClick={() => setTab('invite')}
-            variant="outline"
-            size="sm"
-            className="flex-1 h-9 rounded-xl border-outline-variant/20 text-on-surface-variant text-[11px]"
-          >
-            <span className="material-symbols-outlined text-base">person_add</span>
-            {tp('inviteDriver')}
           </Button>
           <div className="relative group">
             <Button

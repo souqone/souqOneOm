@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-export type DriverTab = 'overview' | 'apps' | 'invites' | 'escrow' | 'recs';
+export type DriverTab = 'overview' | 'apps';
 
 interface TabDef {
   key: DriverTab;
@@ -14,7 +14,7 @@ interface TabDef {
 interface DriverNavTabsProps {
   active: DriverTab;
   onChange: (tab: DriverTab) => void;
-  counts: { apps: number; invites: number; escrow: number; recs: number };
+  counts: { apps: number };
   variant?: 'tabs' | 'sidebar';
   className?: string;
 }
@@ -25,9 +25,6 @@ export function DriverNavTabs({ active, onChange, counts, variant = 'tabs', clas
   const TABS: TabDef[] = [
     { key: 'overview', label: tp('tabOverview'), icon: 'grid_view', count: 0 },
     { key: 'apps', label: tp('tabMyApps'), icon: 'list_alt', count: counts.apps },
-    { key: 'invites', label: tp('tabInvites'), icon: 'mail', count: counts.invites },
-    { key: 'escrow', label: tp('tabPayments'), icon: 'payments', count: counts.escrow },
-    { key: 'recs', label: tp('tabRecs'), icon: 'recommend', count: counts.recs },
   ];
 
   if (variant === 'sidebar') {

@@ -15,7 +15,6 @@ const mockPrisma = {
   driverProfile: { findMany: jest.fn(), count: jest.fn() },
   employerProfile: { findMany: jest.fn(), count: jest.fn() },
   driverVerification: { count: jest.fn() },
-  jobEscrow: { count: jest.fn() },
 };
 
 describe('AdminJobsService', () => {
@@ -90,7 +89,6 @@ describe('AdminJobsService', () => {
       mockPrisma.driverProfile.count.mockResolvedValue(3);
       mockPrisma.employerProfile.count.mockResolvedValue(2);
       mockPrisma.driverVerification.count.mockResolvedValue(1);
-      mockPrisma.jobEscrow.count.mockResolvedValue(0);
 
       const result = await service.getStats();
       expect(result.jobs.total).toBe(10);

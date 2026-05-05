@@ -5,9 +5,9 @@ import { Truck, Search, ShieldCheck, Star, TrendingUp } from 'lucide-react';
 import { STATS } from '../constants';
 
 const CARRIER_STATS = [
-  { icon: ShieldCheck, label: 'مزود موثّق', value: STATS.verifiedCarriers.toLocaleString('ar-OM'), color: '#16a34a' },
+  { icon: ShieldCheck, label: 'مزود موثّق', value: STATS.verifiedCarriers.toLocaleString('en-US'), color: '#16a34a' },
   { icon: Star, label: 'متوسط التقييم', value: '4.8', color: '#d97706' },
-  { icon: TrendingUp, label: 'رحلة مكتملة', value: STATS.completedTrips.toLocaleString('ar-OM'), color: '#7c3aed' },
+  { icon: TrendingUp, label: 'رحلة مكتملة', value: STATS.completedTrips.toLocaleString('en-US'), color: '#7c3aed' },
 ];
 
 export default function CarrierCTA() {

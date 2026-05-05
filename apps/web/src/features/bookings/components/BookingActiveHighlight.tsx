@@ -6,7 +6,7 @@ import { getBookingEntity } from '@/lib/api';
 import type { BookingItem } from '@/lib/api';
 
 function formatDate(dateStr: string, locale: string) {
-  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', {
+  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', {
     day: 'numeric', month: 'short',
   });
 }
@@ -44,7 +44,7 @@ export function BookingActiveHighlight({ booking }: Props) {
 
         <div className="flex items-baseline gap-1 mb-4">
           <span className="font-black text-on-primary text-2xl">
-            {Number(booking.totalPrice).toLocaleString('ar-OM')}
+            {Number(booking.totalPrice).toLocaleString('en-US')}
           </span>
           <span className="text-on-primary/50 text-[11px]">{tb('currencyOMR')}</span>
         </div>

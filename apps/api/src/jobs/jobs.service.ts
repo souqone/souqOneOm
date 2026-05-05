@@ -94,44 +94,7 @@ export class JobsService {
       .catch((err) => this.logger.warn(`Failed to index job ${job.id}: ${(err as Error).message}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
 
-    // Smart notifications: notify matching drivers for HIRING jobs
-    if (dto.jobType === 'HIRING') {
-      this.notifyMatchingDrivers(job)
-        .catch((err) => this.logger.warn(`Failed to notify matching drivers for job ${job.id}: ${(err as Error).message}`));
-    }
-
     return job;
-  }
-
-  /* ───── SMART MATCHING ───── */
-  private async notifyMatchingDrivers(job: any) {
-    const licenseTypes = job.licenseTypes ?? [];
-    if (licenseTypes.length === 0) return;
-
-    const matchingDrivers = await this.prisma.driverProfile.findMany({
-      where: {
-        governorate: job.governorate,
-        licenseTypes: { hasSome: licenseTypes },
-        isAvailable: true,
-        userId: { not: job.userId },
-      },
-      select: { userId: true },
-      take: 50,
-    });
-
-    if (matchingDrivers.length === 0) return;
-
-    const notifPromises = matchingDrivers.map((d) =>
-      this.notifications.create({
-        userId: d.userId,
-        type: 'JOB_RECOMMENDATION' as any,
-        title: 'وظيفة قد تناسبك',
-        body: `وظيفة جديدة "${job.title}" في ${job.governorate}`,
-        data: { jobId: job.id },
-      }).catch((err) => this.logger.warn(`Failed to send job recommendation for job ${job.id}: ${(err as Error).message}`)),
-    );
-
-    await Promise.allSettled(notifPromises);
   }
 
   /* ───── FIND ALL (cached) ───── */

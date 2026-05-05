@@ -43,7 +43,7 @@ export function NotificationsDesktopDetailPanel({
             {notification.isRead ? labels.readStatus : labels.unreadStatus}
           </span>
           <span className="text-[11px] text-on-surface-variant/50">
-            {new Date(notification.createdAt).toLocaleString('ar-OM')}
+            {new Date(notification.createdAt).toLocaleString('en-US')}
           </span>
         </div>
       </div>

@@ -191,8 +191,8 @@ function BookingDetailContent() {
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                    <DetailCell icon="event" label={tp('bookingDetailStartDate')} value={new Date(booking.startDate).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
-                    <DetailCell icon="event_upcoming" label={tp('bookingDetailEndDate')} value={new Date(booking.endDate).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
+                    <DetailCell icon="event" label={tp('bookingDetailStartDate')} value={new Date(booking.startDate).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
+                    <DetailCell icon="event_upcoming" label={tp('bookingDetailEndDate')} value={new Date(booking.endDate).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
                     <DetailCell icon="timelapse" label={tp('bookingDetailDuration')} value={tp('bookingDetailDays', { days: booking.totalDays })} />
                     <DetailCell icon="gavel" label={tp('bookingDetailCancelPolicy')} value={cancelLabels[booking.cancellationPolicy] ?? booking.cancellationPolicy} />
                     {booking.pickupLocation && <DetailCell icon="pin_drop" label={tp('bookingDetailPickup')} value={booking.pickupLocation} />}
@@ -402,7 +402,7 @@ function TimelineItem({ date, label, color, locale }: { date: string; label: str
       <div className="pb-1">
         <p className="text-sm font-black text-on-surface">{label}</p>
         <p className="text-xs text-on-surface-variant mt-0.5">
-          {new Date(date).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          {new Date(date).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>

@@ -91,7 +91,7 @@ export function SellerReviewsTab({ reviews, summary, sellerId, currentUserId, lo
                       {r.reviewer.displayName || r.reviewer.username}
                     </p>
                     <p className="text-xs text-on-surface-variant">
-                      {new Date(r.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')}
+                      {new Date(r.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US')}
                     </p>
                   </div>
                 </div>

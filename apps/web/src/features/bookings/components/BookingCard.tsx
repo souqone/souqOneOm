@@ -21,7 +21,7 @@ interface Props {
 }
 
 function formatDate(dateStr: string, locale: string) {
-  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', {
+  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', {
     day: 'numeric', month: 'short',
   });
 }
@@ -98,7 +98,7 @@ export function BookingCard({ booking, role, onRate, onConfirm, onReject, onCanc
           </div>
           <div className="flex items-baseline gap-0.5">
             <span className="font-black text-primary text-[13px]">
-              {Number(booking.totalPrice).toLocaleString('ar-OM')}
+              {Number(booking.totalPrice).toLocaleString('en-US')}
             </span>
             <span className="text-[10px] text-primary/60">{tb('currencyOMR')}</span>
           </div>

@@ -245,7 +245,7 @@ export default function RequestDetailShell({ id }: { id: string }) {
                 { icon: 'category',  label: 'نوع الخدمة', val: t(`serviceTypes.${req.serviceType}`) },
                 { icon: 'scale',     label: t('fields.weight'), val: req.weightTons ? `${req.weightTons} ${t('fields.tons')}` : '—' },
                 { icon: 'group',     label: t('fields.requiresHelper'), val: req.requiresHelper ? 'نعم' : 'لا' },
-                { icon: 'schedule',  label: t('fields.scheduledAt'), val: req.isFlexible ? t('fields.flexible') : req.scheduledAt ? new Date(req.scheduledAt).toLocaleDateString('ar-OM') : t('fields.asap') },
+                { icon: 'schedule',  label: t('fields.scheduledAt'), val: req.isFlexible ? t('fields.flexible') : req.scheduledAt ? new Date(req.scheduledAt).toLocaleDateString('ar-OM-u-nu-latn') : t('fields.asap') },
               ].map(c => (
                 <div key={c.label} className="bg-surface-container-low p-4 rounded-lg border border-outline-variant/30 flex flex-col items-center text-center">
                   <span className="material-symbols-outlined text-secondary mb-2">{c.icon}</span>

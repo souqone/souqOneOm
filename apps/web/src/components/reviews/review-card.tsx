@@ -12,7 +12,7 @@ export function ReviewCard({ review }: { review: ReviewItem }) {
   const reviewer = review.reviewer;
   const avatar = reviewer.avatarUrl ? getImageUrl(reviewer.avatarUrl) : null;
   const name = reviewer.displayName || reviewer.username;
-  const date = new Date(review.createdAt).toLocaleDateString('ar-OM', { year: 'numeric', month: 'short', day: 'numeric' });
+  const date = new Date(review.createdAt).toLocaleDateString('ar-OM-u-nu-latn', { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
     <div className="bg-surface-container-lowest dark:bg-surface-container rounded-xl border border-outline-variant/10 p-4">

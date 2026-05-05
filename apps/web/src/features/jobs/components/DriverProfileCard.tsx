@@ -1,49 +1,22 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { useRouter } from '@/i18n/navigation';
 import { getImageUrl } from '@/lib/image-utils';
 import { resolveLocationLabel } from '@/lib/location-data';
 import { LICENSE_TYPE_CONFIG } from '@/lib/constants/jobs';
-import { useInviteDriver } from '@/lib/api/jobs';
 import { Button } from '@/components/ui/button';
-import type { DriverProfileItem, JobItem } from '@/lib/api/jobs';
+import type { DriverProfileItem } from '@/lib/api/jobs';
 
 interface DriverProfileCardProps {
   profile: DriverProfileItem;
-  variant?: 'default' | 'invite';
-  activeJobs?: Pick<JobItem, 'id' | 'title'>[];
-  selectedJobId?: string;
-  onJobSelect?: (jobId: string) => void;
-  onInvited?: (driverId: string) => void;
 }
 
-export function DriverProfileCard({
-  profile,
-  variant = 'default',
-  activeJobs = [],
-  selectedJobId,
-  onJobSelect,
-  onInvited,
-}: DriverProfileCardProps) {
+export function DriverProfileCard({ profile }: DriverProfileCardProps) {
   const tp = useTranslations('pages');
   const locale = useLocale();
-  const router = useRouter();
-  const inviteMutation = useInviteDriver();
-  const [localJob, setLocalJob] = useState(selectedJobId ?? '');
 
   const name = profile.user.displayName || profile.user.username;
-  const jobId = selectedJobId ?? localJob;
-
-  const handleInvite = () => {
-    if (!jobId) return;
-    inviteMutation.mutate(
-      { jobId, driverId: profile.id },
-      { onSuccess: () => onInvited?.(profile.id) },
-    );
-  };
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/15 shadow-sm p-4">
@@ -101,48 +74,14 @@ export function DriverProfileCard({
       </div>
 
       {/* Actions */}
-      {variant === 'invite' ? (
-        <div className="flex gap-2 mt-2">
-          <select
-            value={jobId}
-            onChange={(e) => {
-              setLocalJob(e.target.value);
-              onJobSelect?.(e.target.value);
-            }}
-            className="flex-1 h-9 rounded-xl bg-surface-container-low border border-outline-variant/20 text-[11px] px-2 text-on-surface focus:border-primary focus:outline-none"
-          >
-            <option value="">{tp('selectJob')}</option>
-            {activeJobs.map((j) => (
-              <option key={j.id} value={j.id}>{j.title}</option>
-            ))}
-          </select>
-          <Button
-            onClick={handleInvite}
-            disabled={!jobId || inviteMutation.isPending}
-            size="sm"
-            className="h-9 px-4 rounded-xl bg-primary text-on-primary text-[11px] font-semibold shadow-sm shadow-primary/20 flex-shrink-0"
-          >
-            {tp('invite')}
-          </Button>
-          <Button
-            onClick={() => router.push(`/jobs/drivers/${profile.id}`)}
-            variant="outline"
-            size="sm"
-            className="w-9 h-9 rounded-xl border-outline-variant/20 text-on-surface-variant flex-shrink-0"
-          >
-            <span className="material-symbols-outlined text-base">person</span>
-          </Button>
-        </div>
-      ) : (
-        <Button
-          href={`/jobs/drivers/${profile.id}`}
-          variant="outline"
-          size="sm"
-          className="w-full h-9 rounded-xl border-outline-variant/20 text-on-surface-variant text-[11px]"
-        >
-          {tp('viewProfile')}
-        </Button>
-      )}
+      <Button
+        href={`/jobs/drivers/${profile.id}`}
+        variant="outline"
+        size="sm"
+        className="w-full h-9 rounded-xl border-outline-variant/20 text-on-surface-variant text-[11px]"
+      >
+        {tp('viewProfile')}
+      </Button>
     </div>
   );
 }

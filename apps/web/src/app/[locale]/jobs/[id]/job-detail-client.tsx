@@ -1,888 +1,708 @@
 'use client';
-
-import { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import { Link, useRouter } from '@/i18n/navigation';
-import { Share2, MessageCircle, Phone, Trash2, Send, MapPin, Briefcase, Clock, Eye, AlertTriangle } from 'lucide-react';
-import { Navbar } from '@/components/layout/navbar';
-import { Footer } from '@/components/layout/footer';
-import { useJob, useApplyToJob, useDeleteJob, useCreateConversation, useMyApplications, useMyInvites, useWithdrawApplication, useRespondToInvite, useJobApplications, useUpdateApplicationStatus } from '@/lib/api';
+import Link from 'next/link';
+import {
+  MapPin, Clock, Eye, Users, Phone, MessageCircle,
+  Mail, CheckCircle, AlertCircle, ArrowRight, X,
+  Star, Briefcase
+} from 'lucide-react';
+import ProposalCard from '@/features/jobs/components/ProposalCard';
+import RatingBadges from '@/features/jobs/components/RatingBadges';
+import {
+  useJob,
+  useJobApplications,
+  useApplyToJob,
+  useUpdateApplicationStatus,
+  useWithdrawApplication,
+  useCloseJob,
+} from '@/lib/api/jobs';
+import type { DriverJob, JobApplication } from '@/features/jobs/types';
+import {
+  LICENSE_TYPE_LABELS,
+  EMPLOYMENT_TYPE_LABELS,
+  SALARY_PERIOD_LABELS,
+  LANGUAGE_LABELS,
+  NATIONALITY_LABELS,
+  JOB_STATUS_LABELS,
+  JOB_STATUS_COLORS,
+  APPLICATION_STATUS_LABELS,
+  APPLICATION_STATUS_COLORS,
+  STRINGS,
+} from '@/features/jobs/constants';
 import { useAuth } from '@/providers/auth-provider';
-import { useRequireJobProfile } from '@/hooks/use-require-job-profile';
-import { useToast } from '@/components/toast';
-import { employmentLabelsT } from '@/lib/constants/jobs';
-import { useTranslations, useLocale } from 'next-intl';
-import { resolveLocationLabel, resolveCityLabel } from '@/lib/location-data';
-import { clsx } from 'clsx';
+import { useMyDriverProfile, useMyEmployerProfile } from '@/lib/api/jobs';
+import { timeAgo, getInitials, getAvatarColor, cn } from '@/lib/utils';
+import { resolveLocationLabel } from '@/lib/location-data';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+const applySchema = z.object({
+  message: z.string().min(10, 'الرسالة يجب أن تكون على الأقل 10 أحرف').max(500, 'الرسالة طويلة جداً'),
+  resumeUrl: z.string().url('رابط غير صالح').optional().or(z.literal('')),
+})
+type ApplyFormData = z.infer<typeof applySchema>
 
-function formatRelativeTime(dateString: string, locale: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  if (diffDays < 7) return rtf.format(-diffDays, 'day');
-  if (diffDays < 30) return rtf.format(-Math.floor(diffDays / 7), 'week');
-  return rtf.format(-Math.floor(diffDays / 30), 'month');
-}
-
-function SectionTitle({ children, icon }: { children: React.ReactNode, icon?: React.ReactNode }) {
+function DetailSkeleton() {
   return (
-    <div className="mb-6 flex items-center gap-3">
-      {icon && (
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-          {icon}
+    <div className="animate-pulse">
+      <div className="card-base rounded-2xl p-6 mb-4">
+        <div className="flex gap-3 mb-4">
+          <div className="h-7 w-20 bg-surface-dim rounded-full" />
+          <div className="h-7 w-16 bg-surface-dim rounded-full" />
         </div>
-      )}
-      <div>
-        <h2 className="text-lg font-bold text-on-surface tracking-tight">{children}</h2>
-        <div className="mt-1.5 h-1 w-12 rounded-full bg-gradient-to-r from-primary to-primary/30" />
+        <div className="h-7 w-3/4 bg-surface-dim rounded-xl mb-3" />
+        <div className="h-5 w-1/2 bg-surface-dim rounded-xl mb-4" />
+        <div className="flex gap-3">
+          <div className="h-5 w-24 bg-surface-dim rounded-xl" />
+          <div className="h-5 w-20 bg-surface-dim rounded-xl" />
+        </div>
+      </div>
+      <div className="card-base rounded-2xl p-6 mb-4">
+        <div className="h-5 w-1/3 bg-surface-dim rounded-xl mb-4" />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={`skel-detail-${i}`} className="h-4 bg-surface-dim rounded-xl" />
+          ))}
+        </div>
       </div>
     </div>
-  );
+  )
 }
-
-function ExpandableText({ text, expandLabel, collapseLabel }: { text: string; expandLabel: string; collapseLabel: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const maxLength = 300;
-  if (text.length <= maxLength) {
-    return <p className="text-[14px] text-on-surface-variant leading-relaxed whitespace-pre-line">{text}</p>;
-  }
-  const displayText = expanded ? text : text.slice(0, maxLength) + '...';
-  return (
-    <div>
-      <p className="text-[14px] text-on-surface-variant leading-relaxed whitespace-pre-line">{displayText}</p>
-      <button onClick={() => setExpanded(!expanded)} className="mt-3 text-[13px] text-primary hover:text-primary/80 font-bold flex items-center gap-1 transition-colors">
-        {expanded ? collapseLabel : expandLabel}
-        <span className="material-symbols-outlined text-sm">{expanded ? 'expand_less' : 'expand_more'}</span>
-      </button>
-    </div>
-  );
-}
-
-// ── Whatsapp SVG ─────────────────────────────────────────────────────────────
-
-function WhatsAppIcon() {
-  return (
-    <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-    </svg>
-  );
-}
-
-// ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function JobDetailClient() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const { user } = useAuth();
-  const { requireProfile } = useRequireJobProfile();
-  const { addToast } = useToast();
-  const tp = useTranslations('pages');
-  const tj = useTranslations('jobs');
-  const locale = useLocale();
+  const params = useParams()
+  const jobId = (params?.id as string) ?? ''
+  const { user, isAuthenticated } = useAuth()
 
-  // Safely get translations with fallbacks
-  const tShare = tp.has('jobDetailShare') ? tp('jobDetailShare') : 'مشاركة';
-  const tCall = tp.has('jobDetailCall') ? tp('jobDetailCall') : 'اتصال';
-  const tClosed = tp.has('jobDetailClosedAd') ? tp('jobDetailClosedAd') : 'هذا الإعلان مغلق';
-  const tExpired = tp.has('jobDetailExpired') ? tp('jobDetailExpired') : 'هذا الإعلان منتهي';
+  const { data: driverProfile } = useMyDriverProfile(isAuthenticated)
+  const { data: employerProfile } = useMyEmployerProfile(isAuthenticated)
+  const isDriver = !!driverProfile
+  const isEmployer = !!employerProfile
 
-  const jobTypeLabels: Record<string, { label: string; color: string; border: string }> = {
-    OFFERING: { label: tp('jobDetailOffering'), color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
-    HIRING: { label: tp('jobDetailHiring'), color: 'bg-primary/10 text-primary dark:text-primary', border: 'border-primary/20' },
-  };
-  const salaryPeriodLabels: Record<string, string> = {
-    DAILY: tp('jobDetailPerDay'), MONTHLY: tp('jobDetailPerMonth'), YEARLY: tp('jobDetailPerYear'), NEGOTIABLE: tp('jobDetailNegotiable'),
-  };
-  const licenseLabels: Record<string, string> = {
-    LIGHT: tp('jobDetailLicLight'), HEAVY: tp('jobDetailLicHeavy'), TRANSPORT: tp('jobDetailLicTransport'), BUS: tp('jobDetailLicBus'), MOTORCYCLE: tp('jobDetailLicMotorcycle'),
-  };
-  const languageLabels: Record<string, string> = {
-    ARABIC: tp('jobDetailLangArabic'), ENGLISH: tp('jobDetailLangEnglish'), URDU: tp('jobDetailLangUrdu'), HINDI: tp('jobDetailLangHindi'), BENGALI: tp('jobDetailLangBengali'), FILIPINO: tp('jobDetailLangFilipino'),
-  };
-  const vehicleTypeLabels: Record<string, string> = {
-    SEDAN: tp('jobDetailVtSedan'), SUV: tp('jobDetailVtSUV'), LIGHT_TRUCK: tp('jobDetailVtLightTruck'), HEAVY_TRUCK: tp('jobDetailVtHeavyTruck'), BUS: tp('jobDetailVtBus'), LIMO: tp('jobDetailVtLimo'), VAN: tp('jobDetailVtVan'), PICKUP: tp('jobDetailVtPickup'),
-  };
+  const { data: jobData, isLoading: loading, error: jobError } = useJob(jobId)
+  const job = jobData as unknown as DriverJob | undefined
+  const { data: applicationsData, isLoading: appsLoading, refetch: refetchApps } = useJobApplications(jobId)
+  const applications = (applicationsData ?? []) as unknown as JobApplication[]
 
-  const { data: job, isLoading, isError } = useJob(id);
-  const applyMutation = useApplyToJob();
-  const deleteMutation = useDeleteJob();
-  const createConv = useCreateConversation();
+  const applyMutation = useApplyToJob()
+  const updateStatusMutation = useUpdateApplicationStatus()
+  const withdrawMutation = useWithdrawApplication()
+  const closeMutation = useCloseJob()
 
-  const { data: myApplications } = useMyApplications();
-  const myApplication = myApplications?.find(a => a.jobId === id) ?? null;
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [closingJob, setClosingJob] = useState(false)
+  const [appsExpanded, setAppsExpanded] = useState(true)
 
-  const { data: myInvites } = useMyInvites();
-  const myInvite = myInvites?.find(i => i.jobId === id && i.status === 'PENDING') ?? null;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<ApplyFormData>({
+    resolver: zodResolver(applySchema),
+  })
 
-  const withdrawMutation = useWithdrawApplication();
-  const respondMutation  = useRespondToInvite();
+  const isJobOwner = job?.userId === user?.id
+  const alreadyApplied = applications.some(a => a.applicantId === user?.id)
+  const ownApplication = applications.find(a => a.applicantId === user?.id)
 
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [applyMessage, setApplyMessage] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const canApply =
+    isAuthenticated &&
+    !isJobOwner &&
+    !alreadyApplied &&
+    job?.status === 'ACTIVE' &&
+    ((job.jobType === 'HIRING' && isDriver) || (job.jobType === 'OFFERING' && isEmployer))
 
-  const isOwner = !!(user && job?.user.id === user.id);
-
-  const { data: applications } = useJobApplications(isOwner ? id : '');
-  const updateStatusMutation = useUpdateApplicationStatus();
-
-  const handleMessage = useCallback(() => {
-    requireProfile('any', async () => {
-      if (!job) return;
-      try {
-        const conv = await createConv.mutateAsync({ entityType: 'JOB', entityId: job.id });
-        router.push(`/messages/${conv.id}`);
-      } catch (err) {
-        addToast('error', err instanceof Error ? err.message : tp('jobDetailErrorConversation'));
-      }
-    });
-  }, [job, createConv, router, addToast, tp, requireProfile]);
-
-  const handleApply = useCallback(() => {
-    requireProfile('driver', async () => {
-      try {
-        await applyMutation.mutateAsync({ jobId: id, message: applyMessage || undefined });
-        addToast('success', tp('jobDetailApplySuccess'));
-        setShowApplyModal(false);
-        setApplyMessage('');
-      } catch (err: any) {
-        addToast('error', err?.message || tp('jobDetailApplyFail'));
-      }
-    });
-  }, [id, applyMessage, applyMutation, addToast, tp, requireProfile]);
-
-  const handleDelete = useCallback(async () => {
+  const onSubmitProposal = async (data: ApplyFormData) => {
+    if (!job) return
     try {
-      await deleteMutation.mutateAsync(id);
-      addToast('success', tp('jobDetailDeleted'));
-      router.push('/jobs/my');
-    } catch (err: any) {
-      addToast('error', err?.message || tp('jobDetailDeleteFail'));
+      await applyMutation.mutateAsync({
+        jobId: job.id,
+        message: data.message,
+        resumeUrl: data.resumeUrl || undefined,
+      })
+      setSubmitSuccess(true)
+      reset()
+      refetchApps()
+    } catch {
+      // error handled inline
     }
-  }, [id, deleteMutation, addToast, router, tp]);
-
-  const handleShare = useCallback(() => {
-    const url = window.location.href;
-    if (navigator.share) {
-      navigator.share({ title: job?.title, url });
-    } else {
-      navigator.clipboard.writeText(url);
-      addToast('success', tp('jobDetailLinkCopied'));
-    }
-  }, [job?.title, addToast, tp]);
-
-  const handleWhatsApp = useCallback(() => {
-    if (!job?.whatsapp) return;
-    const phone = job.whatsapp.replace(/\D/g, '');
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(job.title)}`, '_blank');
-  }, [job?.whatsapp, job?.title]);
-
-  const handleCall = useCallback(() => {
-    if (!job?.contactPhone) return;
-    window.location.href = `tel:${job.contactPhone}`;
-  }, [job?.contactPhone]);
-
-  const handleWithdraw = useCallback(async () => {
-    if (!myApplication) return;
-    try {
-      await withdrawMutation.mutateAsync(myApplication.id);
-      addToast('success', tp('jobDetailWithdrawSuccess'));
-    } catch (err: any) {
-      addToast('error', err?.message || tp('jobDetailWithdrawFail'));
-    }
-  }, [myApplication, withdrawMutation, addToast, tp]);
-
-  const handleInviteRespond = useCallback(async (status: 'ACCEPTED' | 'DECLINED') => {
-    if (!myInvite) return;
-    try {
-      await respondMutation.mutateAsync({ inviteId: myInvite.id, status });
-      addToast('success',
-        status === 'ACCEPTED' ? tp('jobDetailInviteAccepted') : tp('jobDetailInviteDeclined')
-      );
-    } catch (err: any) {
-      addToast('error', err?.message || tp('jobDetailInviteFail'));
-    }
-  }, [myInvite, respondMutation, addToast, tp]);
-
-  // ── Loading state ──
-  if (isLoading) {
-    return (
-      <div className="bg-background min-h-screen">
-        <Navbar />
-        <main className="max-w-6xl mx-auto px-4 md:px-8 pt-6 pb-20">
-          <div className="animate-pulse space-y-6">
-            <div className="h-6 bg-surface-container-low rounded-xl w-64" />
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
-              <div className="space-y-6">
-                <div className="h-40 bg-surface-container-low rounded-3xl" />
-                <div className="h-64 bg-surface-container-low rounded-3xl" />
-              </div>
-              <div className="h-96 bg-surface-container-low rounded-3xl hidden lg:block" />
-            </div>
-          </div>
-        </main>
-      </div>
-    );
   }
 
-  // ── Error state ──
-  if (isError || !job) {
+  const handleAccept = async (appId: string) => {
+    await updateStatusMutation.mutateAsync({ applicationId: appId, status: 'ACCEPTED' })
+    refetchApps()
+  }
+
+  const handleReject = async (appId: string) => {
+    await updateStatusMutation.mutateAsync({ applicationId: appId, status: 'REJECTED' })
+    refetchApps()
+  }
+
+  const handleWithdraw = async (appId: string) => {
+    await withdrawMutation.mutateAsync(appId)
+    refetchApps()
+  }
+
+  const handleCloseJob = async () => {
+    if (!job) return
+    setClosingJob(true)
+    try {
+      await closeMutation.mutateAsync(job.id)
+    } finally {
+      setClosingJob(false)
+    }
+  }
+
+  if (jobError) {
     return (
-      <div className="bg-background min-h-screen">
-        <Navbar />
-        <main className="max-w-5xl mx-auto px-4 md:px-8 pt-32 pb-20 text-center flex flex-col items-center justify-center">
-          <div className="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center mb-6 shadow-sm">
-            <span className="material-symbols-outlined text-5xl text-on-surface-variant/50">search_off</span>
-          </div>
-          <p className="text-2xl font-bold mb-6 text-on-surface">{tp('jobDetailNotFound')}</p>
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-2 bg-primary text-on-primary px-8 py-3.5 rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            {tp('jobDetailBackToJobs')}
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-12">
+        <div className="card-base rounded-2xl p-8 text-center max-w-md mx-auto">
+          <AlertCircle size={40} className="text-error mx-auto mb-3" />
+          <h2 className="font-bold text-base text-on-surface mb-2">خطأ في التحميل</h2>
+          <p className="text-sm text-on-surface-variant mb-4">تعذّر تحميل الوظيفة. تحقق من الاتصال وحاول مرة أخرى.</p>
+          <Link href="/jobs/browse" className="btn-primary text-sm">
+            العودة للوظائف
           </Link>
-        </main>
-        <Footer />
+        </div>
       </div>
-    );
+    )
   }
 
-  const typeInfo = jobTypeLabels[job.jobType] ?? { label: job.jobType, color: 'bg-surface-container-highest text-on-surface', border: 'border-outline-variant/20' };
-  const sellerName = job.user.displayName || job.user.username;
-  const relativeDate = formatRelativeTime(job.createdAt, locale);
-  const hasWhatsApp = Boolean(job.whatsapp);
-  const hasPhone = Boolean(job.contactPhone);
-  const hasEmail = Boolean(job.contactEmail);
-  const locationText = [resolveCityLabel(job.city, locale), resolveLocationLabel(job.governorate, locale)].filter(Boolean).join('، ');
+  const statusColor = job ? (JOB_STATUS_COLORS[job.status] ?? '#6b7280') : '#6b7280'
+  const statusLabel = job ? (JOB_STATUS_LABELS[job.status] ?? job.status) : ''
+
+  const employerInfo = job?.jobType === 'HIRING'
+    ? job.employerProfile
+    : null
+
+  const driverInfo = job?.jobType === 'OFFERING'
+    ? job.driverProfile
+    : null
+
+  const posterName = job?.jobType === 'HIRING' ? (employerInfo?.companyName ?? job?.user.displayName ??'')
+    : (driverInfo?.user.displayName ?? job?.user.displayName ?? '')
 
   return (
-    <div className="bg-surface min-h-screen relative overflow-hidden">
-      {/* Soft Background Blurs */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute top-[20%] right-0 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px] pointer-events-none translate-x-1/3" />
-      
-      <Navbar />
-      
-      <main className="max-w-[1200px] mx-auto px-4 md:px-8 pt-6 pb-20 relative z-10">
+    <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
 
-        {/* ══ A — TOP BAR: Breadcrumb + Share/Save ══ */}
-        <div className="flex items-center justify-between mb-8 bg-surface-container-lowest/60 backdrop-blur-md p-3 px-5 rounded-2xl border border-outline-variant/20 shadow-sm">
-          <nav className="flex items-center gap-2 text-[13px] font-medium text-on-surface-variant flex-wrap">
-            <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">home</span>
-              {tp('jobDetailHome')}
-            </Link>
-            <span className="material-symbols-outlined text-[14px] opacity-50">chevron_left</span>
-            <Link href="/jobs" className="hover:text-primary transition-colors">{tp('jobDetailBreadcrumb')}</Link>
-            <span className="material-symbols-outlined text-[14px] opacity-50">chevron_left</span>
-            <span className="text-on-surface truncate max-w-[140px] sm:max-w-[200px]">{job.title}</span>
-          </nav>
-          
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-[13px] font-bold text-on-surface transition-all duration-200 active:scale-95"
-          >
-            <Share2 size={16} />
-            <span className="hidden sm:inline">{tShare}</span>
-          </button>
-        </div>
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-on-surface-variant mb-5">
+        <Link href="/jobs/browse" className="hover:text-primary transition-colors font-bold">
+          {STRINGS.BROWSE_JOBS}
+        </Link>
+        <ArrowRight size={14} className="rotate-180" />
+        <span className="text-on-surface truncate max-w-xs">
+          {loading ? '...' : job?.title}
+        </span>
+      </nav>
 
-        {/* ══ INVITE BANNER ══ */}
-        {myInvite && (
-          <div className="mb-6 animate-in fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 rounded-2xl bg-violet-50/80 backdrop-blur-md border border-violet-200/60 shadow-sm">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-                  <span className="material-symbols-outlined text-violet-600 text-[20px]"
-                    style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>
-                </div>
-                <div>
-                  <p className="text-[14px] font-bold text-violet-900">{tp('jobDetailInvited')}</p>
-                  {myInvite.message && (
-                    <p className="text-[12px] text-violet-600 mt-0.5 leading-relaxed">&ldquo;{myInvite.message}&rdquo;</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2 sm:flex-shrink-0">
-                <button
-                  onClick={() => handleInviteRespond('ACCEPTED')}
-                  disabled={respondMutation.isPending}
-                  className="flex-1 sm:flex-none h-10 px-5 rounded-xl bg-violet-600 text-white text-[13px] font-bold flex items-center justify-center gap-1.5 shadow-sm shadow-violet-200 hover:bg-violet-700 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-base">check</span>
-                  {tp('jobDetailAcceptInvite')}
-                </button>
-                <button
-                  onClick={() => handleInviteRespond('DECLINED')}
-                  disabled={respondMutation.isPending}
-                  className="flex-1 sm:flex-none h-10 px-4 rounded-xl border border-violet-300 text-violet-700 text-[13px] font-bold hover:bg-violet-100 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {tp('jobDetailDeclineInvite')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* ── Left Column: Main Content ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-        {/* ══ B — STATUS BANNER ══ */}
-        {job.status && !['ACTIVE'].includes(job.status) && (
-          <div className="mb-6 flex items-center gap-3 px-5 py-4 rounded-2xl bg-red-50/80 backdrop-blur-md border border-red-200/60 shadow-sm text-red-700 text-[14px] font-bold animate-in fade-in">
-            <AlertTriangle className="shrink-0" size={20} />
-            {job.status === 'CLOSED' ? tClosed : tExpired}
-          </div>
-        )}
-
-        {/* ══ C — TWO-COLUMN LAYOUT ══ */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
-
-          {/* ════ LEFT COLUMN (Main Content) ════ */}
-          <div className="space-y-6">
-            
-            {/* Title Card */}
-            <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[40px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
-              
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className={clsx(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border tracking-wide",
-                  typeInfo.color, typeInfo.border
-                )}>
-                  <Briefcase size={14} />
-                  {typeInfo.label}
-                </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold bg-surface-container text-on-surface-variant border border-outline-variant/30 tracking-wide">
-                  <Clock size={14} />
-                  {employmentLabelsT(tj)[job.employmentType] ?? job.employmentType}
-                </span>
-              </div>
-
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-on-surface leading-tight tracking-tight mb-5">
-                {job.title}
-              </h1>
-
-              <div className="flex items-center gap-4 text-[13px] text-on-surface-variant font-medium flex-wrap">
-                <div className="flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/20">
-                  <MapPin size={16} className="text-primary" />
-                  <span>{locationText}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/20">
-                  <Eye size={16} className="text-primary" />
-                  <span>{job.viewCount} {tp('jobDetailViews')}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/20">
-                  <span className="material-symbols-outlined text-[16px] text-primary">history</span>
-                  <span>{relativeDate}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Description Card */}
-            {job.description && (
-              <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm">
-                <SectionTitle icon={<span className="material-symbols-outlined">description</span>}>
-                  {tp('jobDetailDescription')}
-                </SectionTitle>
-                <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-on-surface-variant">
-                  <ExpandableText text={job.description} expandLabel={tp('jobDetailShowMore')} collapseLabel={tp('jobDetailShowLess')} />
-                </div>
-              </div>
-            )}
-
-            {/* Requirements Bento Grid */}
-            <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm">
-              <SectionTitle icon={<span className="material-symbols-outlined">fact_check</span>}>
-                {tp('jobDetailRequirements')}
-              </SectionTitle>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-                {job.licenseTypes.length > 0 && (
-                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                      <span className="material-symbols-outlined text-[18px]">badge</span>
-                    </div>
-                    <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailLicenseType')}</p>
-                    <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {job.licenseTypes.map(lt => licenseLabels[lt] ?? lt).join('، ')}
-                    </p>
+          {loading ? (
+            <DetailSkeleton />
+          ) : job ? (
+            <>
+              {/* Job Header Card */}
+              <div className="card-base rounded-2xl p-6">
+                <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={job.jobType === 'HIRING' ? 'badge-hiring' : 'badge-offering'}>
+                      {job.jobType === 'HIRING' ? STRINGS.HIRING : STRINGS.OFFERING}
+                    </span>
+                    <span className="status-pill">
+                      <span
+                        className="w-2 h-2 rounded-full inline-block"
+                        style={{ backgroundColor: statusColor }}
+                      />
+                      {statusLabel}
+                    </span>
                   </div>
-                )}
-                
-                {job.experienceYears != null && (
-                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                      <span className="material-symbols-outlined text-[18px]">history</span>
-                    </div>
-                    <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailExperience')}</p>
-                    <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {tp('jobDetailExperienceYears', { years: job.experienceYears })}
-                    </p>
+                  <div className="flex items-center gap-3 text-xs text-on-surface-variant">
+                    <span className="flex items-center gap-1">
+                      <Eye size={12} />
+                      {job.viewCount} مشاهدة
+                    </span>
+                    <span>{timeAgo(job.createdAt)}</span>
                   </div>
-                )}
-
-                {(job.minAge || job.maxAge) && (
-                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                      <span className="material-symbols-outlined text-[18px]">cake</span>
-                    </div>
-                    <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailAge')}</p>
-                    <p className="text-[14px] font-bold text-on-surface leading-tight" dir="ltr">
-                      {job.minAge && job.maxAge ? `${job.minAge} - ${job.maxAge}` : job.minAge ? `+${job.minAge}` : `-${job.maxAge}`}
-                    </p>
-                  </div>
-                )}
-
-                {job.languages.length > 0 && (
-                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                      <span className="material-symbols-outlined text-[18px]">translate</span>
-                    </div>
-                    <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailLanguages')}</p>
-                    <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {job.languages.map(l => languageLabels[l] ?? l).join('، ')}
-                    </p>
-                  </div>
-                )}
-
-                {job.nationality && (
-                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                      <span className="material-symbols-outlined text-[18px]">flag</span>
-                    </div>
-                    <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailNationality')}</p>
-                    <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {job.nationality}
-                    </p>
-                  </div>
-                )}
-
-                {job.vehicleTypes.length > 0 && (
-                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                      <span className="material-symbols-outlined text-[18px]">directions_car</span>
-                    </div>
-                    <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailVehicleTypes')}</p>
-                    <p className="text-[14px] font-bold text-on-surface leading-tight">
-                      {job.vehicleTypes.map(v => vehicleTypeLabels[v] ?? v).join('، ')}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-container/50 border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
-                    <span className="material-symbols-outlined text-[18px]">garage</span>
-                  </div>
-                  <p className="text-[12px] text-on-surface-variant font-medium">{tp('jobDetailHasOwnVehicle')}</p>
-                  <p className="text-[14px] font-bold text-on-surface leading-tight">
-                    {job.hasOwnVehicle ? tp('jobDetailYes') : tp('jobDetailNo')}
-                  </p>
                 </div>
-              </div>
-            </div>
 
-            {/* Contact Info Card (Mobile mostly, but visible if applicable) */}
-            {(hasPhone || hasEmail) && (
-              <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm block lg:hidden">
-                <SectionTitle icon={<span className="material-symbols-outlined">contact_phone</span>}>
-                  {tp('jobDetailContactInfo')}
-                </SectionTitle>
-                <div className="flex flex-col gap-3">
-                  {hasPhone && (
-                    <a href={`tel:${job.contactPhone}`} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container border border-outline-variant/20 hover:border-primary/40 group transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                          <Phone size={18} />
-                        </div>
-                        <span className="text-[14px] font-bold text-on-surface">{tCall}</span>
-                      </div>
-                      <span className="text-[14px] font-bold text-on-surface-variant" dir="ltr">{job.contactPhone}</span>
-                    </a>
-                  )}
-                  {hasEmail && (
-                    <a href={`mailto:${job.contactEmail}`} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container border border-outline-variant/20 hover:border-primary/40 group transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">mail</span>
-                        </div>
-                        <span className="text-[14px] font-bold text-on-surface">{tp('jobDetailEmail')}</span>
-                      </div>
-                      <span className="text-[13px] font-bold text-on-surface-variant max-w-[150px] truncate">{job.contactEmail}</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-            {/* ══ APPLICATIONS — Owner Only ══ */}
-            {isOwner && applications && applications.length > 0 && (
-              <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm">
-                <SectionTitle icon={<span className="material-symbols-outlined">people</span>}>
-                  {tp('jobDetailApplications')} ({applications.length})
-                </SectionTitle>
-                <div className="flex flex-col divide-y divide-outline-variant/[0.08]">
-                  {applications.map(app => {
-                    const applicant = app.applicant;
-                    const firstName = (applicant.displayName || applicant.username || '?')[0].toUpperCase();
-                    return (
-                      <div key={app.id} className="flex items-center gap-3 py-3.5">
-                        <div className="relative flex-shrink-0">
-                          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-                            {applicant.avatarUrl
-                              ? <Image src={applicant.avatarUrl} alt={applicant.displayName || applicant.username} width={40} height={40} className="object-cover w-full h-full" />
-                              : <span className="text-white font-bold text-sm">{firstName}</span>
-                            }
-                          </div>
-                          {applicant.isVerified && (
-                            <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 bg-primary rounded-full border-2 border-surface-container-lowest flex items-center justify-center">
-                              <span className="material-symbols-outlined text-white text-[8px]"
-                                style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-on-surface truncate">
-                            {applicant.displayName || applicant.username}
-                          </p>
-                          {app.message && (
-                            <p className="text-[11px] text-on-surface-variant/60 truncate mt-0.5">
-                              &ldquo;{app.message}&rdquo;
-                            </p>
-                          )}
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${
-                          app.status === 'ACCEPTED' ? 'bg-green-50 text-green-700 border-green-200'
-                          : app.status === 'REJECTED' ? 'bg-error/10 text-error border-error/20'
-                          : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        }`}>
-                          {app.status === 'ACCEPTED' ? tp('jobDetailAppAccepted')
-                            : app.status === 'REJECTED' ? tp('jobDetailAppRejected')
-                            : tp('jobDetailAppPending')}
+                <h1 className="text-xl font-extrabold text-on-surface mb-3 leading-snug">
+                  {job.title}
+                </h1>
+
+                {/* Poster info */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0',
+                    getAvatarColor(job.userId)
+                  )}>
+                    {getInitials(posterName)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-on-surface">{posterName}</span>
+                      {job.user.isVerified && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                          <CheckCircle size={10} />
+                          {STRINGS.VERIFIED}
                         </span>
-                        {app.status === 'PENDING' && (
-                          <div className="flex gap-1.5 flex-shrink-0">
-                            <button
-                              onClick={() => updateStatusMutation.mutate({ applicationId: app.id, status: 'ACCEPTED' })}
-                              disabled={updateStatusMutation.isPending}
-                              className="h-8 px-3 rounded-lg bg-primary text-on-primary text-[11px] font-bold hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
-                            >
-                              {tp('jobDetailAccept')}
-                            </button>
-                            <button
-                              onClick={() => updateStatusMutation.mutate({ applicationId: app.id, status: 'REJECTED' })}
-                              disabled={updateStatusMutation.isPending}
-                              className="h-8 px-3 rounded-lg border border-outline-variant/30 text-on-surface-variant text-[11px] font-bold hover:text-error hover:border-error/20 hover:bg-error/5 active:scale-95 transition-all disabled:opacity-50"
-                            >
-                              {tp('jobDetailReject')}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {isOwner && applications && applications.length === 0 && (
-              <div className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-sm text-center">
-                <div className="w-14 h-14 rounded-2xl bg-surface-container-low flex items-center justify-center mx-auto mb-3">
-                  <span className="material-symbols-outlined text-on-surface-variant/30 text-3xl">people</span>
-                </div>
-                <p className="text-on-surface font-bold text-[14px]">{tp('jobDetailNoApps')}</p>
-                <p className="text-on-surface-variant text-[12px] mt-1">{tp('jobDetailNoAppsDesc')}</p>
-              </div>
-            )}
-          </div>
-
-          {/* ════ RIGHT COLUMN — Sticky Salary Card (Desktop) & CTA Mobile ════ */}
-          <div className="sticky top-6 flex flex-col gap-6">
-            
-            {/* The Main Action Card */}
-            <div className="rounded-3xl border border-outline-variant/20 bg-surface-container-lowest/80 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[40px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
-              
-              {/* Salary Section (Gradient Top) */}
-              <div className="p-6 md:p-8 bg-gradient-to-br from-primary/5 via-transparent to-transparent border-b border-outline-variant/10">
-                <p className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">{tp('jobDetailOfferedSalary')}</p>
-                {job.salary ? (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-end gap-2 flex-wrap" dir="ltr">
-                      <span className="text-3xl md:text-4xl font-black text-red-600 leading-none tracking-tight drop-shadow-sm">
-                        {Number(job.salary).toLocaleString('en-US')}
-                      </span>
-                      <span className="text-base font-bold text-on-surface-variant mb-1">{job.currency || 'OMR'}</span>
+                      )}
                     </div>
-                    {job.salaryPeriod && (
-                      <span className="text-[14px] font-semibold text-on-surface-variant mt-1">
-                        / {salaryPeriodLabels[job.salaryPeriod]}
+                    <div className="flex items-center gap-1 text-xs text-on-surface-variant">
+                      <MapPin size={11} />
+                      {resolveLocationLabel(job.governorate) ?? job.governorate}{job.city ? ` · ${job.city}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Driver rating for OFFERING */}
+                {driverInfo && (
+                  <div className="bg-surface-container-low rounded-xl p-3 mb-4">
+                    <RatingBadges
+                      rating={driverInfo.averageRating}
+                      completionRate={driverInfo.completionRate}
+                      responseTime={driverInfo.responseTimeHours}
+                      completedJobs={driverInfo.completedJobs}
+                      size="md"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Requirements / Profile Card */}
+              <div className="card-base rounded-2xl p-6">
+                <h2 className="font-bold text-base text-on-surface mb-4">
+                  {job.jobType === 'HIRING' ? 'متطلبات الوظيفة' : 'المؤهلات والخبرات'}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* License Types */}
+                  {job.licenseTypes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-2">نوع الرخصة</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.licenseTypes.map(lt => (
+                          <span
+                            key={`detail-lic-${lt}`}
+                            className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container text-primary"
+                          >
+                            🪪 {LICENSE_TYPE_LABELS[lt] ?? lt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Employment Type */}
+                  <div>
+                    <p className="text-xs font-bold text-on-surface-variant mb-2">نوع التوظيف</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface">
+                      <Clock size={11} />
+                      {EMPLOYMENT_TYPE_LABELS[job.employmentType] ?? job.employmentType}
+                    </span>
+                  </div>
+
+                  {/* Experience */}
+                  {job.experienceYears !== undefined && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-1">الخبرة المطلوبة</p>
+                      <p className="text-sm font-bold text-on-surface">{job.experienceYears}+ سنوات</p>
+                    </div>
+                  )}
+
+                  {/* Vehicle Types */}
+                  {job.vehicleTypes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-2">أنواع المركبات</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.vehicleTypes.map(vt => (
+                          <span key={`detail-veh-${vt}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface-variant">
+                            🚛 {vt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Has Own Vehicle */}
+                  <div>
+                    <p className="text-xs font-bold text-on-surface-variant mb-1">مركبة خاصة</p>
+                    <p className="text-sm font-bold text-on-surface">
+                      {job.hasOwnVehicle ? '✅ يمتلك مركبة' : '❌ لا يمتلك'}
+                    </p>
+                  </div>
+
+                  {/* Nationality */}
+                  {job.nationality && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-1">الجنسية</p>
+                      <p className="text-sm font-bold text-on-surface">🌍 {NATIONALITY_LABELS[job.nationality!] ?? job.nationality}</p>
+                    </div>
+                  )}
+
+                  {/* Languages */}
+                  {job.languages.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-2">اللغات</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.languages.map(lang => (
+                          <span key={`detail-lang-${lang}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface-variant">
+                            💬 {LANGUAGE_LABELS[lang] ?? lang}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Age Range */}
+                  {(job.minAge || job.maxAge) && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-1">الفئة العمرية</p>
+                      <p className="text-sm font-bold text-on-surface">
+                        {job.minAge ?? '—'} – {job.maxAge ?? '—'} سنة
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Salary Card */}
+              {(job.salary || job.salaryPeriod) && (
+                <div className="card-base rounded-2xl p-6">
+                  <h2 className="font-bold text-base text-on-surface mb-3">الراتب المتوقع</h2>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-extrabold text-brand-amber font-tabular">
+                      {job.salary ?? '—'}
+                    </span>
+                    <span className="text-base font-bold text-brand-amber">{job.currency}</span>
+                    {job.salaryPeriod && job.salaryPeriod !== 'NEGOTIABLE' && (
+                      <span className="text-sm text-on-surface-variant">
+                        / {SALARY_PERIOD_LABELS[job.salaryPeriod]}
                       </span>
                     )}
+                    {job.salaryPeriod === 'NEGOTIABLE' && (
+                      <span className="text-sm text-on-surface-variant">(قابل للتفاوض)</span>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xl font-black text-on-surface drop-shadow-sm">{tp('jobDetailNegotiable') || 'قابل للتفاوض'}</p>
+                </div>
+              )}
+
+              {/* Description Card */}
+              <div className="card-base rounded-2xl p-6">
+                <h2 className="font-bold text-base text-on-surface mb-3">تفاصيل الإعلان</h2>
+                <p className="text-sm text-on-surface leading-loose whitespace-pre-line">
+                  {job.description}
+                </p>
+
+                {/* Contact Info */}
+                {(job.contactPhone || job.whatsapp || job.contactEmail) && (
+                  <div className="mt-5 pt-4 border-t border-outline-variant">
+                    <p className="text-xs font-bold text-on-surface-variant mb-3">معلومات التواصل</p>
+                    <div className="flex flex-wrap gap-3">
+                      {job.contactPhone && (
+                        <a
+                          href={`tel:${job.contactPhone}`}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface text-sm font-bold text-on-surface hover:bg-surface-container transition-colors"
+                        >
+                          <Phone size={14} className="text-primary" />
+                          {job.contactPhone}
+                        </a>
+                      )}
+                      {job.whatsapp && (
+                        <a
+                          href={`https://wa.me/${job.whatsapp.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-50 text-sm font-bold text-green-700 hover:bg-green-100 transition-colors"
+                        >
+                          <MessageCircle size={14} />
+                          واتساب
+                        </a>
+                      )}
+                      {job.contactEmail && (
+                        <a
+                          href={`mailto:${job.contactEmail}`}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface text-sm font-bold text-on-surface hover:bg-surface-container transition-colors"
+                        >
+                          <Mail size={14} className="text-primary" />
+                          {job.contactEmail}
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Seller & CTA Section */}
-              <div className="p-6 md:p-8 flex flex-col gap-6">
-                
-                {/* SELLER */}
-                <Link href={`/seller/${job.user.id}`} className="flex items-center gap-4 group hover:bg-surface-container/50 p-3 -mx-3 rounded-2xl transition-colors">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 bg-surface-container shadow-sm group-hover:border-primary/50 transition-colors">
-                      {job.user.avatarUrl ? (
-                        <Image src={job.user.avatarUrl} alt={sellerName} width={56} height={56} className="object-cover w-full h-full" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                          <span className="text-white font-black text-xl">{sellerName[0]?.toUpperCase()}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-surface-container-lowest rounded-full shadow-sm" />
+              {/* Proposals Section */}
+              <div className="card-base rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => setAppsExpanded(!appsExpanded)}
+                  className="w-full flex items-center justify-between p-5 hover:bg-surface transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <h2 className="font-bold text-base text-on-surface">العروض المقدمة</h2>
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
+                      {applications.length}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                      {sellerName}
-                    </p>
-                    <p className="text-[13px] text-on-surface-variant mt-0.5 flex items-center gap-1">
-                      <MapPin size={12} />
-                      {job.user.governorate ? resolveLocationLabel(job.user.governorate, locale) : tp('jobDetailDefaultLocation')}
-                    </p>
-                  </div>
-                </Link>
+                  <ArrowRight
+                    size={16}
+                    className={cn(
+                      'text-on-surface-variant transition-transform duration-200',
+                      appsExpanded ? 'rotate-90' : '-rotate-90'
+                    )}
+                  />
+                </button>
 
-                {/* CTA BUTTONS */}
-                <div className="flex flex-col gap-3">
-                  {isOwner ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Link
-                        href="/jobs/my"
-                        className="h-12 rounded-xl bg-primary/10 text-primary border border-primary/20 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-primary/20 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                        {tp('jobDetailManageListings')}
-                      </Link>
-                      <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="h-12 rounded-xl bg-error/10 text-error border border-error/20 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-error/20 transition-all"
-                      >
-                        <Trash2 size={18} />
-                        {tp('jobDetailDelete')}
-                      </button>
-                    </div>
-                  ) : job.status === 'ACTIVE' ? (
-                    <>
-                      {/* ── Application Status Check ── */}
-                      {myApplication ? (
-                        <div className="flex flex-col gap-3">
-                          <div className={`flex items-center justify-center gap-2 h-14 rounded-2xl border font-bold text-[15px] ${
-                            myApplication.status === 'ACCEPTED'
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : myApplication.status === 'REJECTED'
-                              ? 'bg-error/10 border-error/20 text-error'
-                              : 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                          }`}>
-                            <span className="material-symbols-outlined text-[20px]"
-                              style={{ fontVariationSettings: "'FILL' 1" }}>
-                              {myApplication.status === 'ACCEPTED' ? 'check_circle'
-                                : myApplication.status === 'REJECTED' ? 'cancel'
-                                : 'schedule'}
-                            </span>
-                            {myApplication.status === 'ACCEPTED' ? tp('jobDetailAppAccepted')
-                              : myApplication.status === 'REJECTED' ? tp('jobDetailAppRejected')
-                              : tp('jobDetailAppPending')}
+                {appsExpanded && (
+                  <div className="border-t border-outline-variant p-5 space-y-3">
+                    {appsLoading ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <div key={`skel-app-${i}`} className="animate-pulse card-base rounded-2xl p-4">
+                          <div className="flex gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-surface-dim" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 w-1/3 bg-surface-dim rounded-lg" />
+                              <div className="h-3 w-1/2 bg-surface-dim rounded-lg" />
+                            </div>
                           </div>
-                          {myApplication.status === 'PENDING' && (
-                            <button
-                              onClick={handleWithdraw}
-                              disabled={withdrawMutation.isPending}
-                              className="w-full h-12 rounded-xl border border-outline-variant/30 text-on-surface-variant text-[14px] font-bold hover:border-error/30 hover:text-error hover:bg-error/5 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              {withdrawMutation.isPending
-                                ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                                : <span className="material-symbols-outlined text-[18px]">undo</span>
-                              }
-                              {tp('jobDetailWithdraw')}
-                            </button>
-                          )}
+                          <div className="h-4 bg-surface-dim rounded-lg mb-2" />
+                          <div className="h-4 w-2/3 bg-surface-dim rounded-lg" />
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => requireProfile('driver', () => setShowApplyModal(true))}
-                          className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-primary/90 text-white text-[15px] font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgb(37,99,235,0.25)] hover:shadow-[0_8px_25px_rgb(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
-                        >
-                          <Send size={18} />
-                          {tp('jobDetailApply')}
-                        </button>
-                      )}
-                      
-                      <div className="grid grid-cols-2 gap-3 mt-1">
-                        <button
-                          onClick={handleMessage}
-                          disabled={createConv.isPending}
-                          className="h-12 rounded-xl bg-surface-container border border-outline-variant/20 text-on-surface text-[14px] font-bold flex items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-60 shadow-sm"
-                        >
-                          <MessageCircle size={16} />
-                          {createConv.isPending ? '...' : tp('jobDetailChat')}
-                        </button>
-                        
-                        {hasWhatsApp ? (
-                          <button
-                            onClick={handleWhatsApp}
-                            className="h-12 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 transition-all shadow-sm"
-                          >
-                            <WhatsAppIcon />
-                            {tp('jobDetailWhatsapp')}
-                          </button>
-                        ) : hasPhone ? (
-                          <button
-                            onClick={handleCall}
-                            className="h-12 rounded-xl bg-surface-container border border-outline-variant/20 text-on-surface text-[14px] font-bold flex items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-sm"
-                          >
-                            <Phone size={16} />
-                            {tCall}
-                          </button>
-                        ) : (
-                          <div />
-                        )}
+                      ))
+                    ) : applications.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Users size={28} className="text-on-surface-variant mx-auto mb-2" />
+                        <p className="text-sm font-bold text-on-surface mb-1">{STRINGS.EMPTY_PROPOSALS}</p>
+                        <p className="text-xs text-on-surface-variant">لم يصل أي عرض لهذا الإعلان بعد</p>
                       </div>
-                    </>
-                  ) : (
-                    <div className="h-14 rounded-2xl bg-surface-container border border-outline-variant/20 text-on-surface-variant text-[14px] font-bold flex items-center justify-center gap-2 cursor-not-allowed">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                      {tClosed}
-                    </div>
-                  )}
-                </div>
-
+                    ) : (
+                      applications.map(app => (
+                        <ProposalCard
+                          key={`proposal-${app.id}`}
+                          application={app}
+                          isJobOwner={isJobOwner}
+                          isOwnProposal={app.applicantId === user?.id}
+                          isAuthenticated={isAuthenticated}
+                          onAccept={handleAccept}
+                          onReject={handleReject}
+                          onWithdraw={handleWithdraw}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-            
-            {/* Desktop only secondary contact info */}
-            {(hasPhone || hasEmail) && !isOwner && (
-              <div className="hidden lg:block rounded-3xl border border-outline-variant/20 bg-surface-container-lowest/80 backdrop-blur-md p-6 shadow-sm">
-                <h3 className="text-[14px] font-bold text-on-surface mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[18px]">contact_support</span>
-                  {tp('jobDetailDirectContact')}
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {hasPhone && (
-                    <a href={`tel:${job.contactPhone}`} className="flex items-center justify-between p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors group">
-                      <span className="text-[13px] text-on-surface-variant font-medium group-hover:text-primary transition-colors">{tCall}</span>
-                      <span className="text-[14px] font-bold text-on-surface" dir="ltr">{job.contactPhone}</span>
-                    </a>
-                  )}
-                  {hasEmail && (
-                    <a href={`mailto:${job.contactEmail}`} className="flex items-center justify-between p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors group">
-                      <span className="text-[13px] text-on-surface-variant font-medium group-hover:text-primary transition-colors">البريد</span>
-                      <span className="text-[13px] font-bold text-on-surface max-w-[150px] truncate">{job.contactEmail}</span>
-                    </a>
-                  )}
+            </>
+          ) : null}
+        </div>
+
+        {/* ── Right Sidebar ── */}
+        <div className="w-full lg:w-80 xl:w-96 shrink-0 space-y-4">
+          <div className="lg:sticky lg:top-24 space-y-4">
+
+            {/* Job Owner Management Panel */}
+            {!loading && isJobOwner && job && (
+              <div className="card-base rounded-2xl p-5">
+                <h3 className="font-bold text-sm text-on-surface mb-4">إدارة الإعلان</h3>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
+                    <p className="text-xl font-extrabold text-primary font-tabular">{job._count.applications}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">عرض</p>
+                  </div>
+                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
+                    <p className="text-xl font-extrabold text-brand-amber font-tabular">{job.viewCount}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">مشاهدة</p>
+                  </div>
+                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
+                    <p className="text-xs font-bold text-on-surface mt-1">{timeAgo(job.createdAt)}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">نُشر</p>
+                  </div>
                 </div>
+                {job.status === 'ACTIVE' && (
+                  <button
+                    onClick={handleCloseJob}
+                    disabled={closingJob}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-error/40 text-error text-sm font-bold hover:bg-red-50 transition-colors disabled:opacity-50 active:scale-95"
+                  >
+                    {closingJob ? (
+                      <span className="animate-spin w-4 h-4 border-2 border-error border-t-transparent rounded-full" />
+                    ) : (
+                      <X size={15} />
+                    )}
+                    {STRINGS.CLOSE_JOB}
+                  </button>
+                )}
               </div>
             )}
 
-          </div>
-        </div>
-      </main>
+            {/* Employer Info Card (for HIRING jobs) */}
+            {!loading && job?.jobType === 'HIRING' && employerInfo && (
+              <div className="card-base rounded-2xl p-5">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={cn(
+                    'w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0',
+                    getAvatarColor(employerInfo.userId)
+                  )}>
+                    {getInitials(employerInfo.companyName ?? employerInfo.user.displayName ?? 'ش')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-on-surface truncate">
+                        {employerInfo.companyName ?? employerInfo.user.displayName}
+                      </span>
+                      {employerInfo.user.isVerified && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                          <CheckCircle size={9} />
+                          موثّق
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {resolveLocationLabel(employerInfo.governorate) ?? employerInfo.governorate}
+                      {employerInfo.industry ? ` · ${employerInfo.industry}` : ''}
+                    </p>
+                  </div>
+                </div>
 
-      {/* ══ APPLY MODAL ══ */}
-      {showApplyModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-6 border-b border-outline-variant/10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 shadow-inner">
-                  <Send size={24} className="text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface tracking-tight">{tp('jobDetailApplyModalTitle')}</h3>
-                  <p className="text-sm text-on-surface-variant mt-1 font-medium">{job.title}</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              <label className="block text-[13px] font-bold text-on-surface mb-2">رسالة التقديم (اختياري)</label>
-              <textarea
-                value={applyMessage}
-                onChange={(e) => setApplyMessage(e.target.value)}
-                placeholder={tp('jobDetailApplyPlaceholder')}
-                className="w-full rounded-2xl bg-surface-container border border-outline-variant/30 p-4 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[14px] min-h-[140px] resize-none transition-all placeholder:text-on-surface-variant/50"
-              />
-            </div>
-            <div className="px-6 py-4 bg-surface-container-low/50 border-t border-outline-variant/10 flex gap-3">
-              <button
-                onClick={() => setShowApplyModal(false)}
-                className="flex-1 h-12 rounded-xl border border-outline-variant/30 text-on-surface text-[14px] font-bold hover:bg-surface-container transition-all duration-150"
-              >
-                {tp('jobDetailApplyCancel')}
-              </button>
-              <button
-                onClick={handleApply}
-                disabled={applyMutation.isPending}
-                className="flex-[2] h-12 rounded-xl bg-primary text-on-primary text-[14px] font-bold hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {applyMutation.isPending ? (
-                  <div className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+                {employerInfo.reviewCount > 0 ? (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star size={14} fill="#f59e0b" className="text-amber-500" />
+                    <span className="text-sm font-bold text-on-surface">
+                      {employerInfo.averageRating.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-on-surface-variant">
+                      ({employerInfo.reviewCount} {STRINGS.REVIEWS})
+                    </span>
+                  </div>
                 ) : (
-                  <Send size={18} />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-surface text-on-surface-variant mb-3">
+                    جديد
+                  </span>
                 )}
-                {applyMutation.isPending ? tp('jobDetailApplySending') : tp('jobDetailApplySend')}
-              </button>
-            </div>
+
+                <Link
+                  href="/jobs/dashboard"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-outline-variant text-sm font-bold text-on-surface hover:bg-surface transition-colors"
+                >
+                  <Briefcase size={14} />
+                  عرض بروفايل صاحب العمل
+                </Link>
+              </div>
+            )}
+
+            {/* Apply Form */}
+            {!loading && job && (
+              <div className="card-base rounded-2xl p-5">
+                {!isAuthenticated ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm font-bold text-on-surface mb-3">سجّل دخولك لتقديم عرض</p>
+                    <Link href="/jobs/browse" className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
+                      {STRINGS.LOGIN}
+                    </Link>
+                  </div>
+                ) : alreadyApplied && ownApplication ? (
+                  <div>
+                    <h3 className="font-bold text-sm text-on-surface mb-3">عرضك المقدم</h3>
+                    <div className="p-3 bg-surface-container-low rounded-xl mb-3">
+                      <p className="text-xs text-on-surface-variant mb-1">رسالتك:</p>
+                      <p className="text-sm text-on-surface line-clamp-3">{ownApplication.message}</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="status-pill">
+                        <span
+                          className="w-2 h-2 rounded-full inline-block"
+                          style={{ backgroundColor: APPLICATION_STATUS_COLORS[ownApplication.status] ?? '#f59e0b' }}
+                        />
+                        {APPLICATION_STATUS_LABELS[ownApplication.status] ?? ownApplication.status}
+                      </span>
+                      {ownApplication.status === 'PENDING' && (
+                        <button
+                          onClick={() => handleWithdraw(ownApplication.id)}
+                          className="text-xs font-bold text-error hover:underline"
+                        >
+                          {STRINGS.WITHDRAW}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : isJobOwner ? null : canApply ? (
+                  <div>
+                    <h3 className="font-bold text-sm text-on-surface mb-4">{STRINGS.APPLY}</h3>
+
+                    {submitSuccess ? (
+                      <div className="text-center py-4">
+                        <CheckCircle size={32} className="text-green-600 mx-auto mb-2" />
+                        <p className="text-sm font-bold text-green-700">تم إرسال عرضك بنجاح!</p>
+                        <p className="text-xs text-on-surface-variant mt-1">سيتواصل معك صاحب الإعلان قريباً</p>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSubmit(onSubmitProposal)} noValidate>
+                        <div className="mb-4">
+                          <label className="block text-xs font-bold text-on-surface mb-1.5">
+                            رسالتك التعريفية
+                            <span className="text-error me-1">*</span>
+                          </label>
+                          <textarea
+                            {...register('message')}
+                            rows={4}
+                            placeholder="أخبر صاحب الإعلان عن خبرتك ولماذا أنت الخيار الأفضل..."
+                            className={cn(
+                              'input-base resize-none text-sm',
+                              errors.message && 'border-error focus:ring-error focus:border-error'
+                            )}
+                          />
+                          {errors.message && (
+                            <p className="mt-1 text-xs text-error">{errors.message.message}</p>
+                          )}
+                        </div>
+
+                        <div className="mb-4">
+                          <label className="block text-xs font-bold text-on-surface mb-1.5">
+                            رابط السيرة الذاتية (اختياري)
+                          </label>
+                          <input
+                            {...register('resumeUrl')}
+                            type="url"
+                            placeholder="https://..."
+                            className={cn(
+                              'input-base text-sm',
+                              errors.resumeUrl && 'border-error focus:ring-error focus:border-error'
+                            )}
+                          />
+                          {errors.resumeUrl && (
+                            <p className="mt-1 text-xs text-error">{errors.resumeUrl.message}</p>
+                          )}
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={applyMutation.isPending}
+                          className="btn-amber w-full flex items-center justify-center gap-2"
+                        >
+                          {applyMutation.isPending ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : null}
+                          {applyMutation.isPending ? 'جاري الإرسال...' : STRINGS.SUBMIT_PROPOSAL}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                ) : job.status !== 'ACTIVE' ? (
+                  <div className="text-center py-4">
+                    <AlertCircle size={24} className="text-on-surface-variant mx-auto mb-2" />
+                    <p className="text-sm text-on-surface-variant">هذا الإعلان {statusLabel}</p>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* ══ DELETE CONFIRMATION MODAL ══ */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-6 border-b border-outline-variant/10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-error/10 rounded-full blur-[40px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="w-14 h-14 rounded-2xl bg-error/10 flex items-center justify-center flex-shrink-0 shadow-inner">
-                  <Trash2 size={24} className="text-error" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface tracking-tight">{tp('jobDetailDeleteConfirm')}</h3>
-                  <p className="text-sm text-on-surface-variant mt-1 font-medium">{tp('jobDetailDelete')}</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              <div className="p-4 rounded-2xl bg-error/5 border border-error/10 text-[14px] text-error/90 font-medium leading-relaxed">
-                هل أنت متأكد من حذف هذه الوظيفة بشكل نهائي؟ لا يمكن التراجع عن هذا الإجراء وسيتم مسح جميع بيانات التقديم المرتبطة بها.
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-surface-container-low/50 border-t border-outline-variant/10 flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 h-12 rounded-xl border border-outline-variant/30 text-on-surface text-[14px] font-bold hover:bg-surface-container transition-all duration-150"
-              >
-                {tp('jobDetailApplyCancel')}
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="flex-[2] h-12 rounded-xl bg-error text-on-error text-[14px] font-bold hover:bg-error/90 active:scale-[0.98] transition-all shadow-md shadow-error/20 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {deleteMutation.isPending ? (
-                  <div className="w-5 h-5 border-2 border-on-error/30 border-t-on-error rounded-full animate-spin" />
-                ) : (
-                  <Trash2 size={18} />
-                )}
-                {tp('jobDetailDelete')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      </div>
     </div>
-  );
+  )
 }

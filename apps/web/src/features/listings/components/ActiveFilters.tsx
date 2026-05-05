@@ -65,7 +65,7 @@ function buildLabel(
   if (field.type === 'range') {
     const str = Array.isArray(value) ? value[0] : value
     const [mn, mx] = str.split('|')
-    const fmt = (v: string) => v ? Number(v).toLocaleString('ar-EG') : ''
+    const fmt = (v: string) => v ? Number(v).toLocaleString('en-US') : ''
     const unit = field.unit ? ` ${field.unit}` : ''
     if (mn && mx) return `${fmt(mn)} — ${fmt(mx)}${unit}`
     if (mn) return `من ${fmt(mn)}${unit}`

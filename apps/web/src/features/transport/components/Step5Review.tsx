@@ -27,7 +27,7 @@ export default function Step5Review() {
 
   const timingText =
     data.timingType === 'scheduled' && data.scheduledAt
-      ? new Date(data.scheduledAt).toLocaleString('ar-OM', {
+      ? new Date(data.scheduledAt).toLocaleString('ar-OM-u-nu-latn', {
           weekday: 'short',
           day: 'numeric',
           month: 'short',
