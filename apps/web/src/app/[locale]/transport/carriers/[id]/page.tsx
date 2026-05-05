@@ -74,69 +74,68 @@ export default function PublicCarrierProfilePage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
-      {/* Banner */}
+      {/* Banner with profile row centered inside */}
       <div
-        className="h-40 sm:h-52 w-full"
+        className="relative h-40 sm:h-52 w-full"
         style={{
           background: 'linear-gradient(135deg, var(--color-brand-navy) 0%, var(--color-brand-navy-light) 60%, var(--color-brand-amber) 100%)',
         }}
-      />
-
-      <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back */}
-        <div className="pt-4 mb-2">
+      >
+        {/* Back button — top corner inside banner */}
+        <div className="absolute top-3 left-4 sm:left-6 lg:left-8 z-10">
           <Link
             href="/transport/browse"
-            className="inline-flex items-center gap-2 text-sm text-[var(--color-on-surface-variant)] hover:text-[var(--color-brand-navy)] font-semibold transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-white/80 hover:text-white font-semibold transition-colors bg-white/10 hover:bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full"
           >
-            <ArrowRight size={16} />
+            <ArrowRight size={13} className="scale-x-[-1]" />
             العودة
           </Link>
         </div>
 
-        {/* Avatar + Name */}
-        <div className="flex items-end gap-4 -mt-12 mb-6">
-          <div className="relative flex-shrink-0">
-            <img
-              src={carrier.user?.avatarUrl}
-              alt={`صورة ${carrier.user?.displayName}`}
-              className="w-24 h-24 rounded-2xl border-4 border-white shadow-lg"
-            />
-            {carrier.isVerified && (
-              <div className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-[var(--color-info)] flex items-center justify-center border-2 border-white">
-                <Shield size={13} className="text-white" />
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
+          <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <img
+                  src={carrier.user?.avatarUrl}
+                  alt={`صورة ${carrier.user?.displayName}`}
+                  className="w-20 h-20 rounded-2xl border-4 border-white/20 shadow-lg"
+                />
+                {carrier.isVerified && (
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-[var(--color-info)] flex items-center justify-center border-2 border-white">
+                    <Shield size={12} className="text-white" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="pb-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-[var(--color-on-surface)]">
-                {carrier.companyName ?? carrier.user?.displayName}
-              </h1>
-              {carrier.isVerified && (
-                <span className="inline-flex items-center gap-1 bg-[var(--color-info-light)] text-[var(--color-info)] text-xs font-bold px-2 py-0.5 rounded-full">
-                  <Shield size={10} />
-                  موثّق
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl font-bold text-white drop-shadow">
+                    {carrier.companyName ?? carrier.user?.displayName}
+                  </h1>
+                  {carrier.isVerified && (
+                    <span className="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      <Shield size={10} />
+                      موثّق
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full mt-1 ${
+                    carrier.isAvailable
+                      ? 'bg-white/20 text-white'
+                      : 'bg-black/20 text-white/70'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${carrier.isAvailable ? 'bg-green-400' : 'bg-white/40'}`} />
+                  {carrier.isAvailable ? 'متاح' : 'غير متاح'}
                 </span>
-              )}
+              </div>
             </div>
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full mt-1 ${
-                carrier.isAvailable
-                  ? 'bg-[var(--color-success-light)] text-[var(--color-success)]'
-                  : 'bg-[var(--color-surface-container)] text-[var(--color-on-surface-muted)]'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  carrier.isAvailable ? 'bg-[var(--color-success)]' : 'bg-[var(--color-on-surface-muted)]'
-                }`}
-              />
-              {carrier.isAvailable ? 'متاح' : 'غير متاح'}
-            </span>
           </div>
         </div>
+      </div>
 
+      <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
           {/* Main */}
           <div className="flex flex-col gap-5">

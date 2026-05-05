@@ -16,6 +16,7 @@ const DEFAULT_FILTERS: JobFilters = {
   jobType: '',
   employmentType: '',
   governorate: '',
+  wilayat: '',
   licenseType: '',
   sortBy: 'createdAt_desc',
 }
@@ -345,7 +346,7 @@ function MobileFilterSheet({
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
-      <div className="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl max-h-[85vh] overflow-y-auto">
+      <div className="absolute inset-x-0 bg-white rounded-t-3xl max-h-[calc(85vh-53px)] overflow-y-auto" style={{ bottom: 'calc(53px + env(safe-area-inset-bottom, 0px))' }}>
         <div className="sticky top-0 bg-white border-b border-outline-variant px-5 py-4 flex items-center justify-between rounded-t-3xl">
           <h3 className="font-bold text-base text-on-surface">{STRINGS.FILTER_TITLE}</h3>
           <button
