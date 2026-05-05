@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, SlidersHorizontal, Check } from 'lucide-react';
 import {
   OMAN_GOVERNORATES,
+  OMAN_WILAYAT_BY_GOVERNORATE,
   SERVICE_TYPE_LABELS,
   SERVICE_TYPES,
   REQUEST_STATUS_LABELS,
@@ -59,9 +60,13 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 lg:hidden ${open ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 lg:hidden ${open ? 'translate-y-0' : 'translate-y-full'}`}
         dir="rtl"
-        style={{ maxHeight: '85vh', overflowY: 'auto' }}
+        style={{
+          bottom: 'calc(58px + env(safe-area-inset-bottom, 0px))',
+          maxHeight: 'calc(85vh - 58px - env(safe-area-inset-bottom, 0px))',
+          overflowY: 'auto',
+        }}
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
@@ -125,33 +130,57 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
               </div>
             </div>
 
-            {/* Governorates */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">
-                  من محافظة
-                </p>
-                <select
-                  value={local.fromGovernorate ?? ''}
-                  onChange={(e) => setLocal((p) => ({ ...p, fromGovernorate: e.target.value || undefined }))}
-                  className="input-base text-sm"
-                >
-                  <option value="">الكل</option>
-                  {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
+            {/* Governorates + Wilayat */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من محافظة</p>
+                  <select
+                    value={local.fromGovernorate ?? ''}
+                    onChange={(e) => setLocal((p) => ({ ...p, fromGovernorate: e.target.value || undefined, fromWilayat: undefined }))}
+                    className="input-base text-sm"
+                  >
+                    <option value="">الكل</option>
+                    {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من ولاية</p>
+                  <select
+                    value={local.fromWilayat ?? ''}
+                    onChange={(e) => setLocal((p) => ({ ...p, fromWilayat: e.target.value || undefined }))}
+                    className="input-base text-sm"
+                    disabled={!local.fromGovernorate}
+                  >
+                    <option value="">الكل</option>
+                    {(OMAN_WILAYAT_BY_GOVERNORATE[local.fromGovernorate ?? ''] ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">
-                  إلى محافظة
-                </p>
-                <select
-                  value={local.toGovernorate ?? ''}
-                  onChange={(e) => setLocal((p) => ({ ...p, toGovernorate: e.target.value || undefined }))}
-                  className="input-base text-sm"
-                >
-                  <option value="">الكل</option>
-                  {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى محافظة</p>
+                  <select
+                    value={local.toGovernorate ?? ''}
+                    onChange={(e) => setLocal((p) => ({ ...p, toGovernorate: e.target.value || undefined, toWilayat: undefined }))}
+                    className="input-base text-sm"
+                  >
+                    <option value="">الكل</option>
+                    {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى ولاية</p>
+                  <select
+                    value={local.toWilayat ?? ''}
+                    onChange={(e) => setLocal((p) => ({ ...p, toWilayat: e.target.value || undefined }))}
+                    className="input-base text-sm"
+                    disabled={!local.toGovernorate}
+                  >
+                    <option value="">الكل</option>
+                    {(OMAN_WILAYAT_BY_GOVERNORATE[local.toGovernorate ?? ''] ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 

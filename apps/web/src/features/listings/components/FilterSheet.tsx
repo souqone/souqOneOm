@@ -618,13 +618,14 @@ export function FilterSheet({
       {/* Sheet */}
       <div
         className={clsx(
-          'fixed bottom-0 inset-x-0 z-[70] flex flex-col',
+          'fixed inset-x-0 z-[70] flex flex-col',
           'bg-background rounded-t-[24px]',
-          'max-h-[92dvh]',
+          'max-h-[calc(92dvh-53px)]',
           'shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           'transition-transform duration-300 ease-out',
           mounted ? 'translate-y-0' : 'translate-y-full',
         )}
+        style={{ bottom: 'calc(53px + env(safe-area-inset-bottom, 0px))' }}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">

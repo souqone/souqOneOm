@@ -3,6 +3,7 @@ import React from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
 import {
   OMAN_GOVERNORATES,
+  OMAN_WILAYAT_BY_GOVERNORATE,
   LICENSE_TYPE_LABELS,
   EMPLOYMENT_TYPE_LABELS,
   SORT_OPTIONS,
@@ -14,6 +15,7 @@ export interface JobFilters {
   jobType: string
   employmentType: string
   governorate: string
+  wilayat: string
   licenseType: string
   sortBy: string
 }
@@ -109,19 +111,35 @@ export default function JobFilterSidebar({ filters, onChange, onClear, totalCoun
           </div>
         </div>
 
-        {/* Governorate */}
-        <div>
-          <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">المحافظة</p>
-          <select
-            value={filters.governorate}
-            onChange={e => onChange('governorate', e.target.value)}
-            className="input-base text-sm"
-          >
-            <option value="">كل المحافظات</option>
-            {OMAN_GOVERNORATES.map(gov => (
-              <option key={`filter-gov-${gov}`} value={gov}>{gov}</option>
-            ))}
-          </select>
+        {/* Governorate + Wilayat */}
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">المحافظة</p>
+            <select
+              value={filters.governorate}
+              onChange={e => { onChange('governorate', e.target.value); onChange('wilayat', ''); }}
+              className="input-base text-sm"
+            >
+              <option value="">كل المحافظات</option>
+              {OMAN_GOVERNORATES.map(gov => (
+                <option key={`filter-gov-${gov}`} value={gov}>{gov}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">الولاية</p>
+            <select
+              value={filters.wilayat}
+              onChange={e => onChange('wilayat', e.target.value)}
+              className="input-base text-sm"
+              disabled={!filters.governorate}
+            >
+              <option value="">كل الولايات</option>
+              {(OMAN_WILAYAT_BY_GOVERNORATE[filters.governorate] ?? []).map(w => (
+                <option key={`filter-wil-${w}`} value={w}>{w}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* License Type */}

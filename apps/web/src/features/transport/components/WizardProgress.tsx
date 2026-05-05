@@ -23,7 +23,7 @@ export default function WizardProgress({ currentStep, totalSteps, stepTitles }: 
         />
       </div>
 
-      <div className="flex items-center justify-between gap-1 overflow-x-auto scrollbar-hide pb-1">
+      <div className="flex items-start justify-center gap-0 pb-1">
         {stepTitles.map((title, index) => {
           const stepNum = index + 1;
           const isCompleted = stepNum < currentStep;
@@ -32,7 +32,7 @@ export default function WizardProgress({ currentStep, totalSteps, stepTitles }: 
           return (
             <div
               key={`wizard-step-${stepNum}`}
-              className="flex flex-col items-center gap-1.5 flex-shrink-0 min-w-[60px]"
+              className="flex flex-col items-center gap-1.5 flex-1 px-1"
             >
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${

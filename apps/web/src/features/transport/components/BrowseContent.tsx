@@ -12,7 +12,9 @@ export interface BrowseFilters {
   serviceType?: string;
   status?: string;
   fromGovernorate?: string;
+  fromWilayat?: string;
   toGovernorate?: string;
+  toWilayat?: string;
   sortBy?: string;
 }
 
