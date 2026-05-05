@@ -1,503 +1,528 @@
 'use client';
+import React, { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { CheckCircle, ChevronRight } from 'lucide-react';
+import { useCreateJob } from '@/lib/api/jobs';
+import {
+  LICENSE_TYPE_LABELS, VEHICLE_TYPE_OPTIONS,
+  LANGUAGE_OPTIONS, EMPLOYMENT_TYPE_LABELS, SALARY_PERIOD_LABELS, STRINGS
+} from '@/features/jobs/constants';
+import { formatSalary, cn } from '@/lib/utils';
+import { getGovernorates, getCities } from '@/lib/location-data';
+import type { JobType, EmploymentType, SalaryPeriod } from '@/features/jobs/types';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter } from '@/i18n/navigation';
-import { useSearchParams } from 'next/navigation';
-import { Navbar } from '@/components/layout/navbar';
-import { Footer } from '@/components/layout/footer';
-import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
-import { useCreateJob } from '@/lib/api';
-import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/toast';
-import { getGovernorates } from '@/lib/location-data';
-import { employmentOptionsT } from '@/lib/constants/jobs';
-import { useTranslations, useLocale } from 'next-intl';
+const STEPS = [
+  { num: 1, label: 'نوع الإعلان' },
+  { num: 2, label: 'التفاصيل' },
+  { num: 3, label: 'المراجعة' },
+]
 
+const jobSchema = z.object({
+  jobType: z.enum(['HIRING', 'OFFERING']),
+  title: z.string().min(3, 'العنوان مطلوب'),
+  description: z.string().min(10, 'الوصف مطلوب (10 أحرف على الأقل)'),
+  employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'TEMPORARY', 'CONTRACT']),
+  salary: z.number().optional(),
+  salaryPeriod: z.enum(['DAILY', 'MONTHLY', 'YEARLY', 'NEGOTIABLE']).optional(),
+  licenseTypes: z.array(z.string()),
+  experienceYears: z.number().optional(),
+  vehicleTypes: z.array(z.string()),
+  hasOwnVehicle: z.boolean(),
+  nationality: z.string().optional(),
+  languages: z.array(z.string()),
+  governorate: z.string().min(1, 'المحافظة مطلوبة'),
+  city: z.string().optional(),
+  contactPhone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  contactEmail: z.string().optional(),
+})
 
-const LICENSE_OPTIONS = [
-  { value: 'LIGHT', key: 'jnLicLight' },
-  { value: 'HEAVY', key: 'jnLicHeavy' },
-  { value: 'TRANSPORT', key: 'jnLicTransport' },
-  { value: 'BUS', key: 'jnLicBus' },
-  { value: 'MOTORCYCLE', key: 'jnLicMotorcycle' },
-];
+type JobFormData = z.infer<typeof jobSchema>
 
-const SALARY_PERIOD_OPTIONS = [
-  { value: 'MONTHLY', key: 'jnPeriodMonthly' },
-  { value: 'DAILY', key: 'jnPeriodDaily' },
-  { value: 'YEARLY', key: 'jnPeriodYearly' },
-  { value: 'NEGOTIABLE', key: 'jnPeriodNegotiable' },
-];
+function CreateJobContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialType = (searchParams.get('type') as JobType) ?? 'HIRING'
+  const createJob = useCreateJob()
 
-const VEHICLE_TYPE_OPTIONS = [
-  { value: 'SEDAN', key: 'jnVtSedan' },
-  { value: 'SUV', key: 'jnVtSUV' },
-  { value: 'LIGHT_TRUCK', key: 'jnVtLightTruck' },
-  { value: 'HEAVY_TRUCK', key: 'jnVtHeavyTruck' },
-  { value: 'BUS', key: 'jnVtBus' },
-  { value: 'LIMO', key: 'jnVtLimo' },
-  { value: 'VAN', key: 'jnVtVan' },
-  { value: 'PICKUP', key: 'jnVtPickup' },
-];
+  const [step, setStep] = useState(1)
 
-const LANGUAGE_OPTIONS = [
-  { value: 'ARABIC', key: 'jnLangArabic' },
-  { value: 'ENGLISH', key: 'jnLangEnglish' },
-  { value: 'URDU', key: 'jnLangUrdu' },
-  { value: 'HINDI', key: 'jnLangHindi' },
-  { value: 'BENGALI', key: 'jnLangBengali' },
-  { value: 'FILIPINO', key: 'jnLangFilipino' },
-];
+  const form = useForm<JobFormData>({
+    resolver: zodResolver(jobSchema),
+    defaultValues: {
+      jobType: initialType,
+      licenseTypes: [],
+      vehicleTypes: [],
+      hasOwnVehicle: false,
+      languages: [],
+      employmentType: 'FULL_TIME',
+    },
+  })
 
-export default function NewJobPage() {
-  return (
-    <JobsPageGuard role="any">
-      <Suspense>
-        <NewJobContent />
-      </Suspense>
-    </JobsPageGuard>
-  );
-}
+  const watchedValues = form.watch()
 
-function NewJobContent() {
-  const tp = useTranslations('pages');
-  const tj = useTranslations('jobs');
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { addToast } = useToast();
-  const createJob = useCreateJob();
-  const locale = useLocale();
-  const govs = getGovernorates('OM', locale);
-  const empOptions = employmentOptionsT(tj);
-  const qc = useQueryClient();
-  const driverProfile   = qc.getQueryData<{ id: string }>(['driver-profile', 'me']);
-  const employerProfile = qc.getQueryData<{ id: string }>(['employer-profile', 'me']);
-  const hasDriver   = !!driverProfile;
-  const hasEmployer = !!employerProfile;
-
-  const forcedType: 'OFFERING' | 'HIRING' | null =
-    hasDriver && !hasEmployer ? 'OFFERING' :
-    hasEmployer && !hasDriver ? 'HIRING' : null;
-
-  const paramType = (searchParams.get('type') ?? 'OFFERING') as 'OFFERING' | 'HIRING';
-
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    jobType: paramType as 'OFFERING' | 'HIRING',
-    employmentType: 'FULL_TIME',
-    salary: '',
-    salaryPeriod: 'MONTHLY',
-    licenseTypes: [] as string[],
-    experienceYears: '',
-    minAge: '',
-    maxAge: '',
-    languages: [] as string[],
-    nationality: '',
-    vehicleTypes: [] as string[],
-    hasOwnVehicle: false,
-    governorate: '',
-    city: '',
-    contactPhone: '',
-    contactEmail: '',
-    whatsapp: '',
-  });
-
-  function updateField(key: string, value: any) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  useEffect(() => {
-    if (forcedType) updateField('jobType', forcedType);
-  }, [forcedType]);
-
-  function toggleArrayItem(key: 'licenseTypes' | 'languages' | 'vehicleTypes', value: string) {
-    setForm((prev) => ({
-      ...prev,
-      [key]: prev[key].includes(value) ? prev[key].filter((v) => v !== value) : [...prev[key], value],
-    }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.title || !form.description || !form.governorate) {
-      addToast('error', tp('jnErrRequired'));
-      return;
+  const toggleArrayValue = (
+    arr: string[],
+    value: string,
+    onChange: (v: string[]) => void
+  ) => {
+    if (arr.includes(value)) {
+      onChange(arr.filter(v => v !== value))
+    } else {
+      onChange([...arr, value])
     }
+  }
 
-    const payload: Record<string, any> = {
-      title: form.title,
-      description: form.description,
-      jobType: forcedType ?? form.jobType,
-      employmentType: form.employmentType,
-      governorate: form.governorate,
-      licenseTypes: form.licenseTypes,
-      languages: form.languages,
-      vehicleTypes: form.vehicleTypes,
-      hasOwnVehicle: form.hasOwnVehicle,
-    };
+  const handleNext = async () => {
+    if (step === 1) {
+      setStep(2)
+    } else if (step === 2) {
+      const valid = await form.trigger([
+        'title', 'description', 'employmentType', 'governorate'
+      ])
+      if (valid) setStep(3)
+    }
+  }
 
-    if (form.salary) payload.salary = Number(form.salary);
-    if (form.salaryPeriod) payload.salaryPeriod = form.salaryPeriod;
-    if (form.experienceYears) payload.experienceYears = Number(form.experienceYears);
-    if (form.minAge) payload.minAge = Number(form.minAge);
-    if (form.maxAge) payload.maxAge = Number(form.maxAge);
-    if (form.nationality) payload.nationality = form.nationality;
-    if (form.city) payload.city = form.city;
-    if (form.contactPhone) payload.contactPhone = form.contactPhone;
-    if (form.contactEmail) payload.contactEmail = form.contactEmail;
-    if (form.whatsapp) payload.whatsapp = form.whatsapp;
-
+  const handleSubmit = async (data: JobFormData) => {
     try {
-      const result = await createJob.mutateAsync(payload);
-      addToast('success', tp('jnSuccess'));
-      router.push(`/jobs/${result.id}`);
-    } catch (err: any) {
-      addToast('error', err?.message || tp('jnError'));
+      const job = await createJob.mutateAsync({
+        ...data,
+        licenseTypes: data.licenseTypes as never[],
+        jobType: data.jobType as JobType,
+        employmentType: data.employmentType as EmploymentType,
+        salaryPeriod: data.salaryPeriod as SalaryPeriod | undefined,
+        currency: 'OMR',
+      })
+      router.push(`/jobs/${job.id}`)
+    } catch {
+      // handle error
     }
   }
 
   return (
-    <>
-      <Navbar />
-      <main className="pt-28 pb-16 max-w-3xl mx-auto px-4 md:px-8">
-        <h1 className="text-3xl font-extrabold mb-2">
-          <span className="material-symbols-outlined text-primary align-middle text-3xl ms-2">add_circle</span>
-          {tp('jnTitle')}
-        </h1>
-        <p className="text-on-surface-variant mb-8">{tp('jnSubtitle')}</p>
+    <div className="max-w-2xl mx-auto px-4 py-10">
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Job Type Toggle — hidden when role is forced */}
-          <div className="glass-card rounded-xl p-6">
-            <label className="block font-bold text-sm mb-3">{tp('jnTypeLabel')}</label>
-            {forcedType ? (
-              <div className={`flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm border-2 ${
-                forcedType === 'OFFERING'
-                  ? 'border-brand-green bg-brand-green/10 text-brand-green'
-                  : 'border-primary bg-primary/10 text-primary'
-              }`}>
-                <span className="material-symbols-outlined">
-                  {forcedType === 'OFFERING' ? 'person_search' : 'person_add'}
-                </span>
-                {forcedType === 'OFFERING' ? tp('jnTypeOffering') : tp('jnTypeHiring')}
+      {/* Progress Indicator */}
+      <div className="flex items-center justify-center gap-2 mb-8">
+        {STEPS.map((s, idx) => (
+          <React.Fragment key={`step-${s.num}`}>
+            <div className="flex flex-col items-center gap-1">
+              <div className={cn(
+                'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all',
+                step > s.num ? 'bg-brand-amber text-white' :
+                step === s.num ? 'bg-brand-amber text-white ring-4 ring-amber-100': 'bg-surface-container text-on-surface-variant'
+              )}>
+                {step > s.num ? <CheckCircle size={16} /> : s.num}
               </div>
-            ) : (
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => updateField('jobType', 'OFFERING')}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all border-2 ${
-                  form.jobType === 'OFFERING'
-                    ? 'border-brand-green bg-brand-green/10 text-brand-green'
-                    : 'border-outline bg-surface text-on-surface-variant'
-                }`}
-              >
-                <span className="material-symbols-outlined">person_search</span>
-                {tp('jnTypeOffering')}
-              </button>
-              <button
-                type="button"
-                onClick={() => updateField('jobType', 'HIRING')}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all border-2 ${
-                  form.jobType === 'HIRING'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-outline bg-surface text-on-surface-variant'
-                }`}
-              >
-                <span className="material-symbols-outlined">person_add</span>
-                {tp('jnTypeHiring')}
-              </button>
+              <span className={cn(
+                'text-xs font-bold hidden sm:block',
+                step === s.num ? 'text-brand-amber' : 'text-on-surface-variant'
+              )}>
+                {s.label}
+              </span>
             </div>
+            {idx < STEPS.length - 1 && (
+              <div className={cn(
+                'h-0.5 w-12 rounded-full mb-4 transition-all',
+                step > s.num ? 'bg-brand-amber' : 'bg-outline-variant'
+              )} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Step 1 — Job Type */}
+      {step === 1 && (
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface text-center mb-2">نوع الإعلان</h1>
+          <p className="text-sm text-on-surface-variant text-center mb-8">حدد نوع إعلانك</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            {[
+              { type: 'HIRING' as JobType, icon: '👔', title: 'أبحث عن سائق', desc: 'أنا صاحب عمل' },
+              { type: 'OFFERING' as JobType, icon: '🚛', title: 'أعرض خدماتي', desc: 'أنا سائق' },
+            ].map(option => {
+              const selected = watchedValues.jobType === option.type
+              return (
+                <button
+                  key={`type-${option.type}`}
+                  type="button"
+                  onClick={() => form.setValue('jobType', option.type)}
+                  className={cn(
+                    'relative p-6 rounded-2xl border-2 text-start transition-all duration-200 hover:shadow-card-hover',
+                    selected
+                      ? 'border-brand-amber bg-amber-50' :'border-outline-variant bg-white hover:border-outline'
+                  )}
+                >
+                  {selected && (
+                    <div className="absolute top-3 start-3">
+                      <CheckCircle size={18} className="text-brand-amber" fill="currentColor" />
+                    </div>
+                  )}
+                  <div className="text-4xl mb-3">{option.icon}</div>
+                  <h3 className="font-extrabold text-base text-on-surface mb-1">{option.title}</h3>
+                  <p className="text-sm text-on-surface-variant">{option.desc}</p>
+                </button>
+              )
+            })}
+          </div>
+
+          <button onClick={handleNext} className="btn-amber w-full py-3 text-base font-bold">
+            التالي
+          </button>
+        </div>
+      )}
+
+      {/* Step 2 — Details */}
+      {step === 2 && (
+        <div>
+          <button
+            onClick={() => setStep(1)}
+            className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant hover:text-on-surface mb-6 transition-colors"
+          >
+            <ChevronRight size={16} />
+            رجوع
+          </button>
+          <h1 className="text-xl font-extrabold text-on-surface mb-6">تفاصيل الإعلان</h1>
+
+          <div className="space-y-5">
+            {/* Basic Info */}
+            <div className="card-base rounded-2xl p-5 space-y-4">
+              <h2 className="font-bold text-sm text-on-surface-variant">المعلومات الأساسية</h2>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">
+                  عنوان الإعلان <span className="text-error">*</span>
+                </label>
+                <input
+                  {...form.register('title')}
+                  className="input-base text-sm w-full"
+                  placeholder="مثال: مطلوب سائق شاحنة ثقيلة"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-xs text-error mt-1">{form.formState.errors.title.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">
+                  الوصف <span className="text-error">*</span>
+                </label>
+                <textarea
+                  {...form.register('description')}
+                  rows={4}
+                  className="input-base text-sm w-full resize-none"
+                  placeholder="اكتب وصفاً تفصيلياً للوظيفة..."
+                />
+                {form.formState.errors.description && (
+                  <p className="text-xs text-error mt-1">{form.formState.errors.description.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-2">نوع الدوام</label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(EMPLOYMENT_TYPE_LABELS).map(([value, label]) => (
+                    <button
+                      key={`emp-${value}`}
+                      type="button"
+                      onClick={() => form.setValue('employmentType', value as EmploymentType)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all',
+                        watchedValues.employmentType === value
+                          ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Salary */}
+            <div className="card-base rounded-2xl p-5 space-y-4">
+              <h2 className="font-bold text-sm text-on-surface-variant">الراتب</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">المبلغ (اختياري)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    {...form.register('salary', { valueAsNumber: true })}
+                    className="input-base text-sm w-full"
+                    placeholder="مثال: 300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">الفترة</label>
+                  <select {...form.register('salaryPeriod')} className="input-base text-sm w-full">
+                    <option value="">اختر</option>
+                    {Object.entries(SALARY_PERIOD_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Requirements */}
+            <div className="card-base rounded-2xl p-5 space-y-4">
+              <h2 className="font-bold text-sm text-on-surface-variant">
+                {watchedValues.jobType === 'HIRING' ? 'المتطلبات' : 'المؤهلات'}
+              </h2>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-2">أنواع الرخص</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(LICENSE_TYPE_LABELS).map(([value, label]) => {
+                    const selected = watchedValues.licenseTypes.includes(value)
+                    return (
+                      <button
+                        key={`lic-${value}`}
+                        type="button"
+                        onClick={() => toggleArrayValue(
+                          watchedValues.licenseTypes,
+                          value,
+                          v => form.setValue('licenseTypes', v)
+                        )}
+                        className={cn(
+                          'p-2.5 rounded-xl border text-xs font-bold transition-all',
+                          selected
+                            ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
+                        )}
+                      >
+                        🪪 {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">سنوات الخبرة</label>
+                <input
+                  type="number"
+                  min={0}
+                  {...form.register('experienceYears', { valueAsNumber: true })}
+                  className="input-base text-sm w-full"
+                  placeholder="اختياري"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-2">أنواع المركبات</label>
+                <div className="flex flex-wrap gap-2">
+                  {VEHICLE_TYPE_OPTIONS.map(vt => {
+                    const selected = watchedValues.vehicleTypes.includes(vt)
+                    return (
+                      <button
+                        key={`vt-${vt}`}
+                        type="button"
+                        onClick={() => toggleArrayValue(
+                          watchedValues.vehicleTypes,
+                          vt,
+                          v => form.setValue('vehicleTypes', v)
+                        )}
+                        className={cn(
+                          'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all',
+                          selected
+                            ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
+                        )}
+                      >
+                        {vt}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-on-surface">يمتلك مركبته الخاصة</span>
+                <button
+                  type="button"
+                  onClick={() => form.setValue('hasOwnVehicle', !watchedValues.hasOwnVehicle)}
+                  className={cn(
+                    'relative w-10 h-5 rounded-full transition-colors duration-200',
+                    watchedValues.hasOwnVehicle ? 'bg-primary' : 'bg-outline-variant'
+                  )}
+                >
+                  <span className={cn(
+                    'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200',
+                    watchedValues.hasOwnVehicle ? 'start-5' : 'start-0.5'
+                  )} />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-2">اللغات</label>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGE_OPTIONS.map(lang => {
+                    const selected = watchedValues.languages.includes(lang)
+                    return (
+                      <button
+                        key={`lang-${lang}`}
+                        type="button"
+                        onClick={() => toggleArrayValue(
+                          watchedValues.languages,
+                          lang,
+                          v => form.setValue('languages', v)
+                        )}
+                        className={cn(
+                          'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all',
+                          selected
+                            ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
+                        )}
+                      >
+                        {lang}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Location & Contact */}
+            <div className="card-base rounded-2xl p-5 space-y-4">
+              <h2 className="font-bold text-sm text-on-surface-variant">الموقع والتواصل</h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">
+                    المحافظة <span className="text-error">*</span>
+                  </label>
+                  <select
+                    {...form.register('governorate')}
+                    onChange={e => {
+                      form.setValue('governorate', e.target.value)
+                      form.setValue('city', '')
+                    }}
+                    className="input-base text-sm w-full"
+                  >
+                    <option value="">اختر المحافظة</option>
+                    {getGovernorates('OM').map(g => (
+                      <option key={g.value} value={g.value}>{g.label}</option>
+                    ))}
+                  </select>
+                  {form.formState.errors.governorate && (
+                    <p className="text-xs text-error mt-1">{form.formState.errors.governorate.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">الولاية</label>
+                  <select {...form.register('city')} className="input-base text-sm w-full" disabled={!watchedValues.governorate}>
+                    <option value="">اختر الولاية</option>
+                    {watchedValues.governorate && getCities('OM', watchedValues.governorate).map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">رقم الهاتف</label>
+                  <input {...form.register('contactPhone')} className="input-base text-sm w-full" placeholder="+968..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">واتساب</label>
+                  <input {...form.register('whatsapp')} className="input-base text-sm w-full" placeholder="+968..." />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">البريد الإلكتروني</label>
+                <input {...form.register('contactEmail')} type="email" className="input-base text-sm w-full" placeholder="اختياري" />
+              </div>
+            </div>
+
+            <button onClick={handleNext} className="btn-amber w-full py-3 text-base font-bold">
+              التالي — المراجعة
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3 — Review */}
+      {step === 3 && (
+        <div>
+          <button
+            onClick={() => setStep(2)}
+            className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant hover:text-on-surface mb-6 transition-colors"
+          >
+            <ChevronRight size={16} />
+            رجوع
+          </button>
+          <h1 className="text-xl font-extrabold text-on-surface mb-6">مراجعة الإعلان</h1>
+
+          <div className="card-base rounded-2xl p-5 space-y-4 mb-6">
+            <div className="flex items-center gap-2">
+              <span className={watchedValues.jobType === 'HIRING' ? 'badge-hiring' : 'badge-offering'}>
+                {watchedValues.jobType === 'HIRING' ? STRINGS.HIRING : STRINGS.OFFERING}
+              </span>
+            </div>
+
+            <div>
+              <p className="text-xs text-on-surface-variant">العنوان</p>
+              <p className="font-bold text-on-surface">{watchedValues.title}</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-on-surface-variant">الوصف</p>
+              <p className="text-sm text-on-surface leading-relaxed">{watchedValues.description}</p>
+            </div>
+
+            {watchedValues.salary && (
+              <div>
+                <p className="text-xs text-on-surface-variant">الراتب</p>
+                <p className="font-bold text-brand-amber">
+                  {formatSalary(watchedValues.salary, watchedValues.salaryPeriod, 'ر.ع.')}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs text-on-surface-variant">الموقع</p>
+              <p className="font-bold text-on-surface">
+                {getGovernorates('OM').find(g => g.value === watchedValues.governorate)?.label ?? watchedValues.governorate}{watchedValues.city ? ` · ${getCities('OM', watchedValues.governorate).find(c => c.value === watchedValues.city)?.label ?? watchedValues.city}` : ''}
+              </p>
+            </div>
+
+            {watchedValues.licenseTypes.length > 0 && (
+              <div>
+                <p className="text-xs text-on-surface-variant mb-1">الرخص</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {watchedValues.licenseTypes.map(lt => (
+                    <span key={`rev-lic-${lt}`} className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container text-primary">
+                      {LICENSE_TYPE_LABELS[lt] ?? lt}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Basic Info */}
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">info</span>
-              {tp('jnBasicTitle')}
-            </h2>
-            <div>
-              <label className="block text-sm font-bold mb-1">{tp('jnLabelTitle')}</label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => updateField('title', e.target.value)}
-                placeholder={form.jobType === 'OFFERING' ? tp('jnPlaceholderTitleOffering') : tp('jnPlaceholderTitleHiring')}
-                className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-               
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">{tp('jnLabelDesc')}</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => updateField('description', e.target.value)}
-                placeholder={tp('jnPlaceholderDesc')}
-                className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none min-h-[120px] resize-none"
-               
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelEmployment')}</label>
-                <select
-                  value={form.employmentType}
-                  onChange={(e) => updateField('employmentType', e.target.value)}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm"
-                >
-                  {empOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelGovernorate')}</label>
-                <select
-                  value={form.governorate}
-                  onChange={(e) => updateField('governorate', e.target.value)}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm"
-                >
-                  <option value="">{tp('jnSelectGovernorate')}</option>
-                  {govs.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelCity')}</label>
-                <input
-                  type="text"
-                  value={form.city}
-                  onChange={(e) => updateField('city', e.target.value)}
-                  placeholder={tp('jnPlaceholderCity')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelNationality')}</label>
-                <input
-                  type="text"
-                  value={form.nationality}
-                  onChange={(e) => updateField('nationality', e.target.value)}
-                  placeholder={tp('jnPlaceholderNationality')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                />
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={form.handleSubmit(handleSubmit)}
+            disabled={createJob.isPending}
+            className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
+          >
+            {createJob.isPending ? STRINGS.LOADING : 'نشر الإعلان'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
-          {/* Salary */}
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">payments</span>
-              {tp('jnSalaryTitle')}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelSalary')}</label>
-                <input
-                  type="number"
-                  value={form.salary}
-                  onChange={(e) => updateField('salary', e.target.value)}
-                  placeholder={tp('jnPlaceholderSalary')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  min={0}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelSalaryPeriod')}</label>
-                <select
-                  value={form.salaryPeriod}
-                  onChange={(e) => updateField('salaryPeriod', e.target.value)}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm"
-                >
-                  {SALARY_PERIOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{tp(o.key)}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Requirements */}
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">checklist</span>
-              {tp('jnRequirementsTitle')}
-            </h2>
-
-            {/* License Types */}
-            <div>
-              <label className="block text-sm font-bold mb-2">{tp('jnLabelLicense')}</label>
-              <div className="flex flex-wrap gap-2">
-                {LICENSE_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => toggleArrayItem('licenseTypes', o.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                      form.licenseTypes.includes(o.value)
-                        ? 'bg-primary text-on-primary shadow-ambient'
-                        : 'bg-surface border border-outline text-on-surface hover:border-primary'
-                    }`}
-                  >
-                    {tp(o.key)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Experience */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelExperience')}</label>
-                <input
-                  type="number"
-                  value={form.experienceYears}
-                  onChange={(e) => updateField('experienceYears', e.target.value)}
-                  placeholder={tp('jnPlaceholderExperience')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  min={0}
-                  max={50}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelMinAge')}</label>
-                <input
-                  type="number"
-                  value={form.minAge}
-                  onChange={(e) => updateField('minAge', e.target.value)}
-                  placeholder={tp('jnPlaceholderMinAge')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  min={18}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelMaxAge')}</label>
-                <input
-                  type="number"
-                  value={form.maxAge}
-                  onChange={(e) => updateField('maxAge', e.target.value)}
-                  placeholder={tp('jnPlaceholderMaxAge')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  max={70}
-                />
-              </div>
-            </div>
-
-            {/* Languages */}
-            <div>
-              <label className="block text-sm font-bold mb-2">{tp('jnLabelLanguages')}</label>
-              <div className="flex flex-wrap gap-2">
-                {LANGUAGE_OPTIONS.map((lang) => (
-                  <button
-                    key={lang.value}
-                    type="button"
-                    onClick={() => toggleArrayItem('languages', lang.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                      form.languages.includes(lang.value)
-                        ? 'bg-primary text-on-primary'
-                        : 'bg-surface border border-outline text-on-surface hover:border-primary'
-                    }`}
-                  >
-                    {tp(lang.key)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Vehicle Types */}
-            <div>
-              <label className="block text-sm font-bold mb-2">{tp('jnLabelVehicleTypes')}</label>
-              <div className="flex flex-wrap gap-2">
-                {VEHICLE_TYPE_OPTIONS.map((vt) => (
-                  <button
-                    key={vt.value}
-                    type="button"
-                    onClick={() => toggleArrayItem('vehicleTypes', vt.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                      form.vehicleTypes.includes(vt.value)
-                        ? 'bg-primary text-on-primary shadow-ambient'
-                        : 'bg-surface border border-outline text-on-surface hover:border-primary'
-                    }`}
-                  >
-                    {tp(vt.key)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Has own vehicle */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.hasOwnVehicle}
-                onChange={(e) => updateField('hasOwnVehicle', e.target.checked)}
-                className="w-5 h-5 rounded accent-primary"
-              />
-              <span className="text-sm font-bold">{tp('jnHasOwnVehicle')}</span>
-            </label>
-          </div>
-
-          {/* Contact */}
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">contact_phone</span>
-              {tp('jnContactTitle')}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelPhone')}</label>
-                <input
-                  type="tel"
-                  value={form.contactPhone}
-                  onChange={(e) => updateField('contactPhone', e.target.value)}
-                  placeholder={tp('jnPlaceholderPhone')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  dir="ltr"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelWhatsapp')}</label>
-                <input
-                  type="tel"
-                  value={form.whatsapp}
-                  onChange={(e) => updateField('whatsapp', e.target.value)}
-                  placeholder={tp('jnPlaceholderPhone')}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  dir="ltr"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-bold mb-1">{tp('jnLabelEmail')}</label>
-                <input
-                  type="email"
-                  value={form.contactEmail}
-                  onChange={(e) => updateField('contactEmail', e.target.value)}
-                  placeholder="example@email.com"
-                  className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none"
-                  dir="ltr"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={createJob.isPending}
-              className="bg-primary text-on-primary hover:brightness-110 rounded-lg shadow-ambient flex-1 py-4 text-base font-bold disabled:opacity-50"
-            >
-              {createJob.isPending ? tp('jnSubmitting') : tp('jnSubmit')}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="bg-surface border border-outline text-on-surface-variant rounded-lg px-8 py-4 font-bold hover:border-primary transition-colors"
-            >
-              {tp('jnCancel')}
-            </button>
-          </div>
-        </form>
-      </main>
-      <Footer />
-    </>
-  );
+export default function CreateJobPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-on-surface-variant">{STRINGS.LOADING}</div>}>
+      <CreateJobContent />
+    </Suspense>
+  )
 }

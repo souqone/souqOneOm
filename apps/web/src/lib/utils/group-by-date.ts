@@ -25,7 +25,7 @@ export function groupNotificationsByDate(
     else if (d >= yesterday) key = labels.yesterday;
     else
       key = new Date(n.createdAt).toLocaleDateString(
-        locale === 'ar' ? 'ar-OM' : 'en-US',
+        locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US',
         { day: 'numeric', month: 'long' },
       );
 

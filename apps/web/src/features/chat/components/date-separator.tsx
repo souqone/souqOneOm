@@ -5,7 +5,7 @@ interface DateSeparatorProps {
 }
 
 export function DateSeparator({ date }: DateSeparatorProps) {
-  const label = date.toLocaleDateString('ar-OM', {
+  const label = date.toLocaleDateString('ar-OM-u-nu-latn', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

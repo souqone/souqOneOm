@@ -56,7 +56,7 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
     <div dir="rtl">
       {/* Results count */}
       <p className="text-xs text-[var(--color-on-surface-muted)] mb-4">
-        عرض {(currentPage - 1) * (params.limit ?? 12) + 1}–{Math.min(currentPage * (params.limit ?? 12), meta.total)} من {meta.total.toLocaleString('ar-OM')} طلب
+        عرض {(currentPage - 1) * (params.limit ?? 12) + 1}–{Math.min(currentPage * (params.limit ?? 12), meta.total)} من {meta.total.toLocaleString('en-US')} طلب
       </p>
 
       {/* Grid */}

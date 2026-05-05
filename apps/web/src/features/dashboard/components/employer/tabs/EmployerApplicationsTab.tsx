@@ -14,15 +14,12 @@ interface EmployerApplicationsTabProps {
   isLoading: boolean;
   jobFilter?: string;
   onUpdateStatus: (appId: string, status: 'ACCEPTED' | 'REJECTED') => void;
-  onRelease: (escrowId: string) => void;
-  onDispute: (escrowId: string) => void;
-  onOpenPay: (app: EmployerApplicationItem) => void;
   isUpdating: boolean;
 }
 
 export function EmployerApplicationsTab({
   applications, isLoading, jobFilter,
-  onUpdateStatus, onRelease, onDispute, onOpenPay, isUpdating,
+  onUpdateStatus, isUpdating,
 }: EmployerApplicationsTabProps) {
   const tp = useTranslations('pages');
   const [filter, setFilter] = useState<StatusFilter>('all');
@@ -62,8 +59,7 @@ export function EmployerApplicationsTab({
       ) : (
         <div className="space-y-3">
           {filtered.map((app) => (
-            <ApplicantCard key={app.id} app={app} onUpdateStatus={onUpdateStatus}
-              onRelease={onRelease} onDispute={onDispute} onOpenPay={onOpenPay} isUpdating={isUpdating} />
+            <ApplicantCard key={app.id} app={app} onUpdateStatus={onUpdateStatus} isUpdating={isUpdating} />
           ))}
         </div>
       )}

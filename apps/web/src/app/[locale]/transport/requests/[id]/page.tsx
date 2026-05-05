@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -35,12 +36,18 @@ import {
   REQUEST_STATUS_LABELS,
   CURRENCY_LABEL,
 } from '@/features/transport/constants';
+
 import {
   formatRelativeDate,
   formatBudgetRange,
   getRequestStatusBadgeClass,
 } from '@/lib/utils';
 import { useAuth } from '@/providers/auth-provider';
+
+const RouteMapView = dynamic(
+  () => import('@/features/transport/components/RouteMapView'),
+  { ssr: false, loading: () => <div className="w-full rounded-xl bg-[var(--color-surface-container)] animate-pulse" style={{ height: 260 }} /> }
+);
 
 /* ─── Quote Card ──────────────────────────────────────────────── */
 
@@ -438,6 +445,25 @@ export default function RequestDetailPage() {
               </div>
             </div>
 
+            {/* Route Map */}
+            <div className="card-base p-5 flex flex-col gap-3">
+              <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">الخريطة</h2>
+              <RouteMapView
+                fromLat={request.fromLat}
+                fromLng={request.fromLng}
+                fromGovernorate={request.fromGovernorate}
+                fromCity={request.fromCity}
+                fromAddress={request.fromAddress}
+                fromLabel={`${request.fromGovernorate}${request.fromCity ? ' — ' + request.fromCity : ''}`}
+                toLat={request.toLat}
+                toLng={request.toLng}
+                toGovernorate={request.toGovernorate}
+                toCity={request.toCity}
+                toAddress={request.toAddress}
+                toLabel={`${request.toGovernorate}${request.toCity ? ' — ' + request.toCity : ''}`}
+              />
+            </div>
+
             {/* Cargo Details */}
             <div className="card-base p-5 flex flex-col gap-3">
               <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
@@ -477,7 +503,7 @@ export default function RequestDetailPage() {
                   <Calendar size={14} className="text-[var(--color-brand-navy)]" />
                   <span className="text-[var(--color-on-surface-variant)]">
                     {request.scheduledAt
-                      ? new Date(request.scheduledAt).toLocaleDateString('ar-OM', {
+                      ? new Date(request.scheduledAt).toLocaleDateString('ar-OM-u-nu-latn', {
                           weekday: 'short', day: 'numeric', month: 'short',
                         })
                       : 'في أقرب وقت'}

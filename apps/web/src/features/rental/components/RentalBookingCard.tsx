@@ -89,10 +89,10 @@ export function RentalBookingCard({
             <span className="material-symbols-outlined text-primary text-[14px]">event_available</span>
             <span>
               {listing.availableFrom && listing.availableTo
-                ? tr('availableRange', { from: new Date(listing.availableFrom).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { day: 'numeric', month: 'short' }), to: new Date(listing.availableTo).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { day: 'numeric', month: 'short' }) })
+                ? tr('availableRange', { from: new Date(listing.availableFrom).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' }), to: new Date(listing.availableTo).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' }) })
                 : listing.availableFrom
-                  ? tr('availableFrom', { from: new Date(listing.availableFrom).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { day: 'numeric', month: 'short' }) })
-                  : tr('availableTo', { to: new Date(listing.availableTo!).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { day: 'numeric', month: 'short' }) })
+                  ? tr('availableFrom', { from: new Date(listing.availableFrom).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' }) })
+                  : tr('availableTo', { to: new Date(listing.availableTo!).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' }) })
               }
             </span>
           </div>

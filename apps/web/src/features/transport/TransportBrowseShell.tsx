@@ -89,7 +89,7 @@ function RequestCard({ request, t }: {
               {request.isFlexible
                 ? t('fields.flexible')
                 : request.scheduledAt
-                  ? new Date(request.scheduledAt).toLocaleDateString('ar-OM', { month: 'short', day: 'numeric' })
+                  ? new Date(request.scheduledAt).toLocaleDateString('ar-OM-u-nu-latn', { month: 'short', day: 'numeric' })
                   : t('fields.asap')}
             </span>
           )}

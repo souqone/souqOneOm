@@ -12,10 +12,7 @@ import {
   useMyEmployerProfile,
   useMyJobs,
   useEmployerApplications,
-  useMyEscrows,
   useUpdateApplicationStatus,
-  useReleaseEscrow,
-  useDisputeEscrow,
   useCloseJob,
 } from '@/lib/api/jobs';
 import { EmployerProfileStrip } from './EmployerProfileStrip';
@@ -25,12 +22,8 @@ import { EmployerNoProfileBanner } from './EmployerNoProfileBanner';
 import { EmployerOverviewTab } from './tabs/EmployerOverviewTab';
 import { EmployerJobsTab } from './tabs/EmployerJobsTab';
 import { EmployerApplicationsTab } from './tabs/EmployerApplicationsTab';
-import { EmployerEscrowTab } from './tabs/EmployerEscrowTab';
-import { EmployerInviteTab } from './tabs/EmployerInviteTab';
-import { PayEscrowModal } from './modals/PayEscrowModal';
 import { useTranslations } from 'next-intl';
 import type { EmployerTab } from './EmployerNavTabs';
-import type { EmployerApplicationItem } from '@/lib/api/jobs';
 
 export function EmployerDashboardClient() {
   const { user } = useAuth();
@@ -38,46 +31,31 @@ export function EmployerDashboardClient() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<EmployerTab>('overview');
   const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
-  const [payModalApp, setPayModalApp] = useState<EmployerApplicationItem | null>(null);
 
   const { data: employerProfile, isLoading: loadingProfile } = useMyEmployerProfile(!!user);
   const { data: jobsData, isLoading: loadingJobs } = useMyJobs();
   const { data: applications = [], isLoading: loadingApps } = useEmployerApplications();
-  const { data: escrows = [], isLoading: loadingEscrows } = useMyEscrows();
 
   const updateStatusMutation = useUpdateApplicationStatus();
-  const releaseMutation = useReleaseEscrow();
-  const disputeMutation = useDisputeEscrow();
   const closeMutation = useCloseJob();
 
   const jobs = jobsData?.items ?? [];
   const activeJobs = jobs.filter((j) => j.status === 'ACTIVE');
   const pendingApps = applications.filter((a) => a.status === 'PENDING');
-  const heldEscrows = escrows.filter((e) => e.status === 'HELD');
 
   const counts = {
     jobs: activeJobs.length,
     apps: pendingApps.length,
-    escrow: heldEscrows.length,
   };
 
   const invalidate = useCallback(() => {
     qc.invalidateQueries({ queryKey: ['employer-applications'] });
     qc.invalidateQueries({ queryKey: ['jobs'] });
-    qc.invalidateQueries({ queryKey: ['my-escrows'] });
   }, [qc]);
 
   const handleUpdateStatus = useCallback((appId: string, status: 'ACCEPTED' | 'REJECTED') => {
     updateStatusMutation.mutate({ applicationId: appId, status }, { onSuccess: invalidate });
   }, [updateStatusMutation, invalidate]);
-
-  const handleRelease = useCallback((escrowId: string) => {
-    releaseMutation.mutate(escrowId, { onSuccess: invalidate });
-  }, [releaseMutation, invalidate]);
-
-  const handleDispute = useCallback((escrowId: string) => {
-    disputeMutation.mutate({ escrowId }, { onSuccess: invalidate });
-  }, [disputeMutation, invalidate]);
 
   const handleCloseJob = useCallback((jobId: string) => {
     closeMutation.mutate(jobId, { onSuccess: invalidate });
@@ -136,9 +114,6 @@ export function EmployerDashboardClient() {
                     onCloseJob={handleCloseJob}
                     onViewApps={handleViewApps}
                     onUpdateStatus={handleUpdateStatus}
-                    onRelease={handleRelease}
-                    onDispute={handleDispute}
-                    onOpenPay={setPayModalApp}
                     isUpdating={updateStatusMutation.isPending}
                   />
                 )}
@@ -148,7 +123,6 @@ export function EmployerDashboardClient() {
                     isLoading={loadingJobs}
                     onClose={handleCloseJob}
                     onViewApps={handleViewApps}
-                    setTab={setTab}
                   />
                 )}
                 {tab === 'apps' && (
@@ -157,22 +131,8 @@ export function EmployerDashboardClient() {
                     isLoading={loadingApps}
                     jobFilter={jobFilter}
                     onUpdateStatus={handleUpdateStatus}
-                    onRelease={handleRelease}
-                    onDispute={handleDispute}
-                    onOpenPay={setPayModalApp}
                     isUpdating={updateStatusMutation.isPending}
                   />
-                )}
-                {tab === 'escrow' && (
-                  <EmployerEscrowTab
-                    escrows={escrows}
-                    isLoading={loadingEscrows}
-                    onRelease={handleRelease}
-                    onDispute={handleDispute}
-                  />
-                )}
-                {tab === 'invite' && (
-                  <EmployerInviteTab activeJobs={activeJobs.map((j) => ({ id: j.id, title: j.title }))} />
                 )}
               </>
             )}
@@ -195,7 +155,6 @@ export function EmployerDashboardClient() {
         <Footer />
       </div>
 
-      <PayEscrowModal app={payModalApp} onClose={() => setPayModalApp(null)} />
     </AuthGuard>
   );
 }

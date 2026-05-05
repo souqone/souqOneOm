@@ -135,8 +135,8 @@ export default function OperatorDetailPage() {
   );
 
   const isOwner = user?.id === op.userId;
-  const rateValue = op.dailyRate ? Number(op.dailyRate).toLocaleString() : op.hourlyRate ? Number(op.hourlyRate).toLocaleString() : null;
-  const rate = op.dailyRate ? tp('opDetailRateDaily', { rate: Number(op.dailyRate).toLocaleString(), currency: op.currency }) : op.hourlyRate ? tp('opDetailRateHourly', { rate: Number(op.hourlyRate).toLocaleString(), currency: op.currency }) : tp('opDetailRateContact');
+  const rateValue = op.dailyRate ? Number(op.dailyRate).toLocaleString('en-US') : op.hourlyRate ? Number(op.hourlyRate).toLocaleString('en-US') : null;
+  const rate = op.dailyRate ? tp('opDetailRateDaily', { rate: Number(op.dailyRate).toLocaleString('en-US'), currency: op.currency }) : op.hourlyRate ? tp('opDetailRateHourly', { rate: Number(op.hourlyRate).toLocaleString('en-US'), currency: op.currency }) : tp('opDetailRateContact');
   const relativeDate = formatRelativeTime(op.createdAt, locale);
   const locationText = [resolveCityLabel(op.city, locale), resolveLocationLabel(op.governorate, locale)].filter(Boolean).join('، ');
   const isActive = op.status === 'ACTIVE';

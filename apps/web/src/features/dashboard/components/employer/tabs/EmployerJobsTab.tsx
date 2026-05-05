@@ -6,7 +6,6 @@ import { JobManagementCard } from '../cards/JobManagementCard';
 import { JobManagementCardSkeleton } from '../cards/JobManagementCardSkeleton';
 import { NoJobsState } from '../empty/NoJobsState';
 import type { JobItem } from '@/lib/api/jobs';
-import type { EmployerTab } from '../EmployerNavTabs';
 
 type StatusFilter = 'all' | 'ACTIVE' | 'CLOSED' | 'DRAFT' | 'EXPIRED';
 
@@ -15,10 +14,9 @@ interface EmployerJobsTabProps {
   isLoading: boolean;
   onClose: (jobId: string) => void;
   onViewApps: (jobId: string) => void;
-  setTab: (tab: EmployerTab) => void;
 }
 
-export function EmployerJobsTab({ jobs, isLoading, onClose, onViewApps, setTab }: EmployerJobsTabProps) {
+export function EmployerJobsTab({ jobs, isLoading, onClose, onViewApps }: EmployerJobsTabProps) {
   const tp = useTranslations('pages');
   const [filter, setFilter] = useState<StatusFilter>('all');
 
@@ -57,7 +55,7 @@ export function EmployerJobsTab({ jobs, isLoading, onClose, onViewApps, setTab }
       ) : (
         <div className="space-y-3">
           {filtered.map((job) => (
-            <JobManagementCard key={job.id} job={job} onClose={onClose} onViewApps={onViewApps} setTab={setTab} />
+            <JobManagementCard key={job.id} job={job} onClose={onClose} onViewApps={onViewApps} />
           ))}
         </div>
       )}

@@ -99,7 +99,6 @@ function AdminJobsContent() {
                 <StatCard icon="person" label="السائقون" value={stats.drivers.total} sub={`${stats.drivers.verified} موثّق`} />
                 <StatCard icon="business" label="أصحاب العمل" value={stats.employers.total} />
                 <StatCard icon="verified_user" label="توثيق معلّق" value={stats.verifications.pending} color="text-yellow-600" />
-                <StatCard icon="payments" label="ضمانات محجوزة" value={stats.escrows.held} sub={`من ${stats.escrows.total}`} />
               </div>
             ) : null}
           </div>
@@ -183,7 +182,7 @@ function AdminJobsContent() {
                         </p>
                         <p className="text-xs text-on-surface-variant">{v.driverProfile?.user.email}</p>
                         <p className="text-xs text-on-surface-variant mt-1">
-                          {new Date(v.createdAt).toLocaleDateString('ar-OM')}
+                          {new Date(v.createdAt).toLocaleDateString('ar-OM-u-nu-latn')}
                         </p>
                       </div>
                       <div className="flex gap-2">

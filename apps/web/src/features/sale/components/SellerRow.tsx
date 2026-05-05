@@ -18,7 +18,7 @@ interface SellerRowProps {
 function formatMemberSince(dateString: string, locale: string): string {
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { year: 'numeric', month: 'long' });
+    return date.toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { year: 'numeric', month: 'long' });
   } catch {
     return '';
   }

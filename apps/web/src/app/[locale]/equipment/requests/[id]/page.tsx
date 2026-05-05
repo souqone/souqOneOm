@@ -124,11 +124,11 @@ export default function EquipmentRequestDetailPage() {
                 </div>
                 <p className="text-sm text-on-surface-variant whitespace-pre-line mb-4">{req.description}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {req.budgetMin && <InfoChip icon="payments" label={tp('eqReqDetailBudgetMin')} value={`${Number(req.budgetMin).toLocaleString()} ${req.currency}`} />}
-                  {req.budgetMax && <InfoChip icon="payments" label={tp('eqReqDetailBudgetMax')} value={`${Number(req.budgetMax).toLocaleString()} ${req.currency}`} />}
+                  {req.budgetMin && <InfoChip icon="payments" label={tp('eqReqDetailBudgetMin')} value={`${Number(req.budgetMin).toLocaleString('en-US')} ${req.currency}`} />}
+                  {req.budgetMax && <InfoChip icon="payments" label={tp('eqReqDetailBudgetMax')} value={`${Number(req.budgetMax).toLocaleString('en-US')} ${req.currency}`} />}
                   {req.rentalDuration && <InfoChip icon="schedule" label={tp('eqReqDetailDuration')} value={req.rentalDuration} />}
-                  {req.startDate && <InfoChip icon="event" label={tp('eqReqDetailStartDate')} value={new Date(req.startDate).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')} />}
-                  {req.endDate && <InfoChip icon="event" label={tp('eqReqDetailEndDate')} value={new Date(req.endDate).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')} />}
+                  {req.startDate && <InfoChip icon="event" label={tp('eqReqDetailStartDate')} value={new Date(req.startDate).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US')} />}
+                  {req.endDate && <InfoChip icon="event" label={tp('eqReqDetailEndDate')} value={new Date(req.endDate).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US')} />}
                   {req.withOperator && <InfoChip icon="person" label={tp('eqReqDetailWithOperator')} value={tp('eqReqDetailOperatorRequired')} />}
                   {req.siteDetails && <InfoChip icon="map" label={tp('eqReqDetailSiteDetails')} value={req.siteDetails} />}
                 </div>
@@ -153,13 +153,13 @@ export default function EquipmentRequestDetailPage() {
                             </div>
                             <div>
                               <p className="font-bold text-sm text-on-surface">{bid.user.displayName || bid.user.username}</p>
-                              <p className="text-[10px] text-on-surface-variant">{new Date(bid.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')}</p>
+                              <p className="text-[10px] text-on-surface-variant">{new Date(bid.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US')}</p>
                             </div>
                           </div>
                           <span className={`text-white text-[10px] font-black px-2 py-0.5 rounded-lg ${BID_STATUS_COLORS[bid.bidStatus]}`}>{BID_STATUS_LABELS[bid.bidStatus]}</span>
                         </div>
                         <div className="flex items-center gap-4 mb-2">
-                          <p className="text-primary font-black text-lg">{Number(bid.price).toLocaleString()} {bid.currency}</p>
+                          <p className="text-primary font-black text-lg">{Number(bid.price).toLocaleString('en-US')} {bid.currency}</p>
                           <span className="text-[11px] text-on-surface-variant flex items-center gap-1"><span className="material-symbols-outlined text-xs">schedule</span>{bid.availability}</span>
                           {bid.withOperator && <span className="text-[11px] text-emerald-600 flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">person</span>{tp('eqReqDetailWithOp')}</span>}
                         </div>
@@ -245,7 +245,7 @@ export default function EquipmentRequestDetailPage() {
 
               <div className="flex items-center gap-4 text-xs text-on-surface-variant px-2">
                 <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">visibility</span>{req.viewCount} {tp('eqReqDetailViews')}</span>
-                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span>{new Date(req.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')}</span>
+                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span>{new Date(req.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US')}</span>
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
-import { APP_STATUS_CONFIG, ESCROW_STATUS_CONFIG, SALARY_PERIOD_CONFIG } from '@/lib/constants/jobs';
+import { APP_STATUS_CONFIG, SALARY_PERIOD_CONFIG } from '@/lib/constants/jobs';
 import type { MyApplicationItem } from '@/lib/api/jobs';
 import { Button } from '@/components/ui/button';
 
@@ -21,10 +21,9 @@ interface ApplicationCardProps {
   app: MyApplicationItem;
   onWithdraw: (id: string) => void;
   onChat: (userId: string) => void;
-  onDispute: (escrowId: string) => void;
 }
 
-export function ApplicationCard({ app, onWithdraw, onChat, onDispute }: ApplicationCardProps) {
+export function ApplicationCard({ app, onWithdraw, onChat }: ApplicationCardProps) {
   const tp = useTranslations('pages');
   const router = useRouter();
   const statusCfg = APP_STATUS_CONFIG[app.status] ?? APP_STATUS_CONFIG.PENDING;
@@ -51,48 +50,13 @@ export function ApplicationCard({ app, onWithdraw, onChat, onDispute }: Applicat
       {app.job.salary && (
         <div className="flex items-baseline gap-1 mb-3">
           <span className="font-black text-primary text-lg">
-            {Number(app.job.salary).toLocaleString('ar-OM')}
+            {Number(app.job.salary).toLocaleString('en-US')}
           </span>
           <span className="text-sm text-primary/60">{tp('currencyOMR')}</span>
           {app.job.salaryPeriod && SALARY_PERIOD_CONFIG[app.job.salaryPeriod] && (
             <span className="text-[11px] text-on-surface-variant/50">
               {tp(SALARY_PERIOD_CONFIG[app.job.salaryPeriod].labelKey)}
             </span>
-          )}
-        </div>
-      )}
-
-      {/* Escrow section — only when ACCEPTED and escrow exists */}
-      {app.status === 'ACCEPTED' && app.escrow && (
-        <div className="mb-3 border-t border-outline-variant/[0.06] pt-3">
-          <div className="flex items-center justify-between bg-primary/[0.04] border border-primary/10 rounded-xl px-3 py-2">
-            <div className="flex items-center gap-2">
-              <span
-                className="material-symbols-outlined text-primary text-base"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                {ESCROW_STATUS_CONFIG[app.escrow.status]?.icon ?? 'lock'}
-              </span>
-              <div>
-                <p className="text-[11px] font-semibold text-primary">
-                  {Number(app.escrow.amount).toLocaleString('ar-OM')} {tp('currencyOMR')}
-                </p>
-                <p className="text-[9px] text-primary/50">{tp('escrowHeldLabel')}</p>
-              </div>
-            </div>
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${ESCROW_STATUS_CONFIG[app.escrow.status]?.color ?? ''}`}>
-              {tp(ESCROW_STATUS_CONFIG[app.escrow.status]?.labelKey ?? 'escrowHeld')}
-            </span>
-          </div>
-          {app.escrow.status === 'HELD' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDispute(app.escrow!.id)}
-              className="w-full h-8 rounded-xl mt-2 border-error/20 text-error text-[11px] hover:bg-error/5"
-            >
-              {tp('openDispute')}
-            </Button>
           )}
         </div>
       )}

@@ -14,10 +14,9 @@ interface DriverApplicationsTabProps {
   isLoading: boolean;
   onWithdraw: (id: string) => void;
   onChat: (userId: string) => void;
-  onDispute: (escrowId: string) => void;
 }
 
-export function DriverApplicationsTab({ applications, isLoading, onWithdraw, onChat, onDispute }: DriverApplicationsTabProps) {
+export function DriverApplicationsTab({ applications, isLoading, onWithdraw, onChat }: DriverApplicationsTabProps) {
   const tp = useTranslations('pages');
   const [filter, setFilter] = useState<StatusFilter>('all');
 
@@ -76,7 +75,6 @@ export function DriverApplicationsTab({ applications, isLoading, onWithdraw, onC
               app={app}
               onWithdraw={onWithdraw}
               onChat={onChat}
-              onDispute={onDispute}
             />
           ))}
         </div>

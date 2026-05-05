@@ -18,7 +18,6 @@ export interface AdminStatsResponse {
   drivers: { total: number; verified: number };
   employers: { total: number };
   verifications: { pending: number };
-  escrows: { total: number; held: number };
 }
 
 export function useAdminJobs(query?: { page?: number; status?: string; search?: string }) {

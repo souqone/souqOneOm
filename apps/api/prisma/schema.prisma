@@ -484,7 +484,6 @@ model DriverJob {
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   applications    JobApplication[]
-  invites         JobInvite[]
 
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -513,7 +512,6 @@ model JobApplication {
   applicantId String
   applicant   User                @relation(fields: [applicantId], references: [id], onDelete: Cascade)
 
-  escrow      JobEscrow?
 
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
@@ -524,25 +522,6 @@ model JobApplication {
   @@map("job_applications")
 }
 
-// ──────────────────────────────────────
-// ضمان الدفع — JobEscrow
-// ──────────────────────────────────────
-model JobEscrow {
-  id              String          @id @default(cuid())
-  applicationId   String          @unique
-  application     JobApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  amount          Int             // بالبيسة
-  status          EscrowStatus    @default(HELD)
-
-  paymentId       String?
-  releasedAt      DateTime?
-
-  createdAt       DateTime        @default(now())
-
-  @@index([status])
-  @@map("job_escrows")
-}
 
 // ──────────────────────────────────────
 // بروفايل السائق — DriverProfile
@@ -612,29 +591,6 @@ model EmployerProfile {
   @@map("employer_profiles")
 }
 
-// ──────────────────────────────────────
-// دعوات الوظائف — JobInvite
-// ──────────────────────────────────────
-model JobInvite {
-  id          String        @id @default(cuid())
-  message     String?
-
-  jobId       String
-  job         DriverJob     @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  inviterId   String
-  inviteeId   String
-
-  status      InviteStatus  @default(PENDING)
-
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@unique([jobId, inviteeId])
-  @@index([inviteeId])
-  @@index([inviterId])
-  @@map("job_invites")
-}
 
 // ──────────────────────────────────────
 // توثيق السائق — DriverVerification
@@ -821,11 +777,6 @@ enum ApplicationStatus {
   WITHDRAWN
 }
 
-enum InviteStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-}
 
 enum VerificationStatus {
   PENDING
@@ -833,12 +784,6 @@ enum VerificationStatus {
   REJECTED
 }
 
-enum EscrowStatus {
-  HELD
-  RELEASED
-  REFUNDED
-  DISPUTED
-}
 
 enum NotificationType {
   MESSAGE

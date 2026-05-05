@@ -60,7 +60,7 @@ function RangeSlider({
     field.unit === 'راكب'
       ? `${n} راكب`
       : n >= 1000
-      ? `${(n / 1000).toLocaleString('ar-EG')}k`
+      ? `${(n / 1000).toLocaleString('en-US')}k`
       : String(n)
 
   const isDefault = sliderVals[0] === min && sliderVals[1] === max

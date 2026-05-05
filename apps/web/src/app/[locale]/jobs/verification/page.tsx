@@ -1,236 +1,220 @@
 'use client';
-
-import { useState } from 'react';
-import { Navbar } from '@/components/layout/navbar';
-import { Footer } from '@/components/layout/footer';
-import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
+import React, { useState, useRef } from 'react';
+import { CheckCircle, Clock, X, AlertCircle } from 'lucide-react';
 import { useMyVerificationStatus, useSubmitVerification, useMyDriverProfile } from '@/lib/api';
 import { useUploadImage } from '@/lib/api/uploads';
 import { useToast } from '@/components/toast';
 import { Link } from '@/i18n/navigation';
+import { STRINGS } from '@/features/jobs/constants';
+import { cn } from '@/lib/utils';
 
-export default function VerificationPage() {
-  return (
-    <JobsPageGuard role="driver">
-      <VerificationContent />
-    </JobsPageGuard>
-  );
+interface UploadZoneProps {
+  label: string
+  icon: string
+  file: File | null
+  onFileChange: (file: File | null) => void
 }
 
-function VerificationContent() {
-  const { addToast } = useToast();
-  const { data: profile, isLoading: profileLoading } = useMyDriverProfile();
-  const { data: verifications, isLoading: verLoading } = useMyVerificationStatus();
-  const submitVerification = useSubmitVerification();
-  const uploadImage = useUploadImage();
+function UploadZone({ label, icon, file, onFileChange }: UploadZoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
 
-  const [licenseFile, setLicenseFile] = useState<File | null>(null);
-  const [idFile, setIdFile] = useState<File | null>(null);
-  const [notes, setNotes] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const handleFile = (f: File) => {
+    onFileChange(f)
+  }
 
-  const isLoading = profileLoading || verLoading;
-  const latestVerification = verifications?.[0];
-  const hasPending = latestVerification?.status === 'PENDING';
-  const isVerified = profile && 'isVerified' in profile && (profile as any).isVerified;
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    const f = e.dataTransfer.files[0]
+    if (f) handleFile(f)
+  }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  return (
+    <div
+      onClick={() => inputRef.current?.click()}
+      onDragOver={e => { e.preventDefault(); setDragging(true) }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      className={cn(
+        'relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200',
+        dragging ? 'border-brand-amber bg-amber-50': file ?'border-green-400 bg-green-50': 'border-outline-variant hover:border-outline hover:bg-surface'
+      )}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0]
+          if (f) handleFile(f)
+        }}
+      />
+
+      {file ? (
+        <div className="flex flex-col items-center gap-2">
+          <CheckCircle size={32} className="text-green-500" />
+          <p className="text-sm font-bold text-green-700">تم رفع الملف بنجاح</p>
+          <p className="text-xs text-green-600">{file.name}</p>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onFileChange(null) }}
+            className="flex items-center gap-1 text-xs text-error hover:underline"
+          >
+            <X size={12} />
+            إزالة
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2">
+          <div className="text-4xl">{icon}</div>
+          <p className="font-bold text-sm text-on-surface">{label}</p>
+          <p className="text-xs text-on-surface-variant">اختر ملف أو اسحب هنا</p>
+          <p className="text-xs text-outline">JPG, PNG — حد أقصى 5MB</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function VerificationPage() {
+  const { addToast } = useToast()
+  const { data: profile, isLoading: profileLoading } = useMyDriverProfile()
+  const { data: verifications, isLoading: verLoading } = useMyVerificationStatus()
+  const submitVerification = useSubmitVerification()
+  const uploadImage = useUploadImage()
+
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [licenseFile, setLicenseFile] = useState<File | null>(null)
+  const [idFile, setIdFile] = useState<File | null>(null)
+  const [notes, setNotes] = useState('')
+
+  const loading = profileLoading || verLoading
+  const existingStatus = verifications?.[0] ?? null
+
+  const handleSubmit = async () => {
     if (!licenseFile || !idFile) {
-      addToast('error', 'يرجى رفع صورة الرخصة وصورة الهوية');
-      return;
+      addToast('error', 'يرجى رفع صورة الرخصة وصورة الهوية')
+      return
     }
-
-    setUploading(true);
+    setSubmitting(true)
     try {
       const [licenseResult, idResult] = await Promise.all([
         uploadImage.mutateAsync(licenseFile),
         uploadImage.mutateAsync(idFile),
-      ]);
-
+      ])
       await submitVerification.mutateAsync({
         licenseImageUrl: licenseResult.url,
         idImageUrl: idResult.url,
         notes: notes || undefined,
-      });
-
-      addToast('success', 'تم إرسال طلب التوثيق بنجاح');
-      setLicenseFile(null);
-      setIdFile(null);
-      setNotes('');
-    } catch (err: any) {
-      addToast('error', err?.message || 'حدث خطأ أثناء الإرسال');
+      })
+      addToast('success', 'تم إرسال طلب التوثيق بنجاح')
+      setSubmitted(true)
+    } catch {
+      addToast('error', STRINGS.ERROR_GENERIC)
     } finally {
-      setUploading(false);
+      setSubmitting(false)
     }
   }
 
-  const statusConfig: Record<string, { label: string; color: string; icon: string }> = {
-    PENDING: { label: 'قيد المراجعة', color: 'bg-yellow-100 text-yellow-700', icon: 'hourglass_top' },
-    APPROVED: { label: 'مقبول ✓', color: 'bg-green-100 text-green-700', icon: 'verified' },
-    REJECTED: { label: 'مرفوض', color: 'bg-red-100 text-red-700', icon: 'cancel' },
-  };
-
-  const inputClass = 'w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-3 px-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none';
-
-  if (isLoading) {
-    return (
-      <>
-        <Navbar />
-        <main className="pt-28 pb-16 max-w-3xl mx-auto px-4 md:px-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-surface-container-low rounded w-1/2" />
-            <div className="h-48 bg-surface-container-low rounded" />
-          </div>
-        </main>
-      </>
-    );
+  const statusConfig = {
+    PENDING: { icon: <Clock size={20} className="text-amber-500" />, label: 'طلبك قيد المراجعة', desc: 'سيتم الرد خلال 24 ساعة', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+    APPROVED: { icon: <CheckCircle size={20} className="text-green-500" />, label: 'تم توثيق حسابك', desc: 'حسابك موثّق الآن', color: 'bg-green-50 border-green-200 text-green-700' },
+    REJECTED: { icon: <AlertCircle size={20} className="text-error" />, label: 'تم رفض الطلب', desc: existingStatus?.rejectionReason ?? 'يرجى إعادة المحاولة', color: 'bg-red-50 border-red-200 text-error' },
   }
 
-  if (!profile) {
+  if (!loading && !profile) {
     return (
-      <>
-        <Navbar />
-        <main className="pt-28 pb-16 max-w-3xl mx-auto px-4 md:px-8 text-center">
-          <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4 block">person_off</span>
-          <h1 className="text-2xl font-extrabold mb-2">لا يوجد بروفايل سائق</h1>
-          <p className="text-on-surface-variant mb-6">يجب إنشاء بروفايل سائق أولاً لطلب التوثيق</p>
-          <Link href="/jobs/onboarding" className="bg-primary text-on-primary px-6 py-3 rounded-lg font-bold text-sm hover:brightness-110 transition">
-            إنشاء بروفايل
-          </Link>
-        </main>
-        <Footer />
-      </>
-    );
+      <div className="max-w-xl mx-auto px-4 py-10 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={32} className="text-error" />
+        </div>
+        <h1 className="text-2xl font-extrabold text-on-surface mb-2">لا يوجد بروفايل سائق</h1>
+        <p className="text-sm text-on-surface-variant mb-6">يجب إنشاء بروفايل سائق أولاً لطلب التوثيق</p>
+        <Link href="/jobs/onboarding" className="btn-amber inline-flex px-6 py-3 text-sm font-bold">
+          إنشاء بروفايل
+        </Link>
+      </div>
+    )
   }
 
   return (
-    <>
-      <Navbar />
-      <main className="pt-28 pb-16 max-w-3xl mx-auto px-4 md:px-8">
-        <h1 className="text-3xl font-extrabold mb-2 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-3xl">verified_user</span>
-          توثيق الحساب
-        </h1>
-        <p className="text-on-surface-variant mb-8">
-          وثّق حسابك كسائق لزيادة فرصك في الحصول على وظائف
-        </p>
+    <div className="max-w-xl mx-auto px-4 py-10">
 
-        {/* Current Status */}
-        {isVerified && (
-          <div className="glass-card rounded-xl p-6 mb-6 text-center">
-            <span className="material-symbols-outlined text-5xl text-green-600 mb-3 block">verified</span>
-            <h2 className="text-xl font-extrabold text-green-700 mb-1">حسابك موثّق ✓</h2>
-            <p className="text-sm text-on-surface-variant">تم توثيق حسابك بنجاح — badge التوثيق يظهر في بروفايلك</p>
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle size={32} className="text-brand-amber" />
+        </div>
+        <h1 className="text-2xl font-extrabold text-on-surface mb-2">توثيق حسابك كسائق</h1>
+        <p className="text-sm text-on-surface-variant">ارفع مستنداتك للحصول على شارة الموثّق</p>
+      </div>
+
+      {loading ? (
+        <div className="space-y-4 animate-pulse">
+          <div className="h-32 bg-surface-dim rounded-2xl" />
+          <div className="h-32 bg-surface-dim rounded-2xl" />
+        </div>
+      ) : existingStatus && existingStatus.status !== 'REJECTED' ? (
+        /* Status Display */
+        <div className={cn(
+          'rounded-2xl border p-5 flex items-start gap-3',
+          statusConfig[existingStatus.status]?.color
+        )}>
+          {statusConfig[existingStatus.status]?.icon}
+          <div>
+            <p className="font-bold text-sm">{statusConfig[existingStatus.status]?.label}</p>
+            <p className="text-xs mt-0.5 opacity-80">{statusConfig[existingStatus.status]?.desc}</p>
           </div>
-        )}
-
-        {/* Verification History */}
-        {verifications && verifications.length > 0 && (
-          <div className="glass-card rounded-xl p-6 mb-6">
-            <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">history</span>
-              سجل الطلبات
-            </h2>
-            <div className="space-y-3">
-              {verifications.map((v) => {
-                const sc = statusConfig[v.status] || statusConfig.PENDING;
-                return (
-                  <div key={v.id} className="flex items-center justify-between p-3 bg-surface-container-low rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className={`material-symbols-outlined text-lg ${sc.color.split(' ')[1]}`}>{sc.icon}</span>
-                      <div>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${sc.color}`}>{sc.label}</span>
-                        <p className="text-xs text-on-surface-variant mt-1">
-                          {new Date(v.createdAt).toLocaleDateString('ar-OM')}
-                        </p>
-                      </div>
-                    </div>
-                    {v.rejectionReason && (
-                      <p className="text-xs text-red-600 max-w-[200px] truncate">{v.rejectionReason}</p>
-                    )}
-                  </div>
-                );
-              })}
+        </div>
+      ) : (
+        /* Upload Form */
+        <div className="space-y-4">
+          {submitted && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+              <Clock size={18} className="text-amber-500 shrink-0" />
+              <p className="text-sm font-bold text-amber-700">تم إرسال طلبك بنجاح — سيتم الرد خلال 24 ساعة</p>
             </div>
+          )}
+
+          <UploadZone
+            label="صورة الرخصة"
+            icon="📄"
+            file={licenseFile}
+            onFileChange={setLicenseFile}
+          />
+
+          <UploadZone
+            label="صورة الهوية الوطنية"
+            icon="🪪"
+            file={idFile}
+            onFileChange={setIdFile}
+          />
+
+          <div>
+            <label className="block text-sm font-bold text-on-surface mb-1.5">
+              ملاحظات إضافية — اختياري
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={3}
+              className="input-base text-sm w-full resize-none"
+              placeholder="أي معلومات إضافية تريد إضافتها..."
+            />
           </div>
-        )}
 
-        {/* Submit Form — only if not verified and no pending request */}
-        {!isVerified && !hasPending && (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="glass-card rounded-xl p-6 space-y-4">
-              <h2 className="font-bold text-lg flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">upload_file</span>
-                ارفع المستندات
-              </h2>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">صورة رخصة القيادة *</label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
-                    className={inputClass}
-                  />
-                  {licenseFile && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">check_circle</span>
-                      {licenseFile.name}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">صورة بطاقة الهوية *</label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-                    className={inputClass}
-                  />
-                  {idFile && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">check_circle</span>
-                      {idFile.name}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">ملاحظات إضافية</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أي ملاحظات تريد إضافتها..."
-                  className={`${inputClass} min-h-[80px] resize-none`}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={uploading || submitVerification.isPending}
-              className="w-full bg-primary text-on-primary py-4 rounded-xl font-extrabold text-base hover:brightness-110 transition disabled:opacity-50"
-            >
-              {uploading ? 'جاري رفع الملفات...' : submitVerification.isPending ? 'جاري الإرسال...' : 'إرسال طلب التوثيق'}
-            </button>
-          </form>
-        )}
-
-        {hasPending && !isVerified && (
-          <div className="glass-card rounded-xl p-6 text-center">
-            <span className="material-symbols-outlined text-5xl text-yellow-600 mb-3 block">hourglass_top</span>
-            <h2 className="text-xl font-extrabold mb-1">طلبك قيد المراجعة</h2>
-            <p className="text-sm text-on-surface-variant">سيتم مراجعة طلبك وإشعارك بالنتيجة</p>
-          </div>
-        )}
-      </main>
-      <Footer />
-    </>
-  );
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || submitted}
+            className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
+          >
+            {submitting ? STRINGS.LOADING : 'إرسال طلب التوثيق'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }

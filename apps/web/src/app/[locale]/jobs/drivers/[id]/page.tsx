@@ -1,352 +1,247 @@
 'use client';
-
+import React from 'react';
 import { useParams } from 'next/navigation';
-import { Link, useRouter } from '@/i18n/navigation';
-import { Navbar } from '@/components/layout/navbar';
-import { Footer } from '@/components/layout/footer';
-import { useDriver, useCreateConversation, useInviteDriver, useMyJobs, useDriverReviews } from '@/lib/api';
-import { useAuth } from '@/providers/auth-provider';
-import { useRequireJobProfile } from '@/hooks/use-require-job-profile';
-import { useToast } from '@/components/toast';
-import { getImageUrl } from '@/lib/image-utils';
-import { useLocale } from 'next-intl';
-import { resolveLocationLabel, resolveCityLabel } from '@/lib/location-data';
-import Image from 'next/image';
+import Link from 'next/link';
+import { MapPin, Phone, MessageCircle, Calendar, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import RatingBadges from '@/features/jobs/components/RatingBadges';
+import { useDriver } from '@/lib/api/jobs';
+import { LICENSE_TYPE_LABELS, STRINGS } from '@/features/jobs/constants';
+import { getInitials, getAvatarColor, timeAgo, cn } from '@/lib/utils';
+import { resolveLocationLabel } from '@/lib/location-data';
 
-const LICENSE_LABELS: Record<string, string> = {
-  LIGHT: 'خفيفة', HEAVY: 'ثقيلة', TRANSPORT: 'نقل', BUS: 'حافلات', MOTORCYCLE: 'دراجة نارية',
-};
-const VEHICLE_LABELS: Record<string, string> = {
-  SEDAN: 'سيدان', SUV: 'دفع رباعي', LIGHT_TRUCK: 'شاحنة خفيفة', HEAVY_TRUCK: 'شاحنة ثقيلة',
-  BUS: 'حافلة', VAN: 'فان', PICKUP: 'بيك أب', LIMO: 'ليموزين',
-};
-const LANG_LABELS: Record<string, string> = {
-  ARABIC: 'العربية', ENGLISH: 'الإنجليزية', URDU: 'الأردية', HINDI: 'الهندية',
-  BENGALI: 'البنغالية', FILIPINO: 'الفلبينية',
-};
+function ProfileSkeleton() {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6 animate-pulse">
+      <div className="h-32 bg-surface-dim rounded-2xl mb-6" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="h-32 bg-surface-dim rounded-2xl" />
+          <div className="h-24 bg-surface-dim rounded-2xl" />
+        </div>
+        <div className="h-48 bg-surface-dim rounded-2xl" />
+      </div>
+    </div>
+  )
+}
 
 export default function DriverProfilePage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const { user } = useAuth();
-  const { requireProfile } = useRequireJobProfile();
-  const { addToast } = useToast();
-  const locale = useLocale();
-  const { data: driver, isLoading, isError } = useDriver(id);
-  const createConv = useCreateConversation();
-  const inviteDriver = useInviteDriver();
-  const { data: myJobsData } = useMyJobs();
-  const myJobs = myJobsData?.items?.filter((j) => j.status === 'ACTIVE') ?? [];
+  const params = useParams()
+  const id = params?.id as string
 
-  async function handleInvite() {
-    requireProfile('employer', async () => {
-      if (!driver || myJobs.length === 0) {
-        addToast('error', 'يجب أن يكون لديك وظيفة نشطة لدعوة سائق');
-        return;
-      }
-      try {
-        await inviteDriver.mutateAsync({ jobId: myJobs[0].id, driverId: driver.userId });
-        addToast('success', 'تم إرسال الدعوة بنجاح');
-      } catch (err: any) {
-        addToast('error', err?.message || 'حدث خطأ أثناء إرسال الدعوة');
-      }
-    });
-  }
+  const { data: driver, isLoading: loading, isError, refetch } = useDriver(id)
 
-  function handleMessage() {
-    requireProfile('any', async () => {
-      if (!driver) return;
-      try {
-        const conv = await createConv.mutateAsync({ entityType: 'JOB', entityId: driver.id });
-        router.push(`/messages/${conv.id}`);
-      } catch {
-        addToast('error', 'تعذر بدء المحادثة');
-      }
-    });
-  }
-
-  if (isLoading) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-background">
-          <div className="h-40 bg-gradient-to-bl from-[#004ac6] via-[#2563eb] to-[#0B2447]" />
-          <main className="max-w-4xl mx-auto px-4 md:px-8 -mt-16">
-            <div className="animate-pulse space-y-6">
-              <div className="h-24 w-24 bg-surface-container-low rounded-full" />
-              <div className="h-8 bg-surface-container-low rounded w-1/3" />
-              <div className="h-64 bg-surface-container-low rounded" />
-            </div>
-          </main>
-        </div>
-      </>
-    );
-  }
+  if (loading) return <ProfileSkeleton />
 
   if (isError || !driver) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-background pt-28">
-          <main className="max-w-4xl mx-auto px-4 md:px-8 text-center">
-            <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4 block">error</span>
-            <p className="text-xl font-bold mb-4">بروفايل السائق غير موجود</p>
-            <Link href="/jobs/drivers" className="bg-primary text-on-primary px-6 py-3 text-sm font-black hover:brightness-110 transition-colors">
-              العودة لقائمة السائقين
-            </Link>
-          </main>
-        </div>
-      </>
-    );
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <AlertCircle size={40} className="text-error mx-auto mb-3" />
+        <p className="font-bold text-on-surface mb-4">{STRINGS.ERROR_GENERIC ?? 'السائق غير موجود'}</p>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 text-sm font-bold text-primary hover:underline mx-auto"
+        >
+          <RefreshCw size={14} />
+          إعادة المحاولة
+        </button>
+      </div>
+    )
   }
 
-  const isOwnProfile = user?.id === driver.userId;
+  const name = driver.user.displayName ?? driver.user.username
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen bg-background">
-        <div className="h-40 md:h-48 bg-gradient-to-bl from-[#004ac6] via-[#2563eb] to-[#0B2447] relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20v20H0zm20 20h20v20H20z\' fill=\'%23fff\' fill-opacity=\'.4\'/%3E%3C/svg%3E")', backgroundSize: '40px 40px' }} />
-        </div>
+    <div className="max-w-4xl mx-auto px-4 lg:px-6 py-6">
 
-        <main className="max-w-4xl mx-auto px-4 md:px-8 -mt-20 md:-mt-24 relative z-10 pb-16">
-          <nav className="flex items-center gap-2 text-sm text-white/70 mb-5">
-            <Link href="/" className="hover:text-white transition-colors">الرئيسية</Link>
-            <span className="material-symbols-outlined icon-flip text-xs">chevron_left</span>
-            <Link href="/jobs/drivers" className="hover:text-white transition-colors">السائقون</Link>
-            <span className="material-symbols-outlined icon-flip text-xs">chevron_left</span>
-            <span className="text-white font-bold truncate max-w-xs">{driver.user.displayName || driver.user.username}</span>
-          </nav>
-
-          {/* Profile Header */}
-          <div className="bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm mb-6">
-            <div className="p-6 flex flex-col sm:flex-row items-start gap-6">
-              <div className="relative w-24 h-24 rounded-full overflow-hidden bg-surface-container-low shrink-0">
-                {driver.user.avatarUrl ? (
-                  <Image src={getImageUrl(driver.user.avatarUrl) ?? ''} alt="" fill className="object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">person</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-extrabold text-on-surface">{driver.user.displayName || driver.user.username}</h1>
-                  {driver.isVerified && (
-                    <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">verified</span>
-                      موثّق
-                    </span>
-                  )}
-                </div>
-                <p className="text-on-surface-variant flex items-center gap-1 mb-2">
-                  <span className="material-symbols-outlined text-sm">location_on</span>
-                  {resolveLocationLabel(driver.governorate, locale) || driver.governorate}{driver.city ? ` - ${resolveCityLabel(driver.city, locale)}` : ''}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {driver.isAvailable ? (
-                    <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded">متاح للعمل</span>
-                  ) : (
-                    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded">غير متاح حاليا</span>
-                  )}
-                  {driver.averageRating && (
-                    <span className="bg-amber-50 text-amber-700 text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">star</span>
-                      {driver.averageRating.toFixed(1)} ({driver.reviewCount} تقييم)
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                {!isOwnProfile && (
-                  <>
-                    {myJobs.length > 0 && (
-                      <button onClick={handleInvite} disabled={inviteDriver.isPending} className="bg-brand-green text-white px-5 py-2.5 rounded-lg font-bold text-sm hover:brightness-110 transition flex items-center gap-2 disabled:opacity-50">
-                        <span className="material-symbols-outlined text-sm">person_add</span>
-                        ادعوه لوظيفتك
-                      </button>
-                    )}
-                    <button onClick={handleMessage} className="bg-primary text-on-primary px-5 py-2.5 rounded-lg font-bold text-sm hover:brightness-110 transition flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm">chat</span>
-                      مراسلة
-                    </button>
-                  </>
-                )}
-              </div>
+      {/* Profile Header Banner */}
+      <div
+        className="relative rounded-2xl overflow-hidden mb-6 p-6 pt-8"
+        style={{ background: 'linear-gradient(135deg, #0B2447 0%, #1a3a6b 100%)' }}
+      >
+        <div className="flex items-end gap-3">
+          {driver.user.avatarUrl ? (
+            <img
+              src={driver.user.avatarUrl}
+              alt={name}
+              loading="lazy"
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-lg shrink-0"
+            />
+          ) : (
+            <div className={cn(
+              'w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold border-4 border-white shadow-lg shrink-0',
+              getAvatarColor(driver.userId)
+            )}>
+              {getInitials(name)}
+            </div>
+          )}
+          <div className="flex-1 pb-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-extrabold text-white">{name}</h1>
+              {driver.isVerified && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30">
+                  <CheckCircle size={12} fill="currentColor" />
+                  {STRINGS.VERIFIED}
+                </span>
+              )}
+              <span className={cn(
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold',
+                driver.isAvailable
+                  ? 'bg-green-500/20 text-green-300 border border-green-400/30' : 'bg-white/10 text-white/60 border border-white/20'
+              )}>
+                <span className={cn('w-1.5 h-1.5 rounded-full', driver.isAvailable ? 'bg-green-400' : 'bg-gray-400')} />
+                {driver.isAvailable ? STRINGS.AVAILABLE : STRINGS.UNAVAILABLE}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-white/70 text-sm mt-1">
+              <MapPin size={13} />
+              <span>{resolveLocationLabel(driver.governorate) ?? driver.governorate}{driver.city ? ` · ${driver.city}` : ''}</span>
+              <span className="text-white/40">·</span>
+              <Calendar size={13} />
+              <span>عضو منذ {timeAgo(driver.createdAt)}</span>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Bio */}
-              {driver.bio && (
-                <div className="bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-outline-variant/10 dark:border-outline-variant/20 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">description</span>
-                    <h2 className="font-extrabold text-on-surface">نبذة</h2>
-                  </div>
-                  <div className="p-6">
-                    <p className="text-on-surface-variant leading-relaxed whitespace-pre-wrap">{driver.bio}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* License Types */}
-              <div className="bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-outline-variant/10 dark:border-outline-variant/20 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">badge</span>
-                  <h2 className="font-extrabold text-on-surface">الرخص</h2>
-                </div>
-                <div className="p-6 flex flex-wrap gap-2">
-                  {driver.licenseTypes.map((lt) => (
-                    <span key={lt} className="bg-primary/10 text-primary font-bold text-sm px-3 py-1.5 rounded-lg">
-                      {LICENSE_LABELS[lt] || lt}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Vehicle Types */}
-              {driver.vehicleTypes.length > 0 && (
-                <div className="bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-outline-variant/10 dark:border-outline-variant/20 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">directions_car</span>
-                    <h2 className="font-extrabold text-on-surface">المركبات</h2>
-                  </div>
-                  <div className="p-6 flex flex-wrap gap-2">
-                    {driver.vehicleTypes.map((vt) => (
-                      <span key={vt} className="bg-surface-container-low text-on-surface-variant font-bold text-sm px-3 py-1.5 rounded-lg">
-                        {VEHICLE_LABELS[vt] || vt}
-                      </span>
-                    ))}
-                    {driver.hasOwnVehicle && (
-                      <span className="bg-green-100 text-green-700 font-bold text-sm px-3 py-1.5 rounded-lg flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">check_circle</span>
-                        لديه مركبة خاصة
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Info Card */}
-              <div className="bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-outline-variant/10 dark:border-outline-variant/20 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">info</span>
-                  <h2 className="font-extrabold text-on-surface">المعلومات</h2>
-                </div>
-                <div className="p-6 space-y-3 text-sm">
-                  {driver.experienceYears != null && (
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">سنوات الخبرة</span>
-                      <span className="font-bold">{driver.experienceYears} سنة</span>
-                    </div>
-                  )}
-                  {driver.nationality && (
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">الجنسية</span>
-                      <span className="font-bold">{driver.nationality}</span>
-                    </div>
-                  )}
-                  {driver.languages.length > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">اللغات</span>
-                      <span className="font-bold">{driver.languages.map((l) => LANG_LABELS[l] || l).join('، ')}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-on-surface-variant">انضم</span>
-                    <span className="font-bold">{new Date(driver.createdAt).toLocaleDateString('ar-OM')}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Card */}
-              {(driver.contactPhone || driver.whatsapp) && (
-                <div className="bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-outline-variant/10 dark:border-outline-variant/20 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">call</span>
-                    <h2 className="font-extrabold text-on-surface">التواصل</h2>
-                  </div>
-                  <div className="p-6 space-y-3">
-                    {driver.contactPhone && (
-                      <a href={`tel:${driver.contactPhone}`} className="flex items-center gap-2 text-sm hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined text-sm">phone</span>
-                        {driver.contactPhone}
-                      </a>
-                    )}
-                    {driver.whatsapp && (
-                      <a href={`https://wa.me/${driver.whatsapp.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700 transition-colors">
-                        <span className="material-symbols-outlined text-sm">chat</span>
-                        واتساب
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Reviews Section */}
-          {driver && <DriverReviewsSection profileId={driver.id} />}
-        </main>
-      </div>
-      <Footer />
-    </>
-  );
-}
-
-function DriverReviewsSection({ profileId }: { profileId: string }) {
-  const { data, isLoading } = useDriverReviews(profileId);
-
-  if (isLoading) return null;
-  if (!data || data.items.length === 0) return null;
-
-  return (
-    <div className="mt-6 bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 dark:border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
-      <div className="px-6 py-4 border-b border-outline-variant/10 dark:border-outline-variant/20 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary">reviews</span>
-          <h2 className="font-extrabold text-on-surface">التقييمات</h2>
         </div>
-        <span className="text-xs text-on-surface-variant font-bold">{data.meta.total} تقييم</span>
       </div>
-      <div className="divide-y divide-outline-variant/10">
-        {data.items.map((review) => (
-          <div key={review.id} className="p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                {review.reviewer.displayName?.[0] || review.reviewer.username[0]}
-              </div>
-              <div>
-                <p className="text-sm font-bold">{review.reviewer.displayName || review.reviewer.username}</p>
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className={`material-symbols-outlined text-xs ${i < review.rating ? 'text-amber-500' : 'text-on-surface-variant/20'}`}>
-                      star
-                    </span>
-                  ))}
-                  <span className="text-xs text-on-surface-variant mr-2">
-                    {new Date(review.createdAt).toLocaleDateString('ar-OM')}
+
+      {/* Stats Row */}
+      <div className="card-base rounded-2xl p-4 mb-6">
+        <RatingBadges
+          rating={driver.averageRating ?? 0}
+          completionRate={undefined}
+          responseTime={undefined}
+          completedJobs={undefined}
+          size="md"
+        />
+      </div>
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Left column — 2/3 */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* Bio */}
+          {driver.bio && (
+            <div className="card-base rounded-2xl p-5">
+              <h2 className="font-bold text-sm text-on-surface-variant mb-2">نبذة عن السائق</h2>
+              <p className="text-sm text-on-surface leading-relaxed">{driver.bio}</p>
+            </div>
+          )}
+
+          {/* License Types */}
+          {driver.licenseTypes.length > 0 && (
+            <div className="card-base rounded-2xl p-5">
+              <h2 className="font-bold text-sm text-on-surface-variant mb-3">أنواع الرخص</h2>
+              <div className="flex flex-wrap gap-2">
+                {driver.licenseTypes.map(lt => (
+                  <span
+                    key={`license-${lt}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-surface-container text-primary"
+                  >
+                    🪪 {LICENSE_TYPE_LABELS[lt] ?? lt}
                   </span>
-                </div>
+                ))}
               </div>
             </div>
-            {review.comment && <p className="text-sm text-on-surface-variant">{review.comment}</p>}
-            {review.reply && (
-              <div className="mt-2 mr-8 bg-surface-container-low rounded-lg p-3">
-                <p className="text-xs font-bold text-primary mb-1">رد السائق</p>
-                <p className="text-xs text-on-surface-variant">{review.reply.body}</p>
+          )}
+
+          {/* Vehicle Types */}
+          {driver.vehicleTypes.length > 0 && (
+            <div className="card-base rounded-2xl p-5">
+              <h2 className="font-bold text-sm text-on-surface-variant mb-3">أنواع المركبات</h2>
+              <div className="flex flex-wrap gap-2">
+                {driver.vehicleTypes.map(vt => (
+                  <span
+                    key={`vehicle-${vt}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-surface text-on-surface border border-outline-variant"
+                  >
+                    🚛 {vt}
+                  </span>
+                ))}
               </div>
-            )}
+              {driver.hasOwnVehicle && (
+                <p className="text-xs text-green-600 font-bold mt-2">✓ يمتلك مركبته الخاصة</p>
+              )}
+            </div>
+          )}
+
+          {/* Languages */}
+          {driver.languages.length > 0 && (
+            <div className="card-base rounded-2xl p-5">
+              <h2 className="font-bold text-sm text-on-surface-variant mb-3">اللغات</h2>
+              <div className="flex flex-wrap gap-2">
+                {driver.languages.map(lang => (
+                  <span
+                    key={`lang-${lang}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-surface text-on-surface border border-outline-variant"
+                  >
+                    🌐 {lang}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Additional Info */}
+          <div className="card-base rounded-2xl p-5">
+            <h2 className="font-bold text-sm text-on-surface-variant mb-3">معلومات إضافية</h2>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {driver.experienceYears != null && (
+                <div>
+                  <span className="text-on-surface-variant text-xs">سنوات الخبرة</span>
+                  <p className="font-bold text-on-surface">{driver.experienceYears} سنة</p>
+                </div>
+              )}
+              {driver.nationality && (
+                <div>
+                  <span className="text-on-surface-variant text-xs">الجنسية</span>
+                  <p className="font-bold text-on-surface">{driver.nationality}</p>
+                </div>
+              )}
+              <div>
+                <span className="text-on-surface-variant text-xs">المحافظة</span>
+                <p className="font-bold text-on-surface">{resolveLocationLabel(driver.governorate) ?? driver.governorate}{driver.city ? ` · ${driver.city}` : ''}</p>
+              </div>
+            </div>
           </div>
-        ))}
+        </div>
+
+        {/* Right sidebar — 1/3 */}
+        <div className="space-y-4">
+          <div className="card-base rounded-2xl p-5 lg:sticky lg:top-24">
+            <h2 className="font-bold text-sm text-on-surface mb-4">التواصل</h2>
+
+            {driver.whatsapp && (
+              <a
+                href={`https://wa.me/${driver.whatsapp.replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-sm transition-colors mb-3"
+              >
+                <MessageCircle size={16} />
+                واتساب
+              </a>
+            )}
+
+            {driver.contactPhone && (
+              <a
+                href={`tel:${driver.contactPhone}`}
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-outline-variant hover:bg-surface text-on-surface font-bold text-sm transition-colors mb-3"
+              >
+                <Phone size={16} />
+                {driver.contactPhone}
+              </a>
+            )}
+
+            <Link
+              href="/jobs/browse?jobType=HIRING"
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-surface-container hover:bg-surface text-primary font-bold text-sm transition-colors"
+            >
+              دعوته للتقدم
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
-  );
+  )
 }

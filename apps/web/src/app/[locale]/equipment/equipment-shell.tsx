@@ -356,7 +356,7 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
                       <h3 className="text-[14px] font-bold text-on-surface line-clamp-1">{req.title}</h3>
                       <p className="text-[11px] text-on-surface-variant mt-0.5">
                         الكمية: {req.quantity}
-                        {req.budgetMax && ` · ميزانية: ${Number(req.budgetMax).toLocaleString()} ${req.currency}`}
+                        {req.budgetMax && ` · ميزانية: ${Number(req.budgetMax).toLocaleString('en-US')} ${req.currency}`}
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold shrink-0">مفتوح</span>
@@ -404,7 +404,7 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {operators.map((op) => {
                 const OPERATOR_TYPES: Record<string, string> = { DRIVER: 'سائق', OPERATOR: 'مشغل', TECHNICIAN: 'فني', MAINTENANCE: 'صيانة' };
-                const rate = op.dailyRate ? `${Number(op.dailyRate).toLocaleString()} ${op.currency}/يوم` : op.hourlyRate ? `${Number(op.hourlyRate).toLocaleString()} ${op.currency}/ساعة` : 'اتصل للسعر';
+                const rate = op.dailyRate ? `${Number(op.dailyRate).toLocaleString('en-US')} ${op.currency}/يوم` : op.hourlyRate ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${op.currency}/ساعة` : 'اتصل للسعر';
                 return (
                   <Link
                     key={op.id}

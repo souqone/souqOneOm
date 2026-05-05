@@ -101,7 +101,7 @@ export function SellerCard({
 
         {memberSince && (
           <p className="text-xs text-on-surface-variant mt-3 pt-3 border-t border-outline-variant/10 dark:border-outline-variant/20">
-            {tp('sellerCardMemberSince', { date: new Date(memberSince).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US', { year: 'numeric', month: 'long' }) })}
+            {tp('sellerCardMemberSince', { date: new Date(memberSince).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', { year: 'numeric', month: 'long' }) })}
           </p>
         )}
 

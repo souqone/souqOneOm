@@ -1,3 +1,4 @@
+import SubNavBar from '@/components/layout/SubNavBar'
 import HeroSection from '@/features/transport/components/HeroSection'
 import StatsBar from '@/features/transport/components/StatsBar'
 import ServiceTypesGrid from '@/features/transport/components/ServiceTypesGrid'
@@ -8,6 +9,7 @@ import CarrierCTA from '@/features/transport/components/CarrierCTA'
 export default function TransportLandingPage() {
   return (
     <>
+      <SubNavBar />
       {/* ── Hero Section ── */}
       <HeroSection />
 

@@ -1,0 +1,257 @@
+'use client';
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { Plus, AlertCircle } from 'lucide-react';
+import { AuthGuard } from '@/components/auth-guard';
+import {
+  useMyJobs,
+  useMyApplications,
+  useMyDriverProfile,
+  useMyEmployerProfile,
+} from '@/lib/api';
+import DashboardStatsRow from '@/features/jobs/components/DashboardStatsRow';
+import MyPostsList from '@/features/jobs/components/MyPostsList';
+import MyProposalsList from '@/features/jobs/components/MyProposalsList';
+import { useWithdrawApplication } from '@/lib/api/jobs';
+import {
+  JOB_STATUS_LABELS,
+  APPLICATION_STATUS_LABELS,
+  STRINGS,
+} from '@/features/jobs/constants';
+import type { DriverJob, JobApplication } from '@/features/jobs/types';
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+function DashboardContent() {
+  const { data: employer, isLoading: empLoading } = useMyEmployerProfile()
+  const { data: driver, isLoading: drvLoading } = useMyDriverProfile()
+  const { data: jobsData, isLoading: jobsLoading } = useMyJobs()
+  const { data: appsData, isLoading: appsLoading } = useMyApplications()
+  const withdrawApp = useWithdrawApplication()
+
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const isEmployer = !!employer
+  const isDriver = !!driver
+  const loading = empLoading || drvLoading || jobsLoading || appsLoading
+
+  // Map API items to feature types for components
+  const myJobs: DriverJob[] = useMemo(() => {
+    if (!jobsData?.items) return []
+    return jobsData.items.map(j => ({
+      id: j.id,
+      userId: j.user?.id ?? '',
+      user: {
+        id: j.user?.id ?? '',
+        username: j.user?.username ?? '',
+        displayName: j.user?.displayName ?? undefined,
+        avatarUrl: j.user?.avatarUrl ?? undefined,
+        isVerified: j.user?.isVerified ?? false,
+      },
+      title: j.title,
+      slug: j.slug,
+      description: j.description,
+      jobType: j.jobType,
+      employmentType: j.employmentType,
+      salary: j.salary ? Number(j.salary) : undefined,
+      salaryPeriod: j.salaryPeriod ?? undefined,
+      currency: j.currency,
+      licenseTypes: j.licenseTypes as any,
+      experienceYears: j.experienceYears ?? undefined,
+      minAge: j.minAge ?? undefined,
+      maxAge: j.maxAge ?? undefined,
+      languages: j.languages,
+      nationality: j.nationality ?? undefined,
+      vehicleTypes: j.vehicleTypes,
+      hasOwnVehicle: j.hasOwnVehicle,
+      governorate: j.governorate,
+      city: j.city ?? undefined,
+      contactPhone: j.contactPhone ?? undefined,
+      contactEmail: j.contactEmail ?? undefined,
+      whatsapp: j.whatsapp ?? undefined,
+      status: j.status as any,
+      viewCount: j.viewCount,
+      _count: { applications: j._count?.applications ?? 0 },
+      createdAt: j.createdAt,
+      updatedAt: j.updatedAt,
+    }))
+  }, [jobsData])
+
+  const myApps: JobApplication[] = useMemo(() => {
+    if (!appsData) return []
+    return appsData.map(a => ({
+      id: a.id,
+      jobId: a.jobId,
+      applicantId: a.applicantId,
+      status: a.status,
+      message: a.message ?? undefined,
+      resumeUrl: a.resumeUrl ?? undefined,
+      isRevealed: false,
+      createdAt: a.createdAt,
+      job: {
+        id: a.job.id,
+        userId: a.job.userId,
+        user: {
+          id: a.job.user.id,
+          username: a.job.user.username,
+          displayName: a.job.user.displayName ?? undefined,
+          avatarUrl: a.job.user.avatarUrl ?? undefined,
+          isVerified: a.job.user.isVerified,
+        },
+        title: a.job.title,
+        slug: '',
+        description: '',
+        jobType: 'HIRING' as const,
+        employmentType: 'FULL_TIME' as const,
+        salary: a.job.salary ? Number(a.job.salary) : undefined,
+        salaryPeriod: (a.job.salaryPeriod ?? undefined) as any,
+        currency: a.job.currency,
+        licenseTypes: [],
+        languages: [],
+        vehicleTypes: [],
+        hasOwnVehicle: false,
+        governorate: a.job.governorate,
+        status: a.job.status as any,
+        viewCount: 0,
+        _count: { applications: 0 },
+        createdAt: a.createdAt,
+        updatedAt: a.createdAt,
+      },
+    }))
+  }, [appsData])
+
+  // Stats
+  const totalPosts = myJobs.length
+  const totalProposals = isEmployer
+    ? myJobs.reduce((s, j) => s + j._count.applications, 0)
+    : myApps.length
+  const acceptedCount = isEmployer
+    ? 0  // employer can't know total accepted from this data shape
+    : myApps.filter(a => a.status === 'ACCEPTED').length
+  const activeCount = isEmployer
+    ? myJobs.filter(j => j.status === 'ACTIVE').length
+    : myApps.filter(a => a.status === 'PENDING').length
+
+  const statusOptions = isEmployer
+    ? ['all', ...Object.keys(JOB_STATUS_LABELS)]
+    : ['all', ...Object.keys(APPLICATION_STATUS_LABELS)]
+  const statusLabels: Record<string, string> = {
+    all: 'الكل',
+    ...JOB_STATUS_LABELS,
+    ...APPLICATION_STATUS_LABELS,
+  }
+
+  const handleWithdraw = async (id: string) => {
+    await withdrawApp.mutateAsync(id)
+  }
+
+  if (!loading && !isEmployer && !isDriver) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-10 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={32} className="text-brand-amber" />
+        </div>
+        <h1 className="text-2xl font-extrabold text-on-surface mb-2">لا يوجد بروفايل</h1>
+        <p className="text-sm text-on-surface-variant mb-6">أنشئ بروفايل سائق أو صاحب عمل للوصول للوحة التحكم</p>
+        <Link href="/jobs/onboarding" className="btn-amber inline-flex px-6 py-3 text-sm font-bold">
+          إنشاء بروفايل
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-screen-xl mx-auto px-4 lg:px-8 xl:px-10 py-6 space-y-6">
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">{STRINGS.DASHBOARD}</h1>
+          <p className="text-sm text-on-surface-variant mt-0.5">
+            {isEmployer ? 'إدارة إعلاناتك والعروض المقدمة' : 'متابعة عروضك وحالتها'}
+          </p>
+        </div>
+        {isEmployer && (
+          <Link
+            href="/jobs/new"
+            className="btn-amber flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+          >
+            <Plus size={16} />
+            {STRINGS.POST_JOB}
+          </Link>
+        )}
+      </div>
+
+      {/* Stats */}
+      {loading ? (
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={`stat-skel-${i}`} className="card-base rounded-2xl p-5 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-surface-dim" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-6 w-12 bg-surface-dim rounded-lg" />
+                  <div className="h-3 w-20 bg-surface-dim rounded-lg" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <DashboardStatsRow
+          isEmployer={isEmployer}
+          totalPosts={totalPosts}
+          totalProposals={totalProposals}
+          acceptedCount={acceptedCount}
+          activeCount={activeCount}
+        />
+      )}
+
+      {/* Status Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {statusOptions.map(s => (
+          <button
+            key={`filter-${s}`}
+            onClick={() => setStatusFilter(s)}
+            className={
+              statusFilter === s
+                ? 'px-4 py-2 rounded-xl text-xs font-bold bg-brand-amber text-white transition-all'
+                : 'px-4 py-2 rounded-xl text-xs font-bold bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all'
+            }
+          >
+            {statusLabels[s] ?? s}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`content-skel-${i}`} className="card-base rounded-2xl p-5 animate-pulse">
+              <div className="space-y-3">
+                <div className="h-4 w-1/3 bg-surface-dim rounded-lg" />
+                <div className="h-3 w-2/3 bg-surface-dim rounded-lg" />
+                <div className="h-3 w-1/2 bg-surface-dim rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : isEmployer ? (
+        <MyPostsList jobs={myJobs} statusFilter={statusFilter} />
+      ) : (
+        <MyProposalsList
+          applications={myApps}
+          statusFilter={statusFilter}
+          onWithdraw={handleWithdraw}
+        />
+      )}
+    </div>
+  )
+}

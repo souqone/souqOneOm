@@ -36,6 +36,7 @@ import { SpecsGrid } from './SpecsGrid';
 import { DetailsTable } from './DetailsTable';
 import { ContractDetails } from './ContractDetails';
 import { PriceCard } from './PriceCard';
+import { MobileCTABar } from './MobileCTABar';
 import { SimilarItems } from './SimilarItems';
 import { SellerRow } from './SellerRow';
 
@@ -336,7 +337,7 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
 
   return (
     <div className="bg-background min-h-screen">
-      <main className="max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-16">
+      <main className="max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-28 lg:pb-16">
         {/* ══ A — TOP BAR ══ */}
         <div className="flex items-center justify-between mb-8 bg-surface-container-lowest/60 backdrop-blur-md p-3 px-5 rounded-2xl border border-outline-variant/20 shadow-sm">
           <Breadcrumb listing={listing} config={config} homeLabel={ts('breadcrumbHome')} />
@@ -411,6 +412,32 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
 
         {/* ══ MOBILE/TABLET CTA BUTTONS — Below Gallery ══ */}
         <div className="lg:hidden mb-5">
+          {/* Price row */}
+          <div className="flex items-baseline gap-1.5 mb-3">
+            {listing.type === 'bus' && listing.busData?.contractMonthly ? (
+              <>
+                <span className="text-[22px] font-black text-red-600 leading-none">
+                  {Number(listing.busData.contractMonthly).toLocaleString('en-US')}
+                </span>
+                <span className="text-[13px] text-on-surface-variant">{listing.currency}</span>
+                <span className="text-[11px] text-on-surface-variant">/ {ts('contractMonthlyLabel')}</span>
+              </>
+            ) : !listing.price || listing.price <= 0 ? (
+              <span className="text-[16px] font-bold text-on-surface">{ts('contactForPrice')}</span>
+            ) : (
+              <>
+                <span className="text-[26px] font-black text-red-600 leading-none">
+                  {listing.price.toLocaleString('en-US')}
+                </span>
+                <span className="text-[13px] text-on-surface-variant">
+                  {listing.currency === 'OMR' ? ts('currencyUnit') : listing.currency}
+                </span>
+                {listing.negotiable && (
+                  <span className="text-[11px] font-semibold text-emerald-600 ms-1">{ts('negotiableLabel')}</span>
+                )}
+              </>
+            )}
+          </div>
           {isOwner ? (
             <div className="grid grid-cols-2 gap-2">
               <Link
@@ -662,6 +689,16 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
           governorate={listing.governorate}
         />
       </main>
+
+      {/* ══ MOBILE STICKY CTA BAR ══ */}
+      {!isOwner && (
+        <MobileCTABar
+          listing={listing}
+          onMessage={handleMessage}
+          onWhatsApp={handleWhatsApp}
+          onCall={listing.seller.phone ? handleCall : undefined}
+        />
+      )}
 
       {/* ══ DELETE CONFIRMATION MODAL ══ */}
       {showDeleteConfirm && (

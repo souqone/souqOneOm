@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
-import { APP_STATUS_CONFIG, ESCROW_STATUS_CONFIG, LICENSE_TYPE_CONFIG } from '@/lib/constants/jobs';
+import { APP_STATUS_CONFIG, LICENSE_TYPE_CONFIG } from '@/lib/constants/jobs';
 import { Button } from '@/components/ui/button';
 import { getImageUrl } from '@/lib/image-utils';
 import type { EmployerApplicationItem } from '@/lib/api/jobs';
@@ -11,13 +11,10 @@ import type { EmployerApplicationItem } from '@/lib/api/jobs';
 interface ApplicantCardProps {
   app: EmployerApplicationItem;
   onUpdateStatus: (appId: string, status: 'ACCEPTED' | 'REJECTED') => void;
-  onRelease: (escrowId: string) => void;
-  onDispute: (escrowId: string) => void;
-  onOpenPay: (app: EmployerApplicationItem) => void;
   isUpdating: boolean;
 }
 
-export function ApplicantCard({ app, onUpdateStatus, onRelease, onDispute, onOpenPay, isUpdating }: ApplicantCardProps) {
+export function ApplicantCard({ app, onUpdateStatus, isUpdating }: ApplicantCardProps) {
   const tp = useTranslations('pages');
   const router = useRouter();
   const applicant = app.applicant;
@@ -73,26 +70,6 @@ export function ApplicantCard({ app, onUpdateStatus, onRelease, onDispute, onOpe
         </span>
       </div>
 
-      {/* Escrow — only when ACCEPTED and escrow exists */}
-      {app.status === 'ACCEPTED' && app.escrow && (
-        <div className="mb-3 bg-primary/[0.04] border border-primary/10 rounded-xl px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {ESCROW_STATUS_CONFIG[app.escrow.status]?.icon ?? 'lock'}
-            </span>
-            <div>
-              <p className="text-[11px] font-semibold text-primary">
-                {Number(app.escrow.amount).toLocaleString('ar-OM')} {tp('currencyOMR')}
-              </p>
-              <p className="text-[9px] text-primary/50">{tp('escrowHeldLabel')}</p>
-            </div>
-          </div>
-          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${ESCROW_STATUS_CONFIG[app.escrow.status]?.color ?? ''}`}>
-            {tp(ESCROW_STATUS_CONFIG[app.escrow.status]?.labelKey ?? 'escrowHeld')}
-          </span>
-        </div>
-      )}
-
       {/* Actions */}
       <div className="flex gap-2 flex-wrap">
         {app.status === 'PENDING' && (
@@ -113,32 +90,12 @@ export function ApplicantCard({ app, onUpdateStatus, onRelease, onDispute, onOpe
           </>
         )}
 
-        {app.status === 'ACCEPTED' && !app.escrow && (
-          <>
-            <Button onClick={() => onOpenPay(app)} size="sm"
-              className="flex-1 h-11 rounded-xl bg-green-600 text-white text-[11px] font-bold shadow-sm shadow-green-200">
-              <span className="material-symbols-outlined text-base">payments</span>
-              {tp('payEscrow')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/messages?user=${applicant.id}`)}
-              className="w-11 h-11 rounded-xl border-outline-variant/20 text-on-surface-variant">
-              <span className="material-symbols-outlined text-base">chat</span>
-            </Button>
-          </>
-        )}
-
-        {app.status === 'ACCEPTED' && app.escrow?.status === 'HELD' && (
-          <>
-            <Button onClick={() => onRelease(app.escrow!.id)} size="sm"
-              className="flex-1 h-11 rounded-xl bg-green-50 border border-green-200 text-green-700 text-[11px] font-semibold hover:bg-green-100 transition-all">
-              <span className="material-symbols-outlined text-base">check_circle</span>
-              {tp('releaseEscrow')}
-            </Button>
-            <Button variant="outline" onClick={() => onDispute(app.escrow!.id)} size="sm"
-              className="flex-1 h-11 rounded-xl border-error/20 text-error text-[11px] hover:bg-error/5 transition-all">
-              {tp('openDispute')}
-            </Button>
-          </>
+        {app.status === 'ACCEPTED' && (
+          <Button variant="outline" size="sm" onClick={() => router.push(`/messages?user=${applicant.id}`)}
+            className="flex-1 h-11 rounded-xl border-outline-variant/20 text-on-surface-variant text-[11px]">
+            <span className="material-symbols-outlined text-base">chat</span>
+            {tp('message') || 'مراسلة'}
+          </Button>
         )}
 
         {app.driverProfile && (

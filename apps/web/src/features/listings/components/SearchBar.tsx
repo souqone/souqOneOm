@@ -246,9 +246,9 @@ export function SearchBar({ category, filters, onFilterChange, onSearch }: Searc
     }
     if (field?.type === 'range' && value.includes('|')) {
       const [mn, mx] = value.split('|')
-      if (mn && mx) return `${Number(mn).toLocaleString()} - ${Number(mx).toLocaleString()}`
-      if (mn) return `من ${Number(mn).toLocaleString()}`
-      if (mx) return `حتى ${Number(mx).toLocaleString()}`
+      if (mn && mx) return `${Number(mn).toLocaleString('en-US')} - ${Number(mx).toLocaleString('en-US')}`
+      if (mn) return `من ${Number(mn).toLocaleString('en-US')}`
+      if (mx) return `حتى ${Number(mx).toLocaleString('en-US')}`
     }
     return value
   }

@@ -17,7 +17,7 @@ export function ResultsMeta({ meta, isLoading, activeFilterCount, labelAr }: Res
           {isLoading
             ? 'جاري التحميل...'
             : meta
-            ? `${meta.total.toLocaleString('ar-EG')} ${labelAr}`
+            ? `${meta.total.toLocaleString('en-US')} ${labelAr}`
             : ''}
         </p>
         {activeFilterCount > 0 && (

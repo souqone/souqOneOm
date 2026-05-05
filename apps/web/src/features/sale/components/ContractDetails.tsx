@@ -92,7 +92,7 @@ export const ContractDetails = memo(function ContractDetails({ listing }: Contra
       icon: Clock,
       label: t('contractExpiryDate'),
       value: busData.contractExpiry
-        ? new Date(busData.contractExpiry).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')
+        ? new Date(busData.contractExpiry).toLocaleDateString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US')
         : notSpecified,
       color: 'text-red-600',
       bgColor: 'bg-red-50',

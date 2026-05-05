@@ -10,7 +10,7 @@ const STAT_ITEMS = [
     icon: FileText,
     color: '#2563eb',
     bg: 'rgba(37,99,235,0.08)',
-    value: STATS.activeRequests.toLocaleString('ar-OM'),
+    value: STATS.activeRequests.toLocaleString('en-US'),
   },
   {
     key: 'verifiedCarriers',
@@ -18,7 +18,7 @@ const STAT_ITEMS = [
     icon: ShieldCheck,
     color: '#16a34a',
     bg: 'rgba(22,163,74,0.08)',
-    value: STATS.verifiedCarriers.toLocaleString('ar-OM'),
+    value: STATS.verifiedCarriers.toLocaleString('en-US'),
   },
   {
     key: 'governoratesServed',
@@ -26,7 +26,7 @@ const STAT_ITEMS = [
     icon: MapPin,
     color: '#d97706',
     bg: 'rgba(217,119,6,0.08)',
-    value: STATS.governoratesServed.toLocaleString('ar-OM'),
+    value: STATS.governoratesServed.toLocaleString('en-US'),
   },
   {
     key: 'completedTrips',
@@ -34,7 +34,7 @@ const STAT_ITEMS = [
     icon: CheckCircle,
     color: '#7c3aed',
     bg: 'rgba(124,58,237,0.08)',
-    value: STATS.completedTrips.toLocaleString('ar-OM'),
+    value: STATS.completedTrips.toLocaleString('en-US'),
   },
 ];
 

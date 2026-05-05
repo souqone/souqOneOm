@@ -180,7 +180,7 @@ function RangeSlider({
     field.unit === 'راكب'
       ? `${n}`
       : n >= 1000
-      ? `${(n / 1000).toLocaleString('ar-EG')}k`
+      ? `${(n / 1000).toLocaleString('en-US')}k`
       : String(n)
 
   function commit(vals: [number, number]) {
@@ -708,7 +708,7 @@ export function FilterSheet({
             )}
           >
             {total > 0
-              ? `عرض ${total.toLocaleString('ar-EG')} إعلان`
+              ? `عرض ${total.toLocaleString('en-US')} إعلان`
               : 'لا توجد نتائج'}
           </button>
         </div>

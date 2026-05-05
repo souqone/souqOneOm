@@ -87,13 +87,13 @@ export default function CarrierProfileShell({ id }: { id: string }) {
         <div className="border-t border-outline-variant/20 bg-surface-container-low/50">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-outline-variant/20 p-4">
             {[
-              { label: 'الرحلات المكتملة', val: carrier.completedTrips.toLocaleString('ar-OM') },
+              { label: 'الرحلات المكتملة', val: carrier.completedTrips.toLocaleString('en-US') },
               { label: t('rating'),         val: <span className="flex items-center justify-center gap-1">
                   {carrier.averageRating.toFixed(1)}
                   <span className="material-symbols-outlined text-brand-amber text-lg"
                     style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                 </span> },
-              { label: 'التقييمات',         val: carrier.reviewCount.toLocaleString('ar-OM') },
+              { label: 'التقييمات',         val: carrier.reviewCount.toLocaleString('en-US') },
               { label: 'عضو منذ',           val: new Date(carrier.createdAt).getFullYear() },
             ].map(s => (
               <div key={s.label} className="text-center px-2">

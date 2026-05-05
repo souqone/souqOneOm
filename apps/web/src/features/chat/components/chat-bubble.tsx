@@ -38,7 +38,7 @@ export function ChatBubble({ message, isMine, onDelete, onReact }: ChatBubblePro
   const locale = useLocale();
   const [showReactions, setShowReactions] = useState(false);
 
-  const timeDisplay = new Date(message.createdAt).toLocaleTimeString(locale === 'ar' ? 'ar-OM' : 'en-US', {
+  const timeDisplay = new Date(message.createdAt).toLocaleTimeString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });

@@ -245,7 +245,7 @@ function ShellContent() {
             <span className="text-[13px] text-on-surface-variant">
               {isLoading
                 ? <span className="h-4 w-24 bg-surface-container rounded animate-pulse inline-block" />
-                : `${total.toLocaleString('ar-EG')} ${t('advertisement')}`}
+                : `${total.toLocaleString('en-US')} ${t('advertisement')}`}
             </span>
 
             <div className="flex items-center gap-1.5">

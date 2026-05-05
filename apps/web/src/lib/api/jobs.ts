@@ -12,13 +12,6 @@ interface JobUser {
   createdAt?: string;
 }
 
-export function useRecommendedJobs() {
-  return useQuery<JobItem[]>({
-    queryKey: ['jobs', 'recommended'],
-    queryFn: () => apiRequest<JobItem[]>('/jobs/recommended'),
-  });
-}
-
 export interface JobItem {
   id: string;
   title: string;
@@ -46,9 +39,8 @@ export interface JobItem {
   viewCount: number;
   createdAt: string;
   updatedAt: string;
-  user: JobUser;
+  user?: JobUser;
   _count?: { applications: number };
-  inviteCount?: number;
 }
 
 export interface JobsResponse {
@@ -175,7 +167,6 @@ export interface EmployerApplicationItem {
     experienceYears?: number | null;
     isVerified: boolean;
   } | null;
-  escrow?: EscrowItem | null;
 }
 
 export function useEmployerApplications() {
@@ -199,16 +190,6 @@ export function useCloseJob() {
 
 // ─── Driver Applications (own) ───
 
-export interface EscrowItem {
-  id: string;
-  applicationId: string;
-  amount: number;
-  status: 'HELD' | 'RELEASED' | 'REFUNDED' | 'DISPUTED';
-  paymentId?: string | null;
-  releasedAt?: string | null;
-  createdAt: string;
-}
-
 export interface MyApplicationItem {
   id: string;
   message?: string | null;
@@ -228,20 +209,12 @@ export interface MyApplicationItem {
     userId: string;
     user: JobUser;
   };
-  escrow?: EscrowItem | null;
 }
 
 export function useMyApplications() {
   return useQuery<MyApplicationItem[]>({
     queryKey: ['my-applications'],
     queryFn: () => apiRequest<MyApplicationItem[]>('/jobs/applications/my'),
-  });
-}
-
-export function useMyEscrows() {
-  return useQuery<EscrowItem[]>({
-    queryKey: ['my-escrows'],
-    queryFn: () => apiRequest<EscrowItem[]>('/jobs/escrow/my'),
   });
 }
 
@@ -375,62 +348,6 @@ export function useEmployer(id: string) {
   });
 }
 
-// ─── Job Invites ───
-
-export interface JobInviteItem {
-  id: string;
-  message?: string | null;
-  jobId: string;
-  inviterId: string;
-  inviteeId: string;
-  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
-  createdAt: string;
-  job?: {
-    id: string;
-    title: string;
-    governorate: string;
-    salary?: string | null;
-    salaryPeriod?: string | null;
-    currency: string;
-    status: string;
-    user: JobUser;
-  };
-}
-
-export function useMyInvites() {
-  return useQuery<JobInviteItem[]>({
-    queryKey: ['job-invites', 'my'],
-    queryFn: () => apiRequest<JobInviteItem[]>('/jobs/invites/my'),
-  });
-}
-
-export function useInviteDriver() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ jobId, driverId, message }: { jobId: string; driverId: string; message?: string }) =>
-      apiRequest<JobInviteItem>(`/jobs/${jobId}/invite/${driverId}`, {
-        method: 'POST',
-        body: JSON.stringify({ message }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['job-invites'] });
-    },
-  });
-}
-
-export function useRespondToInvite() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ inviteId, status }: { inviteId: string; status: 'ACCEPTED' | 'DECLINED' }) =>
-      apiRequest(`/jobs/invites/${inviteId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['job-invites'] });
-    },
-  });
-}
 
 // ─── Driver Verification ───
 
@@ -521,43 +438,3 @@ export function useAdminReviewVerification() {
   });
 }
 
-// ─── Job Escrow ───
-
-export function usePayForApplication() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ applicationId, amount }: { applicationId: string; amount: number }) =>
-      apiRequest<EscrowItem>(`/jobs/applications/${applicationId}/pay`, {
-        method: 'POST',
-        body: JSON.stringify({ amount }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-applications'] });
-    },
-  });
-}
-
-export function useReleaseEscrow() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (escrowId: string) =>
-      apiRequest(`/jobs/escrow/${escrowId}/release`, { method: 'POST' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-applications'] });
-    },
-  });
-}
-
-export function useDisputeEscrow() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ escrowId, reason }: { escrowId: string; reason?: string }) =>
-      apiRequest(`/jobs/escrow/${escrowId}/dispute`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-applications'] });
-    },
-  });
-}
