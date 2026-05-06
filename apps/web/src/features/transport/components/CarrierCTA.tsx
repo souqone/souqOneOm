@@ -1,16 +1,26 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Truck, Search, ShieldCheck, Star, TrendingUp } from 'lucide-react';
-import { STATS } from '../constants';
-
-const CARRIER_STATS = [
-  { icon: ShieldCheck, label: 'مزود موثّق', value: STATS.verifiedCarriers.toLocaleString('en-US'), color: '#16a34a' },
-  { icon: Star, label: 'متوسط التقييم', value: '4.8', color: '#d97706' },
-  { icon: TrendingUp, label: 'رحلة مكتملة', value: STATS.completedTrips.toLocaleString('en-US'), color: '#7c3aed' },
-];
+import { transportApi } from '../api';
 
 export default function CarrierCTA() {
+  const [verifiedCarriers, setVerifiedCarriers] = useState(0);
+  const [completedTrips, setCompletedTrips] = useState(0);
+
+  useEffect(() => {
+    transportApi.getStats().then((data) => {
+      setVerifiedCarriers(data.verifiedCarriers);
+      setCompletedTrips(data.completedTrips);
+    }).catch(() => {});
+  }, []);
+
+  const CARRIER_STATS = [
+    { icon: ShieldCheck, label: 'مزود موثّق', value: verifiedCarriers.toLocaleString('en-US'), color: '#16a34a' },
+    { icon: Star, label: 'متوسط التقييم', value: '4.8', color: '#d97706' },
+    { icon: TrendingUp, label: 'رحلة مكتملة', value: completedTrips.toLocaleString('en-US'), color: '#7c3aed' },
+  ];
   return (
     <section className="py-10 sm:py-16 px-4" dir="rtl">
       <div className="max-w-5xl mx-auto">

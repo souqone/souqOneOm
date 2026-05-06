@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { VehicleType, TransportServiceType } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
+import { AuthGuard } from '@/components/auth-guard';
 import {
   VEHICLE_TYPE_LABELS,
   SERVICE_TYPE_LABELS,
@@ -108,6 +109,7 @@ export default function CarrierRegistrationPage() {
   }
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
       <div className="max-w-screen-md mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
@@ -300,5 +302,6 @@ export default function CarrierRegistrationPage() {
         </form>
       </div>
     </div>
+    </AuthGuard>
   );
 }

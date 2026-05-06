@@ -62,6 +62,11 @@ export class TransportController {
     return this.carrierProfileService.findOne(id);
   }
 
+  @Get('stats')
+  getPublicStats() {
+    return this.carrierProfileService.getPublicStats();
+  }
+
   // ─── Transport Requests ───
 
   @UseGuards(JwtAuthGuard)
@@ -81,8 +86,9 @@ export class TransportController {
     @CurrentUser() user: JwtPayload,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
+    @Query('status') status?: string,
   ) {
-    return this.transportRequestService.myRequests(user.sub, page, limit);
+    return this.transportRequestService.myRequests(user.sub, page, limit, status);
   }
 
   @Get('requests/:id')
@@ -132,8 +138,9 @@ export class TransportController {
     @CurrentUser() user: JwtPayload,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
+    @Query('status') status?: string,
   ) {
-    return this.transportQuoteService.getMyQuotes(user.sub, page, limit);
+    return this.transportQuoteService.getMyQuotes(user.sub, page, limit, status);
   }
 
   // ─── Bookings ───

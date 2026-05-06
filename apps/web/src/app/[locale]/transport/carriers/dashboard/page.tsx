@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Truck, ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, Loader2, AlertCircle, Package, MessageSquare } from 'lucide-react';
+import { Truck, ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, AlertCircle, Package, MessageSquare, Loader2 } from 'lucide-react';
 import type { CarrierProfile, TransportRequest, TransportQuote } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import {
@@ -13,13 +13,15 @@ import {
   REQUEST_STATUS_LABELS,
 } from '@/features/transport/constants';
 import { formatRelativeDate, formatBudgetRange } from '@/lib/utils';
-
+import { AuthGuard } from '@/components/auth-guard';
+import { TransportPageLoader } from '@/features/transport/components/TransportPageState';
 
 export default function CarrierDashboardPage() {
   const [profile, setProfile] = useState<CarrierProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toggling, setToggling] = useState(false);
+  const [toggleError, setToggleError] = useState('');
   const [nearbyRequests, setNearbyRequests] = useState<TransportRequest[]>([]);
   const [recentQuotes, setRecentQuotes] = useState<TransportQuote[]>([]);
 
@@ -28,11 +30,13 @@ export default function CarrierDashboardPage() {
       setLoading(true);
       setError('');
       try {
-        const p = await transportApi.getMyCarrierProfile();
+        const [p, reqRes, quotesRes] = await Promise.all([
+          transportApi.getMyCarrierProfile(),
+          transportApi.getRequests({ limit: 4 }),
+          transportApi.myQuotes(),
+        ]);
         setProfile(p);
-        const reqRes = await transportApi.getRequests({ limit: 4 });
         setNearbyRequests(reqRes.items);
-        const quotesRes = await transportApi.myQuotes();
         setRecentQuotes(quotesRes.items.slice(0, 5));
       } catch {
         setError('تعذّر تحميل لوحة التحكم');
@@ -46,24 +50,18 @@ export default function CarrierDashboardPage() {
   const handleToggleAvailability = async () => {
     if (!profile) return;
     setToggling(true);
+    setToggleError('');
     try {
       const updated = await transportApi.setAvailability(!profile.isAvailable);
       setProfile(updated);
+    } catch {
+      setToggleError('تعذّر تغيير حالة التوفر، حاول مجدداً');
     } finally {
       setToggling(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-[var(--color-brand-navy)]" />
-          <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ التحميل...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <TransportPageLoader />;
 
   if (error || !profile) {
     return (
@@ -83,6 +81,7 @@ export default function CarrierDashboardPage() {
   const acceptedQuotes = recentQuotes.filter((q) => q.status === 'ACCEPTED').length;
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
@@ -336,7 +335,13 @@ export default function CarrierDashboardPage() {
             </div>
           </div>
         </div>
+      {toggleError && (
+        <div className="fixed bottom-20 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-80 bg-[var(--color-error)] text-white text-sm px-4 py-3 rounded-xl shadow-lg z-50">
+          {toggleError}
+        </div>
+      )}
       </div>
     </div>
+    </AuthGuard>
   );
 }

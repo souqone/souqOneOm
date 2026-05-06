@@ -35,6 +35,7 @@ import {
   SERVICE_TYPE_BG_COLORS,
   REQUEST_STATUS_LABELS,
   CURRENCY_LABEL,
+  QUOTE_STATUS_STYLES,
 } from '@/features/transport/constants';
 
 import {
@@ -64,13 +65,7 @@ function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: Quote
   const isAccepted = quote.status === 'ACCEPTED';
   const canAccept = isOwner && requestStatus === 'QUOTED' && quote.status === 'PENDING';
 
-  const statusColors: Record<string, { bg: string; text: string }> = {
-    PENDING: { bg: 'var(--color-warning-light)', text: 'var(--color-warning)' },
-    ACCEPTED: { bg: 'var(--color-success-light)', text: 'var(--color-success)' },
-    REJECTED: { bg: 'var(--color-error-light)', text: 'var(--color-error)' },
-    WITHDRAWN: { bg: 'var(--color-surface-container)', text: 'var(--color-on-surface-muted)' },
-  };
-  const sc = statusColors[quote.status] ?? statusColors['PENDING'];
+  const sc = QUOTE_STATUS_STYLES[quote.status] ?? QUOTE_STATUS_STYLES['PENDING'];
 
   return (
     <div
