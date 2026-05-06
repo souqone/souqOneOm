@@ -17,6 +17,7 @@ import {
   Clock,
   Banknote,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import type { TransportBooking, TransportRequest, TransportQuote, CarrierProfile, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
