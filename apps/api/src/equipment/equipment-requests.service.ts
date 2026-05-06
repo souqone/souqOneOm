@@ -6,10 +6,11 @@ import {
 } from '@nestjs/common';
 import { Prisma, EquipmentType, EquipmentRequestStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { CreateEquipmentRequestDto } from './dto/create-equipment-request.dto';
 import { UpdateEquipmentRequestDto } from './dto/update-equipment-request.dto';
 import { QueryEquipmentRequestsDto } from './dto/query-equipment-requests.dto';
-import { USER_SELECT, generateSlug } from './equipment.utils';
+import { USER_SELECT, generateSlug, MAX_IMAGES_PER_REQUEST } from './equipment.utils';
 
 /** Valid status transitions enforced as a state machine. */
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -21,7 +22,10 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 
 @Injectable()
 export class EquipmentRequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploads: UploadsService,
+  ) {}
 
   async create(dto: CreateEquipmentRequestDto, userId: string) {
     return this.prisma.equipmentRequest.create({
@@ -47,7 +51,7 @@ export class EquipmentRequestsService {
         whatsapp: dto.whatsapp,
         userId,
       },
-      include: { user: { select: USER_SELECT }, bids: { include: { user: { select: USER_SELECT } } } },
+      include: { user: { select: USER_SELECT }, bids: { include: { user: { select: USER_SELECT } } }, images: true },
     });
   }
 
@@ -72,7 +76,7 @@ export class EquipmentRequestsService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.equipmentRequest.findMany({
         where, orderBy, skip: (page - 1) * limit, take: limit,
-        include: { user: { select: USER_SELECT }, _count: { select: { bids: true } } },
+        include: { user: { select: USER_SELECT }, _count: { select: { bids: true } }, images: { orderBy: { createdAt: 'asc' }, take: 1 } },
       }),
       this.prisma.equipmentRequest.count({ where }),
     ]);
@@ -85,6 +89,7 @@ export class EquipmentRequestsService {
       include: {
         user: { select: USER_SELECT },
         bids: { include: { user: { select: USER_SELECT } }, orderBy: { createdAt: 'desc' } },
+        images: { orderBy: { createdAt: 'asc' } },
       },
     });
     if (!item) throw new NotFoundException('الطلب غير موجود');
@@ -96,8 +101,38 @@ export class EquipmentRequestsService {
   async my(userId: string) {
     return this.prisma.equipmentRequest.findMany({
       where: { userId }, orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { bids: true } } },
+      include: { _count: { select: { bids: true } }, images: { orderBy: { createdAt: 'asc' }, take: 1 } },
     });
+  }
+
+  async findMyBids(userId: string, page = 1, limit = 20) {
+    const take = Math.min(limit, 50);
+    const skip = (page - 1) * take;
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.equipmentBid.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          request: {
+            select: {
+              id: true,
+              title: true,
+              requestStatus: true,
+              createdAt: true,
+            },
+          },
+        },
+      }),
+      this.prisma.equipmentBid.count({ where: { userId } }),
+    ]);
+
+    return {
+      items,
+      meta: { total, page, limit: take, totalPages: Math.ceil(total / take) },
+    };
   }
 
   async update(id: string, userId: string, dto: UpdateEquipmentRequestDto) {
@@ -126,7 +161,7 @@ export class EquipmentRequestsService {
 
     return this.prisma.equipmentRequest.update({
       where: { id }, data,
-      include: { user: { select: USER_SELECT }, bids: { include: { user: { select: USER_SELECT } } } },
+      include: { user: { select: USER_SELECT }, bids: { include: { user: { select: USER_SELECT } } }, images: { orderBy: { createdAt: 'asc' } } },
     });
   }
 
@@ -149,7 +184,35 @@ export class EquipmentRequestsService {
     return this.prisma.equipmentRequest.update({
       where: { id },
       data: { requestStatus: newStatus as EquipmentRequestStatus },
-      include: { user: { select: USER_SELECT }, bids: { include: { user: { select: USER_SELECT } } } },
+      include: { user: { select: USER_SELECT }, bids: { include: { user: { select: USER_SELECT } } }, images: { orderBy: { createdAt: 'asc' } } },
+    });
+  }
+
+  async addImages(id: string, userId: string, files: Express.Multer.File[]) {
+    const req = await this.prisma.equipmentRequest.findUnique({ where: { id } });
+    if (!req) throw new NotFoundException('الطلب غير موجود');
+    if (req.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل طلب غيرك');
+
+    const existing = await this.prisma.equipmentRequestImage.count({ where: { requestId: id } });
+    if (existing + files.length > MAX_IMAGES_PER_REQUEST) {
+      throw new BadRequestException(
+        `الحد الأقصى ${MAX_IMAGES_PER_REQUEST} صور لكل طلب — لديك ${existing} حالياً`,
+      );
+    }
+
+    // Upload each file and persist the resulting URL
+    const urls = await Promise.all(files.map((f) => this.uploads.uploadFile(f).then((r) => r.url)));
+    await this.prisma.equipmentRequestImage.createMany({
+      data: urls.map((url) => ({ url, requestId: id })),
+    });
+
+    return this.prisma.equipmentRequest.findUnique({
+      where: { id },
+      include: {
+        user: { select: USER_SELECT },
+        bids: { include: { user: { select: USER_SELECT } }, orderBy: { createdAt: 'desc' } },
+        images: { orderBy: { createdAt: 'asc' } },
+      },
     });
   }
 

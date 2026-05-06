@@ -1326,6 +1326,7 @@ model EquipmentRequest {
   userId              String
   user                User                    @relation("UserEquipmentRequests", fields: [userId], references: [id], onDelete: Cascade)
   bids                EquipmentBid[]
+  images              EquipmentRequestImage[]
 
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
@@ -1337,6 +1338,18 @@ model EquipmentRequest {
   @@index([createdAt])
   @@index([slug])
   @@map("equipment_requests")
+}
+
+// صور طلبات المعدات — EquipmentRequestImage
+model EquipmentRequestImage {
+  id          String           @id @default(cuid())
+  url         String
+  requestId   String
+  request     EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+
+  @@index([requestId])
+  @@map("equipment_request_images")
 }
 
 // ──────────────────────────────────────
