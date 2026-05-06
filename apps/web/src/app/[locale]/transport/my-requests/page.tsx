@@ -54,6 +54,7 @@ export default function MyRequestsPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(activeTab); }, [activeTab]);
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };

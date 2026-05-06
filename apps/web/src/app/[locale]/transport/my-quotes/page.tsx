@@ -60,6 +60,7 @@ export default function MyQuotesPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(activeTab); }, [activeTab]);
 
   const handleWithdraw = async (quoteId: string) => {

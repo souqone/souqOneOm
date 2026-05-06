@@ -161,6 +161,7 @@ export default function RequestDetailShell({ id }: { id: string }) {
     } finally { setLoading(false) }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [id])
 
   async function acceptQuote(quoteId: string) {
