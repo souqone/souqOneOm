@@ -42,11 +42,12 @@ interface UnifiedCardProps {
   onSave?: (id: string) => void
   isSaved?: boolean
   className?: string
+  hideContactButtons?: boolean
 }
 
 //  Component 
 
-export function UnifiedCard({ item, onSave, isSaved = false, className = '' }: UnifiedCardProps) {
+export function UnifiedCard({ item, onSave, isSaved = false, className = '', hideContactButtons = false }: UnifiedCardProps) {
   const router = useRouter()
   const locale = useLocale()
   const t = useTranslations('listings')
@@ -251,7 +252,7 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '' }: U
         </div>
 
         {/* Contact buttons — only shown if data exists */}
-        {(item.phoneNumber || item.whatsappNumber) && (
+        {!hideContactButtons && (item.phoneNumber || item.whatsappNumber) && (
           <div className="flex gap-2 mt-2 pt-2 border-t border-outline-variant/20">
             {item.phoneNumber && (
               <a

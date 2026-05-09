@@ -29,6 +29,7 @@ interface CardGridProps<T> {
   emptyMessage?: string
   emptyAction?: { label: string; href: string }
   className?: string
+  hideContactButtons?: boolean
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export function CardGrid<T extends { id: string }>({
   emptyMessage,
   emptyAction,
   className = '',
+  hideContactButtons = false,
 }: CardGridProps<T>) {
   const gridClass = `grid ${COL_CLASS[cols]} gap-2 sm:gap-4 ${className}`
   const count = skeletonCount ?? cols
@@ -89,7 +91,7 @@ export function CardGrid<T extends { id: string }>({
   return (
     <div className={gridClass}>
       {items.map((item) => (
-        <UnifiedCard key={item.id} item={mapItem(item)} className="h-full" />
+        <UnifiedCard key={item.id} item={mapItem(item)} className="h-full" hideContactButtons={hideContactButtons} />
       ))}
     </div>
   )

@@ -31,7 +31,7 @@ export default function JobCard({ job }: JobCardProps) {
   return (
     <Link
       href={`/jobs/${job.id}`}
-      className="block group card-base hover:shadow-card-hover hover:border-outline transition-all duration-200 rounded-2xl overflow-hidden"
+      className="block group card-base hover:shadow-card-hover hover:border-outline transition-all duration-200 rounded-2xl overflow-hidden h-full"
     >
       <div className="p-4">
         {/* Top row: type badge + status */}

@@ -55,6 +55,7 @@ export function PartsShowcase({ items, isLoading }: PartsShowcaseProps) {
               items={items}
               mapItem={transformPart}
               isLoading={isLoading}
+              hideContactButtons
               emptyIcon="settings"
               emptyMessage={t('noPartsNow')}
             />

@@ -55,6 +55,7 @@ export function EquipmentShowcase({ items, isLoading }: EquipmentShowcaseProps) 
               items={items}
               mapItem={transformEquipment}
               isLoading={isLoading}
+              hideContactButtons
               emptyIcon="construction"
               emptyMessage={t('noEquipmentNow')}
             />
