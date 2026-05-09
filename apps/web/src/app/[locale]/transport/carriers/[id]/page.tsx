@@ -12,8 +12,6 @@ import {
   MessageCircle,
   Truck,
   Calendar,
-  Loader2,
-  AlertCircle,
   Shield,
   TrendingUp,
   Package,
@@ -21,6 +19,7 @@ import {
 import type { CarrierProfile } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import { SERVICE_TYPE_LABELS, VEHICLE_TYPE_LABELS } from '@/features/transport/constants';
+import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
 
 export default function PublicCarrierProfilePage() {
   const params = useParams();
@@ -46,31 +45,9 @@ export default function PublicCarrierProfilePage() {
     if (id) load();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-[var(--color-brand-navy)]" />
-          <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ التحميل...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <TransportPageLoader />;
 
-  if (error || !carrier) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="flex flex-col items-center gap-4 text-center px-4">
-          <AlertCircle size={40} className="text-[var(--color-error)]" />
-          <p className="text-base font-semibold">{error || 'الناقل غير موجود'}</p>
-          <Link href="/transport/browse" className="btn-primary">
-            <ArrowRight size={16} />
-            تصفح الطلبات
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (error || !carrier) return <TransportPageError message={error || 'الناقل غير موجود'} />;
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
@@ -97,8 +74,8 @@ export default function PublicCarrierProfilePage() {
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
                 <img
-                  src={carrier.user?.avatarUrl}
-                  alt={`صورة ${carrier.user?.displayName}`}
+                  src={carrier.user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(carrier.companyName ?? carrier.user?.displayName ?? 'N')}&background=1e3a5f&color=fff&size=80`}
+                  alt={`صورة ${carrier.user?.displayName ?? 'الناقل'}`}
                   className="w-20 h-20 rounded-2xl border-4 border-white/20 shadow-lg"
                 />
                 {carrier.isVerified && (

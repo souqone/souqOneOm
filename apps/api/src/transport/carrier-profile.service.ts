@@ -111,6 +111,15 @@ export class CarrierProfileService {
     };
   }
 
+  async getPublicStats() {
+    const [activeRequests, verifiedCarriers, completedTrips] = await this.prisma.$transaction([
+      this.prisma.transportRequest.count({ where: { status: 'OPEN' } }),
+      this.prisma.carrierProfile.count({ where: { isVerified: true } }),
+      this.prisma.transportBooking.count({ where: { status: 'COMPLETED' } }),
+    ]);
+    return { activeRequests, verifiedCarriers, completedTrips };
+  }
+
   async setAvailability(userId: string, isAvailable: boolean) {
     const profile = await this.prisma.carrierProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('لم يتم العثور على ملف الناقل');

@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Loader2,
-  AlertCircle,
   MessageSquare,
   CheckCircle,
   XCircle,
@@ -12,11 +10,15 @@ import {
   Banknote,
   ExternalLink,
   Trash2,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import type { TransportQuote, QuoteStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
-import { QUOTE_STATUS_LABELS, CURRENCY_LABEL } from '@/features/transport/constants';
+import { QUOTE_STATUS_LABELS, CURRENCY_LABEL, QUOTE_STATUS_STYLES } from '@/features/transport/constants';
 import { formatRelativeDate } from '@/lib/utils';
+import { AuthGuard } from '@/components/auth-guard';
+import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
 
 type TabStatus = 'ALL' | QuoteStatus;
 
@@ -32,31 +34,11 @@ const TABS: TabDef[] = [
   { key: 'REJECTED', label: 'مرفوض' },
 ];
 
-const QUOTE_STATUS_CONFIG: Record<QuoteStatus, { bg: string; text: string; border: string; icon: React.ElementType }> = {
-  PENDING: {
-    bg: 'var(--color-warning-light)',
-    text: 'var(--color-warning)',
-    border: 'rgba(217,119,6,0.3)',
-    icon: Clock,
-  },
-  ACCEPTED: {
-    bg: 'var(--color-success-light)',
-    text: 'var(--color-success)',
-    border: 'rgba(22,163,74,0.3)',
-    icon: CheckCircle,
-  },
-  REJECTED: {
-    bg: 'var(--color-error-light)',
-    text: 'var(--color-error)',
-    border: 'rgba(220,38,38,0.3)',
-    icon: XCircle,
-  },
-  WITHDRAWN: {
-    bg: 'var(--color-surface-container)',
-    text: 'var(--color-on-surface-muted)',
-    border: 'var(--color-outline)',
-    icon: Trash2,
-  },
+const QUOTE_STATUS_ICON: Record<QuoteStatus, React.ElementType> = {
+  PENDING: Clock,
+  ACCEPTED: CheckCircle,
+  REJECTED: XCircle,
+  WITHDRAWN: Trash2,
 };
 
 export default function MyQuotesPage() {
@@ -65,12 +47,13 @@ export default function MyQuotesPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (tab: TabStatus) => {
     setLoading(true);
     setError('');
     try {
-      const res = await transportApi.myQuotes();
+      const res = await transportApi.myQuotes(1, 50, tab === 'ALL' ? undefined : tab);
       setQuotes(res.items);
     } catch {
       setError('تعذّر تحميل عروضك');
@@ -79,32 +62,29 @@ export default function MyQuotesPage() {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(activeTab); }, [activeTab]);
 
   const handleWithdraw = async (quoteId: string) => {
     setWithdrawing(quoteId);
+    setWithdrawError(null);
     try {
       await transportApi.withdrawQuote(quoteId);
       setQuotes((prev) =>
         prev.map((q) => (q.id === quoteId ? { ...q, status: 'WITHDRAWN' as QuoteStatus } : q))
       );
+    } catch {
+      setWithdrawError('تعذّر سحب العرض، حاول مجدداً');
     } finally {
       setWithdrawing(null);
     }
   };
 
-  const filtered =
-    activeTab === 'ALL' ? quotes : quotes.filter((q) => q.status === activeTab);
-
-  const countFor = (tab: TabStatus) =>
-    tab === 'ALL' ? quotes.length : quotes.filter((q) => q.status === tab).length;
-
-  const pendingCount = quotes.filter((q) => q.status === 'PENDING').length;
-  const acceptedCount = quotes.filter((q) => q.status === 'ACCEPTED').length;
+  const pendingCount = activeTab === 'ALL' ? quotes.filter((q) => q.status === 'PENDING').length : 0;
+  const acceptedCount = activeTab === 'ALL' ? quotes.filter((q) => q.status === 'ACCEPTED').length : 0;
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
       <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
@@ -114,6 +94,13 @@ export default function MyQuotesPage() {
             تتبع العروض التي قدمتها على طلبات النقل
           </p>
         </div>
+
+        {withdrawError && (
+          <div className="mb-4 flex items-center gap-2 bg-[var(--color-error-light)] text-[var(--color-error)] text-sm px-4 py-3 rounded-xl">
+            <AlertCircle size={15} />
+            {withdrawError}
+          </div>
+        )}
 
         {/* Stats Summary */}
         {!loading && !error && (
@@ -142,7 +129,6 @@ export default function MyQuotesPage() {
         {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto pb-1 mb-6">
           {TABS.map((tab) => {
-            const count = countFor(tab.key);
             const isActive = activeTab === tab.key;
             return (
               <button
@@ -155,16 +141,6 @@ export default function MyQuotesPage() {
                 }`}
               >
                 {tab.label}
-                {count > 0 && (
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      isActive
-                        ? 'bg-white/20 text-white' :'bg-[var(--color-surface-container)] text-[var(--color-on-surface-muted)]'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -172,19 +148,10 @@ export default function MyQuotesPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex flex-col items-center gap-3 py-16">
-            <Loader2 size={32} className="animate-spin text-[var(--color-brand-navy)]" />
-            <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ التحميل...</p>
-          </div>
+          <TransportPageLoader />
         ) : error ? (
-          <div className="flex flex-col items-center gap-4 py-16 text-center">
-            <AlertCircle size={36} className="text-[var(--color-error)]" />
-            <p className="text-sm font-semibold">{error}</p>
-            <button onClick={load} className="btn-primary text-sm">
-              إعادة المحاولة
-            </button>
-          </div>
-        ) : filtered.length === 0 ? (
+          <TransportPageError message={error} onRetry={() => load(activeTab)} />
+        ) : quotes.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">
               <MessageSquare size={28} className="text-[var(--color-on-surface-muted)]" />
@@ -201,9 +168,9 @@ export default function MyQuotesPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {filtered.map((quote) => {
-              const config = QUOTE_STATUS_CONFIG[quote.status] ?? QUOTE_STATUS_CONFIG['PENDING'];
-              const StatusIcon = config.icon;
+            {quotes.map((quote) => {
+              const config = QUOTE_STATUS_STYLES[quote.status] ?? QUOTE_STATUS_STYLES['PENDING'];
+              const StatusIcon = QUOTE_STATUS_ICON[quote.status] ?? Clock;
               return (
                 <div
                   key={quote.id}
@@ -288,5 +255,6 @@ export default function MyQuotesPage() {
         )}
       </div>
     </div>
+    </AuthGuard>
   );
 }

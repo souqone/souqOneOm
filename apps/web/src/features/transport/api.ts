@@ -40,10 +40,9 @@ export const transportApi = {
     })
   },
 
-  myRequests(page = 1, limit = 12) {
-    return apiRequest<PaginatedResponse<TransportRequest>>(
-      `/transport/requests/my?page=${page}&limit=${limit}`,
-    )
+  myRequests(page = 1, limit = 12, status?: string) {
+    const q = qs({ page, limit, ...(status ? { status } : {}) })
+    return apiRequest<PaginatedResponse<TransportRequest>>(`/transport/requests/my${q}`)
   },
 
   cancelRequest(id: string) {
@@ -71,10 +70,9 @@ export const transportApi = {
     return apiRequest<TransportQuote>(`/transport/quotes/${quoteId}/withdraw`, { method: 'PATCH' })
   },
 
-  myQuotes(page = 1, limit = 12) {
-    return apiRequest<PaginatedResponse<TransportQuote>>(
-      `/transport/quotes/my?page=${page}&limit=${limit}`,
-    )
+  myQuotes(page = 1, limit = 12, status?: string) {
+    const q = qs({ page, limit, ...(status ? { status } : {}) })
+    return apiRequest<PaginatedResponse<TransportQuote>>(`/transport/quotes/my${q}`)
   },
 
   // ── Bookings ─────────────────────────────────────
@@ -137,5 +135,11 @@ export const transportApi = {
 
   getCarrier(id: string) {
     return apiRequest<CarrierProfile>(`/transport/carriers/${id}`)
+  },
+
+  getStats() {
+    return apiRequest<{ activeRequests: number; verifiedCarriers: number; completedTrips: number }>(
+      '/transport/stats',
+    )
   },
 }

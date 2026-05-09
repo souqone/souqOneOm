@@ -57,6 +57,8 @@ export class EquipmentListingsService {
     const page = q.page ?? 1;
     const limit = Math.min(q.limit ?? 20, 50);
     const where: Prisma.EquipmentListingWhereInput = { status: 'ACTIVE' };
+
+    // ─── Existing filters ────────────────────────────────────────────────────
     if (q.equipmentType) where.equipmentType = q.equipmentType as EquipmentType;
     if (q.listingType) where.listingType = q.listingType as EquipmentListingType;
     if (q.governorate) where.governorate = q.governorate;
@@ -68,6 +70,38 @@ export class EquipmentListingsService {
       ];
     }
     // TODO: migrate to GIN index or Meilisearch for 50K+ records
+
+    // ─── Rich filters ────────────────────────────────────────────────────────
+    if (q.condition) where.condition = q.condition as ItemCondition;
+
+    // make / model: case-insensitive exact match
+    if (q.make) where.make = { equals: q.make, mode: 'insensitive' };
+    if (q.model) where.model = { equals: q.model, mode: 'insensitive' };
+
+    // year range
+    if (q.yearMin != null || q.yearMax != null) {
+      where.year = {
+        ...(q.yearMin != null && { gte: q.yearMin }),
+        ...(q.yearMax != null && { lte: q.yearMax }),
+      };
+    }
+
+    // hoursUsed upper bound
+    if (q.hoursUsedMax != null) where.hoursUsed = { lte: q.hoursUsedMax };
+
+    // price range — sale listings use `price`, rent listings use `dailyPrice`
+    if (q.minPrice != null || q.maxPrice != null) {
+      const priceFilter: Prisma.DecimalNullableFilter = {
+        ...(q.minPrice != null && { gte: new Prisma.Decimal(q.minPrice) }),
+        ...(q.maxPrice != null && { lte: new Prisma.Decimal(q.maxPrice) }),
+      };
+      if (q.listingType === 'EQUIPMENT_RENT') {
+        where.dailyPrice = priceFilter;
+      } else {
+        // Applies to EQUIPMENT_SALE or unspecified listingType
+        where.price = priceFilter;
+      }
+    }
 
     const orderBy: Prisma.EquipmentListingOrderByWithRelationInput =
       q.sortBy === 'price_asc' ? { price: 'asc' } :

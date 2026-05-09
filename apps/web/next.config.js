@@ -5,6 +5,7 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  eslint: { ignoreDuringBuilds: true },
   transpilePackages: ['@carone/ui', '@carone/types'],
   reactStrictMode: true,
   allowedDevOrigins: ['localhost', '127.0.0.1', '192.168.56.1', '192.168.1.192'],

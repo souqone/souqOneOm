@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -229,6 +229,21 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
   const [userLng, setUserLng] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // ─── Sticky CTA bar — shown when mobile price section scrolls out of view ──
+  const mobilePriceSectionRef = useRef<HTMLDivElement>(null);
+  const [stickyBarVisible, setStickyBarVisible] = useState(false);
+
+  useEffect(() => {
+    const el = mobilePriceSectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyBarVisible(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const lat = sessionStorage.getItem('userLat');
     const lng = sessionStorage.getItem('userLng');
@@ -411,7 +426,7 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
         )}
 
         {/* ══ MOBILE/TABLET CTA BUTTONS — Below Gallery ══ */}
-        <div className="lg:hidden mb-5">
+        <div className="lg:hidden mb-5" ref={mobilePriceSectionRef}>
           {/* Price row */}
           <div className="flex items-baseline gap-1.5 mb-3">
             {listing.type === 'bus' && listing.busData?.contractMonthly ? (
@@ -697,6 +712,7 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
           onMessage={handleMessage}
           onWhatsApp={handleWhatsApp}
           onCall={listing.seller.phone ? handleCall : undefined}
+          visible={stickyBarVisible}
         />
       )}
 

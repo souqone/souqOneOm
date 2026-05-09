@@ -58,6 +58,7 @@ export function FeaturedShowroom({ items, isLoading }: FeaturedShowroomProps) {
               items={items}
               mapItem={transformCar}
               isLoading={isLoading}
+              hideContactButtons
               emptyIcon="directions_car"
               emptyMessage={t('noListingsNow')}
             />

@@ -9,7 +9,7 @@ import type { UnifiedListingItem } from '../types/unified-item.types'
 
 // ── Card width config ────────────────────────────────────────────────────────
 // On mobile: ~80vw per card | sm: ~300px | md+: ~280px
-const CARD_CLASS = 'w-[78vw] sm:w-[300px] md:w-[280px] shrink-0'
+const CARD_CLASS = 'w-[82vw] sm:w-[36vw] lg:w-[268px] xl:w-[341px] shrink-0'
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ interface CardSliderProps<T> {
   emptyIcon?: string
   emptyMessage?: string
   className?: string
+  hideContactButtons?: boolean
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -37,10 +38,38 @@ export function CardSlider<T extends { id: string }>({
   emptyIcon = 'inventory_2',
   emptyMessage,
   className = '',
+  hideContactButtons = false,
 }: CardSliderProps<T>) {
   const trackRef = useRef<HTMLDivElement>(null)
   const [canScrollStart, setCanScrollStart] = useState(false)
   const [canScrollEnd, setCanScrollEnd] = useState(true)
+  const dragRef = useRef({ isDragging: false, startX: 0, scrollLeft: 0 })
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = trackRef.current
+    if (!el) return
+    dragRef.current = { isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft }
+    el.style.cursor = 'grabbing'
+    el.style.userSelect = 'none'
+  }, [])
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragRef.current.isDragging) return
+    const el = trackRef.current
+    if (!el) return
+    e.preventDefault()
+    const x = e.pageX - el.offsetLeft
+    const walk = (x - dragRef.current.startX) * 1.5
+    el.scrollLeft = dragRef.current.scrollLeft - walk
+  }, [])
+
+  const onMouseUp = useCallback(() => {
+    const el = trackRef.current
+    if (!el) return
+    dragRef.current.isDragging = false
+    el.style.cursor = 'grab'
+    el.style.userSelect = ''
+  }, [])
 
   const checkScroll = useCallback(() => {
     const el = trackRef.current
@@ -130,11 +159,15 @@ export function CardSlider<T extends { id: string }>({
       {/* Track */}
       <div
         ref={trackRef}
-        className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth"
+        className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth cursor-grab active:cursor-grabbing"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
       >
         {items.map((item) => (
           <div key={item.id} className={CARD_CLASS}>
-            <UnifiedCard item={mapItem(item)} className="h-full" />
+            <UnifiedCard item={mapItem(item)} className="h-full" hideContactButtons={hideContactButtons} />
           </div>
         ))}
       </div>
