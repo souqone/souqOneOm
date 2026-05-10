@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { LayoutGrid, ChevronDown, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutGrid, ChevronDown, MapPin, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcn/popover';
 import { getGovernorates, type LocationOption } from '@/lib/location-data';
@@ -131,10 +131,12 @@ export function HeroSection() {
 
           {/* Content overlay — outside overflow-hidden so dropdowns work */}
           <div className="absolute inset-x-0 px-2 sm:px-8 lg:px-12 xl:px-16 pb-2 sm:pb-6 lg:pb-10 xl:pb-12 text-white flex flex-col items-center text-center z-20" style={{ bottom: '30px' }}>
-            <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-1 lg:mb-2">
-              <span className="text-white">منصة </span>
-              <span className="bg-gradient-to-l from-[#e54d00] via-[#fe5e00] to-[#ff9a5c] bg-clip-text text-transparent">عمان الأولى</span>
-            </h1>
+            <div className="inline-flex items-center justify-center gap-2 sm:gap-3 px-5 py-2 sm:px-8 sm:py-3 md:px-10 md:py-3.5 rounded-full bg-gradient-to-r from-white/10 via-white/5 to-white/10 border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)] backdrop-blur-md mb-3 sm:mb-4 lg:mb-5 transition-all hover:scale-105">
+              <Star className="text-white/80 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 animate-pulse-soft" strokeWidth={1.5} fill="transparent" />
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-wide m-0 leading-none">
+                منصة <span className="text-[#ff5e00]">عُمان</span> الأولى
+              </h1>
+            </div>
             <p className="text-[10px] sm:text-sm md:text-base lg:text-lg text-white/90 leading-snug mb-2 sm:mb-3 lg:mb-4 max-w-[90%] sm:max-w-lg lg:max-w-xl">
               {t('heroSubtitle')}
             </p>
