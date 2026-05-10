@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { AuthGuard } from '@/components/auth-guard';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useMyApplications, useWithdrawApplication } from '@/lib/api';
 import { resolveLocationLabel } from '@/lib/location-data';
@@ -17,7 +18,7 @@ const STATUS_TABS = [
   { value: 'WITHDRAWN', label: APPLICATION_STATUS_LABELS['WITHDRAWN'] },
 ];
 
-export default function MyProposalsPage() {
+function MyProposalsContent() {
   const { data: applications, isLoading, isError, refetch } = useMyApplications();
   const withdrawMutation = useWithdrawApplication();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -164,5 +165,13 @@ export default function MyProposalsPage() {
           </div>
         )}
     </div>
+  );
+}
+
+export default function MyProposalsPage() {
+  return (
+    <AuthGuard>
+      <MyProposalsContent />
+    </AuthGuard>
   );
 }

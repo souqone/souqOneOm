@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef } from 'react';
+import { AuthGuard } from '@/components/auth-guard';
 import { CheckCircle, Clock, X, AlertCircle } from 'lucide-react';
 import { useMyVerificationStatus, useSubmitVerification, useMyDriverProfile } from '@/lib/api';
 import { useUploadImage } from '@/lib/api/uploads';
@@ -78,7 +79,7 @@ function UploadZone({ label, icon, file, onFileChange }: UploadZoneProps) {
   )
 }
 
-export default function VerificationPage() {
+function VerificationContent() {
   const { addToast } = useToast()
   const { data: profile, isLoading: profileLoading } = useMyDriverProfile()
   const { data: verifications, isLoading: verLoading } = useMyVerificationStatus()
@@ -216,5 +217,13 @@ export default function VerificationPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function VerificationPage() {
+  return (
+    <AuthGuard>
+      <VerificationContent />
+    </AuthGuard>
   )
 }
