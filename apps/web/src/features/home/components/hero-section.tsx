@@ -252,7 +252,7 @@ export function HeroSection() {
       <div className="w-[95%] sm:max-w-7xl mx-auto px-0 sm:px-6 relative z-30 -mt-6 sm:-mt-12 lg:-mt-[70px]">
         <div className="bg-white dark:bg-surface-container rounded-xl sm:rounded-3xl shadow-xl border border-outline-variant/10 overflow-hidden">
           <div className="grid grid-cols-6 divide-x divide-x-reverse divide-outline-variant/10">
-            {FLOAT_CATS.map((cat, i) => (
+            {FLOAT_CATS.map((cat) => (
               <Link
                 key={cat.href}
                 href={cat.href}
