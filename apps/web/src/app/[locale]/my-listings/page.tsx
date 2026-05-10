@@ -8,7 +8,7 @@ import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
 import { useMyListings, useDeleteListing } from '@/lib/api';
 import { useMyBusListings, useDeleteBusListing } from '@/lib/api/buses';
-import { useMyEquipmentListings, useDeleteEquipmentListing, useMyOperatorListings, useDeleteOperatorListing } from '@/lib/api/equipment';
+import { useMyEquipmentListings, useDeleteEquipmentListing, useMyOperatorListings, useDeleteOperatorListing, useMyEquipmentRequests, useDeleteEquipmentRequest } from '@/lib/api/equipment';
 import { useMyParts, useDeletePart } from '@/lib/api/parts';
 import { useMyCarServices, useDeleteCarService } from '@/lib/api/services';
 import { useMyJobs, useDeleteJob } from '@/lib/api/jobs';
@@ -20,13 +20,14 @@ import { useToast } from '@/components/toast';
 import { useTranslations, useLocale } from 'next-intl';
 import { MoreVertical, Plus, PlusCircle, Pencil, RefreshCw, Pause, Trash2 } from 'lucide-react';
 
-type StatusFilter = 'ALL' | 'ACTIVE' | 'PENDING' | 'EXPIRED' | 'DRAFT';
+type StatusFilter = 'ALL' | 'ACTIVE' | 'PENDING' | 'EXPIRED' | 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED';
 
 const SECTION_TABS = [
   { key: 'cars', icon: 'directions_car', labelKey: 'sectionCars' },
   { key: 'buses', icon: 'directions_bus', labelKey: 'sectionBuses' },
   { key: 'equipment', icon: 'construction', labelKey: 'sectionEquipment' },
   { key: 'operators', icon: 'engineering', labelKey: 'sectionOperators' },
+  { key: 'equipment-requests', icon: 'assignment', labelKey: 'sectionEquipmentRequests' },
   { key: 'parts', icon: 'build', labelKey: 'sectionParts' },
   { key: 'services', icon: 'car_repair', labelKey: 'sectionServices' },
   { key: 'jobs', icon: 'work', labelKey: 'sectionJobs' },
@@ -36,8 +37,8 @@ type SectionKey = typeof SECTION_TABS[number]['key'];
 
 const SECTION_LABEL_MAP: Record<SectionKey, string> = {
   cars: 'sectionCars', buses: 'sectionBuses', equipment: 'sectionEquipment',
-  operators: 'sectionOperators', parts: 'sectionParts', services: 'sectionServices',
-  jobs: 'sectionJobs',
+  operators: 'sectionOperators', 'equipment-requests': 'sectionEquipmentRequests',
+  parts: 'sectionParts', services: 'sectionServices', jobs: 'sectionJobs',
 };
 
 // ─── Dropdown menu component ───
@@ -127,6 +128,8 @@ export default function MyListingsPage() {
   const deleteEquipment = useDeleteEquipmentListing();
   const operators = useMyOperatorListings();
   const deleteOperator = useDeleteOperatorListing();
+  const equipmentRequests = useMyEquipmentRequests();
+  const deleteEquipmentRequest = useDeleteEquipmentRequest();
   const parts = useMyParts();
   const deleteParts = useDeletePart();
   const services = useMyCarServices();
@@ -144,11 +147,15 @@ export default function MyListingsPage() {
   ];
 
   const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-    ACTIVE:  { label: tp('myListingsFilterActive'),  cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-    PENDING: { label: tp('myListingsFilterPending'), cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-    EXPIRED: { label: tp('myListingsFilterExpired'), cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400' },
-    DRAFT:   { label: tp('myListingsFilterDraft'),   cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    SOLD:    { label: tp('myListingsFilterSold'),    cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400' },
+    ACTIVE:      { label: tp('myListingsFilterActive'),  cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    PENDING:     { label: tp('myListingsFilterPending'), cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+    EXPIRED:     { label: tp('myListingsFilterExpired'), cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400' },
+    DRAFT:       { label: tp('myListingsFilterDraft'),   cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+    SOLD:        { label: tp('myListingsFilterSold'),    cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400' },
+    OPEN:        { label: 'مفتوح',       cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    IN_PROGRESS: { label: 'قيد التنفيذ', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+    CLOSED:      { label: 'مغلق',        cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400' },
+    CANCELLED:   { label: 'ملغي',        cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
   };
 
   // ─── Section data mapping ───
@@ -158,6 +165,7 @@ export default function MyListingsPage() {
       case 'buses': return { items: buses.data ?? [], isLoading: buses.isLoading, refetch: buses.refetch };
       case 'equipment': return { items: equipment.data ?? [], isLoading: equipment.isLoading, refetch: equipment.refetch };
       case 'operators': return { items: operators.data ?? [], isLoading: operators.isLoading, refetch: operators.refetch };
+      case 'equipment-requests': return { items: equipmentRequests.data ?? [], isLoading: equipmentRequests.isLoading, refetch: equipmentRequests.refetch };
       case 'parts': return { items: parts.data ?? [], isLoading: parts.isLoading, refetch: parts.refetch };
       case 'services': return { items: services.data ?? [], isLoading: services.isLoading, refetch: services.refetch };
       case 'jobs': return { items: jobs.data?.items ?? [], isLoading: jobs.isLoading, refetch: jobs.refetch };
@@ -171,6 +179,7 @@ export default function MyListingsPage() {
       case 'buses': return (id, opts) => deleteBus.mutate(id, opts);
       case 'equipment': return (id, opts) => deleteEquipment.mutate(id, opts);
       case 'operators': return (id, opts) => deleteOperator.mutate(id, opts);
+      case 'equipment-requests': return (id, opts) => deleteEquipmentRequest.mutate(id, opts);
       case 'parts': return (id, opts) => deleteParts.mutate(id, opts);
       case 'services': return (id, opts) => deleteService.mutate(id, opts);
       case 'jobs': return (id, opts) => deleteJob.mutate(id, opts);
@@ -184,6 +193,7 @@ export default function MyListingsPage() {
       case 'buses': return `/edit-listing/bus/${id}`;
       case 'equipment': return `/edit-listing/equipment/${id}`;
       case 'operators': return `/edit-listing/operator/${id}`;
+      case 'equipment-requests': return `/equipment/requests/${id}`;
       case 'parts': return `/edit-listing/parts/${id}`;
       case 'services': return `/edit-listing/service/${id}`;
       case 'jobs': return `/edit-listing/job/${id}`;
@@ -193,31 +203,46 @@ export default function MyListingsPage() {
 
   const ENTITY_TYPE_MAP: Record<SectionKey, string> = {
     cars: 'LISTING', buses: 'BUS_LISTING', equipment: 'EQUIPMENT_LISTING',
-    operators: 'OPERATOR_LISTING', parts: 'SPARE_PART', services: 'CAR_SERVICE',
-    jobs: 'JOB',
+    operators: 'OPERATOR_LISTING', 'equipment-requests': 'EQUIPMENT_REQUEST',
+    parts: 'SPARE_PART', services: 'CAR_SERVICE', jobs: 'JOB',
   };
 
   const sectionData = getSectionData();
   const deleteFn = getDeleteFn();
 
-  // Filter by status for non-car sections (they don't have server-side status filter)
+  // Normalize status field — equipment-requests use requestStatus, everything else uses status
+  const isRequestSection = activeSection === 'equipment-requests';
+  const getItemStatus = (item: any): string => isRequestSection ? item.requestStatus : item.status;
+
+  // Filter by status
   const filteredItems = activeSection === 'cars'
     ? sectionData.items
     : statusFilter === 'ALL'
       ? sectionData.items
-      : sectionData.items.filter((item: any) => item.status === statusFilter);
+      : sectionData.items.filter((item: any) => getItemStatus(item) === statusFilter);
+
+  // Status filter chips — show request-specific statuses for equipment-requests tab
+  const activeStatusFilters: { key: StatusFilter; label: string }[] = isRequestSection
+    ? [
+        { key: 'ALL',         label: tp('myListingsFilterAll') },
+        { key: 'OPEN',        label: 'مفتوح' },
+        { key: 'IN_PROGRESS', label: 'قيد التنفيذ' },
+        { key: 'CLOSED',      label: 'مغلق' },
+        { key: 'CANCELLED',   label: 'ملغي' },
+      ]
+    : statusFilters;
 
   // ─── Stats ───
   const stats = useMemo(() => {
     const all = sectionData.items;
-    const activeCount = all.filter((i: any) => i.status === 'ACTIVE').length;
-    const expiredCount = all.filter((i: any) => i.status === 'EXPIRED' || i.status === 'SOLD').length;
+    const activeCount = all.filter((i: any) => { const s = isRequestSection ? i.requestStatus : i.status; return s === 'ACTIVE' || s === 'OPEN'; }).length;
+    const expiredCount = all.filter((i: any) => { const s = isRequestSection ? i.requestStatus : i.status; return s === 'EXPIRED' || s === 'SOLD' || s === 'CLOSED' || s === 'CANCELLED'; }).length;
     const totalViews = all.reduce((sum: number, i: any) => sum + (i.viewCount || 0), 0);
     return { activeCount, expiredCount, totalViews };
-  }, [sectionData.items]);
+  }, [sectionData.items, isRequestSection]);
 
-  // ─── Helpers ───
   function getItemImage(item: any): string | null {
+    if (isRequestSection) return null;
     if (activeSection === 'cars') {
       const img = item.images?.find((i: any) => i.isPrimary) ?? item.images?.[0];
       return getImageUrl(img?.url) || null;
@@ -226,17 +251,23 @@ export default function MyListingsPage() {
   }
 
   function getItemPrice(item: any): string | null {
+    if (isRequestSection) {
+      if (item.budgetMax) return `حتى ${Number(item.budgetMax).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
+      if (item.budgetMin) return `من ${Number(item.budgetMin).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
+      return null;
+    }
     const p = item.price || item.salary || item.priceFrom || item.basePrice || item.dailyPrice;
     if (!p) return null;
     return `${Number(p).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
   }
 
   function getItemMeta(item: any): string {
-    const parts: string[] = [];
-    parts.push(tp(SECTION_LABEL_MAP[activeSection]));
-    if (item.governorate) parts.push(resolveLocationLabel(item.governorate, locale) ?? item.governorate);
-    if (item.createdAt) parts.push(relativeTimeT(item.createdAt, tt, locale));
-    return parts.join(' · ');
+    const metaParts: string[] = [];
+    metaParts.push(tp(SECTION_LABEL_MAP[activeSection]));
+    if (item.governorate) metaParts.push(resolveLocationLabel(item.governorate, locale) ?? item.governorate);
+    if (isRequestSection && item._count?.bids !== undefined) metaParts.push(`${item._count.bids} عرض`);
+    if (item.createdAt) metaParts.push(relativeTimeT(item.createdAt, tt, locale));
+    return metaParts.join(' · ');
   }
 
   return (
@@ -284,11 +315,11 @@ export default function MyListingsPage() {
         </div>
 
         {/* Section Tabs */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 px-4 pb-2 max-w-3xl mx-auto">
+        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 px-4 pb-2 max-w-3xl mx-auto">
           {SECTION_TABS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveSection(tab.key)}
+              onClick={() => { setActiveSection(tab.key); setStatusFilter('ALL'); }}
               className={`flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium rounded-2xl transition-all ${
                 activeSection === tab.key
                   ? 'bg-primary text-on-primary shadow-sm shadow-primary/20'
@@ -303,7 +334,7 @@ export default function MyListingsPage() {
 
         {/* ═══ B) STATUS FILTER TABS ═══ */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-2 mt-3 max-w-3xl mx-auto">
-          {statusFilters.map((f) => (
+          {activeStatusFilters.map((f) => (
             <button
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
@@ -336,7 +367,8 @@ export default function MyListingsPage() {
           ) : filteredItems.length > 0 ? (
             <div className="flex flex-col gap-3 px-4">
               {filteredItems.map((item: any) => {
-                const badge = STATUS_BADGE[item.status] ?? { label: item.status, cls: 'bg-gray-100 text-gray-600' };
+                const itemStatus = getItemStatus(item);
+                const badge = STATUS_BADGE[itemStatus] ?? { label: itemStatus, cls: 'bg-gray-100 text-gray-600' };
                 const entityType = ENTITY_TYPE_MAP[activeSection];
                 const imgSrc = getItemImage(item);
                 const price = getItemPrice(item);
@@ -381,8 +413,8 @@ export default function MyListingsPage() {
                     {/* Actions menu */}
                     <ActionMenu
                       itemId={item.id}
-                      isActive={item.status === 'ACTIVE'}
-                      isExpired={item.status === 'EXPIRED' || item.status === 'SOLD'}
+                      isActive={itemStatus === 'ACTIVE' || itemStatus === 'OPEN'}
+                      isExpired={!isRequestSection && (itemStatus === 'EXPIRED' || itemStatus === 'SOLD')}
                       tp={tp}
                       onEdit={() => {
                         window.location.href = `/${locale}${getEditRoute(item.id)}`;

@@ -24,12 +24,12 @@ interface Paginated<T> {
 
 async function getHomeData() {
   const [featured, buses, parts, equipment, services, jobs] = await Promise.all([
-    serverFetch<ListingsResponse>('/listings?page=1&limit=4', { revalidate: 60, tags: ['listings'] }).catch(() => null),
-    serverFetch<Paginated<BusListingItem>>('/buses?page=1&limit=4', { revalidate: 60, tags: ['buses'] }).catch(() => null),
-    serverFetch<Paginated<SparePartItem>>('/parts?page=1&limit=4', { revalidate: 60, tags: ['parts'] }).catch(() => null),
-    serverFetch<Paginated<EquipmentListingItem>>('/equipment?page=1&limit=4', { revalidate: 60, tags: ['equipment'] }).catch(() => null),
-    serverFetch<Paginated<CarServiceItem>>('/services?page=1&limit=4', { revalidate: 60, tags: ['services'] }).catch(() => null),
-    serverFetch<JobsResponse>('/jobs?limit=6', { revalidate: 60, tags: ['jobs'] }).catch(() => null),
+    serverFetch<ListingsResponse>('/listings?page=1&limit=4', { revalidate: 60, tags: ['listings'] }).catch((e) => { console.error('Listings error:', e); return null; }),
+    serverFetch<Paginated<BusListingItem>>('/buses?page=1&limit=4', { revalidate: 60, tags: ['buses'] }).catch((e) => { console.error('Buses error:', e); return null; }),
+    serverFetch<Paginated<SparePartItem>>('/parts?page=1&limit=4', { revalidate: 60, tags: ['parts'] }).catch((e) => { console.error('Parts error:', e); return null; }),
+    serverFetch<Paginated<EquipmentListingItem>>('/equipment?page=1&limit=4', { revalidate: 60, tags: ['equipment'] }).catch((e) => { console.error('Equipment error:', e); return null; }),
+    serverFetch<Paginated<CarServiceItem>>('/services?page=1&limit=4', { revalidate: 60, tags: ['services'] }).catch((e) => { console.error('Services error:', e); return null; }),
+    serverFetch<JobsResponse>('/jobs?limit=6', { revalidate: 60, tags: ['jobs'] }).catch((e) => { console.error('Jobs error:', e); return null; }),
   ]);
   return { featured, buses, parts, equipment, services, jobs };
 }

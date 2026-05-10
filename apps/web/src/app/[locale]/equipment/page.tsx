@@ -1,5 +1,3 @@
-import { Navbar } from '@/components/layout/navbar';
-import { Footer } from '@/components/layout/footer';
 import { serverFetch } from '@/lib/server-fetch';
 import type { EquipmentListingItem, EquipmentRequestItem, OperatorListingItem } from '@/lib/api/equipment';
 import type { Metadata } from 'next';
@@ -39,15 +37,11 @@ export default async function EquipmentPage() {
   const { saleEquipment, rentalEquipment, operators, requests } = await getEquipmentData();
 
   return (
-    <>
-      <Navbar />
-      <EquipmentShell
-        saleEquipment={saleEquipment?.items ?? []}
-        rentalEquipment={rentalEquipment?.items ?? []}
-        operators={operators?.items ?? []}
-        requests={requests?.items ?? []}
-      />
-      <Footer />
-    </>
+    <EquipmentShell
+      saleEquipment={saleEquipment?.items ?? []}
+      rentalEquipment={rentalEquipment?.items ?? []}
+      operators={operators?.items ?? []}
+      requests={requests?.items ?? []}
+    />
   );
 }
