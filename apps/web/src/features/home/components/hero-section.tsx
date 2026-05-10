@@ -130,12 +130,12 @@ export function HeroSection() {
           </div>
 
           {/* Content overlay — outside overflow-hidden so dropdowns work */}
-          <div className="absolute inset-x-0 px-4 sm:px-8 lg:px-12 xl:px-16 pb-3 sm:pb-6 lg:pb-10 xl:pb-12 text-white flex flex-col items-center text-center z-20" style={{ bottom: '45px' }}>
-            <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-1 lg:mb-2">
+          <div className="absolute inset-x-0 px-2 sm:px-8 lg:px-12 xl:px-16 pb-2 sm:pb-6 lg:pb-10 xl:pb-12 text-white flex flex-col items-center text-center z-20" style={{ bottom: '30px' }}>
+            <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-1 lg:mb-2">
               <span className="text-white">منصة </span>
               <span className="bg-gradient-to-l from-[#e54d00] via-[#fe5e00] to-[#ff9a5c] bg-clip-text text-transparent">عمان الأولى</span>
             </h1>
-            <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-4 max-w-lg lg:max-w-xl">
+            <p className="text-[10px] sm:text-sm md:text-base lg:text-lg text-white/90 leading-snug mb-2 sm:mb-3 lg:mb-4 max-w-[90%] sm:max-w-lg lg:max-w-xl">
               {t('heroSubtitle')}
             </p>
 
@@ -143,11 +143,11 @@ export function HeroSection() {
               initial="hidden"
               animate="visible"
               variants={fadeUp}
-              className="mb-3 sm:mb-4 lg:mb-5 w-full max-w-[696px] lg:max-w-[792px]"
+              className="mb-2 sm:mb-4 lg:mb-5 w-[95%] sm:w-full max-w-[696px] lg:max-w-[792px]"
             >
               <form
                 onSubmit={handleSearch}
-                className="flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full border border-white/25 ps-4 sm:ps-5 pe-2 py-1.5 shadow-sm"
+                className="flex items-center gap-0.5 sm:gap-2 bg-white/15 backdrop-blur-md rounded-full border border-white/25 ps-2 sm:ps-5 pe-1 sm:pe-2 py-1 sm:py-1.5 shadow-sm"
               >
                 {/* Input — rightmost */}
                 <input
@@ -157,22 +157,22 @@ export function HeroSection() {
                   onChange={e => setQuery(e.target.value)}
                   placeholder={t('heroSearchPlaceholder')}
                   dir="rtl"
-                  className="flex-1 bg-transparent text-sm sm:text-base text-white placeholder:text-white/50 focus:outline-none min-w-0 text-right"
+                  className="flex-1 bg-transparent text-[10px] sm:text-base text-white placeholder:text-white/70 focus:outline-none min-w-0 text-right px-1"
                 />
 
                 {/* Separator */}
-                <span className="w-px h-5 bg-white/20 shrink-0 mx-0.5" />
+                <span className="w-px h-4 sm:h-5 bg-white/20 shrink-0 mx-0.5" />
 
                 {/* Category pill */}
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 h-8 sm:h-9 text-xs sm:text-sm font-bold text-white bg-white/20 rounded-full px-3 sm:px-4 hover:bg-white/30 transition-colors whitespace-nowrap shrink-0"
+                      className="flex items-center gap-1 sm:gap-1.5 h-6 sm:h-9 text-[9px] sm:text-sm font-bold text-white bg-white/20 rounded-full px-2 sm:px-4 hover:bg-white/30 transition-colors whitespace-nowrap shrink-0"
                     >
-                      <LayoutGrid className="w-4 h-4 shrink-0 text-white" strokeWidth={2.5} />
-                      <span>{selectedCat.label}</span>
-                      <ChevronDown className="w-3.5 h-3.5 shrink-0 text-white/70" strokeWidth={2.5} />
+                      <LayoutGrid className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 text-white" strokeWidth={2.5} />
+                      <span className="max-w-[45px] sm:max-w-none truncate">{selectedCat.label}</span>
+                      <ChevronDown className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 shrink-0 text-white/70" strokeWidth={2.5} />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
@@ -202,11 +202,11 @@ export function HeroSection() {
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 h-8 sm:h-9 text-xs sm:text-sm font-bold text-white bg-white/20 rounded-full px-3 sm:px-4 hover:bg-white/30 transition-colors whitespace-nowrap shrink-0"
+                      className="flex items-center gap-1 sm:gap-1.5 h-6 sm:h-9 text-[9px] sm:text-sm font-bold text-white bg-white/20 rounded-full px-2 sm:px-4 hover:bg-white/30 transition-colors whitespace-nowrap shrink-0"
                     >
-                      <MapPin className="w-4 h-4 shrink-0 text-white" strokeWidth={2.5} />
-                      <span>{selectedGov ? selectedGov.label : t('heroLocation')}</span>
-                      <ChevronDown className="w-3.5 h-3.5 shrink-0 text-white/70" strokeWidth={2.5} />
+                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 text-white" strokeWidth={2.5} />
+                      <span className="max-w-[40px] sm:max-w-none truncate">{selectedGov ? selectedGov.label : t('heroLocation')}</span>
+                      <ChevronDown className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 shrink-0 text-white/70" strokeWidth={2.5} />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
@@ -237,9 +237,9 @@ export function HeroSection() {
                 {/* Search button — leftmost */}
                 <button
                   type="submit"
-                  className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-primary rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all"
+                  className="shrink-0 w-6 h-6 sm:w-9 sm:h-9 bg-primary rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined text-on-primary text-[16px] sm:text-[18px]">search</span>
+                  <span className="material-symbols-outlined text-on-primary text-[14px] sm:text-[18px]">search</span>
                 </button>
               </form>
             </motion.div>
@@ -249,25 +249,21 @@ export function HeroSection() {
       </div>
 
       {/* ── Floating Category Bar ── */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 relative z-30 -mt-10 sm:-mt-12 lg:-mt-[70px]" style={{ paddingInline: '120px' }}>
-        <div className="bg-white dark:bg-surface-container rounded-2xl sm:rounded-3xl shadow-xl border border-outline-variant/10 overflow-hidden">
-          <div className="grid grid-cols-3 sm:grid-cols-6">
+      <div className="w-[95%] sm:max-w-7xl mx-auto px-0 sm:px-6 relative z-30 -mt-6 sm:-mt-12 lg:-mt-[70px]">
+        <div className="bg-white dark:bg-surface-container rounded-xl sm:rounded-3xl shadow-xl border border-outline-variant/10 overflow-hidden">
+          <div className="grid grid-cols-6 divide-x divide-x-reverse divide-outline-variant/10">
             {FLOAT_CATS.map((cat, i) => (
               <Link
                 key={cat.href}
                 href={cat.href}
-                className={`group flex flex-col items-center justify-center gap-1 sm:gap-1 py-2 sm:py-2.5 px-1 text-center hover:bg-primary/5 transition-colors ${
-                  i < 5 ? 'border-e border-outline-variant/10' : ''
-                } ${
-                  i >= 3 ? 'border-t sm:border-t-0 border-outline-variant/10' : ''
-                }`}
+                className="group flex flex-col items-center justify-center gap-0.5 sm:gap-1 py-1.5 sm:py-2.5 px-0.5 sm:px-1 text-center hover:bg-primary/5 transition-colors"
               >
-                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-primary/8 dark:bg-primary/15 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                  <span className="material-symbols-outlined text-primary text-[20px] sm:text-[24px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24" }}>{cat.icon}</span>
+                <div className="w-6 h-6 sm:w-11 sm:h-11 rounded-lg sm:rounded-2xl bg-primary/8 dark:bg-primary/15 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                  <span className="material-symbols-outlined text-primary text-[14px] sm:text-[24px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24" }}>{cat.icon}</span>
                 </div>
-                <div>
-                  <p className="text-[11px] sm:text-xs font-black text-on-surface leading-tight">{cat.label}</p>
-                  <p className="text-[9px] sm:text-[10px] text-on-surface-variant/60 leading-tight mt-0.5">{cat.sub}</p>
+                <div className="flex flex-col items-center w-full overflow-hidden">
+                  <p className="text-[7.5px] sm:text-xs font-black text-on-surface leading-tight truncate w-full">{cat.label}</p>
+                  <p className="text-[6px] sm:text-[10px] text-on-surface-variant/60 leading-[1] mt-[1px] sm:mt-0.5 truncate w-full">{cat.sub}</p>
                 </div>
               </Link>
             ))}

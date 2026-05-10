@@ -10,6 +10,10 @@ import {
   Search,
   Briefcase,
   Users,
+  Hammer,
+  ClipboardList,
+  HardHat,
+  PlusCircle,
 } from 'lucide-react'
 
 // ── Transport links ──────────────────────────────────────────────
@@ -19,6 +23,15 @@ const TRANSPORT_LINKS = [
   { href: '/transport/my-quotes',          label: 'عروضي',          icon: MessageSquare },
   { href: '/transport/carriers/dashboard', label: 'لوحة الناقل',   icon: LayoutDashboard },
   { href: '/transport/carriers/register',  label: 'سجّل كناقل',    icon: Truck },
+]
+
+// ── Equipment links ──────────────────────────────────────────────
+const EQUIPMENT_LINKS = [
+  { href: '/equipment',             label: 'الرئيسية',       icon: Hammer },
+  { href: '/browse/equipment',      label: 'تصفح المعدات',  icon: Search },
+  { href: '/equipment/requests',    label: 'الطلبات',       icon: ClipboardList },
+  { href: '/equipment/operators',   label: 'المشغّلون',      icon: HardHat },
+  { href: '/add-listing/equipment', label: 'أضف معدة',     icon: PlusCircle },
 ]
 
 // ── Jobs links ────────────────────────────────────────────────────
@@ -31,8 +44,17 @@ const JOBS_LINKS = [
   { href: '/jobs/dashboard',    label: 'لوحة التحكم',   icon: LayoutDashboard },
 ]
 
+// ── Active link helper ───────────────────────────────────────────
+function isLinkActive(href: string, pathname: string): boolean {
+  if (href === '/equipment' || href === '/jobs' || href === '/transport') {
+    return pathname === href
+  }
+  return pathname === href || pathname.startsWith(href + '/')
+}
+
 // ── Route → links mapping ────────────────────────────────────────
 function getLinksForPath(pathname: string) {
+  if (/\/equipment(\/|$)/.test(pathname)) return EQUIPMENT_LINKS
   if (pathname.includes('/transport')) return TRANSPORT_LINKS
   if (pathname.includes('/jobs')) return JOBS_LINKS
   return null
@@ -52,7 +74,7 @@ export default function SubNavBar() {
         className="bg-white/90 backdrop-blur-md shadow-lg rounded-full px-3 md:px-6 py-2 md:py-3 flex items-center gap-1.5 md:gap-4 border border-gray-200 overflow-x-auto scrollbar-hide"
       >
         {links.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href + '/')
+          const isActive = isLinkActive(href, pathname)
           return (
             <Link
               key={href}
