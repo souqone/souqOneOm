@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/auth'
+import { apiRequest, apiFetch } from '@/lib/auth'
 import type {
   TransportRequest,
   TransportQuote,
@@ -104,11 +104,21 @@ export const transportApi = {
 
   // ── Carrier Profile ──────────────────────────────
 
-  createCarrierProfile(dto: CreateCarrierProfileDto) {
-    return apiRequest<CarrierProfile>('/transport/carrier-profile', {
+  async createCarrierProfile(dto: CreateCarrierProfileDto) {
+    const res = await apiFetch('/transport/carrier-profile', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
     })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      const err = Object.assign(
+        new Error(data?.message || data?.error || 'SERVER_ERROR'),
+        { status: res.status },
+      )
+      throw err
+    }
+    return data as CarrierProfile
   },
 
   getMyCarrierProfile() {
