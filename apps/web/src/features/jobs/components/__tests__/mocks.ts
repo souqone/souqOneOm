@@ -67,5 +67,6 @@ export const mockFilters = {
   employmentType: '',
   licenseType: '',
   governorate: '',
+  wilayat: '',
   sortBy: 'createdAt_desc',
 }

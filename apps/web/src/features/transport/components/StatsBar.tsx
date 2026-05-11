@@ -1,49 +1,45 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { FileText, ShieldCheck, MapPin, CheckCircle } from 'lucide-react';
-import { STATS } from '../constants';
+import { transportApi } from '../api';
+import { OMAN_GOVERNORATES } from '../constants';
 
-const STAT_ITEMS = [
-  {
-    key: 'activeRequests',
-    label: 'طلب نشط',
-    icon: FileText,
-    color: '#2563eb',
-    bg: 'rgba(37,99,235,0.08)',
-    value: STATS.activeRequests.toLocaleString('en-US'),
-  },
-  {
-    key: 'verifiedCarriers',
-    label: 'مزود موثّق',
-    icon: ShieldCheck,
-    color: '#16a34a',
-    bg: 'rgba(22,163,74,0.08)',
-    value: STATS.verifiedCarriers.toLocaleString('en-US'),
-  },
-  {
-    key: 'governoratesServed',
-    label: 'محافظة مخدومة',
-    icon: MapPin,
-    color: '#d97706',
-    bg: 'rgba(217,119,6,0.08)',
-    value: STATS.governoratesServed.toLocaleString('en-US'),
-  },
-  {
-    key: 'completedTrips',
-    label: 'رحلة مكتملة',
-    icon: CheckCircle,
-    color: '#7c3aed',
-    bg: 'rgba(124,58,237,0.08)',
-    value: STATS.completedTrips.toLocaleString('en-US'),
-  },
-];
+const GOVERNORATES_COUNT = OMAN_GOVERNORATES.length;
+
+const STAT_CONFIG = [
+  { key: 'activeRequests',    label: 'طلب نشط',         icon: FileText,    color: '#2563eb', bg: 'rgba(37,99,235,0.08)'   },
+  { key: 'verifiedCarriers',  label: 'مزود موثّق',       icon: ShieldCheck, color: '#16a34a', bg: 'rgba(22,163,74,0.08)'   },
+  { key: 'governoratesServed',label: 'محافظة مخدومة',    icon: MapPin,      color: '#d97706', bg: 'rgba(217,119,6,0.08)'   },
+  { key: 'completedTrips',    label: 'رحلة مكتملة',      icon: CheckCircle, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)'  },
+] as const;
+
+type StatsKey = (typeof STAT_CONFIG)[number]['key'];
 
 export default function StatsBar() {
+  const [values, setValues] = useState<Record<StatsKey, number>>({
+    activeRequests: 0,
+    verifiedCarriers: 0,
+    governoratesServed: GOVERNORATES_COUNT,
+    completedTrips: 0,
+  });
+
+  useEffect(() => {
+    transportApi.getStats().then((data) => {
+      setValues((prev) => ({
+        ...prev,
+        activeRequests: data.activeRequests,
+        verifiedCarriers: data.verifiedCarriers,
+        completedTrips: data.completedTrips,
+      }));
+    }).catch(() => {});
+  }, []);
+
   return (
     <section className="py-5 sm:py-8 px-4" dir="rtl">
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          {STAT_ITEMS.map((item) => {
+          {STAT_CONFIG.map((item) => {
             const Icon = item.icon;
             return (
               <div
@@ -60,7 +56,7 @@ export default function StatsBar() {
                 </div>
                 <div>
                   <p className="text-base sm:text-lg font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-                    {item.value}
+                    {values[item.key].toLocaleString('en-US')}
                   </p>
                   <p className="text-[10px] sm:text-[11px] text-[var(--color-on-surface-variant)]">{item.label}</p>
                 </div>

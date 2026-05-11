@@ -34,6 +34,7 @@ export function RentalSection({ items, isLoading }: RentalSectionProps) {
           items={items}
           mapItem={transformCar}
           isLoading={isLoading}
+          hideContactButtons
           emptyIcon="car_rental"
           emptyMessage={tp('rentalEmpty')}
           emptyAction={{ label: tp('rentalAddCar'), href: '/add-listing' }}

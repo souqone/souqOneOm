@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { EditListingClient } from './client';
 
-const SUPPORTED_TYPES = ['bus', 'equipment', 'parts', 'service', 'operator'];
+const SUPPORTED_TYPES = ['car', 'job', 'bus', 'equipment', 'parts', 'service', 'operator'];
 
 interface Props {
   params: Promise<{ type: string; id: string }>;

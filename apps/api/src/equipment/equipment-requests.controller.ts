@@ -1,7 +1,8 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards,
+  UseGuards, UseInterceptors, UploadedFiles,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
@@ -36,6 +37,20 @@ export class EquipmentRequestsController {
     return this.reqSvc.my(user.sub);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('my/bids')
+  myBids(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.reqSvc.findMyBids(
+      user.sub,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.reqSvc.findOne(id);
@@ -62,6 +77,17 @@ export class EquipmentRequestsController {
   // ─── Bids ───
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/images')
+  @UseInterceptors(FilesInterceptor('files', 5, { limits: { fileSize: 10 * 1024 * 1024 } }))
+  addImages(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.reqSvc.addImages(id, user.sub, files);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':id/bids')
   createBid(@Param('id') id: string, @Body() dto: CreateEquipmentBidDto, @CurrentUser() user: JwtPayload) {
     return this.bidSvc.create(id, dto, user.sub);
@@ -77,5 +103,11 @@ export class EquipmentRequestsController {
   @Patch(':id/bids/:bidId/reject')
   rejectBid(@Param('id') id: string, @Param('bidId') bidId: string, @CurrentUser() user: JwtPayload) {
     return this.bidSvc.reject(id, bidId, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/bids/:bidId/withdraw')
+  withdrawBid(@Param('id') id: string, @Param('bidId') bidId: string, @CurrentUser() user: JwtPayload) {
+    return this.bidSvc.withdraw(id, bidId, user.sub);
   }
 }

@@ -207,7 +207,7 @@ export class TransportQuoteService {
     return { message: 'تم سحب العرض بنجاح' };
   }
 
-  async getMyQuotes(userId: string, page = 1, limit = DEFAULT_LIMIT) {
+  async getMyQuotes(userId: string, page = 1, limit = DEFAULT_LIMIT, status?: string) {
     const carrier = await this.prisma.carrierProfile.findUnique({ where: { userId } });
     if (!carrier) throw new NotFoundException('يجب إنشاء ملف ناقل أولاً');
 
@@ -215,7 +215,10 @@ export class TransportQuoteService {
     limit = Math.min(MAX_LIMIT, Math.max(1, limit));
     const skip = (page - 1) * limit;
 
-    const where = { carrierId: carrier.id };
+    const where: Prisma.TransportQuoteWhereInput = {
+      carrierId: carrier.id,
+      ...(status ? { status: status as Prisma.EnumQuoteStatusFilter } : {}),
+    };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.transportQuote.findMany({

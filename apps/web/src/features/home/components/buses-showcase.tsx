@@ -55,6 +55,7 @@ export function BusesShowcase({ items, isLoading }: BusesShowcaseProps) {
               items={items}
               mapItem={transformBus}
               isLoading={isLoading}
+              hideContactButtons
               emptyIcon="directions_bus"
               emptyMessage={t('noBusesNow')}
             />

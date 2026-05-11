@@ -55,6 +55,7 @@ export function ServicesShowcase({ items, isLoading }: ServicesShowcaseProps) {
               items={items.slice(0, 8)}
               mapItem={transformService}
               isLoading={isLoading}
+              hideContactButtons
               emptyIcon="build"
               emptyMessage={t('noServicesNow')}
             />

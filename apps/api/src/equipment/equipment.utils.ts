@@ -5,3 +5,4 @@
 export { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
 
 export const MAX_IMAGES_PER_LISTING = 10;
+export const MAX_IMAGES_PER_REQUEST = 5;

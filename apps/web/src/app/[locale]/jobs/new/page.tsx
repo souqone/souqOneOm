@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, Suspense } from 'react';
+import { AuthGuard } from '@/components/auth-guard';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -521,8 +522,10 @@ function CreateJobContent() {
 
 export default function CreateJobPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-on-surface-variant">{STRINGS.LOADING}</div>}>
-      <CreateJobContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="p-8 text-center text-on-surface-variant">{STRINGS.LOADING}</div>}>
+        <CreateJobContent />
+      </Suspense>
+    </AuthGuard>
   )
 }

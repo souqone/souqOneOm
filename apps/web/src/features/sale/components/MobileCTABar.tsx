@@ -6,8 +6,8 @@
 'use client';
 
 import { memo } from 'react';
-import { MessageCircle, Phone } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { MessageCircle, Phone, Tag } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 import type { UnifiedListing } from '../types/unified.types';
 
 interface MobileCTABarProps {
@@ -15,6 +15,7 @@ interface MobileCTABarProps {
   onMessage: () => void;
   onWhatsApp: () => void;
   onCall?: () => void;
+  visible?: boolean;
 }
 
 export const MobileCTABar = memo(function MobileCTABar({
@@ -22,35 +23,47 @@ export const MobileCTABar = memo(function MobileCTABar({
   onMessage,
   onWhatsApp,
   onCall,
+  visible = true,
 }: MobileCTABarProps) {
   const ts = useTranslations('sale');
+  const locale = useLocale();
   const hasWhatsApp = Boolean(listing.seller.whatsapp);
   const hasPhone = Boolean(listing.seller.phone);
+  const currencyLabel = locale === 'ar' ? 'ر.ع' : listing.currency;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-background/95 backdrop-blur-sm border-t border-outline-variant/30 px-4 py-3 pb-[env(safe-area-inset-bottom)]">
+    <div
+      className={`fixed inset-x-0 z-40 lg:hidden bg-background/95 backdrop-blur-sm border-b border-outline-variant/30 px-4 py-3 shadow-md transition-all duration-300 ${
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+      }`}
+      style={{ top: 56 }}
+      dir="ltr"
+    >
       {/* Price row */}
-      <div className="flex items-baseline gap-1 mb-2">
+      <div className="flex items-center gap-2 mb-2 flex-wrap" dir="ltr">
         {listing.type === 'bus' && listing.busData?.contractMonthly ? (
-          <>
-            <span className="text-[16px] font-bold text-on-surface">
+          <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
+            <span className="text-[10px] font-bold opacity-60">{currencyLabel} </span>
+            <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
               {Number(listing.busData.contractMonthly).toLocaleString('en-US')}
             </span>
-            <span className="text-[12px] text-on-surface-variant">{listing.currency}</span>
             <span className="text-[10px] text-on-surface-variant ms-1">/ {ts('contractMonthlyLabel')}</span>
-          </>
+          </span>
         ) : !listing.price || listing.price <= 0 ? (
           <span className="text-[14px] font-bold text-on-surface">{ts('contactForPrice')}</span>
         ) : (
-          <>
-            <span className="text-[16px] font-bold text-on-surface">
+          <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
+            <span className="text-[10px] font-bold opacity-60">{currencyLabel} </span>
+            <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
               {listing.price.toLocaleString('en-US')}
             </span>
-            <span className="text-[12px] text-on-surface-variant">{listing.currency}</span>
-            {listing.negotiable && (
-              <span className="text-[10px] text-emerald-600 ms-1">{ts('negotiableLabel')}</span>
-            )}
-          </>
+          </span>
+        )}
+        {listing.negotiable && (
+          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 font-medium">
+            <Tag size={9} />
+            {ts('negotiableLabel')}
+          </span>
         )}
       </div>
 

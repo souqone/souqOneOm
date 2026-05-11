@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Truck,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { VehicleType, TransportServiceType } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
+import { AuthGuard } from '@/components/auth-guard';
 import {
   VEHICLE_TYPE_LABELS,
   SERVICE_TYPE_LABELS,
@@ -45,6 +46,31 @@ export default function CarrierRegistrationPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // ── FIX 1: Pre-check — redirect if profile already exists ──────────────
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    transportApi.getMyCarrierProfile()
+      .then(() => {
+        if (!cancelled) router.replace('/transport/carriers/dashboard');
+      })
+      .catch(() => {
+        // 404 / any error → no profile → show the form
+        if (!cancelled) setCheckingProfile(false);
+      });
+    return () => { cancelled = true; };
+  }, [router]);
+
+  if (checkingProfile) {
+    return (
+      <div className="flex-1 min-h-[60vh] flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[var(--color-brand-navy)]" />
+      </div>
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   const toggleVehicle = (v: VehicleType) => {
     setVehicleTypes((prev) =>
       prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
@@ -73,6 +99,10 @@ export default function CarrierRegistrationPage() {
     }
     setSubmitting(true);
     setError('');
+
+    // FIX 3 flag: keep button disabled on 409 (no retry allowed)
+    let isConflict = false;
+
     try {
       await transportApi.createCarrierProfile({
         companyName: companyName || undefined,
@@ -85,12 +115,23 @@ export default function CarrierRegistrationPage() {
       });
       setSuccess(true);
       setTimeout(() => router.push('/transport/carriers/dashboard'), 2000);
-    } catch {
-      setError('حدث خطأ أثناء التسجيل. حاول مجدداً.');
+    } catch (err) {
+      // ── FIX 2: Distinguish 409 from generic errors ──────────────────────
+      const status = (err as { status?: number })?.status;
+      if (status === 409) {
+        isConflict = true;
+        setError('لديك ملف ناقل مسجّل بالفعل. جارٍ تحويلك للوحة التحكم...');
+        setTimeout(() => router.replace('/transport/carriers/dashboard'), 2000);
+      } else {
+        setError('حدث خطأ أثناء التسجيل. يرجى التحقق من اتصالك والمحاولة لاحقاً.');
+      }
+      // ────────────────────────────────────────────────────────────────────
     } finally {
-      setSubmitting(false);
+      // FIX 3: On 409, button stays disabled — user should follow the redirect
+      if (!isConflict) setSubmitting(false);
     }
   };
+
 
   if (success) {
     return (
@@ -108,6 +149,7 @@ export default function CarrierRegistrationPage() {
   }
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
       <div className="max-w-screen-md mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
@@ -300,5 +342,6 @@ export default function CarrierRegistrationPage() {
         </form>
       </div>
     </div>
+    </AuthGuard>
   );
 }

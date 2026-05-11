@@ -7,8 +7,6 @@ import {
   ArrowRight,
   CheckCircle,
   Circle,
-  Loader2,
-  AlertCircle,
   MapPin,
   Package,
   Calendar,
@@ -19,6 +17,7 @@ import {
   Clock,
   Banknote,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import type { TransportBooking, TransportRequest, TransportQuote, CarrierProfile, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -29,14 +28,11 @@ import {
   SERVICE_TYPE_LABELS,
 } from '@/features/transport/constants';
 import { formatRelativeDate, formatScheduledDate } from '@/lib/utils';
+import { AuthGuard } from '@/components/auth-guard';
+import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
 
 const BOOKING_STEPS = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
-const BOOKING_STEP_LABELS: Record<string, string> = {
-  ACCEPTED: 'تم القبول',
-  IN_PROGRESS: 'جارٍ التنفيذ',
-  COMPLETED: 'مكتمل',
-};
 
 function BookingTimeline({ status }: { status: string }) {
   const currentIdx = BOOKING_STEPS.indexOf(status as (typeof BOOKING_STEPS)[number]);
@@ -70,7 +66,7 @@ function BookingTimeline({ status }: { status: string }) {
                     : 'text-[var(--color-on-surface-muted)]'
                 }`}
               >
-                {BOOKING_STEP_LABELS[step]}
+                {BOOKING_STATUS_LABELS[step as BookingStatus] ?? step}
               </span>
             </div>
             {idx < BOOKING_STEPS.length - 1 && (
@@ -163,31 +159,9 @@ export default function BookingDetailPage() {
   const isCarrier = user?.role === 'CARRIER';
   const isShipper = !isCarrier;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-[var(--color-brand-navy)]" />
-          <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ التحميل...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <TransportPageLoader />;
 
-  if (error || !booking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="flex flex-col items-center gap-4 text-center px-4">
-          <AlertCircle size={40} className="text-[var(--color-error)]" />
-          <p className="text-base font-semibold">{error || 'الحجز غير موجود'}</p>
-          <Link href="/transport/my-requests" className="btn-primary">
-            <ArrowRight size={16} />
-            طلباتي
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (error || !booking) return <TransportPageError message={error || 'الحجز غير موجود'} />;
 
   const statusColorMap: Record<string, string> = {
     ACCEPTED: 'var(--color-status-accepted)',
@@ -199,6 +173,7 @@ export default function BookingDetailPage() {
   const statusColor = statusColorMap[booking.status] ?? 'var(--color-on-surface-muted)';
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
       <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Back */}
@@ -427,5 +402,6 @@ export default function BookingDetailPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

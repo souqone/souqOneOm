@@ -149,6 +149,15 @@ export const REQUEST_STATUS_LABELS: Record<TransportRequestStatus, string> = {
   EXPIRED: 'منتهي الصلاحية',
 }
 
+// ─── Quote Status Styles ──────────────────────────
+
+export const QUOTE_STATUS_STYLES: Record<QuoteStatus, { bg: string; text: string; border: string }> = {
+  PENDING:   { bg: 'var(--color-warning-light)',        text: 'var(--color-warning)',        border: 'rgba(217,119,6,0.3)'   },
+  ACCEPTED:  { bg: 'var(--color-success-light)',        text: 'var(--color-success)',        border: 'rgba(22,163,74,0.3)'   },
+  REJECTED:  { bg: 'var(--color-error-light)',          text: 'var(--color-error)',          border: 'rgba(220,38,38,0.3)'   },
+  WITHDRAWN: { bg: 'var(--color-surface-container)',    text: 'var(--color-on-surface-muted)', border: 'var(--color-outline)' },
+}
+
 // ─── Quote Status Labels ──────────────────────────
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -171,11 +180,3 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
 
 export const CURRENCY_LABEL = 'ر.ع.'
 
-// ─── Stats (for landing page StatsBar) ───────────
-
-export const STATS = {
-  activeRequests: 1247,
-  verifiedCarriers: 389,
-  governoratesServed: 18,
-  completedTrips: 8432,
-}

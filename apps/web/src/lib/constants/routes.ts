@@ -45,10 +45,7 @@ export const ROUTES = {
     user: (id: string) => `/profile/${id}`,
     seller: (id: string) => `/seller/${id}`,
   },
-  dashboard: {
-    driver: '/dashboard/driver',
-    employer: '/dashboard/employer',
-  },
+
   addListing: (type: string) => `/add-listing/${type}`,
   editListing: (type: string, id: string) => `/edit-listing/${type}/${id}`,
   auth: {

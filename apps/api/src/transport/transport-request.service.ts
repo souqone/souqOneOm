@@ -202,12 +202,15 @@ export class TransportRequestService {
     return updated;
   }
 
-  async myRequests(userId: string, page = 1, limit = DEFAULT_LIMIT) {
+  async myRequests(userId: string, page = 1, limit = DEFAULT_LIMIT, status?: string) {
     page = Math.max(1, page);
     limit = Math.min(MAX_LIMIT, Math.max(1, limit));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.TransportRequestWhereInput = { userId };
+    const where: Prisma.TransportRequestWhereInput = {
+      userId,
+      ...(status ? { status: status as Prisma.EnumTransportRequestStatusFilter } : {}),
+    };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.transportRequest.findMany({

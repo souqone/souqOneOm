@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { Search, ArrowLeft, ArrowRight, ChevronLeft, Wrench, HardHat, Package, Users, Plus, Sparkles, MapPin } from 'lucide-react';
@@ -88,11 +88,37 @@ interface EquipmentShellProps {
 export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requests }: EquipmentShellProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const typesRef = useRef<HTMLDivElement>(null);
+  const typesDragRef = useRef({ isDragging: false, startX: 0, scrollLeft: 0 });
 
   const scrollTypes = (dir: 'left' | 'right') => {
     if (!typesRef.current) return;
     typesRef.current.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
   };
+
+  const onTypesMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = typesRef.current;
+    if (!el) return;
+    typesDragRef.current = { isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+    el.style.cursor = 'grabbing';
+    el.style.userSelect = 'none';
+  }, []);
+
+  const onTypesMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!typesDragRef.current.isDragging) return;
+    const el = typesRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    el.scrollLeft = typesDragRef.current.scrollLeft - (x - typesDragRef.current.startX) * 1.5;
+  }, []);
+
+  const onTypesMouseUp = useCallback(() => {
+    const el = typesRef.current;
+    if (!el) return;
+    typesDragRef.current.isDragging = false;
+    el.style.cursor = 'grab';
+    el.style.userSelect = '';
+  }, []);
 
   return (
     <main className="min-h-screen bg-background">
@@ -175,9 +201,9 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
               {/* Stats as trust badges */}
               <div className="flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-3 flex-wrap">
                 {[
-                  { label: 'معدة للبيع', value: `+${saleEquipment.length > 0 ? '500' : '0'}` },
-                  { label: 'معدة للإيجار', value: `+${rentalEquipment.length > 0 ? '200' : '0'}` },
-                  { label: 'مشغل معتمد', value: `+${operators.length > 0 ? '50' : '0'}` },
+                  { label: 'معدة للبيع', value: `${saleEquipment.length}+` },
+                  { label: 'معدة للإيجار', value: `${rentalEquipment.length}+` },
+                  { label: 'مشغل متاح', value: `${operators.length}+` },
                 ].map((stat) => (
                   <span key={stat.label} className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2 py-1 sm:px-2.5 sm:py-1 lg:px-3 lg:py-1.5">
                     {stat.value} {stat.label}
@@ -235,8 +261,11 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
 
         <div
           ref={typesRef}
-          className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 scroll-smooth"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth cursor-grab active:cursor-grabbing"
+          onMouseDown={onTypesMouseDown}
+          onMouseMove={onTypesMouseMove}
+          onMouseUp={onTypesMouseUp}
+          onMouseLeave={onTypesMouseUp}
         >
           {EQUIP_TYPES.map((type) => (
             <Link
@@ -275,7 +304,7 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
           {saleEquipment.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {saleEquipment.map((item) => (
-                <UnifiedCard key={item.id} item={normalizeEquipment(item)} />
+                <UnifiedCard key={item.id} item={normalizeEquipment(item)} hideContactButtons />
               ))}
             </div>
           ) : (
@@ -309,7 +338,7 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
           {rentalEquipment.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {rentalEquipment.map((item) => (
-                <UnifiedCard key={item.id} item={normalizeEquipment(item)} />
+                <UnifiedCard key={item.id} item={normalizeEquipment(item)} hideContactButtons />
               ))}
             </div>
           ) : (
@@ -335,10 +364,15 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
                   <p className="text-[12px] text-on-surface-variant mt-0.5">طلبات مفتوحة تنتظر عروضك</p>
                 </div>
               </div>
-              <Link href="/equipment/requests/new" className="text-[13px] text-blue-600 font-bold hover:underline flex items-center gap-1">
-                أضف طلب
-                <ChevronLeft size={16} />
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link href="/equipment/requests" className="text-[13px] text-on-surface-variant hover:underline flex items-center gap-1">
+                  عرض الكل
+                </Link>
+                <Link href="/equipment/requests/new" className="text-[13px] text-blue-600 font-bold hover:underline flex items-center gap-1">
+                  أضف طلب
+                  <ChevronLeft size={16} />
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -395,7 +429,7 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
                   <p className="text-[12px] text-on-surface-variant mt-0.5">سائقين وفنيين محترفين</p>
                 </div>
               </div>
-              <Link href="/browse/equipment?tab=operators" className="text-[13px] text-purple-600 font-bold hover:underline flex items-center gap-1">
+              <Link href="/equipment/operators" className="text-[13px] text-purple-600 font-bold hover:underline flex items-center gap-1">
                 عرض الكل
                 <ChevronLeft size={16} />
               </Link>

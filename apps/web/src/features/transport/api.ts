@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/auth'
+import { apiRequest, apiFetch } from '@/lib/auth'
 import type {
   TransportRequest,
   TransportQuote,
@@ -40,10 +40,9 @@ export const transportApi = {
     })
   },
 
-  myRequests(page = 1, limit = 12) {
-    return apiRequest<PaginatedResponse<TransportRequest>>(
-      `/transport/requests/my?page=${page}&limit=${limit}`,
-    )
+  myRequests(page = 1, limit = 12, status?: string) {
+    const q = qs({ page, limit, ...(status ? { status } : {}) })
+    return apiRequest<PaginatedResponse<TransportRequest>>(`/transport/requests/my${q}`)
   },
 
   cancelRequest(id: string) {
@@ -71,10 +70,9 @@ export const transportApi = {
     return apiRequest<TransportQuote>(`/transport/quotes/${quoteId}/withdraw`, { method: 'PATCH' })
   },
 
-  myQuotes(page = 1, limit = 12) {
-    return apiRequest<PaginatedResponse<TransportQuote>>(
-      `/transport/quotes/my?page=${page}&limit=${limit}`,
-    )
+  myQuotes(page = 1, limit = 12, status?: string) {
+    const q = qs({ page, limit, ...(status ? { status } : {}) })
+    return apiRequest<PaginatedResponse<TransportQuote>>(`/transport/quotes/my${q}`)
   },
 
   // ── Bookings ─────────────────────────────────────
@@ -106,11 +104,21 @@ export const transportApi = {
 
   // ── Carrier Profile ──────────────────────────────
 
-  createCarrierProfile(dto: CreateCarrierProfileDto) {
-    return apiRequest<CarrierProfile>('/transport/carrier-profile', {
+  async createCarrierProfile(dto: CreateCarrierProfileDto) {
+    const res = await apiFetch('/transport/carrier-profile', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
     })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      const err = Object.assign(
+        new Error(data?.message || data?.error || 'SERVER_ERROR'),
+        { status: res.status },
+      )
+      throw err
+    }
+    return data as CarrierProfile
   },
 
   getMyCarrierProfile() {
@@ -137,5 +145,11 @@ export const transportApi = {
 
   getCarrier(id: string) {
     return apiRequest<CarrierProfile>(`/transport/carriers/${id}`)
+  },
+
+  getStats() {
+    return apiRequest<{ activeRequests: number; verifiedCarriers: number; completedTrips: number }>(
+      '/transport/stats',
+    )
   },
 }
