@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
-import { PartForm } from './PartForm';
+import { PartFormShell } from './part/PartFormShell';
 
 export function AddPartForm() {
-  return <PartForm mode="add" />;
+  return <PartFormShell mode="add" />;
 }

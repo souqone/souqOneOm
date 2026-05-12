@@ -9,7 +9,7 @@ import { useSearch } from '@/providers/search-provider';
 export function BottomNav() {
   const t = useTranslations('common');
 
-  const NAV_ITEMS = [
+  const NAV_ITEMS: Array<{ href: string; label: string; icon: string; authRequired?: boolean; accent?: boolean }> = [
     { href: '/notifications', label: t('notifications'), icon: 'notifications', authRequired: true },
     { href: '/messages', label: t('messages'), icon: 'chat', authRequired: true },
     { href: '/add-listing', label: t('addListing'), icon: 'add_circle', accent: true },

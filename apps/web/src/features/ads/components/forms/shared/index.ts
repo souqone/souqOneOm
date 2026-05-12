@@ -11,3 +11,6 @@ export { FormPhoneInput } from './FormPhoneInput';
 export { FormPriceInput } from './FormPriceInput';
 export { FormSubmitBar } from './FormSubmitBar';
 export { FormErrorDisplay } from './FormErrorDisplay';
+export { LocationSection } from './LocationSection';
+export { ExistingImagesGrid } from './ExistingImagesGrid';
+export { ContactSection } from './ContactSection';

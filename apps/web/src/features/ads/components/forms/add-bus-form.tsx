@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
-import { BusForm } from './BusForm';
+import { BusFormShell } from './bus/BusFormShell';
 
 export function AddBusForm() {
-  return <BusForm mode="add" />;
+  return <BusFormShell mode="add" />;
 }

@@ -55,12 +55,20 @@ export default function JobCard({ job }: JobCardProps) {
 
         {/* Poster + Location */}
         <div className="flex items-center gap-1.5 text-sm text-on-surface-variant mb-2">
-          <div className={cn(
-            'w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0',
-            getAvatarColor(job.userId)
-          )}>
-            {getInitials(poster)}
-          </div>
+          {job.user.avatarUrl ? (
+            <img
+              src={job.user.avatarUrl}
+              alt={poster ?? ''}
+              className="w-5 h-5 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div className={cn(
+              'w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0',
+              getAvatarColor(job.userId)
+            )}>
+              {getInitials(poster)}
+            </div>
+          )}
           <span className="truncate font-bold text-on-surface">{poster}</span>
           <span className="text-outline">·</span>
           <MapPin size={12} className="shrink-0" />

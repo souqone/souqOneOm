@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
-import { OperatorForm } from './OperatorForm';
+import { OperatorFormShell } from './operator/OperatorFormShell';
 
 export function AddOperatorForm() {
-  return <OperatorForm mode="add" />;
+  return <OperatorFormShell mode="add" />;
 }

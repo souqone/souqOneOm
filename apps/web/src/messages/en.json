@@ -1680,6 +1680,8 @@
     "lfWeeklyPrice": "Weekly Price (OMR)",
     "lfMonthlyPrice": "Monthly Price (OMR)",
     "lfDepositAmount": "Deposit Amount (OMR)",
+    "lfAvailableFrom": "Available From",
+    "lfAvailableTo": "Available Until",
     "lfLocationTitle": "Location",
     "lfCountry": "Country",
     "lfSelectCountry": "Select country",
