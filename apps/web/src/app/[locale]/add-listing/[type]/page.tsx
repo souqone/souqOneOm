@@ -30,8 +30,8 @@ export default function AddListingByTypePage() {
   return (
     <AuthGuard>
       <Navbar />
-      <main className="pt-[75px] pb-8 max-w-[900px] mx-auto px-4 md:px-8">
-        <Suspense fallback={<div className="animate-pulse bg-surface-container-low h-96 rounded-3xl" />}>
+      <main className="pt-[75px] pb-12 px-4">
+        <Suspense fallback={<div className="animate-pulse bg-[var(--color-surface-container)] h-96 rounded-3xl max-w-2xl mx-auto" />}>
           <FormComponent />
         </Suspense>
       </main>

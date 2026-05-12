@@ -10,8 +10,8 @@ export default function LatestRequests() {
   const { data, isLoading, isError } = useRequests({ limit: 6, sortBy: 'createdAt', sortOrder: 'desc' });
 
   return (
-    <section className="py-8 sm:py-12 px-4" dir="rtl">
-      <div className="max-w-5xl mx-auto">
+    <section className="py-8 sm:py-12" dir="rtl">
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>

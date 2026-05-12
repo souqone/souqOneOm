@@ -172,21 +172,21 @@ export function ImageUploader({
             flex flex-col items-center justify-center gap-3
             transition-all cursor-pointer
             ${dragOver
-              ? 'border-primary bg-primary/5 scale-[1.01]'
-              : 'border-outline-variant/40 hover:border-primary/50 hover:bg-surface-container-low'}
+              ? 'border-[var(--color-brand-navy)] bg-[var(--color-brand-navy)]/5 scale-[1.01]'
+              : 'border-[var(--color-outline-variant)]/40 hover:border-[var(--color-brand-navy)]/50 hover:bg-[var(--color-surface-container)]'}
             ${disabled ? 'opacity-50 pointer-events-none' : ''}
           `}
         >
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-3xl">
+          <div className="w-14 h-14 rounded-2xl bg-[var(--color-brand-navy)]/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-[var(--color-brand-navy)] text-3xl">
               add_photo_alternate
             </span>
           </div>
           <div className="text-center">
-            <p className="font-bold text-on-surface text-sm">
+            <p className="font-bold text-[var(--color-on-surface)] text-sm">
               {tp('imgUploadDrag')}
             </p>
-            <p className="text-on-surface-variant text-xs mt-1">
+            <p className="text-[var(--color-on-surface-variant)] text-xs mt-1">
               {tp('imgUploadHint', { current: images.length, max: maxImages })}
             </p>
           </div>
@@ -214,7 +214,7 @@ export function ImageUploader({
               className={`
                 relative group aspect-square rounded-xl overflow-hidden
                 border-2 transition-all cursor-grab active:cursor-grabbing
-                ${img.isPrimary ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}
+                ${img.isPrimary ? 'border-[var(--color-brand-navy)] ring-2 ring-[var(--color-brand-navy)]/20' : 'border-transparent'}
                 ${dragIndex === index ? 'opacity-50 scale-95' : 'opacity-100'}
               `}
             >
@@ -235,7 +235,7 @@ export function ImageUploader({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setPrimary(index); }}
-                    className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center text-primary hover:bg-white transition-colors"
+                    className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center text-[var(--color-brand-navy)] hover:bg-white transition-colors"
                     title={tp('imgUploadSetPrimary')}
                   >
                     <span className="material-symbols-outlined text-lg">star</span>
@@ -257,7 +257,7 @@ export function ImageUploader({
 
               {/* Primary Badge */}
               {img.isPrimary && (
-                <div className="absolute top-2 end-2 bg-primary text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                <div className="absolute top-2 end-2 bg-[var(--color-brand-navy)] text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
                   {tp('imgUploadPrimary')}
                 </div>
               )}
@@ -269,8 +269,8 @@ export function ImageUploader({
 
               {/* Upload Progress (for new files) */}
               {img.file && !img.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary/20">
-                  <div className="h-full bg-primary animate-pulse w-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--color-brand-navy)]/20">
+                  <div className="h-full bg-[var(--color-brand-navy)] animate-pulse w-full" />
                 </div>
               )}
             </div>
@@ -279,7 +279,7 @@ export function ImageUploader({
       )}
 
       {images.length > 1 && (
-        <p className="text-xs text-on-surface-variant">
+        <p className="text-xs text-[var(--color-on-surface-variant)]">
           <span className="material-symbols-outlined text-sm align-text-bottom ms-1">drag_indicator</span>
           {tp('imgUploadReorder')}
         </p>

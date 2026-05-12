@@ -70,7 +70,7 @@ export default function PublicCarrierProfilePage() {
         </div>
 
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
-          <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
                 <img
@@ -112,7 +112,7 @@ export default function PublicCarrierProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
           {/* Main */}
           <div className="flex flex-col gap-5">

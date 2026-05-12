@@ -29,7 +29,7 @@ export function FormPhoneInput({
       </label>
 
       <div className="flex items-center gap-0">
-        <span className="shrink-0 flex items-center gap-1 px-3 h-[46px] rounded-s-xl border border-e-0 border-outline-variant/20 bg-surface-container-low dark:bg-surface-container-high text-sm font-semibold text-on-surface-variant select-none">
+        <span className="shrink-0 flex items-center gap-1 px-3 h-[46px] rounded-s-xl border border-e-0 border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm font-semibold text-[var(--color-on-surface-variant)] select-none">
           🇴🇲 +968
         </span>
         <input

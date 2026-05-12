@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { Check } from 'lucide-react';
 
 export interface StepConfig {
   label: string;
@@ -19,6 +20,7 @@ interface MultiStepFormProps {
   canProceed?: boolean;
   children: ReactNode;
   title?: string;
+  subtitle?: string;
 }
 
 export function MultiStepForm({
@@ -32,123 +34,129 @@ export function MultiStepForm({
   canProceed = true,
   children,
   title,
+  subtitle,
 }: MultiStepFormProps) {
   const tp = useTranslations('pages');
   const isLast = currentStep === steps.length - 1;
   const isFirst = currentStep === 0;
-  const progress = ((currentStep + 1) / steps.length) * 100;
+
+  const wizardStep = currentStep + 1;
+  const totalSteps = steps.length;
+  const progressPercent = totalSteps > 1 ? ((wizardStep - 1) / (totalSteps - 1)) * 100 : 100;
 
   return (
-    <div className="w-full">
-      {/* ── Gradient Hero Header ── */}
-      <div className="relative overflow-hidden rounded-2xl mb-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#004ac6] via-[#2563eb] to-[#0B2447]" />
-        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20v20H0zm20 20h20v20H20z\' fill=\'%23fff\' fill-opacity=\'.4\'/%3E%3C/svg%3E")', backgroundSize: '40px 40px' }} />
-        <div className="absolute top-[-50%] left-[-10%] w-[300px] h-[300px] rounded-full bg-white/[0.04] blur-3xl" />
-
-        <div className="relative z-10 px-4 sm:px-6 md:px-8 pt-5 sm:pt-8 pb-5 sm:pb-6">
-          {/* Title */}
-          {title && (
-            <h1 className="text-base sm:text-xl md:text-2xl font-black text-white mb-5 sm:mb-6 text-center drop-shadow-sm">{title}</h1>
+    <div className="w-full max-w-2xl mx-auto" data-testid="form-shell">
+      {/* ── Page Title ── */}
+      {title && (
+        <div className="mb-6">
+          <h1 className="text-xl font-black text-[var(--color-on-surface)] text-center">{title}</h1>
+          {subtitle && (
+            <p className="text-sm text-[var(--color-on-surface-variant)] mt-1 text-center">{subtitle}</p>
           )}
+        </div>
+      )}
 
-          {/* Steps — uses flex with equal columns for perfect alignment */}
-          <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${steps.length * 2 - 1}, auto)`, justifyContent: 'center', alignItems: 'start' }}>
-            {steps.map((step, i) => {
-              const done = i < currentStep;
-              const active = i === currentStep;
-              return (
-                <div key={i} className="contents">
-                  {/* Step circle + label */}
-                  <div className="flex flex-col items-center min-w-0 px-1 sm:px-2">
-                    <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-xs sm:text-sm font-black shrink-0 transition-all duration-300 ${
-                        done
-                          ? 'bg-white text-primary shadow-lg'
-                          : active
-                            ? 'bg-white text-primary shadow-lg scale-110'
-                            : 'bg-white/15 text-white/60 backdrop-blur-sm'
-                      }`}
-                    >
-                      {done ? <span className="material-symbols-outlined text-sm sm:text-base">check_circle</span> : i + 1}
-                    </div>
-                    <span
-                      className={`mt-1.5 text-[9px] sm:text-[11px] font-bold text-center leading-tight max-w-[80px] sm:max-w-[120px] transition-colors ${
-                        active || done ? 'text-white' : 'text-white/40'
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                  {/* Connector line */}
-                  {i < steps.length - 1 && (
-                    <div className="flex items-center self-center pt-0 mt-[4px] sm:mt-[5px]" style={{ height: '32px' }}>
-                      <div className={`w-5 sm:w-14 lg:w-24 h-[2px] rounded-full transition-colors duration-500 ${
-                        i < currentStep ? 'bg-white/70' : 'bg-white/15'
-                      }`} />
-                    </div>
-                  )}
+      {/* ── WizardProgress ── */}
+      <div className="mb-6">
+        {/* Amber progress bar */}
+        <div className="h-1.5 bg-[var(--color-surface-container-high)] rounded-full mb-5 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progressPercent}%`,
+              background: 'linear-gradient(90deg, var(--color-brand-amber) 0%, #f59e0b 100%)',
+            }}
+          />
+        </div>
+
+        {/* Step dots */}
+        <div className="flex items-start justify-center gap-0">
+          {steps.map((step, index) => {
+            const stepNum = index + 1;
+            const isCompleted = stepNum < wizardStep;
+            const isCurrent = stepNum === wizardStep;
+            return (
+              <div key={index} className="flex flex-col items-center gap-1.5 flex-1 px-1">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                    isCompleted
+                      ? 'bg-[var(--color-brand-green)] text-white shadow-sm'
+                      : isCurrent
+                      ? 'bg-[var(--color-brand-navy)] text-white shadow-md ring-4 ring-[var(--color-brand-navy)]/20'
+                      : 'bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-muted)]'
+                  }`}
+                >
+                  {isCompleted ? <Check size={14} /> : stepNum}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-4 sm:mt-5 bg-white/10 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+                <span
+                  className={`text-[10px] font-semibold text-center leading-tight ${
+                    isCurrent
+                      ? 'text-[var(--color-brand-navy)]'
+                      : isCompleted
+                      ? 'text-[var(--color-brand-green)]'
+                      : 'text-[var(--color-on-surface-muted)]'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Step Content ── */}
-      <div className="min-h-[300px]">
+      {/* ── Card: content + navigation ── */}
+      <div className="card-base p-5 sm:p-6">
+        {/* Step content */}
         {children}
-      </div>
 
-      {/* ── Navigation ── */}
-      <div className="flex items-center justify-between mt-8 mb-28 sm:mb-8 gap-3 bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 rounded-2xl p-3 sm:p-4">
-        {!isFirst ? (
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-on-surface-variant hover:text-on-surface bg-surface-container-low dark:bg-surface-container-high hover:bg-surface-container rounded-xl transition-all disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined icon-flip text-sm">chevron_right</span>
-            {tp('multiStepPrev')}
-          </button>
-        ) : (
-          <div />
-        )}
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className="text-xs text-on-surface-variant font-medium hidden sm:inline">
-            {tp('multiStepOf', { current: currentStep + 1, total: steps.length })}
-          </span>
-          {isLast ? (
+        {/* Navigation — inside card with border-t separator */}
+        <div className="flex items-center justify-between mt-8 pt-5 border-t border-[var(--color-outline-variant)]">
+          {!isFirst ? (
             <button
               type="button"
-              onClick={onSubmit}
-              disabled={isLoading || !canProceed}
-              className="flex items-center gap-1.5 px-4 sm:px-7 py-2.5 text-xs sm:text-sm font-black bg-primary text-on-primary rounded-xl hover:brightness-110 active:scale-[0.97] transition-all shadow-lg disabled:opacity-50 disabled:shadow-none"
+              onClick={onBack}
+              disabled={isLoading}
+              data-testid="back-button"
+              className="px-5 py-2.5 rounded-xl border border-[var(--color-outline-variant)] text-sm font-bold text-[var(--color-on-surface-variant)] disabled:opacity-40 hover:bg-[var(--color-surface-container)] transition-colors flex items-center gap-1.5"
             >
-              {isLoading && <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>}
-              {isLoading ? tp('multiStepSaving') : (submitLabel || tp('multiStepSubmit'))}
+              <span className="material-symbols-outlined icon-flip text-sm">chevron_right</span>
+              {tp('multiStepPrev')}
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={!canProceed}
-              className="flex items-center gap-1.5 px-4 sm:px-7 py-2.5 text-xs sm:text-sm font-black bg-primary text-on-primary rounded-xl hover:brightness-110 active:scale-[0.97] transition-all shadow-lg disabled:opacity-50 disabled:shadow-none"
-            >
-              {tp('multiStepNext')}
-              <span className="material-symbols-outlined icon-flip text-sm">chevron_left</span>
-            </button>
+            <div />
           )}
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-xs text-[var(--color-on-surface-muted)] hidden sm:inline">
+              {tp('multiStepOf', { current: currentStep + 1, total: steps.length })}
+            </span>
+            {isLast ? (
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={isLoading || !canProceed}
+                data-testid="submit-button"
+                className="btn-navy px-6 py-2.5 text-sm disabled:opacity-60 active:scale-[0.97]"
+              >
+                {isLoading && (
+                  <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                )}
+                {isLoading ? tp('multiStepSaving') : (submitLabel || tp('multiStepSubmit'))}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onNext}
+                disabled={!canProceed}
+                data-testid="next-button"
+                className="btn-navy px-6 py-2.5 text-sm disabled:opacity-50 active:scale-[0.97]"
+              >
+                {tp('multiStepNext')}
+                <span className="material-symbols-outlined icon-flip text-sm">chevron_left</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

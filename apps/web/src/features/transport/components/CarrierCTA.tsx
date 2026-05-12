@@ -22,8 +22,8 @@ export default function CarrierCTA() {
     { icon: TrendingUp, label: 'رحلة مكتملة', value: completedTrips.toLocaleString('en-US'), color: '#7c3aed' },
   ];
   return (
-    <section className="py-10 sm:py-16 px-4" dir="rtl">
-      <div className="max-w-5xl mx-auto">
+    <section className="py-10 sm:py-16" dir="rtl">
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
         <div className="gradient-navy rounded-2xl sm:rounded-3xl p-5 sm:p-12 text-white overflow-hidden relative">
           {/* Decorative circles */}
           <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />

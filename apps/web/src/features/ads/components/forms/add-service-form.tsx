@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
-import { ServiceForm } from './ServiceForm';
+import { ServiceFormShell } from './service/ServiceFormShell';
 
 export function AddServiceForm() {
-  return <ServiceForm mode="add" />;
+  return <ServiceFormShell mode="add" />;
 }

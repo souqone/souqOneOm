@@ -63,15 +63,15 @@ export function FormChipGroup({
 
   const chipBaseCls = `rounded-full font-semibold transition-all border cursor-pointer select-none ${sizeCls}`;
   const chipActiveCls =
-    'bg-primary text-on-primary border-primary shadow-[0_2px_8px_rgba(0,74,198,0.25)]';
+    'bg-[var(--color-brand-navy)] text-white border-[var(--color-brand-navy)] shadow-[0_2px_8px_rgba(11,36,71,0.25)]';
   const chipInactiveCls =
-    'bg-surface-container-low dark:bg-surface-container-high/50 border-outline-variant/15 dark:border-outline-variant/25 text-on-surface-variant hover:border-primary/40 hover:bg-primary/5 hover:text-on-surface';
+    'bg-[var(--color-surface-container)] border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)] hover:border-[var(--color-brand-navy)]/40 hover:bg-[var(--color-brand-navy)]/5 hover:text-[var(--color-on-surface)]';
 
   const cardBaseCls =
     'flex flex-col items-start gap-1 p-4 rounded-2xl border-2 transition-all text-start cursor-pointer select-none';
-  const cardActiveCls = 'border-primary bg-primary/5 dark:bg-primary/10';
+  const cardActiveCls = 'border-[var(--color-brand-navy)] bg-[var(--color-brand-navy)]/5';
   const cardInactiveCls =
-    'border-outline-variant/20 hover:border-outline-variant/40 bg-surface-container-lowest dark:bg-surface-container';
+    'border-[var(--color-outline-variant)] hover:border-[var(--color-outline-variant)]/60 bg-[var(--color-surface-container-lowest)]';
 
   const gridLayout = columns === 'auto' ? 'flex flex-wrap gap-2' : `grid gap-2 ${gridColsCls[columns]}`;
 
@@ -98,15 +98,15 @@ export function FormChipGroup({
                 {opt.icon && (
                   <span
                     className={`material-symbols-outlined text-2xl mt-0.5 ${
-                      active ? 'text-primary' : 'text-on-surface-variant'
+                      active ? 'text-[var(--color-brand-navy)]' : 'text-[var(--color-on-surface-variant)]'
                     }`}
                   >
                     {opt.icon}
                   </span>
                 )}
-                <p className="font-black text-on-surface text-sm">{opt.label}</p>
+                <p className="font-black text-[var(--color-on-surface)] text-sm">{opt.label}</p>
                 {opt.desc && (
-                  <p className="text-xs text-on-surface-variant">{opt.desc}</p>
+                  <p className="text-xs text-[var(--color-on-surface-variant)]">{opt.desc}</p>
                 )}
               </button>
             );

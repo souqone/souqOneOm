@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Truck, ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, AlertCircle, Package, MessageSquare, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, Package, MessageSquare, Loader2 } from 'lucide-react';
 import type { CarrierProfile, TransportRequest, TransportQuote } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import {
@@ -16,10 +17,10 @@ import { formatRelativeDate, formatBudgetRange } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { TransportPageLoader } from '@/features/transport/components/TransportPageState';
 
-export default function CarrierDashboardPage() {
+function CarrierDashboardContent() {
+  const router = useRouter();
   const [profile, setProfile] = useState<CarrierProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState('');
   const [nearbyRequests, setNearbyRequests] = useState<TransportRequest[]>([]);
@@ -28,7 +29,6 @@ export default function CarrierDashboardPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      setError('');
       try {
         const [p, reqRes, quotesRes] = await Promise.all([
           transportApi.getMyCarrierProfile(),
@@ -39,13 +39,19 @@ export default function CarrierDashboardPage() {
         setNearbyRequests(reqRes.items);
         setRecentQuotes(quotesRes.items.slice(0, 5));
       } catch {
-        setError('تعذّر تحميل لوحة التحكم');
+        // profile load failed → auto-redirect to register via useEffect
       } finally {
         setLoading(false);
       }
     };
     load();
   }, []);
+
+  useEffect(() => {
+    if (!loading && !profile) {
+      router.replace('/transport/carriers/register');
+    }
+  }, [loading, profile, router]);
 
   const handleToggleAvailability = async () => {
     if (!profile) return;
@@ -63,27 +69,13 @@ export default function CarrierDashboardPage() {
 
   if (loading) return <TransportPageLoader />;
 
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" dir="rtl">
-        <div className="flex flex-col items-center gap-4 text-center px-4">
-          <AlertCircle size={40} className="text-[var(--color-error)]" />
-          <p className="text-base font-semibold">{error || 'لا يوجد ملف ناقل'}</p>
-          <Link href="/transport/carriers/register" className="btn-primary">
-            <Truck size={16} />
-            سجّل كناقل
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!profile) return <TransportPageLoader />;
 
   const acceptedQuotes = recentQuotes.filter((q) => q.status === 'ACCEPTED').length;
 
   return (
-    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div>
@@ -342,6 +334,13 @@ export default function CarrierDashboardPage() {
       )}
       </div>
     </div>
+  );
+}
+
+export default function CarrierDashboardPage() {
+  return (
+    <AuthGuard>
+      <CarrierDashboardContent />
     </AuthGuard>
   );
 }

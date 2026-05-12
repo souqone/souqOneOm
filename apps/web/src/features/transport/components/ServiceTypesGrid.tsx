@@ -64,8 +64,8 @@ const SERVICE_CARDS: {
 
 export default function ServiceTypesGrid() {
   return (
-    <section className="py-8 sm:py-12 px-4" dir="rtl">
-      <div className="max-w-5xl mx-auto">
+    <section className="py-8 sm:py-12" dir="rtl">
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
         <div className="text-center mb-5 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-on-surface)] mb-2">
             أنواع خدمات النقل
