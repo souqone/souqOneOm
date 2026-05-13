@@ -26,14 +26,14 @@ export function FormSubmitBar({
   const isSubmit = isLastStep || !onNext;
 
   return (
-    <div className="sticky bottom-0 z-30 bg-surface/95 dark:bg-surface/95 backdrop-blur-sm border-t border-outline-variant/10 py-4 px-4">
+    <div className="sticky bottom-0 z-30 backdrop-blur-sm border-t border-[var(--color-outline-variant)] py-4 px-4" style={{ background: 'color-mix(in srgb, var(--color-surface) 95%, transparent)' }}>
       <div className="max-w-[900px] mx-auto flex items-center gap-3">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
             disabled={isLoading}
-            className="flex items-center gap-1.5 px-5 py-3 rounded-2xl text-sm font-bold text-on-surface-variant border border-outline-variant/20 bg-surface-container-low hover:bg-surface-container transition-all disabled:opacity-50 shrink-0"
+            className="flex items-center gap-1.5 px-5 py-3 rounded-2xl text-sm font-bold text-[var(--color-on-surface-variant)] border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] hover:bg-[var(--color-surface-container-high)] transition-all disabled:opacity-50 shrink-0"
           >
             <span className="material-symbols-outlined text-base icon-flip">arrow_forward</span>
             {backLabel}
@@ -45,7 +45,7 @@ export function FormSubmitBar({
             type={onNext ? 'button' : 'submit'}
             onClick={onNext}
             disabled={isLoading || !canProceed}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-black bg-primary text-on-primary hover:brightness-110 transition-all disabled:opacity-50 shadow-lg"
+            className="btn-navy flex-1 justify-center py-3 text-sm disabled:opacity-50"
           >
             {isLoading ? (
               <>
@@ -66,7 +66,7 @@ export function FormSubmitBar({
             type="button"
             onClick={onNext}
             disabled={isLoading || !canProceed}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-black bg-primary text-on-primary hover:brightness-110 transition-all disabled:opacity-50 shadow-lg"
+            className="btn-navy flex-1 justify-center py-3 text-sm disabled:opacity-50"
           >
             {nextLabel}
             <span className="material-symbols-outlined text-base icon-flip">arrow_forward</span>

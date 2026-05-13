@@ -46,7 +46,7 @@ export function FeaturedShowroom({ items, isLoading }: FeaturedShowroomProps) {
               <p className="text-on-surface-variant text-xs sm:text-sm">{t('latestCarsDesc')}</p>
             </div>
             <Link
-              href="/browse/cars"
+              href="/cars/browse"
               className="text-primary font-bold text-xs sm:text-sm hover:underline transition-colors"
             >
               {t('viewAll')}

@@ -1,4 +1,3 @@
-export { HeroSection } from './components/hero-section';
 export { CategoriesSection } from './components/categories-section';
 export { FeaturedShowroom } from './components/featured-showroom';
 export { BusesShowcase } from './components/buses-showcase';

@@ -59,11 +59,13 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '', hid
   const serverSaved = isFav(favoriteKey)
   const [localSaved, setLocalSaved] = useState(onSave ? isSaved : serverSaved)
   const selectedImage = item.images[selectedImageIndex] ?? item.images[0]
-  const thumbnails = item.images.length >= 5 ? item.images.slice(0, 4) : []
-  const visibleDetails = [
-    ...(item.secondaryBadge ? [{ icon: 'Tag', value: item.secondaryBadge.label }] : []),
-    ...item.details,
-  ].slice(0, 5)
+  const thumbnails = item.images.length >= 3 ? item.images.slice(0, 4) : []
+  const visibleDetails = item.category === 'cars'
+    ? item.details.slice(0, 4)
+    : [
+        ...(item.secondaryBadge ? [{ icon: 'Tag', value: item.secondaryBadge.label }] : []),
+        ...item.details,
+      ].slice(0, 4)
   const fallbackPriceText = item.priceText ?? (item.price == null && item.priceLabel ? item.priceLabel : null)
   const countryLabel = getCountryLabel(
     typeof item.attributes?.country === 'string' && item.attributes.country ? item.attributes.country : 'OM',
@@ -128,9 +130,9 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '', hid
           <RibbonBadge
             label={item.primaryBadge.label}
             intent={BADGE_INTENT[item.primaryBadge.color]}
-            icon="none"
+            size="lg"
             position="top-start"
-            className="absolute top-0 start-0"
+            className="absolute top-0 start-0 scale-[0.9] origin-top-right translate-x-[2px] -translate-y-[1px]"
           />
         )}
 
@@ -206,7 +208,7 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '', hid
 
         {/* Details */}
         {visibleDetails.length > 0 && (
-          <div className="mb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
             {visibleDetails.map((detail, i) => (
               <DetailChip key={i} icon={detail.icon} value={detail.value} />
             ))}
@@ -258,7 +260,7 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '', hid
               <a
                 href={`tel:${item.phoneNumber}`}
                 onClick={e => e.stopPropagation()}
-                className="flex flex-1 items-center justify-center gap-1.5 h-8 rounded-lg bg-primary text-on-primary text-[12px] font-bold hover:brightness-110 transition-all duration-150 active:scale-95"
+                className="flex flex-1 items-center justify-center gap-1.5 h-8 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 text-[12px] font-semibold hover:bg-sky-100 transition-colors"
               >
                 <Phone size={13} />
                 <span>اتصال</span>
@@ -270,7 +272,7 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '', hid
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
-                className="flex flex-1 items-center justify-center gap-1.5 h-8 rounded-lg bg-[#25D366] text-white text-[12px] font-bold hover:brightness-110 transition-all duration-150 active:scale-95"
+                className="flex flex-1 items-center justify-center gap-1.5 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[12px] font-semibold hover:bg-emerald-100 transition-colors"
               >
                 <MessageCircle size={13} />
                 <span>واتساب</span>

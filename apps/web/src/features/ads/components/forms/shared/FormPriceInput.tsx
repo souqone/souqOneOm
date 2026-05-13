@@ -53,7 +53,7 @@ export function FormPriceInput({
           dir="ltr"
           className={`${inputCls} [appearance:textfield] rounded-e-none`}
         />
-        <span className="shrink-0 flex items-center h-[46px] px-3 rounded-e-xl border border-s-0 border-outline-variant/20 bg-surface-container-low dark:bg-surface-container-high text-sm font-semibold text-on-surface-variant select-none">
+        <span className="shrink-0 flex items-center h-[46px] px-3 rounded-e-xl border border-s-0 border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm font-semibold text-[var(--color-on-surface-variant)] select-none">
           ر.ع
         </span>
       </div>

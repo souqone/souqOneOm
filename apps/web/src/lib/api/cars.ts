@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../auth';
+import type { ListingItem } from './listings';
 
 export interface CarBrand {
   id: string;
@@ -56,5 +57,34 @@ export function useCarYears(modelId: string) {
     queryFn: () => apiRequest<CarYearItem[]>(`/cars/models/${modelId}/years`),
     enabled: !!modelId,
     staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useCarListing(id: string) {
+  return useQuery<ListingItem>({
+    queryKey: ['listing', id],
+    queryFn: () => apiRequest<ListingItem>(`/listings/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useCreateCarListing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      apiRequest<ListingItem>('/listings', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['listings'] }),
+  });
+}
+
+export function useUpdateCarListing(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      apiRequest<ListingItem>(`/listings/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['listings'] });
+      qc.invalidateQueries({ queryKey: ['listing', id] });
+    },
   });
 }

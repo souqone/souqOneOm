@@ -14,6 +14,10 @@ import {
   ClipboardList,
   HardHat,
   PlusCircle,
+  Car,
+  Key,
+  Settings,
+  Wrench,
 } from 'lucide-react'
 
 // ── Transport links ──────────────────────────────────────────────
@@ -34,6 +38,16 @@ const EQUIPMENT_LINKS = [
   { href: '/add-listing/equipment', label: 'أضف معدة',     icon: PlusCircle },
 ]
 
+// ── Cars links ──────────────────────────────────────────────────
+const CARS_LINKS = [
+  { href: '/cars',                              label: 'الرئيسية',        icon: Car      },
+  { href: '/cars/browse',                       label: 'سيارات للبيع',   icon: Search   },
+  { href: '/cars/browse?listingType=RENTAL',    label: 'سيارات للإيجار', icon: Key      },
+  { href: '/browse/parts',                      label: 'قطع الغيار',     icon: Settings },
+  { href: '/browse/services',                   label: 'خدمات السيارات', icon: Wrench   },
+  { href: '/cars/new',                          label: 'أضف إعلان',      icon: PlusCircle },
+]
+
 // ── Jobs links ────────────────────────────────────────────────────
 const JOBS_LINKS = [
   { href: '/jobs',              label: 'الوظائف',       icon: Briefcase },
@@ -46,9 +60,10 @@ const JOBS_LINKS = [
 
 // ── Active link helper ───────────────────────────────────────────
 function isLinkActive(href: string, pathname: string): boolean {
-  if (href === '/equipment' || href === '/jobs' || href === '/transport') {
+  if (href === '/equipment' || href === '/jobs' || href === '/transport' || href === '/cars') {
     return pathname === href
   }
+  if (href.includes('?')) return false
   return pathname === href || pathname.startsWith(href + '/')
 }
 
@@ -57,6 +72,7 @@ function getLinksForPath(pathname: string) {
   if (/\/equipment(\/|$)/.test(pathname)) return EQUIPMENT_LINKS
   if (pathname.includes('/transport')) return TRANSPORT_LINKS
   if (pathname.includes('/jobs')) return JOBS_LINKS
+  if (/\/cars(\/|$)/.test(pathname)) return CARS_LINKS
   return null
 }
 

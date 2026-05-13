@@ -25,6 +25,13 @@ const nextConfig = {
       // Legacy /search routes → unified /browse
       { source: '/:locale/search', destination: '/:locale/browse', permanent: true },
       { source: '/:locale/search/:path*', destination: '/:locale/browse', permanent: true },
+      // Cars section: old paths → new /cars/* paths
+      { source: '/:locale/motors', destination: '/:locale/cars', permanent: true },
+      { source: '/:locale/browse/cars', destination: '/:locale/cars/browse', permanent: true },
+      { source: '/:locale/sale/car/:id', destination: '/:locale/cars/sale/:id', permanent: true },
+      { source: '/:locale/rental/car/:id', destination: '/:locale/cars/rental/:id', permanent: true },
+      { source: '/:locale/add-listing/car', destination: '/:locale/cars/new', permanent: true },
+      { source: '/:locale/edit-listing/car/:id', destination: '/:locale/cars/:id/edit', permanent: true },
     ];
   },
 };

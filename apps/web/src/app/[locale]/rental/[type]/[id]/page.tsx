@@ -3,6 +3,7 @@
  * Provides OG metadata for WhatsApp / social sharing.
  */
 
+import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { serverFetch } from '@/lib/server-fetch';
 import { getPrimaryImage } from '@/lib/utils/get-primary-image';
@@ -82,6 +83,8 @@ export async function generateMetadata({
   }
 }
 
-export default function RentalPage() {
+export default async function RentalPage({ params }: { params: Promise<{ type: string; id: string }> }) {
+  const { type, id } = await params;
+  if (type === 'car') redirect(`/cars/rental/${id}`);
   return <RentalDetailClient />;
 }

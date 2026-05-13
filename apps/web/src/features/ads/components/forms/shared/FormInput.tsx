@@ -43,7 +43,7 @@ export function FormInput({
   const hasSuffix = !!suffix;
 
   const sharedBoxCls =
-    'shrink-0 flex items-center h-[46px] px-3 border border-outline-variant/20 bg-surface-container-low dark:bg-surface-container-high text-sm font-semibold text-on-surface-variant select-none';
+    'shrink-0 flex items-center h-[46px] px-3 border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm font-semibold text-[var(--color-on-surface-variant)] select-none';
 
   const inputExtraCls = [
     type === 'number' ? '[appearance:textfield]' : '',

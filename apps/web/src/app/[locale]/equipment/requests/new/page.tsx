@@ -32,9 +32,9 @@ const EQUIP_TYPES = [
   { value: 'OTHER_EQUIPMENT', key: 'eqrTypeOther', icon: 'category' },
 ];
 
-const sectionCls = 'bg-surface-container-lowest dark:bg-surface-container rounded-2xl p-5 border border-outline-variant/10';
-const labelCls = 'block text-sm font-bold text-on-surface mb-1.5';
-const inputCls = 'w-full bg-surface-container-low dark:bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
+const sectionCls = 'card-base p-5';
+const labelCls = 'block text-sm font-bold text-[var(--color-on-surface)] mb-1.5';
+const inputCls = 'input-base text-sm';
 
 export default function NewEquipmentRequestPage() {
   const tp = useTranslations('pages');
@@ -136,8 +136,8 @@ export default function NewEquipmentRequestPage() {
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {EQUIP_TYPES.map(eq => (
                   <button key={eq.value} type="button" onClick={() => setEquipmentType(eq.value)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-center ${equipmentType === eq.value ? 'border-primary bg-primary/5' : 'border-outline-variant/10 hover:border-primary/30'}`}>
-                    <span className="material-symbols-outlined text-xl text-primary">{eq.icon}</span>
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-center ${equipmentType === eq.value ? 'border-[var(--color-brand-navy)] bg-[var(--color-brand-navy)]/5' : 'border-[var(--color-outline-variant)] hover:border-[var(--color-brand-navy)]/30'}`}>
+                    <span className="material-symbols-outlined text-xl text-[var(--color-brand-navy)]">{eq.icon}</span>
                     <span className="text-[10px] font-bold">{tp(eq.key)}</span>
                   </button>
                 ))}

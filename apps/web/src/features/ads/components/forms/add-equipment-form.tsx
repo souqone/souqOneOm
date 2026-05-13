@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
-import { EquipmentForm } from './EquipmentForm';
+import { EquipmentFormShell } from './equipment/EquipmentFormShell';
 
 export function AddEquipmentForm() {
-  return <EquipmentForm mode="add" />;
+  return <EquipmentFormShell mode="add" />;
 }

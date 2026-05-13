@@ -79,7 +79,7 @@ export function ListingCard({ item }: ListingCardProps) {
   const plan = typeof item.attributes?.plan === 'string' ? item.attributes.plan.toUpperCase() : null
   const isElite = plan === 'ELITE'
   const isPremium = isElite || plan === 'PREMIUM' || plan === 'FEATURED' || item.attributes?.isPremium === true
-  const frameClass = isElite ? ELITE_FRAME_CLS : isPremium ? PREMIUM_FRAME_CLS : 'border-outline-variant/30 hover:border-red-400/50 hover:shadow-[0_2px_16px_rgba(0,0,0,0.09)]'
+  const frameClass = isElite ? ELITE_FRAME_CLS : isPremium ? PREMIUM_FRAME_CLS : 'border-outline-variant/30 hover:border-primary/30 hover:shadow-[0_2px_16px_rgba(0,0,0,0.09)]'
   const shineClass = isElite ? ELITE_SHINE_CLS : isPremium ? PREMIUM_SHINE_CLS : ''
 
   // ── Mobile scale: render card at fixed desktop width, then scale to fit ──
@@ -262,7 +262,7 @@ export function ListingCard({ item }: ListingCardProps) {
         {/* Price */}
         <div className="flex justify-end">
           {item.price && item.price > 0 ? (
-            <p className="text-[20px] font-black text-red-500 leading-none">
+            <p className="text-[20px] font-black text-primary leading-none">
               {item.price.toLocaleString('en-US')}
               <span className="text-[11px] font-normal text-on-surface-variant mr-1.5">
                 {item.currency === 'OMR' ? t('currencyUnit') : item.currency}

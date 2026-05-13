@@ -44,6 +44,7 @@ import {
   getRequestStatusBadgeClass,
 } from '@/lib/utils';
 import { useAuth } from '@/providers/auth-provider';
+import { useAuthModal } from '@/providers/auth-modal-provider';
 
 const RouteMapView = dynamic(
   () => import('@/features/transport/components/RouteMapView'),
@@ -279,6 +280,7 @@ export default function RequestDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { open: openAuth } = useAuthModal();
   const id = params?.id as string;
 
   const [request, setRequest] = useState<TransportRequest | null>(null);
@@ -353,7 +355,7 @@ export default function RequestDetailPage() {
   }
 
   const isOwner = user?.id === request.userId;
-  const isCarrier = user?.role === 'CARRIER' || !!user?.id;
+  const isCarrier = user?.role === 'CARRIER';
   const quotes = request.quotes ?? [];
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
   const hasAlreadyQuoted = quotes.some((q) => q.carrierId === user?.id);
@@ -369,7 +371,7 @@ export default function RequestDetailPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
 
         {/* Back */}
         <div className="mb-4">
@@ -612,12 +614,15 @@ export default function RequestDetailPage() {
                 ) : !user ? (
                   <div className="flex flex-col gap-3 text-center">
                     <p className="text-sm text-[var(--color-on-surface-muted)]">
-                      سجّل دخولك لتقديم عرض سعر
+                      سجّل دخولك لتقديم عرض سعر كناقل
                     </p>
-                    <Link href="/transport/carriers/register" className="btn-primary w-full justify-center">
+                    <button
+                      onClick={() => openAuth({ message: 'سجّل دخولك لتقديم عرض سعر كناقل' })}
+                      className="btn-primary w-full justify-center"
+                    >
                       <Truck size={15} />
-                      سجّل كناقل
-                    </Link>
+                      تسجيل الدخول
+                    </button>
                   </div>
                 ) : (
                   canSubmitQuote && (

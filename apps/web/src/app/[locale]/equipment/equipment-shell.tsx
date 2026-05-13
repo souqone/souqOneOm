@@ -1,78 +1,88 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import { useMemo } from 'react';
 import { Link } from '@/i18n/navigation';
-import { Search, ArrowLeft, ArrowRight, ChevronLeft, Wrench, HardHat, Package, Users, Plus, Sparkles, MapPin } from 'lucide-react';
+import {
+  Wrench, HardHat, Package, Users, Plus, MapPin, ArrowLeft,
+  Search, Shield, Star, BadgeCheck, TrendingUp,
+  Zap, Truck, Wind, Droplets, RefreshCw,
+} from 'lucide-react';
 import type { EquipmentListingItem, EquipmentRequestItem, OperatorListingItem } from '@/lib/api/equipment';
 import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
-import { normalizeEquipment } from '@/features/listings/config/categories.config';
+import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
+import type { UnifiedListingItem } from '@/features/listings/types/unified-item.types';
 
-// ── Neon Typing Animation ────────────────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
 
-function NeonTypingText({ text, className, speed = 70, glowColor = '#f59e0b' }: { text: string; className?: string; speed?: number; glowColor?: string }) {
-  const [displayed, setDisplayed] = useState('');
-  const [done, setDone] = useState(false);
+const HERO_SAMPLE_EQUIPMENT: UnifiedListingItem = {
+  id: 'hero-sample-equipment',
+  category: 'equipment',
+  title: 'حفارة هيتاشي ZX200',
+  price: 85000,
+  priceLabel: null,
+  currency: 'OMR',
+  images: ['/images/categories/equipment.webp'],
+  governorate: 'MUSCAT',
+  createdAt: '2024-01-01T00:00:00.000Z',
+  primaryBadge: { label: 'للبيع', color: 'blue' },
+  secondaryBadge: { label: 'ممتاز', color: 'green' },
+  details: [
+    { icon: 'Calendar', value: '2021' },
+    { icon: 'Gauge',    value: '1,200 ساعة' },
+    { icon: 'Settings', value: 'ديزل' },
+  ],
+  href: '/browse/equipment',
+  favoriteEntityType: 'EQUIPMENT_LISTING',
+  sellerVerified: true,
+  isPriceNegotiable: true,
+};
 
-  useEffect(() => {
-    setDisplayed('');
-    setDone(false);
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(id);
-        setDone(true);
-      }
-    }, speed);
-    return () => clearInterval(id);
-  }, [text, speed]);
+const BG_CLS: { [k: string]: string } = {
+  '#2563eb': 'bg-blue-50 dark:bg-blue-950/40',
+  '#16a34a': 'bg-green-50 dark:bg-green-950/40',
+  '#d97706': 'bg-amber-50 dark:bg-amber-950/40',
+  '#7c3aed': 'bg-violet-50 dark:bg-violet-950/40',
+  '#0d9488': 'bg-teal-50 dark:bg-teal-950/40',
+  '#e11d48': 'bg-rose-50 dark:bg-rose-950/40',
+};
 
-  return (
-    <span
-      className={className}
-      style={{
-        textShadow: `0 0 7px ${glowColor}80, 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20`,
-        transition: 'text-shadow 0.3s ease',
-      }}
-    >
-      {displayed}
-      {!done && (
-        <span
-          className="inline-block w-[3px] h-[0.85em] align-middle ms-0.5 rounded-full animate-pulse"
-          style={{ backgroundColor: glowColor, boxShadow: `0 0 8px ${glowColor}, 0 0 20px ${glowColor}80` }}
-        />
-      )}
-    </span>
-  );
-}
-
-// ── Equipment Type Config ────────────────────────────────────────────────────
-
-const EQUIP_TYPES = [
-  { key: 'EXCAVATOR', label: 'حفارة', icon: 'precision_manufacturing' },
-  { key: 'CRANE', label: 'رافعة', icon: 'hardware' },
-  { key: 'LOADER', label: 'لودر', icon: 'front_loader' },
-  { key: 'BULLDOZER', label: 'بلدوزر', icon: 'agriculture' },
-  { key: 'FORKLIFT', label: 'رافعة شوكية', icon: 'forklift' },
-  { key: 'CONCRETE_MIXER', label: 'خلاطة', icon: 'autorenew' },
-  { key: 'GENERATOR', label: 'مولد كهربائي', icon: 'bolt' },
-  { key: 'COMPRESSOR', label: 'ضاغط هواء', icon: 'air' },
-  { key: 'SCAFFOLDING', label: 'سقالات', icon: 'construction' },
-  { key: 'TRUCK', label: 'شاحنة', icon: 'local_shipping' },
-  { key: 'DUMP_TRUCK', label: 'قلاب', icon: 'local_shipping' },
-  { key: 'WATER_TANKER', label: 'تنكر مياه', icon: 'water_drop' },
-];
-
-// ── Quick Links ──────────────────────────────────────────────────────────────
+const ICON_BG_CLS: { [k: string]: string } = {
+  '#2563eb': 'bg-blue-100 dark:bg-blue-900/30',
+  '#16a34a': 'bg-green-100 dark:bg-green-900/30',
+  '#d97706': 'bg-amber-100 dark:bg-amber-900/30',
+  '#7c3aed': 'bg-violet-100 dark:bg-violet-900/30',
+  '#0d9488': 'bg-teal-100 dark:bg-teal-900/30',
+  '#e11d48': 'bg-rose-100 dark:bg-rose-900/30',
+};
 
 const QUICK_LINKS = [
-  { title: 'معدات للبيع', desc: 'معدات ثقيلة جديدة ومستعملة', icon: Package, href: '/browse/equipment', gradient: 'from-amber-600 to-orange-700', count: 'عروض يومية' },
-  { title: 'معدات للإيجار', desc: 'إيجار يومي وشهري بأسعار تنافسية', icon: Wrench, href: '/browse/equipment?listingType=EQUIPMENT_RENT', gradient: 'from-emerald-600 to-teal-700', count: 'أسعار مرنة' },
-  { title: 'طلبات المعدات', desc: 'انشر طلبك واحصل على عروض', icon: HardHat, href: '/equipment/requests/new', gradient: 'from-blue-600 to-indigo-700', count: 'عروض مباشرة' },
-  { title: 'مشغلين معدات', desc: 'سائقين وفنيين محترفين', icon: Users, href: '/browse/equipment?tab=operators', gradient: 'from-purple-600 to-pink-600', count: 'خبرة عالية' },
-];
+  { title: 'معدات للبيع',   sublabel: 'جديدة ومستعملة',      icon: Package, color: '#d97706', href: '/browse/equipment' },
+  { title: 'معدات للإيجار', sublabel: 'يومي وشهري',           icon: Wrench,  color: '#16a34a', href: '/browse/equipment?listingType=EQUIPMENT_RENT' },
+  { title: 'طلبات المعدات', sublabel: 'انشر واحصل على عروض', icon: HardHat, color: '#2563eb', href: '/equipment/requests/new' },
+  { title: 'مشغلين معدات',  sublabel: 'سائقين وفنيين',        icon: Users,   color: '#7c3aed', href: '/browse/equipment?tab=operators' },
+] as const;
+
+const EQUIP_TYPES = [
+  { key: 'EXCAVATOR',      label: 'حفارة',        icon: Package,    color: '#d97706' },
+  { key: 'CRANE',          label: 'رافعة',         icon: TrendingUp, color: '#2563eb' },
+  { key: 'LOADER',         label: 'لودر',          icon: Truck,      color: '#16a34a' },
+  { key: 'BULLDOZER',      label: 'بلدوزر',        icon: Truck,      color: '#0d9488' },
+  { key: 'FORKLIFT',       label: 'رافعة شوكية',   icon: Package,    color: '#7c3aed' },
+  { key: 'CONCRETE_MIXER', label: 'خلاطة',         icon: RefreshCw,  color: '#e11d48' },
+  { key: 'GENERATOR',      label: 'مولد كهربائي',  icon: Zap,        color: '#d97706' },
+  { key: 'COMPRESSOR',     label: 'ضاغط هواء',     icon: Wind,       color: '#2563eb' },
+  { key: 'SCAFFOLDING',    label: 'سقالات',         icon: HardHat,    color: '#16a34a' },
+  { key: 'TRUCK',          label: 'شاحنة',          icon: Truck,      color: '#7c3aed' },
+  { key: 'DUMP_TRUCK',     label: 'قلاب',           icon: Truck,      color: '#0d9488' },
+  { key: 'WATER_TANKER',   label: 'تنكر مياه',      icon: Droplets,   color: '#e11d48' },
+] as const;
+
+const HOW_STEPS = [
+  { num: 1, icon: Search,  title: 'تصفّح المعدات',    desc: 'ابحث بين مئات المعدات بالفلاتر المناسبة.',         color: '#d97706' },
+  { num: 2, icon: Package, title: 'اختر معدتك',        desc: 'قارن الأسعار والمواصفات والصور بالتفصيل.',          color: '#2563eb' },
+  { num: 3, icon: Users,   title: 'تواصل مع المالك',   desc: 'اتصل مباشرةً عبر الهاتف أو واتساب.',               color: '#7c3aed' },
+  { num: 4, icon: Shield,  title: 'أتمّ الصفقة بأمان', desc: 'تحقق من الوثائق واستلم معدتك بكل ثقة.',            color: '#16a34a' },
+] as const;
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -86,326 +96,253 @@ interface EquipmentShellProps {
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requests }: EquipmentShellProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const typesRef = useRef<HTMLDivElement>(null);
-  const typesDragRef = useRef({ isDragging: false, startX: 0, scrollLeft: 0 });
+  const { transformEquipment } = useItemTransformers();
 
-  const scrollTypes = (dir: 'left' | 'right') => {
-    if (!typesRef.current) return;
-    typesRef.current.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
-  };
+  const stats = useMemo(() => [
+    { label: 'معدة للبيع',   icon: Package,    color: '#d97706', value: saleEquipment.length > 0   ? `${saleEquipment.length}+`   : '+100' },
+    { label: 'معدة للإيجار', icon: Wrench,     color: '#16a34a', value: rentalEquipment.length > 0 ? `${rentalEquipment.length}+` : '+50'  },
+    { label: 'نوع معدة',     icon: Star,       color: '#2563eb', value: '12'                                                               },
+    { label: 'مشغل متاح',   icon: BadgeCheck, color: '#7c3aed', value: operators.length > 0       ? `${operators.length}+`       : '+30'  },
+  ], [saleEquipment.length, rentalEquipment.length, operators.length]);
 
-  const onTypesMouseDown = useCallback((e: React.MouseEvent) => {
-    const el = typesRef.current;
-    if (!el) return;
-    typesDragRef.current = { isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
-    el.style.cursor = 'grabbing';
-    el.style.userSelect = 'none';
-  }, []);
-
-  const onTypesMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!typesDragRef.current.isDragging) return;
-    const el = typesRef.current;
-    if (!el) return;
-    e.preventDefault();
-    const x = e.pageX - el.offsetLeft;
-    el.scrollLeft = typesDragRef.current.scrollLeft - (x - typesDragRef.current.startX) * 1.5;
-  }, []);
-
-  const onTypesMouseUp = useCallback(() => {
-    const el = typesRef.current;
-    if (!el) return;
-    typesDragRef.current.isDragging = false;
-    el.style.cursor = 'grab';
-    el.style.userSelect = '';
-  }, []);
+  const OPERATOR_TYPES: Record<string, string> = { DRIVER: 'سائق', OPERATOR: 'مشغل', TECHNICIAN: 'فني', MAINTENANCE: 'صيانة' };
 
   return (
-    <main className="min-h-screen bg-background">
+    <div dir="rtl">
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          1. HERO SECTION
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section>
-        {/* Search bar — above slider */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-2 bg-surface-container-lowest dark:bg-surface-container rounded-full border border-outline-variant/20 ps-3 pe-1.5 py-1 shadow-sm">
-              <Search size={16} className="text-on-surface-variant/50 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث عن معدة، حفارة، رافعة، مولد..."
-                className="flex-1 h-8 sm:h-9 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none min-w-0"
-              />
-              <Link
-                href={`/browse/equipment${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`}
-                className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-amber-600 rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all"
-              >
-                <span className="material-symbols-outlined text-white text-[16px] sm:text-[18px]">search</span>
-              </Link>
-            </div>
-          </div>
+      {/* ═══════════════════ 1. HERO ═══════════════════ */}
+      <section className="relative overflow-hidden gradient-navy text-white">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
+          }} />
         </div>
+        <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/4 translate-y-1/4" />
 
-        {/* Hero Banner */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
-          <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5] xl:aspect-[16/5] rounded-2xl sm:rounded-3xl">
-            <Image
-              src="/images/categories/equipment.webp"
-              alt="معدات سوق وان"
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1280px"
-              quality={80}
-              placeholder="blur"
-              blurDataURL="data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAADQAQCdASoQAAkAAkA4JZQCdAEO/hepgAAA/vxR0f//LGf/0pV//9Kf/+lf/6Uq1PUAAP7+IQAA"
-              className="object-cover"
-            />
+        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-10 sm:py-20 lg:py-24" style={{ paddingTop: '85px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
-
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 sm:px-8 lg:px-12 xl:px-16 text-white">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10 text-white/80 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
-                <Sparkles size={12} className="text-amber-400 sm:w-[14px] sm:h-[14px]" />
-                سوق المعدات الثقيلة في عُمان
+            <div>
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 sm:px-4 py-1.5 mb-4 sm:mb-6">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-xs font-bold text-white/90">سوق المعدات الثقيلة في سلطنة عُمان</span>
               </div>
 
-              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-1 sm:mb-2 lg:mb-3">
-                <NeonTypingText text="عالم المعدات الثقيلة" speed={80} glowColor="#f59e0b" className="text-amber-400" />
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl text-white leading-tight mb-3 sm:mb-4" style={{ fontWeight: 800, lineHeight: 1.3 }}>
+                بِع أو استأجر معدتك
+                <br />
+                <span className="text-[var(--color-brand-amber)]">أو طلب معدة اليوم</span>
               </h1>
-              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 leading-snug mb-2 sm:mb-3 lg:mb-5 max-w-lg lg:max-w-xl">
-                بيع وإيجار المعدات الثقيلة، طلبات المعدات، ومشغلين محترفين في مكان واحد
+
+              <p className="text-sm sm:text-lg text-white/75 mb-5 sm:mb-8 leading-relaxed max-w-lg">
+                سوق متخصص يجمع بائعي ومستأجري المعدات الثقيلة والمشغلين المحترفين من جميع محافظات سلطنة عُمان.
               </p>
 
-              {/* CTAs */}
-              <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-5">
-                <Link
-                  href="/browse/equipment"
-                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl bg-amber-600 hover:bg-amber-700 text-white transition-all"
-                >
-                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">explore</span>
-                  تصفح المعدات
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mb-6 sm:mb-8">
+                <Link href="/browse/equipment" className="btn-transport-primary text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto">
+                  <Package size={18} />
+                  تصفّح المعدات
                 </Link>
-                <Link
-                  href="/add-listing/equipment"
-                  className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
-                >
-                  <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">add_circle</span>
-                  أضف معدتك
+                <Link href="/add-listing/equipment" className="btn-outline-white text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto">
+                  أضف معدتك مجاناً
+                  <ArrowLeft size={18} />
                 </Link>
               </div>
 
-              {/* Stats as trust badges */}
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-3 flex-wrap">
-                {[
-                  { label: 'معدة للبيع', value: `${saleEquipment.length}+` },
-                  { label: 'معدة للإيجار', value: `${rentalEquipment.length}+` },
-                  { label: 'مشغل متاح', value: `${operators.length}+` },
-                ].map((stat) => (
-                  <span key={stat.label} className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] lg:text-xs font-bold bg-white/15 backdrop-blur-sm rounded-full px-2 py-1 sm:px-2.5 sm:py-1 lg:px-3 lg:py-1.5">
-                    {stat.value} {stat.label}
-                  </span>
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                {([
+                  { icon: Shield, text: 'بائعون موثّقون' },
+                  { icon: Star,   text: 'تقييمات حقيقية' },
+                  { icon: MapPin, text: 'تغطية 11 محافظة' },
+                ] as const).map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-1.5 text-white/70">
+                    <Icon size={14} className="text-[var(--color-brand-amber)]" />
+                    <span className="text-xs font-semibold">{text}</span>
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          2. QUICK LINKS
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative z-20 max-w-6xl mx-auto px-2 sm:px-4 md:px-8 mt-4 sm:mt-6">
-        <div className="grid grid-cols-4 gap-1 sm:gap-3 md:gap-4">
-          {QUICK_LINKS.map((link) => (
-            <Link
-              key={link.title}
-              href={link.href}
-              className="group flex flex-col items-center text-center py-2 sm:py-3 hover:opacity-80 transition-opacity"
-            >
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-1.5 sm:mb-2 shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                <link.icon size={18} className="text-white sm:hidden" />
-                <link.icon size={22} className="text-white hidden sm:block" />
-              </div>
-              <h3 className="text-[10px] sm:text-[13px] md:text-[14px] font-bold text-on-surface leading-tight">{link.title}</h3>
-              <span className="text-[8px] sm:text-[10px] md:text-[11px] font-medium text-on-surface-variant mt-0.5">{link.count}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          3. BROWSE BY TYPE — Horizontal scroll
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="mt-12 md:mt-16 max-w-6xl mx-auto px-4 md:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg md:text-xl font-black text-on-surface">تصفح حسب النوع</h2>
-            <p className="text-[12px] text-on-surface-variant mt-0.5">اختر نوع المعدة</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => scrollTypes('right')} className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 flex items-center justify-center transition-colors">
-              <ArrowRight size={16} />
-            </button>
-            <button onClick={() => scrollTypes('left')} className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 flex items-center justify-center transition-colors">
-              <ArrowLeft size={16} />
-            </button>
-            <Link href="/browse/equipment" className="text-[12px] text-amber-600 font-bold hover:underline mr-2">
-              عرض الكل
-            </Link>
-          </div>
-        </div>
-
-        <div
-          ref={typesRef}
-          className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth cursor-grab active:cursor-grabbing"
-          onMouseDown={onTypesMouseDown}
-          onMouseMove={onTypesMouseMove}
-          onMouseUp={onTypesMouseUp}
-          onMouseLeave={onTypesMouseUp}
-        >
-          {EQUIP_TYPES.map((type) => (
-            <Link
-              key={type.key}
-              href={`/browse/equipment?equipmentType=${type.key}`}
-              className="group flex flex-col items-center gap-2 min-w-[100px] p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/20 hover:border-amber-500/40 hover:shadow-md transition-all duration-200"
-            >
-              <div className="w-14 h-14 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition-all">
-                <span className="material-symbols-outlined text-amber-600 text-[28px]">{type.icon}</span>
-              </div>
-              <span className="text-[11px] font-bold text-on-surface text-center leading-tight">{type.label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          4. EQUIPMENT FOR SALE
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="mt-12 md:mt-16 py-10 bg-surface-container-low/50">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-1 rounded-full bg-amber-600" />
-              <div>
-                <h2 className="text-lg md:text-xl font-black text-on-surface">أحدث المعدات للبيع</h2>
-                <p className="text-[12px] text-on-surface-variant mt-0.5">معدات جديدة ومستعملة بأفضل الأسعار</p>
-              </div>
-            </div>
-            <Link href="/browse/equipment" className="text-[13px] text-amber-600 font-bold hover:underline flex items-center gap-1">
-              عرض الكل
-              <ChevronLeft size={16} />
-            </Link>
-          </div>
-
-          {saleEquipment.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {saleEquipment.map((item) => (
-                <UnifiedCard key={item.id} item={normalizeEquipment(item)} hideContactButtons />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 text-on-surface-variant">
-              <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">construction</span>
-              <p className="font-medium">لا توجد معدات للبيع حالياً</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          5. EQUIPMENT FOR RENT
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="mt-0 py-10">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-1 rounded-full bg-emerald-500" />
-              <div>
-                <h2 className="text-lg md:text-xl font-black text-on-surface">معدات للإيجار</h2>
-                <p className="text-[12px] text-on-surface-variant mt-0.5">يومي، أسبوعي، أو شهري</p>
-              </div>
-            </div>
-            <Link href="/browse/equipment?listingType=EQUIPMENT_RENT" className="text-[13px] text-emerald-600 font-bold hover:underline flex items-center gap-1">
-              عرض الكل
-              <ChevronLeft size={16} />
-            </Link>
-          </div>
-
-          {rentalEquipment.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {rentalEquipment.map((item) => (
-                <UnifiedCard key={item.id} item={normalizeEquipment(item)} hideContactButtons />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 text-on-surface-variant">
-              <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">build</span>
-              <p className="font-medium">لا توجد معدات للإيجار حالياً</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          6. OPEN REQUESTS — Equipment wanted
-      ═══════════════════════════════════════════════════════════════════════ */}
-      {requests.length > 0 && (
-        <section className="py-10 bg-surface-container-low/50">
-          <div className="max-w-6xl mx-auto px-4 md:px-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-1 rounded-full bg-blue-600" />
-                <div>
-                  <h2 className="text-lg md:text-xl font-black text-on-surface">طلبات المعدات</h2>
-                  <p className="text-[12px] text-on-surface-variant mt-0.5">طلبات مفتوحة تنتظر عروضك</p>
+            <div className="hidden lg:block">
+              <div className="relative max-w-sm mx-auto scale-[0.8] origin-top mt-10">
+                <div className="transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                  <UnifiedCard item={HERO_SAMPLE_EQUIPMENT} hideContactButtons />
+                </div>
+                <div className="absolute -top-3 -left-3 bg-[var(--color-brand-amber)] text-white rounded-2xl px-3 py-2 shadow-lg z-10 pointer-events-none">
+                  <div className="text-xs font-bold">سعر مميز!</div>
+                  <div className="text-[10px] opacity-80">تفاوض مقبول</div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Link href="/equipment/requests" className="text-[13px] text-on-surface-variant hover:underline flex items-center gap-1">
-                  عرض الكل
-                </Link>
-                <Link href="/equipment/requests/new" className="text-[13px] text-blue-600 font-bold hover:underline flex items-center gap-1">
-                  أضف طلب
-                  <ChevronLeft size={16} />
-                </Link>
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {requests.map((req) => (
-                <Link
-                  key={req.id}
-                  href={`/equipment/requests/${req.id}`}
-                  className="group relative overflow-hidden rounded-2xl bg-white dark:bg-surface-container border border-outline-variant/20 p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-blue-600 text-xl">assignment</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════ 2. STATS BAR ═══════════════════ */}
+      <section className="py-5 sm:py-8">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            {stats.map(s => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-2xl ${BG_CLS[s.color]}`}>
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${ICON_BG_CLS[s.color]}`}>
+                    <Icon size={20} style={{ color: s.color }} />
+                  </div>
+                  <div>
+                    <p className="text-base sm:text-lg font-bold text-[var(--color-on-surface)]">{s.value}</p>
+                    <p className="text-[10px] sm:text-[11px] text-[var(--color-on-surface-variant)]">{s.label}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════ 3. QUICK LINKS ═══════════════════ */}
+      <section className="py-8 sm:py-12">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+          <div className="text-center mb-5 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-on-surface)] mb-2">تصفّح حسب القسم</h2>
+            <p className="text-sm text-[var(--color-on-surface-variant)]">اختر ما يناسبك من بين أقسامنا المتنوعة</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+            {QUICK_LINKS.map(link => {
+              const Icon = link.icon;
+              return (
+                <Link key={link.title} href={link.href} className="card-base card-hover p-3 sm:p-4 flex flex-col gap-2.5 sm:gap-3">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${BG_CLS[link.color]}`}>
+                    <Icon size={22} style={{ color: link.color }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>{link.title}</p>
+                    <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5 leading-tight">{link.sublabel}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════ 4. EQUIPMENT TYPES GRID ═══════════════════ */}
+      <section className="py-8 sm:py-12 bg-[var(--color-surface-container-low)] dark:bg-[var(--color-surface-dim)]">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+          <div className="text-center mb-5 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-on-surface)] mb-2">تصفّح حسب نوع المعدة</h2>
+            <p className="text-sm text-[var(--color-on-surface-variant)]">اختر نوع المعدة المناسب لمشروعك</p>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-4">
+            {EQUIP_TYPES.map(type => {
+              const Icon = type.icon;
+              return (
+                <Link key={type.key} href={`/browse/equipment?equipmentType=${type.key}`} className="card-base card-hover p-3 sm:p-4 flex flex-col gap-2 sm:gap-3">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${BG_CLS[type.color]}`}>
+                    <Icon size={22} style={{ color: type.color }} />
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-[var(--color-on-surface)] leading-tight" style={{ fontWeight: 700 }}>{type.label}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════ 5. SALE LISTINGS ═══════════════════ */}
+      {saleEquipment.length > 0 && (
+        <section className="py-8 sm:py-12">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-5 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 rounded-full" style={{ backgroundColor: '#d97706' }} />
+                  <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[var(--color-on-surface)]">أحدث المعدات للبيع</h2>
+                </div>
+                <p className="text-sm text-[var(--color-on-surface-variant)]">معدات جديدة ومستعملة بأفضل الأسعار</p>
+              </div>
+              <Link href="/browse/equipment" className="flex items-center gap-1.5 font-bold text-xs sm:text-sm hover:underline" style={{ color: '#d97706' }}>
+                عرض الكل <ArrowLeft size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+              {saleEquipment.slice(0, 8).map(item => (
+                <UnifiedCard key={item.id} item={transformEquipment(item)} className="h-full" hideContactButtons />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════ 6. RENTAL LISTINGS ═══════════════════ */}
+      {rentalEquipment.length > 0 && (
+        <section className="py-8 sm:py-12 bg-[var(--color-surface-container-low)] dark:bg-[var(--color-surface-dim)]">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-5 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 rounded-full" style={{ backgroundColor: '#16a34a' }} />
+                  <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[var(--color-on-surface)]">معدات للإيجار</h2>
+                </div>
+                <p className="text-sm text-[var(--color-on-surface-variant)]">يومي، أسبوعي، أو شهري</p>
+              </div>
+              <Link href="/browse/equipment?listingType=EQUIPMENT_RENT" className="flex items-center gap-1.5 font-bold text-xs sm:text-sm hover:underline" style={{ color: '#16a34a' }}>
+                عرض الكل <ArrowLeft size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+              {rentalEquipment.slice(0, 8).map(item => (
+                <UnifiedCard key={item.id} item={transformEquipment(item)} className="h-full" hideContactButtons />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════ 7. OPEN REQUESTS ═══════════════════ */}
+      {requests.length > 0 && (
+        <section className="py-8 sm:py-12">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-5 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 rounded-full" style={{ backgroundColor: '#2563eb' }} />
+                  <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[var(--color-on-surface)]">طلبات المعدات</h2>
+                </div>
+                <p className="text-sm text-[var(--color-on-surface-variant)]">طلبات مفتوحة تنتظر عروضك</p>
+              </div>
+              <Link href="/equipment/requests" className="flex items-center gap-1.5 font-bold text-xs sm:text-sm hover:underline" style={{ color: '#2563eb' }}>
+                عرض الكل <ArrowLeft size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4">
+              {requests.slice(0, 6).map(req => (
+                <Link key={req.id} href={`/equipment/requests/${req.id}`} className="card-base card-hover p-4 sm:p-5 flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-50 dark:bg-blue-950/40">
+                      <HardHat size={20} style={{ color: '#2563eb' }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-[14px] font-bold text-on-surface line-clamp-1">{req.title}</h3>
-                      <p className="text-[11px] text-on-surface-variant mt-0.5">
+                      <h3 className="text-sm font-bold text-[var(--color-on-surface)] line-clamp-1">{req.title}</h3>
+                      <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5">
                         الكمية: {req.quantity}
                         {req.budgetMax && ` · ميزانية: ${Number(req.budgetMax).toLocaleString('en-US')} ${req.currency}`}
                       </p>
                     </div>
-                    <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold shrink-0">مفتوح</span>
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold flex-shrink-0">مفتوح</span>
                   </div>
-                  <p className="text-[12px] text-on-surface-variant line-clamp-2 mb-3">{req.description}</p>
-                  <div className="flex items-center justify-between text-[11px] text-on-surface-variant/60">
+                  {req.description && (
+                    <p className="text-xs text-[var(--color-on-surface-variant)] line-clamp-2">{req.description}</p>
+                  )}
+                  <div className="flex items-center justify-between text-[11px] text-[var(--color-on-surface-variant)]">
                     {req.governorate && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} />
-                        {req.governorate}
-                      </span>
+                      <span className="flex items-center gap-1"><MapPin size={12} />{req.governorate}</span>
                     )}
-                    <span className="flex items-center gap-1 font-bold text-blue-600">
-                      <span className="material-symbols-outlined text-[14px]">gavel</span>
-                      {req._count?.bids ?? 0} عروض
+                    <span className="flex items-center gap-1 font-bold" style={{ color: '#2563eb' }}>
+                      <Search size={12} />{req._count?.bids ?? 0} عروض
                     </span>
                   </div>
                 </Link>
@@ -415,62 +352,55 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
         </section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          7. OPERATORS
-      ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══════════════════ 8. OPERATORS ═══════════════════ */}
       {operators.length > 0 && (
-        <section className="py-10">
-          <div className="max-w-6xl mx-auto px-4 md:px-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-1 rounded-full bg-purple-600" />
-                <div>
-                  <h2 className="text-lg md:text-xl font-black text-on-surface">مشغلين معدات</h2>
-                  <p className="text-[12px] text-on-surface-variant mt-0.5">سائقين وفنيين محترفين</p>
+        <section className="py-8 sm:py-12 bg-[var(--color-surface-container-low)] dark:bg-[var(--color-surface-dim)]">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-5 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 rounded-full" style={{ backgroundColor: '#7c3aed' }} />
+                  <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[var(--color-on-surface)]">مشغلين معدات</h2>
                 </div>
+                <p className="text-sm text-[var(--color-on-surface-variant)]">سائقين وفنيين محترفين</p>
               </div>
-              <Link href="/equipment/operators" className="text-[13px] text-purple-600 font-bold hover:underline flex items-center gap-1">
-                عرض الكل
-                <ChevronLeft size={16} />
+              <Link href="/equipment/operators" className="flex items-center gap-1.5 font-bold text-xs sm:text-sm hover:underline" style={{ color: '#7c3aed' }}>
+                عرض الكل <ArrowLeft size={14} />
               </Link>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {operators.map((op) => {
-                const OPERATOR_TYPES: Record<string, string> = { DRIVER: 'سائق', OPERATOR: 'مشغل', TECHNICIAN: 'فني', MAINTENANCE: 'صيانة' };
-                const rate = op.dailyRate ? `${Number(op.dailyRate).toLocaleString('en-US')} ${op.currency}/يوم` : op.hourlyRate ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${op.currency}/ساعة` : 'اتصل للسعر';
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4">
+              {operators.slice(0, 6).map(op => {
+                const rate = op.dailyRate
+                  ? `${Number(op.dailyRate).toLocaleString('en-US')} ${op.currency}/يوم`
+                  : op.hourlyRate
+                  ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${op.currency}/ساعة`
+                  : 'اتصل للسعر';
                 return (
-                  <Link
-                    key={op.id}
-                    href={`/equipment/operators/${op.id}`}
-                    className="group bg-white dark:bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/20 p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-purple-600 text-2xl">engineering</span>
+                  <Link key={op.id} href={`/equipment/operators/${op.id}`} className="card-base card-hover p-4 sm:p-5 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-violet-50 dark:bg-violet-950/40">
+                        <Users size={22} style={{ color: '#7c3aed' }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-[14px] font-bold text-on-surface line-clamp-1">{op.title}</h3>
-                        <p className="text-[11px] text-on-surface-variant">
+                        <h3 className="text-sm font-bold text-[var(--color-on-surface)] line-clamp-1">{op.title}</h3>
+                        <p className="text-[11px] text-[var(--color-on-surface-variant)]">
                           {OPERATOR_TYPES[op.operatorType] || op.operatorType}
                           {op.experienceYears ? ` · ${op.experienceYears} سنة خبرة` : ''}
                         </p>
                       </div>
                     </div>
-                    <p className="text-[12px] text-on-surface-variant line-clamp-2 mb-3">{op.description}</p>
                     {op.specializations.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
+                      <div className="flex flex-wrap gap-1">
                         {op.specializations.slice(0, 3).map(s => (
-                          <span key={s} className="text-[10px] bg-purple-50 dark:bg-purple-900/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">{s}</span>
+                          <span key={s} className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-violet-50 dark:bg-violet-950/40" style={{ color: '#7c3aed' }}>{s}</span>
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center justify-between pt-3 border-t border-outline-variant/10">
-                      <span className="text-[14px] font-black text-amber-600">{rate}</span>
+                    <div className="flex items-center justify-between pt-3 border-t border-[var(--color-outline-variant)]/10">
+                      <span className="text-sm font-bold" style={{ color: '#d97706' }}>{rate}</span>
                       {op.governorate && (
-                        <span className="text-[11px] text-on-surface-variant flex items-center gap-1">
-                          <MapPin size={12} />
-                          {op.governorate}
+                        <span className="text-[11px] text-[var(--color-on-surface-variant)] flex items-center gap-1">
+                          <MapPin size={12} />{op.governorate}
                         </span>
                       )}
                     </div>
@@ -482,65 +412,94 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
         </section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          8. CTA — Post your ad
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="py-12 md:py-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-bl from-amber-700 via-amber-600/90 to-orange-700 p-8 md:p-12">
-            {/* Decorative */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-[60px] translate-x-1/4 translate-y-1/4" />
+      {/* ═══════════════════ 9. HOW IT WORKS ═══════════════════ */}
+      <section className="py-10 sm:py-16">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+          <div className="text-center mb-6 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-on-surface)] mb-2">كيف يعمل سوق ون للمعدات؟</h2>
+            <p className="text-sm text-[var(--color-on-surface-variant)] max-w-lg mx-auto">أربع خطوات بسيطة تفصلك عن معدتك المثالية</p>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
+            {HOW_STEPS.map(step => {
+              const Icon = step.icon;
+              return (
+                <div key={step.num} className="card-base p-3.5 sm:p-5 flex flex-col gap-2 sm:gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${BG_CLS[step.color]}`}>
+                      <Icon size={20} style={{ color: step.color }} />
+                    </div>
+                    <span className="text-2xl font-bold" style={{ color: step.color, opacity: 0.25 }}>{step.num}</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>{step.title}</h3>
+                  <p className="text-xs text-[var(--color-on-surface-variant)] leading-relaxed">{step.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
-            <div className="relative z-10 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white/90 text-[12px] font-medium mb-4">
-                <Plus size={14} />
-                نشر إعلان جديد
+      {/* ═══════════════════ 10. SELLER CTA ═══════════════════ */}
+      <section className="py-10 sm:py-16 bg-[var(--color-surface-container-low)] dark:bg-[var(--color-surface-dim)]">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+          <div className="gradient-navy rounded-2xl sm:rounded-3xl p-5 sm:p-12 text-white overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/2 translate-y-1/2" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-brand-amber)]/20 flex items-center justify-center">
+                  <Package size={24} className="text-[var(--color-brand-amber)]" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-brand-amber)]">للبائعين والمؤجرين</p>
+                  <h2 className="text-xl font-bold" style={{ fontWeight: 700 }}>بِع أو أجّر معدتك بأفضل سعر</h2>
+                </div>
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-white mb-3">
-                عندك معدات تبغى تبيعها أو تأجرها؟
-              </h2>
-              <p className="text-white/70 text-sm md:text-base max-w-md mx-auto mb-6">
-                انشر إعلانك مجاناً ووصّل لآلاف المهتمين في عُمان
+
+              <p className="text-sm text-white/75 leading-relaxed mb-6 max-w-lg">
+                أضف إعلانك مجاناً وتواصل مع آلاف المشترين والمستأجرين المهتمين في جميع محافظات سلطنة عُمان.
               </p>
-              <div className="flex items-center justify-center gap-3 flex-wrap">
+
+              <div className="flex flex-wrap gap-2.5 sm:gap-4 mb-6 sm:mb-8">
+                {([
+                  { icon: TrendingUp, label: 'مشاهدة يومياً', value: '+500',  color: '#16a34a' },
+                  { icon: Star,       label: 'متوسط التقييم', value: '4.8',   color: '#d97706' },
+                  { icon: Shield,     label: 'إعلان مجاني',   value: '100%',  color: '#7c3aed' },
+                ] as const).map(stat => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={stat.label} className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2.5">
+                      <Icon size={16} style={{ color: stat.color }} />
+                      <div>
+                        <p className="text-sm font-bold" style={{ fontWeight: 700 }}>{stat.value}</p>
+                        <p className="text-[10px] text-white/60">{stat.label}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
                 <Link
                   href="/add-listing/equipment"
-                  className="inline-flex items-center gap-2 h-12 px-8 rounded-xl bg-white text-amber-700 font-bold text-[14px] shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+                  className="btn-navy rounded-full w-full sm:w-auto justify-center sm:justify-start"
+                  style={{ background: 'var(--color-brand-amber)', color: '#fff' }}
                 >
-                  <Plus size={18} />
-                  أضف معدة
+                  <Plus size={16} />
+                  أضف معدتك مجاناً
                 </Link>
-                <Link
-                  href="/equipment/requests/new"
-                  className="inline-flex items-center gap-2 h-12 px-8 rounded-xl bg-white/15 backdrop-blur-md text-white font-bold text-[14px] border border-white/20 hover:bg-white/25 transition-all duration-200"
-                >
-                  <HardHat size={18} />
-                  طلب معدة
+                <Link href="/equipment/requests/new" className="btn-outline-white w-full sm:w-auto justify-center sm:justify-start">
+                  <HardHat size={16} />
+                  انشر طلب معدة
                 </Link>
-              </div>
-
-              {/* Trust signals */}
-              <div className="flex items-center justify-center gap-6 mt-8 text-white/60 text-[11px]">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">verified</span>
-                  إعلان مجاني
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">speed</span>
-                  نشر فوري
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">group</span>
-                  +1000 مهتم نشط
-                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-    </main>
+    </div>
   );
 }
 

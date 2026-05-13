@@ -101,27 +101,6 @@ export function useListingBySlug(slug: string): UseQueryResult<ListingItem, Erro
   });
 }
 
-export function useCreateListing(): UseMutationResult<ListingItem, Error, Record<string, unknown>> {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Record<string, unknown>) =>
-      apiRequest<ListingItem>('/listings', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['listings'] }),
-  });
-}
-
-export function useUpdateListing(id: string): UseMutationResult<ListingItem, Error, Record<string, unknown>> {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Record<string, unknown>) =>
-      apiRequest<ListingItem>(`/listings/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['listings'] });
-      qc.invalidateQueries({ queryKey: ['listing', id] });
-    },
-  });
-}
-
 export function useDeleteListing(): UseMutationResult<unknown, Error, string> {
   const qc = useQueryClient();
   return useMutation({

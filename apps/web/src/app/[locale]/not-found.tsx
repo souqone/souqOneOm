@@ -14,7 +14,7 @@ export default function NotFound() {
         <Link href="/" className="bg-primary text-on-primary hover:brightness-110 rounded-lg shadow-ambient px-8 py-3 text-sm font-bold">
           {tp('notFoundHome')}
         </Link>
-        <Link href="/browse/cars" className="border border-outline-variant rounded-full px-8 py-3 text-sm font-bold text-on-surface hover:bg-surface-container-low transition-all">
+        <Link href="/cars/browse" className="border border-outline-variant rounded-full px-8 py-3 text-sm font-bold text-on-surface hover:bg-surface-container-low transition-all">
           {tp('notFoundBrowse')}
         </Link>
       </div>

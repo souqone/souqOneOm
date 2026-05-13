@@ -95,56 +95,62 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
           </div>
 
           {/* From Governorate + Wilayat */}
-          <div className="space-y-2">
-            <div>
-              <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من محافظة</p>
-              <select
-                value={filters.fromGovernorate ?? ''}
-                onChange={(e) => onChange({ ...filters, fromGovernorate: e.target.value || undefined, fromWilayat: undefined })}
-                className="input-base text-sm"
-              >
-                <option value="">الكل</option>
-                {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من ولاية</p>
-              <select
-                value={filters.fromWilayat ?? ''}
-                onChange={(e) => onChange({ ...filters, fromWilayat: e.target.value || undefined })}
-                className="input-base text-sm"
-                disabled={!filters.fromGovernorate}
-              >
-                <option value="">الكل</option>
-                {(OMAN_WILAYAT_BY_GOVERNORATE[filters.fromGovernorate ?? ''] ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">المحافظة</p>
+                <select
+                  value={filters.fromGovernorate ?? ''}
+                  onChange={(e) => onChange({ ...filters, fromGovernorate: e.target.value || undefined, fromWilayat: undefined })}
+                  className="input-base text-sm"
+                >
+                  <option value="">الكل</option>
+                  {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">الولاية</p>
+                <select
+                  value={filters.fromWilayat ?? ''}
+                  onChange={(e) => onChange({ ...filters, fromWilayat: e.target.value || undefined })}
+                  className="input-base text-sm"
+                  disabled={!filters.fromGovernorate}
+                >
+                  <option value="">الكل</option>
+                  {(OMAN_WILAYAT_BY_GOVERNORATE[filters.fromGovernorate ?? ''] ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 
           {/* To Governorate + Wilayat */}
-          <div className="space-y-2">
-            <div>
-              <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى محافظة</p>
-              <select
-                value={filters.toGovernorate ?? ''}
-                onChange={(e) => onChange({ ...filters, toGovernorate: e.target.value || undefined, toWilayat: undefined })}
-                className="input-base text-sm"
-              >
-                <option value="">الكل</option>
-                {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى ولاية</p>
-              <select
-                value={filters.toWilayat ?? ''}
-                onChange={(e) => onChange({ ...filters, toWilayat: e.target.value || undefined })}
-                className="input-base text-sm"
-                disabled={!filters.toGovernorate}
-              >
-                <option value="">الكل</option>
-                {(OMAN_WILAYAT_BY_GOVERNORATE[filters.toGovernorate ?? ''] ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
+          <div>
+            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">المحافظة</p>
+                <select
+                  value={filters.toGovernorate ?? ''}
+                  onChange={(e) => onChange({ ...filters, toGovernorate: e.target.value || undefined, toWilayat: undefined })}
+                  className="input-base text-sm"
+                >
+                  <option value="">الكل</option>
+                  {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">الولاية</p>
+                <select
+                  value={filters.toWilayat ?? ''}
+                  onChange={(e) => onChange({ ...filters, toWilayat: e.target.value || undefined })}
+                  className="input-base text-sm"
+                  disabled={!filters.toGovernorate}
+                >
+                  <option value="">الكل</option>
+                  {(OMAN_WILAYAT_BY_GOVERNORATE[filters.toGovernorate ?? ''] ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 

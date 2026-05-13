@@ -32,13 +32,13 @@ function AnimatedSection({ children, className }: { children: React.ReactNode; c
 }
 
 const CAT_META = [
-  { labelKey: 'catCars',      descKey: 'catCarsDesc',      image: '/images/categories/cars.webp',   href: '/browse/cars',   color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' },
+  { labelKey: 'catCars',      descKey: 'catCarsDesc',      image: '/images/categories/cars.webp',   href: '/cars/browse',   color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' },
   { labelKey: 'catBuses',     descKey: 'catBusesDesc',     image: '/images/categories/buses.webp',   href: '/browse/buses',      color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400' },
   { labelKey: 'catParts',     descKey: 'catPartsDesc',     image: '/images/categories/parts.webp',         href: '/browse/parts',      color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' },
   { labelKey: 'catServices',  descKey: 'catServicesDesc',  image: '/images/categories/services.webp',            href: '/browse/services',   color: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400' },
   { labelKey: 'catEquipment', descKey: 'catEquipmentDesc', image: '/images/categories/equipment.webp',     href: '/browse/equipment',  color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' },
   { labelKey: 'catJobs',      descKey: 'catJobsDesc',      image: '/images/categories/jobs.webp',            href: '/jobs',       color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' },
-  { labelKey: 'catRentals',   descKey: 'catRentalsDesc',   image: '/images/categories/rentals.webp',       href: '/browse/cars?listingType=RENTAL',    color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' },
+  { labelKey: 'catRentals',   descKey: 'catRentalsDesc',   image: '/images/categories/rentals.webp',       href: '/cars/browse?listingType=RENTAL',    color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' },
 ] as const;
 
 const SLIDE_INTERVAL = 3000;

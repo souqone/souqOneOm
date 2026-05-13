@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, redirect, useParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
@@ -24,14 +24,15 @@ const FORM_MAP: Record<string, React.ComponentType> = {
 export default function AddListingByTypePage() {
   const { type } = useParams<{ type: string }>();
 
+  if (type === 'car') redirect('/cars/new');
   const FormComponent = FORM_MAP[type];
   if (!FormComponent) return notFound();
 
   return (
     <AuthGuard>
       <Navbar />
-      <main className="pt-[75px] pb-8 max-w-[900px] mx-auto px-4 md:px-8">
-        <Suspense fallback={<div className="animate-pulse bg-surface-container-low h-96 rounded-3xl" />}>
+      <main className="pt-[75px] pb-12 px-4">
+        <Suspense fallback={<div className="animate-pulse bg-[var(--color-surface-container)] h-96 rounded-3xl max-w-2xl mx-auto" />}>
           <FormComponent />
         </Suspense>
       </main>
