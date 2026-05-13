@@ -36,8 +36,8 @@ export function BottomNav() {
       className="fixed z-[51] left-1/2 -translate-x-1/2 lg:hidden"
       style={{ bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="relative w-[63px] h-[63px] rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 pulse-ring">
-        <span className="material-symbols-outlined text-on-primary text-2xl">add_circle</span>
+      <div className="relative w-[63px] h-[63px] rounded-full bg-[var(--color-brand-navy)] flex items-center justify-center shadow-lg shadow-[var(--color-brand-navy)]/30 pulse-ring">
+        <span className="material-symbols-outlined text-white text-2xl">add_circle</span>
       </div>
     </Link>
 
@@ -62,7 +62,7 @@ export function BottomNav() {
             return (
               <div key={item.href} className="flex flex-col items-center justify-center min-w-[48px]">
                 <div className="w-10 h-6" />
-                <span className="text-[9px] font-bold text-primary">{item.label}</span>
+                <span className="text-[9px] font-bold text-[var(--color-brand-navy)]">{item.label}</span>
               </div>
             );
           }

@@ -18,6 +18,8 @@ import {
   Key,
   Settings,
   Wrench,
+  Bus,
+  KeyRound,
 } from 'lucide-react'
 
 // ── Transport links ──────────────────────────────────────────────
@@ -48,6 +50,15 @@ const CARS_LINKS = [
   { href: '/cars/new',                          label: 'أضف إعلان',      icon: PlusCircle },
 ]
 
+// ── Buses links ─────────────────────────────────────────────────
+const BUS_LINKS = [
+  { href: '/buses',                                          label: 'الرئيسية',        icon: Bus       },
+  { href: '/browse/buses?busListingType=BUS_SALE',           label: 'حافلات للبيع',   icon: Search    },
+  { href: '/browse/buses?busListingType=BUS_RENT',           label: 'حافلات للإيجار', icon: KeyRound  },
+  { href: '/browse/buses?busListingType=BUS_CONTRACT',       label: 'عقود تشغيل',     icon: Truck     },
+  { href: '/add-listing/bus',                                label: 'أضف حافلتك',     icon: PlusCircle },
+]
+
 // ── Jobs links ────────────────────────────────────────────────────
 const JOBS_LINKS = [
   { href: '/jobs',              label: 'الوظائف',       icon: Briefcase },
@@ -60,19 +71,22 @@ const JOBS_LINKS = [
 
 // ── Active link helper ───────────────────────────────────────────
 function isLinkActive(href: string, pathname: string): boolean {
-  if (href === '/equipment' || href === '/jobs' || href === '/transport' || href === '/cars') {
-    return pathname === href
+  const bare = pathname.replace(/^\/[a-z]{2,5}/, '') || '/'
+  if (href === '/equipment' || href === '/jobs' || href === '/transport' || href === '/cars' || href === '/buses') {
+    return bare === href
   }
   if (href.includes('?')) return false
-  return pathname === href || pathname.startsWith(href + '/')
+  return bare === href || bare.startsWith(href + '/')
 }
 
-// ── Route → links mapping ────────────────────────────────────────
+// ── Route → links mapping (landing pages only) ───────────────────
 function getLinksForPath(pathname: string) {
-  if (/\/equipment(\/|$)/.test(pathname)) return EQUIPMENT_LINKS
-  if (pathname.includes('/transport')) return TRANSPORT_LINKS
-  if (pathname.includes('/jobs')) return JOBS_LINKS
-  if (/\/cars(\/|$)/.test(pathname)) return CARS_LINKS
+  const bare = pathname.replace(/^\/[a-z]{2,5}/, '') || '/'
+  if (bare === '/equipment') return EQUIPMENT_LINKS
+  if (bare === '/transport') return TRANSPORT_LINKS
+  if (bare === '/jobs')      return JOBS_LINKS
+  if (bare === '/cars')      return CARS_LINKS
+  if (bare === '/buses')     return BUS_LINKS
   return null
 }
 
@@ -84,28 +98,26 @@ export default function SubNavBar() {
   if (!links) return null
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 z-50 px-3 w-full max-w-fit" style={{ top: topOffset }}>
+    <div className="fixed left-1/2 -translate-x-1/2 z-50 px-3 w-full md:max-w-fit" style={{ top: topOffset }}>
       <nav
         dir="rtl"
-        className="bg-white/90 backdrop-blur-md shadow-lg rounded-full px-3 md:px-6 py-2 md:py-3 flex items-center gap-1.5 md:gap-4 border border-gray-200 overflow-x-auto scrollbar-hide"
+        className="bg-white/90 backdrop-blur-md shadow-lg rounded-full px-2 md:px-6 py-2 md:py-3 flex items-center border border-gray-200"
       >
-        {links.map(({ href, label, icon: Icon }) => {
+        {links.map(({ href, label }) => {
           const isActive = isLinkActive(href, pathname)
           return (
             <Link
               key={href}
               href={href}
               className={`
-                flex items-center gap-1 md:gap-1.5 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full
-                text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-150 flex-shrink-0
+                flex-1 text-center px-1.5 md:px-3 py-1 md:py-1.5 rounded-full
+                text-[10px] md:text-sm font-semibold whitespace-nowrap transition-all duration-150
                 ${isActive
                   ? 'bg-[var(--color-brand-navy)] text-white'
                   : 'text-[var(--color-on-surface-variant)] hover:bg-[var(--color-brand-navy)]/10 hover:text-[var(--color-brand-navy)]'
                 }
               `}
             >
-              <Icon size={12} className="md:hidden" aria-hidden="true" />
-              <Icon size={14} className="hidden md:block" aria-hidden="true" />
               {label}
             </Link>
           )
