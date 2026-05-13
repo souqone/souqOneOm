@@ -15,7 +15,7 @@ function useSearchCategories() {
   const ts = useTranslations('search');
   return [
     { value: 'all',       label: ts('all'),       placeholder: ts('navPlaceholder'),         route: '/browse' },
-    { value: 'cars',      label: ts('cars'),      placeholder: ts('navCarsPlaceholder'),      route: '/browse/cars' },
+    { value: 'cars',      label: ts('cars'),      placeholder: ts('navCarsPlaceholder'),      route: '/cars/browse' },
     { value: 'buses',     label: ts('buses'),     placeholder: ts('navBusesPlaceholder'),     route: '/browse/buses' },
     { value: 'equipment', label: ts('equipment'), placeholder: ts('navEquipmentPlaceholder'), route: '/browse/equipment' },
     { value: 'parts',     label: ts('parts'),     placeholder: ts('navPartsPlaceholder'),     route: '/browse/parts' },
@@ -65,7 +65,8 @@ export function NavSearchBar({ searchOpen, onSearchOpenChange, onCloseMobile, he
 
   function buildSearchUrl(query: string) {
     const cat = activeCat.value !== 'all' ? activeCat.value : 'cars';
-    return `/browse/${cat}?q=${encodeURIComponent(query)}`;
+    const base = cat === 'cars' ? '/cars/browse' : `/browse/${cat}`;
+    return `${base}?q=${encodeURIComponent(query)}`;
   }
 
   function handleSearch(e?: React.FormEvent) {

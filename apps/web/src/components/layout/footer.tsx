@@ -34,8 +34,8 @@ export function Footer() {
 
   const quickLinks = [
     { label: t('home'), href: '/' },
-    { label: t('carsForSale'), href: '/browse/cars' },
-    { label: t('carsForRent'), href: '/browse/cars?listingType=RENTAL' },
+    { label: t('carsForSale'), href: '/cars/browse' },
+    { label: t('carsForRent'), href: '/cars/browse?listingType=RENTAL' },
     { label: t('spareParts'), href: '/browse/parts' },
     { label: tf('driverJobs'), href: '/jobs' },
   ];

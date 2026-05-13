@@ -41,7 +41,7 @@ export default function LandingPage() {
       <SubNavBar />
       {/* Hero */}
       <section
-        className="relative overflow-hidden py-16 md:py-24"
+        className="relative overflow-hidden pb-16 md:pb-24"
         style={{ background: 'linear-gradient(135deg, #0B2447 0%, #1a3a6b 60%, #0d3060 100%)' }}
       >
         {/* Grid overlay */}
@@ -52,15 +52,15 @@ export default function LandingPage() {
             backgroundSize: '40px 40px',
           }}
         />
-        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 text-center">
+        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 text-center" style={{ paddingTop: '85px' }}>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs font-bold mb-6 border border-white/20">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse-soft inline-block" />
+            <span className="w-2 h-2 rounded-full bg-green-400 motion-safe:animate-pulse-soft inline-block" />
             1,240+ سائق نشط في عُمان
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
             بورصة الوظائف للسائقين
             <br />
-            <span className="text-gradient-amber">في سلطنة عُمان</span>
+            <span className="text-[var(--color-brand-amber)]">في سلطنة عُمان</span>
           </h1>
           <p className="text-base md:text-lg text-white/70 mb-8 max-w-xl mx-auto">
             ابحث عن سائق محترف أو أعلن عن خدماتك — الأسرع، الأموثوق، الأشمل
@@ -89,7 +89,7 @@ export default function LandingPage() {
             {[
               { icon: Users, label: 'سائق نشط', value: '1,240', color: 'text-primary' },
               { icon: Briefcase, label: 'وظيفة منشورة', value: '3,800', color: 'text-brand-amber' },
-              { icon: Star, label: 'رضا العملاء', value: '98%', color: 'text-green-600' },
+              { icon: Star, label: 'رضا العملاء', value: '98%', color: 'text-[var(--color-brand-green)]' },
               { icon: MapPin, label: 'تغطية كاملة لعُمان', value: '11', color: 'text-on-surface' },
             ].map(stat => (
               <div key={`stat-${stat.label}`} className="flex flex-col items-center py-5 px-4 text-center">
@@ -120,12 +120,20 @@ export default function LandingPage() {
               <ArrowLeft size={14} />
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={`skel-hiring-${i}`} />)
-              : hiringJobs.map(job => <JobCard key={`landing-hiring-${job.id}`} job={job} />)
-            }
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={`skel-hiring-${i}`} />)}
+            </div>
+          ) : hiringJobs.length === 0 ? (
+            <div className="text-center py-12 text-on-surface-variant">
+              <Briefcase size={32} className="mx-auto mb-3 opacity-40" />
+              <p className="font-medium text-sm">لا توجد طلبات توظيف حالياً</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {hiringJobs.map(job => <JobCard key={`landing-hiring-${job.id}`} job={job} />)}
+            </div>
+          )}
         </div>
       </section>
 
@@ -141,7 +149,7 @@ export default function LandingPage() {
               href="/jobs/drivers"
               className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
             >
-              عرض الكل السائقين
+              عرض جميع السائقين
               <ArrowLeft size={14} />
             </Link>
           </div>
@@ -171,7 +179,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-extrabold text-on-surface">سائقون يعرضون خدماتهم</h2>
-              <p className="text-sm text-on-surface-variant mt-0.5">محترفون متاحون للعمل الآن</p>
+              <p className="text-sm text-on-surface-variant mt-0.5">يبحثون عن فرصة عمل الآن</p>
             </div>
             <Link
               href="/jobs/browse?type=OFFERING"
@@ -181,12 +189,20 @@ export default function LandingPage() {
               <ArrowLeft size={14} />
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => <JobCardSkeleton key={`skel-offer-${i}`} />)
-              : offeringJobs.map(job => <JobCard key={`landing-offering-${job.id}`} job={job} />)
-            }
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <JobCardSkeleton key={`skel-offer-${i}`} />)}
+            </div>
+          ) : offeringJobs.length === 0 ? (
+            <div className="text-center py-12 text-on-surface-variant">
+              <Users size={32} className="mx-auto mb-3 opacity-40" />
+              <p className="font-medium text-sm">لا يوجد سائقون يعرضون خدماتهم حالياً</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {offeringJobs.map(job => <JobCard key={`landing-offering-${job.id}`} job={job} />)}
+            </div>
+          )}
         </div>
       </section>
 

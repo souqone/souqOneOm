@@ -148,7 +148,7 @@ export function formatFilterLabel(
 
 export function getAddListingHref(category: ListingCategory): string {
   const map: Record<ListingCategory, string> = {
-    cars:      '/add-listing/car',
+    cars:      '/cars/new',
     buses:     '/add-listing/bus',
     equipment: '/add-listing/equipment',
     'equipment-requests': '/equipment/requests/new',

@@ -14,7 +14,7 @@ function useLinks(): NavLinkDef[] {
   const t = useTranslations('common');
   return [
     { href: '/',                label: t('home'),        icon: 'home'            },
-    { href: '/motors',          label: t('cars'),        icon: 'directions_car'  },
+    { href: '/cars',             label: t('cars'),        icon: 'directions_car'  },
     { href: '/buses',           label: t('buses'),       icon: 'directions_bus'  },
     { href: '/equipment',       label: t('equipment'),   icon: 'construction'    },
     { href: '/jobs',            label: t('jobs'),        icon: 'work'            },

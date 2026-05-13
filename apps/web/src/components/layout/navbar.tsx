@@ -28,7 +28,7 @@ function useNavLinks() {
 
   const navLinks: NavLinkItem[] = [
     { href: '/', label: t('home') },
-    { href: '/motors', label: t('cars') },
+    { href: '/cars', label: t('cars') },
     { href: '/buses', label: t('buses') },
     { href: '/equipment', label: t('equipment') },
     { href: '/transport', label: t('transportRequests') },
@@ -37,7 +37,7 @@ function useNavLinks() {
 
   const flatNavLinks = [
     { href: '/', label: t('home') },
-    { href: '/motors', label: t('cars') },
+    { href: '/cars', label: t('cars') },
     { href: '/browse/parts', label: t('spareParts') },
     { href: '/browse/services', label: t('carServices') },
     { href: '/buses', label: t('buses') },

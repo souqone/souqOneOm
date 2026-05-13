@@ -6,7 +6,7 @@ import {
   Car, Bus, Wrench, Settings, Truck, Briefcase,
   Calendar, Gauge, Settings2, Users, Building2,
   CalendarDays, Route, Tag, Fuel, MapPin, Clock,
-  Cog, HardHat,
+  Cog, HardHat, Palette,
 } from 'lucide-react'
 
 type LucideIcon = React.ComponentType<{ size?: number; className?: string }>
@@ -15,7 +15,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Car, Bus, Wrench, Settings, Truck, Briefcase,
   Calendar, Gauge, Settings2, Users, Building2,
   CalendarDays, Route, Tag, Fuel, MapPin, Clock,
-  Cog, HardHat,
+  Cog, HardHat, Palette,
 }
 
 interface DetailChipProps {
