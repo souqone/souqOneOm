@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, redirect, useParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
@@ -24,6 +24,7 @@ const FORM_MAP: Record<string, React.ComponentType> = {
 export default function AddListingByTypePage() {
   const { type } = useParams<{ type: string }>();
 
+  if (type === 'car') redirect('/cars/new');
   const FormComponent = FORM_MAP[type];
   if (!FormComponent) return notFound();
 

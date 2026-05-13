@@ -92,8 +92,8 @@ const TOP_BRANDS = [
 ];
 
 const QUICK_LINKS_DATA = [
-  { key: 'Sale',     icon: Car,    href: '/browse/cars',                    gradient: 'from-blue-600 to-indigo-700' },
-  { key: 'Rent',     icon: Key,    href: '/browse/cars?listingType=RENTAL', gradient: 'from-emerald-600 to-teal-700' },
+  { key: 'Sale',     icon: Car,    href: '/cars/browse',                    gradient: 'from-blue-600 to-indigo-700' },
+  { key: 'Rent',     icon: Key,    href: '/cars/browse?listingType=RENTAL', gradient: 'from-emerald-600 to-teal-700' },
   { key: 'Services', icon: Wrench, href: '/browse/services',               gradient: 'from-orange-500 to-red-600' },
   { key: 'Parts',    icon: Shield, href: '/browse/parts',                  gradient: 'from-purple-600 to-pink-600' },
 ] as const;
@@ -152,7 +152,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = searchRef.current?.value?.trim();
-    router.push(`/browse/cars${q ? `?q=${encodeURIComponent(q)}` : ''}` as any);
+    router.push(`/cars/browse${q ? `?q=${encodeURIComponent(q)}` : ''}` as any);
   }
 
   const scrollBrands = (dir: 'start' | 'end') => {
@@ -226,14 +226,14 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
               {/* CTAs */}
               <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-5">
                 <Link
-                  href="/browse/cars"
+                  href="/cars/browse"
                   className="btn-primary shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-black rounded-lg sm:rounded-xl hover:brightness-110 transition-all"
                 >
                   <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">explore</span>
                   {t('searchBtn')}
                 </Link>
                 <Link
-                  href="/add-listing/car"
+                  href="/cars/new"
                   className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 lg:px-7 py-1.5 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm lg:text-base font-bold rounded-lg sm:rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all"
                 >
                   <span className="material-symbols-outlined !text-[12px] sm:!text-[15px] lg:!text-base leading-none">add_circle</span>
@@ -302,7 +302,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
                 <button onClick={() => scrollBrands('end')} className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 flex items-center justify-center transition-colors">
                   <ArrowLeft size={16} />
                 </button>
-                <Link href="/browse/cars" className="text-xs text-primary font-bold hover:underline ms-2">
+                <Link href="/cars/browse" className="text-xs text-primary font-bold hover:underline ms-2">
                   {t('brandsViewAll')}
                 </Link>
               </div>
@@ -316,7 +316,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
                 {TOP_BRANDS.map(brand => (
                   <Link
                     key={brand.key}
-                    href={`/browse/cars?make=${brand.value}`}
+                    href={`/cars/browse?make=${brand.value}`}
                     className="group flex flex-col items-center gap-2 min-w-[90px] p-3 rounded-2xl bg-surface-container-lowest dark:bg-surface-container border border-outline-variant/10 hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
                   >
                     <div className="w-14 h-14 rounded-xl bg-white dark:bg-surface-container-high flex items-center justify-center p-2 shadow-sm group-hover:shadow-md transition-shadow">
@@ -349,7 +349,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
                 </div>
                 <p className="text-on-surface-variant text-xs sm:text-sm">{t('saleSectionSubtitle')}</p>
               </div>
-              <Link href="/browse/cars" className="flex items-center gap-1.5 text-primary font-bold text-xs sm:text-sm hover:underline transition-colors">
+              <Link href="/cars/browse" className="flex items-center gap-1.5 text-primary font-bold text-xs sm:text-sm hover:underline transition-colors">
                 {t('viewAll')}
                 <ArrowLeft size={14} />
               </Link>
@@ -359,7 +359,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
               {saleCars.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
                   {saleCars.map(item => (
-                    <UnifiedCard key={item.id} item={transformCar(item)} className="h-full" />
+                    <UnifiedCard key={item.id} item={transformCar(item)} className="h-full" hideContactButtons />
                   ))}
                 </div>
               ) : (
@@ -385,7 +385,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
                 </div>
                 <p className="text-on-surface-variant text-xs sm:text-sm">{t('rentSectionSubtitle')}</p>
               </div>
-              <Link href="/browse/cars?listingType=RENTAL" className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs sm:text-sm hover:underline transition-colors">
+              <Link href="/cars/browse?listingType=RENTAL" className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs sm:text-sm hover:underline transition-colors">
                 {t('viewAll')}
                 <ArrowLeft size={14} />
               </Link>
@@ -395,7 +395,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
               {rentalCars.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
                   {rentalCars.map(item => (
-                    <UnifiedCard key={item.id} item={transformCar(item)} className="h-full" />
+                    <UnifiedCard key={item.id} item={transformCar(item)} className="h-full" hideContactButtons />
                   ))}
                 </div>
               ) : (
@@ -431,7 +431,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
               {services.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
                   {services.map(svc => (
-                    <UnifiedCard key={svc.id} item={transformService(svc as any)} className="h-full" />
+                    <UnifiedCard key={svc.id} item={transformService(svc as any)} className="h-full" hideContactButtons />
                   ))}
                 </div>
               ) : (
@@ -467,7 +467,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
               {parts.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
                   {parts.map(part => (
-                    <UnifiedCard key={part.id} item={transformPart(part)} className="h-full" />
+                    <UnifiedCard key={part.id} item={transformPart(part)} className="h-full" hideContactButtons />
                   ))}
                 </div>
               ) : (

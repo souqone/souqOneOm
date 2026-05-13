@@ -267,6 +267,13 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
     }
   }
 
+  const steps = [
+    { label: tp('lfStep1') },
+    { label: tp('lfStep2') },
+    { label: tp('lfStep3') },
+  ];
+  const { step, next, back } = useFormSteps(steps.length);
+
   // Edit-mode loading / error states
   if (isEdit && isFetching) {
     return (
@@ -279,13 +286,6 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
   if (isEdit && (isError || !car)) {
     return <div className="p-8 text-center text-error">خطأ في تحميل البيانات</div>;
   }
-
-  const steps = [
-    { label: tp('lfStep1') },
-    { label: tp('lfStep2') },
-    { label: tp('lfStep3') },
-  ];
-  const { step, next, back } = useFormSteps(steps.length);
 
   const canProceed =
     step === 0

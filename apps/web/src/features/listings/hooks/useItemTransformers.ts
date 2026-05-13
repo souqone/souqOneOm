@@ -69,7 +69,6 @@ function getConditionBadge(condition: string, enums: EnumTranslations): Badge {
 
 function translateTransmission(v: string, enums: EnumTranslations): string { return translateEnum(enums.transmission, v) }
 function translateFuel(v: string, enums: EnumTranslations): string { return translateEnum(enums.fuelType, v) }
-function translateBody(v: string, enums: EnumTranslations): string { return translateEnum(enums.bodyType, v) }
 function translateServiceType(v: string, enums: EnumTranslations): string { return translateEnum(enums.serviceType, v) }
 function translateProvider(v: string, enums: EnumTranslations): string { return translateEnum(enums.providerType, v) }
 function translatePartCategory(v: string, enums: EnumTranslations): string { return translateEnum(enums.partCategory, v) }
@@ -132,11 +131,10 @@ export function useItemTransformers() {
         : null
 
       const details: DetailItem[] = [
-        raw.year         ? { icon: 'Calendar',  value: String(raw.year) }                                    : null,
-        raw.mileage      ? { icon: 'Gauge',     value: `${raw.mileage.toLocaleString('en-US')} ${t('km')}` } : null,
-        raw.transmission ? { icon: 'Settings2', value: translateTransmission(raw.transmission, enums) }       : null,
-        raw.fuelType     ? { icon: 'Fuel',      value: translateFuel(raw.fuelType, enums) }                   : null,
-        raw.bodyType     ? { icon: 'Car',       value: translateBody(raw.bodyType, enums) }                   : null,
+        raw.year             ? { icon: 'Calendar',  value: String(raw.year) }                              : null,
+        raw.transmission     ? { icon: 'Settings2', value: translateTransmission(raw.transmission, enums) } : null,
+        raw.exteriorColor    ? { icon: 'Palette',   value: raw.exteriorColor }                             : null,
+        raw.fuelType         ? { icon: 'Fuel',      value: translateFuel(raw.fuelType, enums) }             : null,
       ].filter(Boolean) as DetailItem[]
 
       return {

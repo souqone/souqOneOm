@@ -127,7 +127,7 @@ export default function NearbyListings({ listings, maxItems = 6 }: NearbyListing
           </div>
           <h2 className="text-3xl lg:text-4xl font-black text-on-surface">{tp('nearbyTitle')}</h2>
         </div>
-        <Link href="/browse/cars" className="hidden sm:flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-bold text-sm group">
+        <Link href="/cars/browse" className="hidden sm:flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-bold text-sm group">
           {tp('nearbyViewAll')}
           <span className="material-symbols-outlined icon-flip text-lg rtl:group-hover:-translate-x-1 ltr:group-hover:translate-x-1 transition-transform">arrow_back</span>
         </Link>

@@ -26,9 +26,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function BrowseCategoryPage({ params }: PageProps) {
   const { category } = await params
 
-  if (!VALID_CATEGORIES.includes(category as ListingCategory)) {
-    redirect('/browse')
-  }
+  if (category === 'cars') redirect('/cars/browse')
+  if (!VALID_CATEGORIES.includes(category as ListingCategory)) redirect('/browse')
 
   return <ListingsPageShell category={category as ListingCategory} />
 }

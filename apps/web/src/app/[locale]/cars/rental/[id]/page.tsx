@@ -1,29 +1,10 @@
-﻿/**
- * Rental Detail Page - Server Component
- * Provides OG metadata for WhatsApp / social sharing.
- */
-
-import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { serverFetch } from '@/lib/server-fetch';
 import { getPrimaryImage } from '@/lib/utils/get-primary-image';
-import RentalDetailClient from './rental-detail-client';
-
-const API_PATHS: Record<string, string> = {
-  car: '/listings',
-  bus: '/buses',
-  equipment: '/equipment',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  car: 'سيارة للإيجار',
-  bus: 'باص للإيجار',
-  equipment: 'معدات للإيجار',
-};
+import CarRentalDetailClient from './car-rental-detail-client';
 
 interface RentalOgData {
   title?: string;
-  description?: string;
   price?: string | number;
   dailyPrice?: string | number;
   monthlyPrice?: string | number;
@@ -35,29 +16,23 @@ interface RentalOgData {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; type: string; id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }): Promise<Metadata> {
-  const { locale, type, id } = await params;
-  const apiPath = API_PATHS[type];
-
-  if (!apiPath) {
-    return { title: 'غير موجود | سوق ون' };
-  }
+  const { locale, id } = await params;
 
   try {
-    const data = await serverFetch<RentalOgData>(`${apiPath}/${id}`, { revalidate: 60 });
+    const data = await serverFetch<RentalOgData>(`/listings/${id}`, { revalidate: 60 });
 
-    const title = data.title || TYPE_LABELS[type] || 'إيجار';
+    const title = data.title || 'سيارة للإيجار';
     const daily = data.dailyPrice ? `${Number(data.dailyPrice).toLocaleString('en-US')} ${data.currency || 'OMR'}/يوم` : '';
     const monthly = data.monthlyPrice ? `${Number(data.monthlyPrice).toLocaleString('en-US')} ${data.currency || 'OMR'}/شهر` : '';
-    const location = data.governorate || '';
     const priceInfo = daily || monthly || (data.price ? `${Number(data.price).toLocaleString('en-US')} ${data.currency || 'OMR'}` : '');
-    const descParts = [priceInfo, location, TYPE_LABELS[type]].filter(Boolean);
+    const descParts = [priceInfo, data.governorate || '', 'سيارة للإيجار'].filter(Boolean);
     const description = descParts.join(' · ') || title;
     const image = getPrimaryImage(data.images);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://souqone.com';
-    const pageUrl = `${appUrl}/${locale}/rental/${type}/${id}`;
+    const pageUrl = `${appUrl}/${locale}/cars/rental/${id}`;
 
     return {
       title: `${title} | سوق ون`,
@@ -79,12 +54,10 @@ export async function generateMetadata({
       },
     };
   } catch {
-    return { title: `${TYPE_LABELS[type] || 'إيجار'} | سوق ون` };
+    return { title: 'سيارة للإيجار | سوق ون' };
   }
 }
 
-export default async function RentalPage({ params }: { params: Promise<{ type: string; id: string }> }) {
-  const { type, id } = await params;
-  if (type === 'car') redirect(`/cars/rental/${id}`);
-  return <RentalDetailClient />;
+export default function CarRentalPage() {
+  return <CarRentalDetailClient />;
 }

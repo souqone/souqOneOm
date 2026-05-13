@@ -149,7 +149,7 @@ function ExpandableText({ text, expandLabel, collapseLabel }: { text: string; ex
  */
 function Breadcrumb({ listing, config, homeLabel }: { listing: UnifiedListing; config: SectionConfig; homeLabel: string }) {
   const listPaths: Record<string, string> = {
-    car: '/browse/cars',
+    car: '/cars/browse',
     bus: '/browse/buses',
     equipment: '/browse/equipment',
     part: '/browse/parts',
