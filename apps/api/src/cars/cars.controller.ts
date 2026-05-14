@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CarsService } from './cars.service';
 import { CarFilterDto } from './dto/car-filter.dto';
 import { BrandSearchDto } from './dto/brand-search.dto';
-import { SEED_BRANDS } from './data/seed-brands-v2';
+import { GULF_BRANDS as SEED_BRANDS } from './data/seed-gulf-v1';
 
 @Controller('cars')
 export class CarsController {
@@ -40,6 +40,14 @@ export class CarsController {
   @Get('models/:modelId/years')
   async getYearsByModel(@Param('modelId') modelId: string) {
     return this.carsService.findYearsByModel(modelId);
+  }
+
+  /**
+   * GET /cars/models/:modelId/trims
+   */
+  @Get('models/:modelId/trims')
+  async getTrimsByModel(@Param('modelId') modelId: string) {
+    return this.carsService.findTrimsByModel(modelId);
   }
 
   /**
@@ -117,6 +125,27 @@ export class CarsController {
     );
     if (!model) return [];
     return model.years.map((y) => ({ id: `${slug}--${modelSlug}--${y}`, year: y })).reverse();
+  }
+
+  /**
+   * GET /cars/static/brands/:slug/models/:modelSlug/trims
+   */
+  @Get('static/brands/:slug/models/:modelSlug/trims')
+  getStaticTrims(@Param('slug') slug: string, @Param('modelSlug') modelSlug: string) {
+    const brand = SEED_BRANDS.find((b) => b.slug === slug);
+    if (!brand) return [];
+    const model = (brand as any).models.find(
+      (m: any) => m.name.toLowerCase().replace(/\s+/g, '-') === modelSlug,
+    );
+    if (!model || !model.trims) return [];
+    return model.trims.map((t: any) => ({
+      id:       `${slug}--${modelSlug}--${t.name.toLowerCase().replace(/\s+/g, '-')}`,
+      name:     t.name,
+      nameAr:   t.nameAr ?? t.name,
+      slug:     t.name.toLowerCase().replace(/\s+/g, '-'),
+      yearFrom: t.from,
+      yearTo:   t.to ?? 2026,
+    }));
   }
 
   /**

@@ -126,6 +126,7 @@ model Listing {
   // بيانات السيارة
   make              String
   model             String
+  trim              String?
   year              Int
   mileage           Int?
   fuelType          FuelType?
@@ -190,6 +191,7 @@ model Listing {
   @@index([sellerId])
   @@index([make])
   @@index([model])
+  @@index([trim])
   @@index([year])
   @@index([status])
   @@index([price])
@@ -645,6 +647,7 @@ model CarModel {
   brandId   String
   brand     Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
   years     CarYear[]
+  trims     CarTrim[]
   createdAt DateTime  @default(now())
 
   @@unique([name, brandId])
@@ -667,6 +670,25 @@ model CarYear {
   @@index([modelId])
   @@index([year])
   @@map("car_years")
+}
+
+// ──────────────────────────────────────
+// فئات / تريمات السيارات — CarTrim
+// ──────────────────────────────────────
+model CarTrim {
+  id        String   @id @default(cuid())
+  name      String
+  nameAr    String?
+  slug      String
+  yearFrom  Int
+  yearTo    Int
+  modelId   String
+  model     CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([name, modelId])
+  @@index([modelId])
+  @@map("car_trims")
 }
 
 // ──────────────────────────────────────

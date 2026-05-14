@@ -17,6 +17,11 @@ export class CreateListingDto {
   @MaxLength(50)
   model!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  trim?: string;
+
   @IsInt()
   @Min(1900)
   @Max(2030)

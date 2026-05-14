@@ -1,14 +1,15 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
 import { FormSection } from '@/features/ads/components/forms/shared';
 import { inputCls, labelCls, chipCls } from '@/lib/constants/form-styles';
 import { condOptions, type ListingFormData } from './types';
 
-interface Brand { id: string; name: string; nameAr?: string | null }
+interface Brand    { id: string; name: string; nameAr?: string | null }
 interface CarModel { id: string; name: string; nameAr?: string | null }
-interface CarYear { id: string; year: number }
+interface CarTrim  { id: string; name: string; nameAr: string | null; yearFrom: number; yearTo: number }
 
 interface Step1Props {
   form: ListingFormData;
@@ -17,11 +18,13 @@ interface Step1Props {
   onImagesChange: (imgs: UploadedImage[]) => void;
   brands: Brand[];
   models: CarModel[];
-  years: CarYear[];
+  trims: CarTrim[];
   selectedBrandId: string;
   onBrandChange: (id: string, name: string) => void;
   selectedModelId: string;
   onModelChange: (id: string, name: string) => void;
+  selectedTrimId: string;
+  onTrimChange: (id: string, name: string, yearFrom: number, yearTo: number) => void;
   isLoading: boolean;
   condLabels: Record<string, string>;
 }
@@ -33,15 +36,32 @@ export function Step1BasicInfo({
   onImagesChange,
   brands,
   models,
-  years,
+  trims,
   selectedBrandId,
   onBrandChange,
   selectedModelId,
   onModelChange,
+  selectedTrimId,
+  onTrimChange,
   isLoading,
   condLabels,
 }: Step1Props) {
   const tp = useTranslations('pages');
+
+  // Build year options from selected trim's range, or from all trims for the model
+  const yearOptions = useMemo(() => {
+    if (trims.length === 0) return [];
+    const selectedTrim = trims.find((t) => t.id === selectedTrimId);
+    const from = selectedTrim
+      ? selectedTrim.yearFrom
+      : Math.min(...trims.map((t) => t.yearFrom));
+    const to = selectedTrim
+      ? selectedTrim.yearTo
+      : Math.max(...trims.map((t) => t.yearTo));
+    const years: number[] = [];
+    for (let y = to; y >= from; y--) years.push(y);
+    return years;
+  }, [trims, selectedTrimId]);
 
   return (
     <div className="space-y-8">
@@ -57,9 +77,9 @@ export function Step1BasicInfo({
         </div>
         <div className="flex gap-2 mt-4">
           {[
-            { value: 'SALE' as const, label: tp('lfTypeSale'), icon: 'sell' },
+            { value: 'SALE'   as const, label: tp('lfTypeSale'),   icon: 'sell'       },
             { value: 'RENTAL' as const, label: tp('lfTypeRental'), icon: 'car_rental' },
-            { value: 'WANTED' as const, label: tp('lfTypeWanted'), icon: 'search' },
+            { value: 'WANTED' as const, label: tp('lfTypeWanted'), icon: 'search'     },
           ].map((opt) => (
             <button
               key={opt.value}
@@ -86,10 +106,12 @@ export function Step1BasicInfo({
         <p className="text-xs text-[var(--color-on-surface-variant)] mt-3">{tp('lfUploadHint')}</p>
       </FormSection>
 
-      {/* Basic Info */}
+      {/* Basic Info — Brand → Model → Trim → Year */}
       <FormSection icon="directions_car" title={tp('lfBasicInfoTitle')}>
         <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Row 1: Brand + Model */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>{tp('lfBrand')}</label>
               <select
@@ -125,6 +147,32 @@ export function Step1BasicInfo({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Row 2: Trim + Year */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>الفئة / Trim</label>
+              <select
+                value={selectedTrimId}
+                onChange={(e) => {
+                  const trim = trims.find((t) => t.id === e.target.value);
+                  onTrimChange(
+                    e.target.value,
+                    trim?.name ?? '',
+                    trim?.yearFrom ?? 1990,
+                    trim?.yearTo ?? 2026,
+                  );
+                }}
+                className={inputCls}
+                disabled={!selectedModelId}
+              >
+                <option value="">{selectedModelId ? 'اختر الفئة' : 'اختر الموديل أولاً'}</option>
+                {trims.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nameAr || t.name}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className={labelCls}>{tp('lfYear')}</label>
               <select
@@ -132,16 +180,17 @@ export function Step1BasicInfo({
                 value={form.year || ''}
                 onChange={(e) => onChange({ year: parseInt(e.target.value) })}
                 className={inputCls}
-                disabled={!selectedModelId}
+                disabled={yearOptions.length === 0}
               >
-                <option value="">{selectedModelId ? tp('lfSelectYear') : tp('lfSelectModelFirst')}</option>
-                {years.map((y) => (
-                  <option key={y.id} value={y.year}>{y.year}</option>
+                <option value="">{yearOptions.length > 0 ? tp('lfSelectYear') : 'اختر الموديل أولاً'}</option>
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>{y}</option>
                 ))}
               </select>
             </div>
           </div>
 
+          {/* Row 3: Condition + Mileage */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>{tp('lfCondition')}</label>
@@ -169,6 +218,7 @@ export function Step1BasicInfo({
               />
             </div>
           </div>
+
         </div>
       </FormSection>
     </div>
