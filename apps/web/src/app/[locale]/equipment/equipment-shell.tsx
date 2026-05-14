@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { Link } from '@/i18n/navigation';
+import { ListingSearchBar } from '@/components/shared/listing-search-bar';
 import {
   Wrench, HardHat, Package, Users, Plus, MapPin, ArrowLeft,
   Search, Shield, Star, BadgeCheck, TrendingUp,
@@ -44,15 +45,6 @@ const BG_CLS: { [k: string]: string } = {
   '#7c3aed': 'bg-violet-50 dark:bg-violet-950/40',
   '#0d9488': 'bg-teal-50 dark:bg-teal-950/40',
   '#e11d48': 'bg-rose-50 dark:bg-rose-950/40',
-};
-
-const ICON_BG_CLS: { [k: string]: string } = {
-  '#2563eb': 'bg-blue-100 dark:bg-blue-900/30',
-  '#16a34a': 'bg-green-100 dark:bg-green-900/30',
-  '#d97706': 'bg-amber-100 dark:bg-amber-900/30',
-  '#7c3aed': 'bg-violet-100 dark:bg-violet-900/30',
-  '#0d9488': 'bg-teal-100 dark:bg-teal-900/30',
-  '#e11d48': 'bg-rose-100 dark:bg-rose-900/30',
 };
 
 const QUICK_LINKS = [
@@ -98,13 +90,6 @@ interface EquipmentShellProps {
 export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requests }: EquipmentShellProps) {
   const { transformEquipment } = useItemTransformers();
 
-  const stats = useMemo(() => [
-    { label: 'معدة للبيع',   icon: Package,    color: '#d97706', value: saleEquipment.length > 0   ? `${saleEquipment.length}+`   : '+100' },
-    { label: 'معدة للإيجار', icon: Wrench,     color: '#16a34a', value: rentalEquipment.length > 0 ? `${rentalEquipment.length}+` : '+50'  },
-    { label: 'نوع معدة',     icon: Star,       color: '#2563eb', value: '12'                                                               },
-    { label: 'مشغل متاح',   icon: BadgeCheck, color: '#7c3aed', value: operators.length > 0       ? `${operators.length}+`       : '+30'  },
-  ], [saleEquipment.length, rentalEquipment.length, operators.length]);
-
   const OPERATOR_TYPES: Record<string, string> = { DRIVER: 'سائق', OPERATOR: 'مشغل', TECHNICIAN: 'فني', MAINTENANCE: 'صيانة' };
 
   return (
@@ -121,7 +106,7 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
         <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/4 translate-y-1/4" />
 
-        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6 sm:py-20 lg:py-24" style={{ paddingTop: '85px' }}>
+        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-4 sm:py-[61px] lg:py-[74px]" style={{ paddingTop: '82px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
             <div className="text-center sm:text-start">
@@ -183,27 +168,23 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
         </div>
       </section>
 
-      {/* ═══════════════════ 2. STATS BAR ═══════════════════ */}
-      <section className="py-5 sm:py-8">
-        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-4">
-            {stats.map(s => {
-              const Icon = s.icon;
-              return (
-                <div key={s.label} className={`flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-3 p-2 sm:p-3 rounded-2xl ${BG_CLS[s.color]}`}>
-                  <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${ICON_BG_CLS[s.color]}`}>
-                    <Icon size={16} style={{ color: s.color }} />
-                  </div>
-                  <div className="text-center sm:text-start">
-                    <p className="text-sm sm:text-lg font-bold text-[var(--color-on-surface)]">{s.value}</p>
-                    <p className="text-[9px] sm:text-[11px] leading-tight text-[var(--color-on-surface-variant)]">{s.label}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* ═══════════════════ 2. SEARCH BAR ═══════════════════ */}
+      <ListingSearchBar
+        categories={[{
+          key: 'equipment',
+          label: 'معدات',
+          route: '/browse/equipment',
+          subcategories: [
+            { key: 'sale',      label: 'معدات للبيع',    route: '/browse/equipment?listingType=EQUIPMENT_SALE' },
+            { key: 'rent',      label: 'معدات للإيجار',  route: '/browse/equipment?listingType=EQUIPMENT_RENT' },
+            { key: 'requests',  label: 'طلبات المعدات',  route: '/equipment/requests/new'                     },
+            { key: 'operators', label: 'مشغلين معدات',   route: '/browse/equipment?tab=operators'             },
+          ],
+        }]}
+        defaultCat="equipment"
+        addListingHref="/add-listing/equipment"
+        addListingLabel="أضف معدة"
+      />
 
       {/* ═══════════════════ 3. QUICK LINKS ═══════════════════ */}
       <section className="py-8 sm:py-12">

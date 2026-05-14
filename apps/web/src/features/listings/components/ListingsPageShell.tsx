@@ -15,6 +15,7 @@ import { CATEGORY_META, VALID_CATEGORIES } from '../types/category.types'
 import { CATEGORY_SORT_OPTIONS } from '../config/filters.config'
 import { useUnifiedListings } from '../hooks/useUnifiedListings'
 import { useFilterState } from '../hooks/useFilterState'
+import { useBrandCounts } from '../hooks/useBrandCounts'
 import { useRecentSearches } from '../hooks/useRecentSearches'
 import { getAddListingHref } from '../utils/filter-helpers'
 import { CATEGORY_SLIDER_MAP } from '../data'
@@ -174,6 +175,10 @@ function ShellContent({ category }: { category: ListingCategory }) {
 
   // Fetch Data
   const { items, total, totalPages, isLoading, isFetching } = useUnifiedListings(category, filters, page)
+
+  // Brand counts (cars only)
+  const carBrandValues = category === 'cars' ? (CATEGORY_SLIDER_MAP['cars']?.items.map(i => i.value) ?? []) : []
+  const brandCounts = useBrandCounts(carBrandValues)
 
   // Handlers
   const submitSearch = (query: string = searchQuery) => {
@@ -370,6 +375,7 @@ function ShellContent({ category }: { category: ListingCategory }) {
           filterKey={CATEGORY_SLIDER_MAP['cars']!.defaultFilterKey}
           filters={filters}
           onFilterChange={handleFilterChange}
+          counts={brandCounts}
         />
       )}
       {category !== 'cars' && CATEGORY_SLIDER_MAP[category] && (

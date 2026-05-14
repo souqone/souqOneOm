@@ -1,12 +1,13 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Users, Briefcase, Star, MapPin } from 'lucide-react';
+import { ArrowLeft, Briefcase, Users } from 'lucide-react';
 import JobCard from '@/features/jobs/components/JobCard';
 import JobCardSkeleton from '@/features/jobs/components/JobCardSkeleton';
 import DriverCard from '@/features/jobs/components/DriverCard';
 import { useJobs, useDrivers } from '@/lib/api/jobs';
 import SubNavBar from '@/components/layout/SubNavBar';
+import { ListingSearchBar } from '@/components/shared/listing-search-bar';
 import type { DriverJob, DriverProfile } from '@/features/jobs/types';
 
 function mapJob(item: Record<string, any>): DriverJob {
@@ -41,7 +42,7 @@ export default function LandingPage() {
       <SubNavBar />
       {/* Hero */}
       <section
-        className="relative overflow-hidden pb-16 md:pb-24"
+        className="relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #0B2447 0%, #1a3a6b 60%, #0d3060 100%)' }}
       >
         {/* Grid overlay */}
@@ -52,7 +53,7 @@ export default function LandingPage() {
             backgroundSize: '40px 40px',
           }}
         />
-        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 text-center" style={{ paddingTop: '85px' }}>
+        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 text-center py-4 sm:py-[61px] lg:py-[74px]" style={{ paddingTop: '82px' }}>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs font-bold mb-6 border border-white/20">
             <span className="w-2 h-2 rounded-full bg-green-400 motion-safe:animate-pulse-soft inline-block" />
             1,240+ سائق نشط في عُمان
@@ -82,27 +83,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Bar */}
-      <section className="bg-white border-b border-outline-variant">
-        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-outline-variant">
-            {[
-              { icon: Users, label: 'سائق نشط', value: '1,240', color: 'text-primary' },
-              { icon: Briefcase, label: 'وظيفة منشورة', value: '3,800', color: 'text-brand-amber' },
-              { icon: Star, label: 'رضا العملاء', value: '98%', color: 'text-[var(--color-brand-green)]' },
-              { icon: MapPin, label: 'تغطية كاملة لعُمان', value: '11', color: 'text-on-surface' },
-            ].map(stat => (
-              <div key={`stat-${stat.label}`} className="flex flex-col items-center py-5 px-4 text-center">
-                <stat.icon size={20} className={`${stat.color} mb-1`} />
-                <span className={`text-xl md:text-2xl font-extrabold font-tabular ${stat.color}`}>
-                  {stat.value}
-                </span>
-                <span className="text-xs text-on-surface-variant mt-0.5">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ListingSearchBar
+        categories={[{
+          key: 'jobs',
+          label: 'وظائف',
+          route: '/jobs/browse',
+          subcategories: [
+            { key: 'hiring',   label: 'طلبات توظيف',    route: '/jobs/browse?type=HIRING'   },
+            { key: 'offering', label: 'سائقون متاحون',    route: '/jobs/browse?type=OFFERING' },
+            { key: 'drivers',  label: 'ملفات السائقين', route: '/jobs/drivers'              },
+          ],
+        }]}
+        defaultCat="jobs"
+        addListingHref="/jobs/new"
+        addListingLabel="أضف إعلان"
+      />
 
       {/* Latest HIRING Jobs */}
       <section className="py-12">
