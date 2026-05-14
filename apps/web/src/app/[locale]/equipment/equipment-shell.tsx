@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Link } from '@/i18n/navigation';
 import { ListingSearchBar } from '@/components/shared/listing-search-bar';
 import {
   Wrench, HardHat, Package, Users, Plus, MapPin, ArrowLeft,
-  Search, Shield, Star, BadgeCheck, TrendingUp,
+  Search, Shield, Star, TrendingUp,
   Zap, Truck, Wind, Droplets, RefreshCw,
 } from 'lucide-react';
 import type { EquipmentListingItem, EquipmentRequestItem, OperatorListingItem } from '@/lib/api/equipment';

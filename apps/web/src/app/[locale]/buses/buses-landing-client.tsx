@@ -5,7 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { ListingSearchBar } from '@/components/shared/listing-search-bar';
 import {
   Bus, Users, GraduationCap, Crown, Truck, MinusSquare,
-  ArrowLeft, Search, Plus, Shield, Star, MapPin, BadgeCheck,
+  ArrowLeft, Search, Plus, Shield, Star, MapPin,
   KeyRound, TrendingUp,
 } from 'lucide-react';
 
