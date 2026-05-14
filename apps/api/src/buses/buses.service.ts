@@ -38,6 +38,21 @@ export class BusesService {
     private readonly search: SearchService,
   ) {}
 
+  async getManufacturers() {
+    return this.prisma.busManufacturer.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, nameAr: true, country: true },
+    });
+  }
+
+  async getModelsByManufacturer(manufacturerId: string) {
+    return this.prisma.busModel.findMany({
+      where: { manufacturerId },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, nameAr: true, busType: true, capacity: true },
+    });
+  }
+
   private buildMeiliDoc(bus: any): Record<string, any> {
     return {
       id: bus.id,
@@ -72,6 +87,8 @@ export class BusesService {
         busType: dto.busType,
         make: dto.make,
         model: dto.model,
+        manufacturerId: dto.manufacturerId,
+        modelId: dto.modelId,
         year: dto.year,
         capacity: dto.capacity,
         mileage: dto.mileage,

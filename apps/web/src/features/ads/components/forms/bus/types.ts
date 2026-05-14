@@ -48,6 +48,8 @@ export interface BusFormData {
   description: string;
   make: string;
   model: string;
+  manufacturerId?: string;
+  modelId?: string;
   year: string;
   capacity: string;
   mileage: string;
@@ -91,6 +93,8 @@ export const DEFAULT_BUS_FORM: BusFormData = {
   description: '',
   make: '',
   model: '',
+  manufacturerId: undefined,
+  modelId: undefined,
   year: '',
   capacity: '',
   mileage: '',

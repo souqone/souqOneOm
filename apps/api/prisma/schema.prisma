@@ -1018,6 +1018,32 @@ enum ContractType {
   OTHER_CONTRACT
 }
 
+model BusManufacturer {
+  id       String       @id @default(cuid())
+  name     String       @unique
+  nameAr   String
+  country  String
+  models   BusModel[]
+  listings BusListing[]
+
+  @@map("bus_manufacturers")
+}
+
+model BusModel {
+  id             String          @id @default(cuid())
+  name           String
+  nameAr         String
+  busType        BusType
+  capacity       Int
+  aliases        String[]
+  manufacturerId String
+  manufacturer   BusManufacturer @relation(fields: [manufacturerId], references: [id])
+  listings       BusListing[]
+
+  @@unique([manufacturerId, name])
+  @@map("bus_models")
+}
+
 model BusListing {
   id                String          @id @default(cuid())
   title             String
@@ -1029,6 +1055,11 @@ model BusListing {
 
   make              String
   model             String
+
+  manufacturerId    String?
+  modelId           String?
+  busManufacturer   BusManufacturer? @relation(fields: [manufacturerId], references: [id])
+  busModel          BusModel?        @relation(fields: [modelId], references: [id])
   year              Int
   capacity          Int
   mileage           Int?
@@ -1097,6 +1128,8 @@ model BusListing {
   @@index([createdAt])
   @@index([slug])
   @@index([deletedAt])
+  @@index([manufacturerId])
+  @@index([modelId])
   @@map("bus_listings")
 }
 

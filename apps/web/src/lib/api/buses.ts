@@ -140,3 +140,35 @@ export function useUpdateBusListing() {
 export function useDeleteBusListing() {
   return useDeleteListingHook('buses', (id) => `/buses/${id}`);
 }
+
+export interface BusManufacturer {
+  id: string;
+  name: string;
+  nameAr: string;
+  country: string;
+}
+
+export interface BusModelOption {
+  id: string;
+  name: string;
+  nameAr: string;
+  busType: string;
+  capacity: number;
+}
+
+export function useBusManufacturers() {
+  return useQuery<BusManufacturer[]>({
+    queryKey: ['bus-manufacturers'],
+    queryFn: () => apiRequest<BusManufacturer[]>('/buses/manufacturers'),
+    staleTime: Infinity,
+  });
+}
+
+export function useBusModels(manufacturerId: string | undefined) {
+  return useQuery<BusModelOption[]>({
+    queryKey: ['bus-models', manufacturerId],
+    queryFn: () => apiRequest<BusModelOption[]>(`/buses/models?manufacturerId=${manufacturerId}`),
+    enabled: !!manufacturerId,
+    staleTime: Infinity,
+  });
+}

@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, Req,
 } from '@nestjs/common';
+
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -27,6 +28,16 @@ export class BusesController {
   @Get()
   findAll(@Query() query: QueryBusListingsDto) {
     return this.busesService.findAll(query);
+  }
+
+  @Get('manufacturers')
+  getManufacturers() {
+    return this.busesService.getManufacturers();
+  }
+
+  @Get('models')
+  getModels(@Query('manufacturerId') manufacturerId: string) {
+    return this.busesService.getModelsByManufacturer(manufacturerId);
   }
 
   @UseGuards(JwtAuthGuard)

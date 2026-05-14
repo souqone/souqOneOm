@@ -30,6 +30,14 @@ export class CreateBusListingDto {
   @IsString()
   model!: string;
 
+  @IsOptional()
+  @IsString()
+  manufacturerId?: string;
+
+  @IsOptional()
+  @IsString()
+  modelId?: string;
+
   @IsNumber()
   @Type(() => Number)
   @Min(1970)
