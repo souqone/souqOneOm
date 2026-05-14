@@ -109,12 +109,13 @@ export class CarsController {
       name: m.name,
       nameAr: m.nameAr,
       slug: m.name.toLowerCase().replace(/\s+/g, '-'),
-      yearCount: m.years.length,
+      trimCount: m.trims.length,
     }));
   }
 
   /**
    * GET /cars/static/brands/:slug/models/:modelSlug/years
+   * Derives year range from trims (min yearFrom → max yearTo)
    */
   @Get('static/brands/:slug/models/:modelSlug/years')
   getStaticYears(@Param('slug') slug: string, @Param('modelSlug') modelSlug: string) {
@@ -123,8 +124,12 @@ export class CarsController {
     const model = brand.models.find(
       (m) => m.name.toLowerCase().replace(/\s+/g, '-') === modelSlug,
     );
-    if (!model) return [];
-    return model.years.map((y) => ({ id: `${slug}--${modelSlug}--${y}`, year: y })).reverse();
+    if (!model || !model.trims.length) return [];
+    const from = Math.min(...model.trims.map((t) => t.from));
+    const to   = Math.max(...model.trims.map((t) => t.to ?? 2026));
+    const years: number[] = [];
+    for (let y = to; y >= from; y--) years.push(y);
+    return years.map((y) => ({ id: `${slug}--${modelSlug}--${y}`, year: y }));
   }
 
   /**
@@ -166,7 +171,14 @@ export class CarsController {
           name: m.name,
           nameAr: m.nameAr,
           slug: m.name.toLowerCase().replace(/\s+/g, '-'),
-          years: [...m.years].reverse().map((y) => ({ id: `${b.slug}--${m.name.toLowerCase().replace(/\s+/g, '-')}--${y}`, year: y })),
+          trims: m.trims.map((t) => ({
+            id:       `${b.slug}--${m.name.toLowerCase().replace(/\s+/g, '-')}--${t.name.toLowerCase().replace(/\s+/g, '-')}`,
+            name:     t.name,
+            nameAr:   t.nameAr ?? t.name,
+            slug:     t.name.toLowerCase().replace(/\s+/g, '-'),
+            yearFrom: t.from,
+            yearTo:   t.to ?? 2026,
+          })),
         })),
       }));
   }
