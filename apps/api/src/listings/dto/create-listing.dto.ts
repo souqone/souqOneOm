@@ -167,4 +167,16 @@ export class CreateListingDto {
   @IsOptional()
   @IsNumber()
   longitude?: number;
+
+  @IsOptional()
+  @IsString()
+  brandId?: string;
+
+  @IsOptional()
+  @IsString()
+  carModelId?: string;
+
+  @IsOptional()
+  @IsString()
+  carTrimId?: string;
 }

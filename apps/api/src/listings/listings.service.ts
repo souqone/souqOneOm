@@ -124,6 +124,9 @@ export class ListingsService {
         city: dto.city,
         latitude: dto.latitude,
         longitude: dto.longitude,
+        ...(dto.brandId    && { brand:    { connect: { id: dto.brandId    } } }),
+        ...(dto.carModelId && { carModel: { connect: { id: dto.carModelId } } }),
+        ...(dto.carTrimId  && { carTrim:  { connect: { id: dto.carTrimId  } } }),
         status: 'ACTIVE',
         seller: { connect: { id: sellerId } },
     });
@@ -348,6 +351,9 @@ export class ListingsService {
     if (dto.cancellationPolicy !== undefined) data.cancellationPolicy = dto.cancellationPolicy;
     if (dto.availableFrom !== undefined) data.availableFrom = dto.availableFrom ? new Date(dto.availableFrom) : null;
     if (dto.availableTo !== undefined) data.availableTo = dto.availableTo ? new Date(dto.availableTo) : null;
+    if (dto.brandId !== undefined)    data.brand    = dto.brandId    ? { connect: { id: dto.brandId    } } : { disconnect: true };
+    if (dto.carModelId !== undefined) data.carModel = dto.carModelId ? { connect: { id: dto.carModelId } } : { disconnect: true };
+    if (dto.carTrimId !== undefined)  data.carTrim  = dto.carTrimId  ? { connect: { id: dto.carTrimId  } } : { disconnect: true };
 
     const updated = await this.repo.update(id, data);
 
