@@ -144,6 +144,25 @@ export class CarsService {
   }
 
   /* ═══════════════════════════════════════════
+     Trims
+  ═══════════════════════════════════════════ */
+
+  async findTrimsByModel(modelId: string) {
+    const cacheKey = `cars:trims:${modelId}`;
+    const cached = await this.redis.get<any[]>(cacheKey);
+    if (cached) return cached;
+
+    const trims = await this.prisma.carTrim.findMany({
+      where: { modelId },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, nameAr: true, slug: true, yearFrom: true, yearTo: true },
+    });
+
+    await this.redis.set(cacheKey, trims, 3600);
+    return trims;
+  }
+
+  /* ═══════════════════════════════════════════
      Filter (advanced)
   ═══════════════════════════════════════════ */
 

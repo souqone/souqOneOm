@@ -189,7 +189,7 @@ export function MotorsShell({ saleCars, rentalCars, services, parts }: MotorsShe
 
         {/* Hero Banner */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-3">
-          <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/5] lg:aspect-[16/5.5] xl:aspect-[16/5] rounded-2xl sm:rounded-3xl">
+          <div className="relative w-full overflow-hidden aspect-[16/7] sm:aspect-[16/4] lg:aspect-[16/4] xl:aspect-[16/4] rounded-2xl sm:rounded-3xl">
             <Image
               src="/images/categories/cars.webp"
               alt="سيارات سوق وان"

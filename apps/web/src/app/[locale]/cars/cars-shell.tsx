@@ -1,11 +1,16 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
+import { ListingSearchBar } from '@/components/shared/listing-search-bar';
+import { BrandGrid } from '@/features/listings/components/BrandGrid';
+import { CAR_SLIDER_ITEMS } from '@/features/listings/data/cars';
+import { useBrandCounts } from '@/features/listings/hooks/useBrandCounts';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
 import {
   Car, Key, Wrench, Settings, Star, Shield, Users,
-  MapPin, Search, Plus, ArrowLeft, TrendingUp, BadgeCheck,
+  MapPin, Search, Plus, ArrowLeft, TrendingUp,
 } from 'lucide-react';
 import type { UnifiedListingItem } from '@/features/listings/types/unified-item.types';
 
@@ -48,26 +53,33 @@ const BG_CLS: { [k: string]: string } = {
   '#7c3aed': 'bg-violet-50 dark:bg-violet-950/40',
 };
 
-const ICON_BG_CLS: { [k: string]: string } = {
-  '#2563eb': 'bg-blue-100 dark:bg-blue-900/30',
-  '#16a34a': 'bg-green-100 dark:bg-green-900/30',
-  '#d97706': 'bg-amber-100 dark:bg-amber-900/30',
-  '#7c3aed': 'bg-violet-100 dark:bg-violet-900/30',
-};
-
-const STATS = [
-  { label: 'إعلان نشط',     icon: Car,        color: '#2563eb', value: '+500' },
-  { label: 'بائع موثّق',    icon: BadgeCheck,  color: '#16a34a', value: '+200' },
-  { label: 'ماركة متوفرة',  icon: Star,       color: '#d97706', value: '+30'  },
-  { label: 'محافظة مخدومة', icon: MapPin,     color: '#7c3aed', value: '11'   },
-] as const;
-
 const HOW_STEPS = [
   { num: 1, icon: Search,  title: 'تصفّح الإعلانات',   desc: 'ابحث بين مئات السيارات بالفلاتر المناسبة.',        color: '#2563eb' },
   { num: 2, icon: Car,     title: 'اختر سيارتك',       desc: 'قارن الأسعار والصور والمواصفات بالتفصيل.',          color: '#d97706' },
   { num: 3, icon: Users,   title: 'تواصل مع البائع',   desc: 'اتصل مباشرةً بالبائع عبر الهاتف أو واتساب.',        color: '#7c3aed' },
   { num: 4, icon: Shield,  title: 'أتمّ الصفقة بأمان', desc: 'تحقق من الوثائق واستلم سيارتك بكل ثقة.',            color: '#16a34a' },
 ] as const;
+
+// ── Brand section ────────────────────────────────────────────────────────────
+
+function CarsBrandSection() {
+  const router = useRouter()
+  const brandCounts = useBrandCounts(CAR_SLIDER_ITEMS.map(i => i.value))
+
+  function handleBrandFilter(_key: string, value: string | boolean | null) {
+    if (value) router.push(`/cars/browse?make=${encodeURIComponent(String(value))}`)
+    else router.push('/cars/browse')
+  }
+
+  return (
+    <BrandGrid
+      items={CAR_SLIDER_ITEMS}
+      filters={{}}
+      onFilterChange={handleBrandFilter}
+      counts={brandCounts}
+    />
+  )
+}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -80,8 +92,8 @@ interface CarsShellProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
-  const { transformCar } = useItemTransformers();
+export function CarsShell({ saleCars, rentalCars, services, parts }: CarsShellProps) {
+  const { transformCar, transformPart, transformService } = useItemTransformers();
 
   return (
     <div dir="rtl">
@@ -98,11 +110,11 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
         <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/4 translate-y-1/4" />
 
-        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-10 sm:py-20 lg:py-24" style={{ paddingTop: '85px' }}>
+        <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-4 sm:py-[61px] lg:py-[74px]" style={{ paddingTop: '82px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
             {/* Content */}
-            <div>
+            <div className="text-center sm:text-start">
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 sm:px-4 py-1.5 mb-4 sm:mb-6">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="text-xs font-bold text-white/90">منصة عُمانية متخصصة في بيع وتأجير السيارات</span>
@@ -114,23 +126,25 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
                 <span className="text-[var(--color-brand-amber)]">أو بِعها اليوم</span>
               </h1>
 
-              <p className="text-sm sm:text-lg text-white/75 mb-5 sm:mb-8 leading-relaxed max-w-lg">
+              <p className="text-sm sm:text-lg text-white/75 mb-5 sm:mb-8 leading-relaxed max-w-lg mx-auto sm:mx-0">
                 سوق متخصص يجمع بائعي ومشتري السيارات من جميع محافظات سلطنة عُمان.
                 أسعار تنافسية وبائعون موثّقون.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mb-6 sm:mb-8">
-                <Link href="/cars/browse" className="btn-transport-primary text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto">
-                  <Car size={18} />
+              <div className="flex flex-row gap-2 sm:gap-3 mb-4 sm:mb-8">
+                <Link href="/cars/browse" className="btn-transport-primary flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-base !py-2 !px-3 sm:!py-3.5 sm:!px-6">
+                  <Car size={13} className="sm:hidden" aria-hidden="true" />
+                  <Car size={18} className="hidden sm:block" aria-hidden="true" />
                   تصفّح السيارات
                 </Link>
-                <Link href="/cars/new" className="btn-outline-white text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto">
+                <Link href="/cars/new" className="btn-outline-white flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-base !py-2 !px-3 sm:!py-3.5 sm:!px-6">
                   أضف إعلانك مجاناً
-                  <ArrowLeft size={18} />
+                  <ArrowLeft size={13} className="sm:hidden" aria-hidden="true" />
+                  <ArrowLeft size={18} className="hidden sm:block" aria-hidden="true" />
                 </Link>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4">
                 {([
                   { icon: Shield,   text: 'بائعون موثّقون' },
                   { icon: Star,     text: 'تقييمات حقيقية' },
@@ -161,27 +175,25 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
         </div>
       </section>
 
-      {/* ═══════════════════ 2. STATS BAR ═══════════════════ */}
-      <section className="py-5 sm:py-8">
-        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            {STATS.map(s => {
-              const Icon = s.icon;
-              return (
-                <div key={s.label} className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-2xl ${BG_CLS[s.color]}`}>
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${ICON_BG_CLS[s.color]}`}>
-                    <Icon size={20} style={{ color: s.color }} />
-                  </div>
-                  <div>
-                    <p className="text-base sm:text-lg font-bold text-[var(--color-on-surface)]">{s.value}</p>
-                    <p className="text-[10px] sm:text-[11px] text-[var(--color-on-surface-variant)]">{s.label}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* ═══════════════════ 2. SEARCH BAR ═══════════════════ */}
+      <ListingSearchBar
+        categories={[{
+          key: 'cars',
+          label: 'سيارات',
+          route: '/cars/browse',
+          subcategories: [
+            { key: 'sale',     label: 'سيارات للبيع',   route: '/cars/browse?listingType=SALE'   },
+            { key: 'rent',     label: 'سيارات للإيجار', route: '/cars/browse?listingType=RENTAL' },
+            { key: 'parts',    label: 'قطع الغيار',     route: '/browse/parts'                   },
+            { key: 'services', label: 'خدمات السيارات', route: '/browse/services'                },
+          ],
+        }]}
+        defaultCat="cars"
+        addListingHref="/cars/new"
+      />
+
+      {/* ═══════════════════ 2b. BRAND GRID ═══════════════════ */}
+      <CarsBrandSection />
 
       {/* ═══════════════════ 3. CAR TYPES GRID ═══════════════════ */}
       <section className="py-8 sm:py-12">
@@ -259,7 +271,57 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
         </section>
       )}
 
-      {/* ═══════════════════ 6. HOW IT WORKS ═══════════════════ */}
+      {/* ═══════════════════ 6. SPARE PARTS ═══════════════════ */}
+      {parts.length > 0 && (
+        <section className="py-8 sm:py-12">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-5 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 rounded-full bg-[#d97706]" />
+                  <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[var(--color-on-surface)]">قطع الغيار</h2>
+                </div>
+                <p className="text-sm text-[var(--color-on-surface-variant)]">قطع أصلية وبديلة لجميع الماركات</p>
+              </div>
+              <Link href="/browse/parts" className="flex items-center gap-1.5 text-amber-600 font-bold text-xs sm:text-sm hover:underline transition-colors">
+                عرض الكل <ArrowLeft size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+              {parts.map(item => (
+                <UnifiedCard key={item.id} item={transformPart(item)} className="h-full" hideContactButtons />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════ 7. CAR SERVICES ═══════════════════ */}
+      {services.length > 0 && (
+        <section className="py-8 sm:py-12 bg-[var(--color-surface-container-low)] dark:bg-[var(--color-surface-dim)]">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-5 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <div className="h-6 sm:h-8 w-1 rounded-full bg-[#7c3aed]" />
+                  <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[var(--color-on-surface)]">خدمات السيارات</h2>
+                </div>
+                <p className="text-sm text-[var(--color-on-surface-variant)]">صيانة وطلاء وتجليد وفحص وأكثر</p>
+              </div>
+              <Link href="/browse/services" className="flex items-center gap-1.5 text-violet-600 font-bold text-xs sm:text-sm hover:underline transition-colors">
+                عرض الكل <ArrowLeft size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+              {services.map(item => (
+                <UnifiedCard key={item.id} item={transformService(item)} className="h-full" hideContactButtons />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════ 8. HOW IT WORKS ═══════════════════ */}
       <section className="py-10 sm:py-16 bg-[var(--color-surface-container-low)] dark:bg-[var(--color-surface-dim)]">
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
           <div className="text-center mb-6 sm:mb-10">
@@ -287,9 +349,9 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
       </section>
 
       {/* ═══════════════════ 7. SELLER CTA ═══════════════════ */}
-      <section className="py-10 sm:py-16">
+      <section className="py-4 sm:py-16 pb-[calc(1rem+env(safe-area-inset-bottom,0px)+53px)] sm:pb-16">
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-          <div className="gradient-navy rounded-2xl sm:rounded-3xl p-5 sm:p-12 text-white overflow-hidden relative">
+          <div className="gradient-navy rounded-2xl sm:rounded-3xl p-4 sm:p-12 text-white overflow-hidden relative">
             <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/2 translate-y-1/2" />
 
@@ -308,7 +370,7 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
                 أضف إعلانك مجاناً وتواصل مع آلاف المشترين المهتمين في جميع محافظات سلطنة عُمان.
               </p>
 
-              <div className="flex flex-wrap gap-2.5 sm:gap-4 mb-6 sm:mb-8">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-4 mb-4 sm:mb-8">
                 {([
                   { icon: TrendingUp, label: 'مشاهدة يومياً', value: '+1000', color: '#16a34a' },
                   { icon: Star,       label: 'متوسط التقييم', value: '4.8',   color: '#d97706' },
@@ -316,7 +378,7 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
                 ] as const).map(stat => {
                   const Icon = stat.icon;
                   return (
-                    <div key={stat.label} className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2.5">
+                    <div key={stat.label} className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 bg-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-center sm:text-start">
                       <Icon size={16} style={{ color: stat.color }} />
                       <div>
                         <p className="text-sm font-bold" style={{ fontWeight: 700 }}>{stat.value}</p>
@@ -327,17 +389,19 @@ export function CarsShell({ saleCars, rentalCars }: CarsShellProps) {
                 })}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+              <div className="flex flex-row gap-2 sm:gap-3">
                 <Link
                   href="/cars/new"
-                  className="btn-navy rounded-full w-full sm:w-auto justify-center sm:justify-start"
+                  className="btn-navy rounded-full flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-sm !py-2 !px-3 sm:!py-3 sm:!px-6"
                   style={{ background: 'var(--color-brand-amber)', color: '#fff' }}
                 >
-                  <Plus size={16} />
+                  <Plus size={13} className="sm:hidden" aria-hidden="true" />
+                  <Plus size={16} className="hidden sm:block" aria-hidden="true" />
                   أضف إعلانك مجاناً
                 </Link>
-                <Link href="/cars/browse" className="btn-outline-white w-full sm:w-auto justify-center sm:justify-start">
-                  <Search size={16} />
+                <Link href="/cars/browse" className="btn-outline-white flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-sm !py-2 !px-3 sm:!py-3 sm:!px-6">
+                  <Search size={13} className="sm:hidden" aria-hidden="true" />
+                  <Search size={16} className="hidden sm:block" aria-hidden="true" />
                   تصفّح الإعلانات أولاً
                 </Link>
               </div>

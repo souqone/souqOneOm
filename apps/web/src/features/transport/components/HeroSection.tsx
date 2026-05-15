@@ -22,7 +22,7 @@ export default function HeroSection() {
       {/* Decorative circles */}
       <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/4 translate-y-1/4" />
-      <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-10 sm:py-20 lg:py-24" style={{ paddingTop: '85px' }}>
+      <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-4 sm:py-[61px] lg:py-[74px]" style={{ paddingTop: '82px' }}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           {/* Content */}
           <div>

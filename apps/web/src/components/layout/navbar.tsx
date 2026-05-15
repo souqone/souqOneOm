@@ -9,16 +9,12 @@ import { useUnreadCount, useNotifications, useMarkNotificationRead } from '@/lib
 import { NotificationDropdown } from './navbar/notification-dropdown';
 import { ProfileDropdown } from './navbar/profile-dropdown';
 import { MobileDrawer } from './navbar/mobile-drawer';
-import { NavSearchBar } from './navbar/search-bar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { useSearch } from '@/providers/search-provider';
 import { useAuthModal } from '@/providers/auth-modal-provider';
 
 /* ─────────── Corify heights ─────────── */
 const TOP_H  = 56;
-const NAV_H  = 46;
-const TOTAL  = TOP_H + NAV_H;
 
 export interface NavChild { href: string; label: string; icon: string; desc: string }
 export interface NavLinkItem { href: string; label: string; children?: NavChild[] }
@@ -51,7 +47,7 @@ function useNavLinks() {
 
 /** Spacer — pushes page content below the fixed navbar */
 export function NavbarSpacer() {
-  return <div style={{ height: TOTAL }} aria-hidden />;
+  return <div style={{ height: TOP_H }} aria-hidden />;
 }
 
 export function Navbar() {
@@ -63,7 +59,6 @@ export function Navbar() {
   const { navLinks, flatNavLinks } = useNavLinks();
 
   const [profileOpen, setProfileOpen] = useState(false);
-  const { searchOpen, setSearchOpen } = useSearch();
   const [mobileOpen, setMobileOpen]   = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
 
@@ -94,8 +89,8 @@ export function Navbar() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
-  /* close mobile + search on route */
-  useEffect(() => { setMobileOpen(false); setSearchOpen(false); }, [pathname, setSearchOpen]);
+  /* close mobile on route */
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const isActive = useCallback(
     (href: string) => (href === '/' ? pathname === '/' : pathname === href.split('?')[0]),
@@ -104,7 +99,7 @@ export function Navbar() {
 
   return (
     <>
-      <div style={{ height: searchOpen ? TOTAL : TOP_H }} className="transition-all duration-300" aria-hidden />
+      <div style={{ height: TOP_H }} aria-hidden />
 
       {/* Fixed wrapper */}
       <div className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
@@ -216,14 +211,6 @@ export function Navbar() {
             {/* Actions */}
             <div className="flex items-center gap-0.5">
               {/* Icon buttons group */}
-              <button
-                onClick={() => setSearchOpen(!searchOpen)}
-                className={`hidden lg:flex w-9 h-9 rounded-xl items-center justify-center transition-all ${
-                  searchOpen ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">{searchOpen ? 'close' : 'search'}</span>
-              </button>
               <Link href="/favorites" className="w-9 h-9 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-all">
                 <span className="material-symbols-outlined text-[20px]">favorite</span>
               </Link>
@@ -270,17 +257,6 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* ━━━ SEARCH BAR (bottom row — toggle) ━━━ */}
-        <div className={`transition-all duration-300 ${searchOpen ? 'max-h-[60px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`} style={{ paddingTop: searchOpen ? 2 : 0, paddingBottom: searchOpen ? 2 : 0 }}>
-          <NavSearchBar
-            searchOpen={searchOpen}
-            onSearchOpenChange={setSearchOpen}
-            onCloseMobile={() => setMobileOpen(false)}
-            height={NAV_H}
-            navLinks={flatNavLinks}
-            isActive={isActive}
-          />
-        </div>
       </div>
 
       <MobileDrawer

@@ -24,6 +24,15 @@ export interface CarYearItem {
   year: number;
 }
 
+export interface CarTrimItem {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  slug: string;
+  yearFrom: number;
+  yearTo: number;
+}
+
 export function useBrands(popular?: boolean) {
   const params = popular !== undefined ? `?popular=${popular}` : '';
   return useQuery<CarBrand[]>({
@@ -55,6 +64,15 @@ export function useCarYears(modelId: string) {
   return useQuery<CarYearItem[]>({
     queryKey: ['car-years', modelId],
     queryFn: () => apiRequest<CarYearItem[]>(`/cars/models/${modelId}/years`),
+    enabled: !!modelId,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useCarTrims(modelId: string) {
+  return useQuery<CarTrimItem[]>({
+    queryKey: ['car-trims', modelId],
+    queryFn: () => apiRequest<CarTrimItem[]>(`/cars/models/${modelId}/trims`),
     enabled: !!modelId,
     staleTime: 60 * 60 * 1000,
   });

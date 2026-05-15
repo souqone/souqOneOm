@@ -1,3 +1,4 @@
+export { HomeHero } from './components/home-hero';
 export { CategoriesSection } from './components/categories-section';
 export { FeaturedShowroom } from './components/featured-showroom';
 export { BusesShowcase } from './components/buses-showcase';

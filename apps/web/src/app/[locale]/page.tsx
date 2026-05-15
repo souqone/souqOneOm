@@ -9,6 +9,7 @@ import type { EquipmentListingItem } from '@/lib/api/equipment';
 import type { JobsResponse } from '@/lib/api/jobs';
 import type { CarServiceItem } from '@/lib/api/services';
 import {
+  HomeHero,
   CategoriesSection,
   FeaturedShowroom,
   QuickServicesGrid,
@@ -42,6 +43,9 @@ export default async function Home() {
       <WelcomeModal />
 
       <main>
+        {/* 0. Hero */}
+        <HomeHero />
+
         {/* 1. Browse categories */}
         <CategoriesSection />
 

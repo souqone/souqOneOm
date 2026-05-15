@@ -126,6 +126,7 @@ model Listing {
   // بيانات السيارة
   make              String
   model             String
+  trim              String?
   year              Int
   mileage           Int?
   fuelType          FuelType?
@@ -190,6 +191,7 @@ model Listing {
   @@index([sellerId])
   @@index([make])
   @@index([model])
+  @@index([trim])
   @@index([year])
   @@index([status])
   @@index([price])
@@ -645,6 +647,7 @@ model CarModel {
   brandId   String
   brand     Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
   years     CarYear[]
+  trims     CarTrim[]
   createdAt DateTime  @default(now())
 
   @@unique([name, brandId])
@@ -667,6 +670,25 @@ model CarYear {
   @@index([modelId])
   @@index([year])
   @@map("car_years")
+}
+
+// ──────────────────────────────────────
+// فئات / تريمات السيارات — CarTrim
+// ──────────────────────────────────────
+model CarTrim {
+  id        String   @id @default(cuid())
+  name      String
+  nameAr    String?
+  slug      String
+  yearFrom  Int
+  yearTo    Int
+  modelId   String
+  model     CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([name, modelId])
+  @@index([modelId])
+  @@map("car_trims")
 }
 
 // ──────────────────────────────────────
@@ -1018,6 +1040,32 @@ enum ContractType {
   OTHER_CONTRACT
 }
 
+model BusManufacturer {
+  id       String       @id @default(cuid())
+  name     String       @unique
+  nameAr   String
+  country  String
+  models   BusModel[]
+  listings BusListing[]
+
+  @@map("bus_manufacturers")
+}
+
+model BusModel {
+  id             String          @id @default(cuid())
+  name           String
+  nameAr         String
+  busType        BusType
+  capacity       Int
+  aliases        String[]
+  manufacturerId String
+  manufacturer   BusManufacturer @relation(fields: [manufacturerId], references: [id])
+  listings       BusListing[]
+
+  @@unique([manufacturerId, name])
+  @@map("bus_models")
+}
+
 model BusListing {
   id                String          @id @default(cuid())
   title             String
@@ -1029,6 +1077,11 @@ model BusListing {
 
   make              String
   model             String
+
+  manufacturerId    String?
+  modelId           String?
+  busManufacturer   BusManufacturer? @relation(fields: [manufacturerId], references: [id])
+  busModel          BusModel?        @relation(fields: [modelId], references: [id])
   year              Int
   capacity          Int
   mileage           Int?
@@ -1097,6 +1150,8 @@ model BusListing {
   @@index([createdAt])
   @@index([slug])
   @@index([deletedAt])
+  @@index([manufacturerId])
+  @@index([modelId])
   @@map("bus_listings")
 }
 

@@ -2,6 +2,7 @@ export interface ListingFormData {
   title: string;
   make: string;
   model: string;
+  trim: string;
   year: number;
   price: string;
   currency: string;
@@ -45,6 +46,7 @@ export const defaultListingData: ListingFormData = {
   title: '',
   make: '',
   model: '',
+  trim: '',
   year: new Date().getFullYear(),
   price: '',
   currency: 'OMR',

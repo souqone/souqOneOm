@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { FormSection, FormInput, FormTextarea } from '@/features/ads/components/forms/shared';
 import { labelCls, chipCls } from '@/lib/constants/form-styles';
+import { useBusManufacturers, useBusModels } from '@/lib/api/buses';
 import { FUEL_TYPE_KEYS, CONDITION_KEYS, BUS_FEATURE_KEYS, type BusFormData } from './types';
 
 interface Step1Props {
@@ -12,6 +13,8 @@ interface Step1Props {
 
 export function Step1BusInfo({ form, onChange }: Step1Props) {
   const tp = useTranslations('pages');
+  const { data: manufacturers = [] } = useBusManufacturers();
+  const { data: modelOptions = [] } = useBusModels(form.manufacturerId);
 
   function toggleFeature(label: string) {
     onChange({
@@ -32,8 +35,53 @@ export function Step1BusInfo({ form, onChange }: Step1Props) {
 
       <FormSection icon="directions_bus" title={tp('busLabelBusData')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormInput label={tp('busLabelBrand')} name="make" value={form.make} onChange={(v) => onChange({ make: v })} placeholder={tp('busPlaceholderBrand')} />
-          <FormInput label={tp('busLabelModel')} name="model" value={form.model} onChange={(v) => onChange({ model: v })} placeholder="Rosa, Coaster" />
+
+          {/* Manufacturer cascading select */}
+          <div>
+            <label className={labelCls}>{tp('busLabelBrand')}</label>
+            <select
+              value={form.manufacturerId ?? ''}
+              onChange={(e) => {
+                const selected = manufacturers.find((m) => m.id === e.target.value);
+                onChange({
+                  manufacturerId: e.target.value || undefined,
+                  modelId: undefined,
+                  make: selected?.name ?? '',
+                  model: '',
+                });
+              }}
+              className="w-full rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]"
+            >
+              <option value="">{tp('busPlaceholderBrand')}</option>
+              {manufacturers.map((m) => (
+                <option key={m.id} value={m.id}>{m.nameAr} — {m.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Model cascading select — disabled until manufacturer chosen */}
+          <div>
+            <label className={labelCls}>{tp('busLabelModel')}</label>
+            <select
+              value={form.modelId ?? ''}
+              disabled={!form.manufacturerId}
+              onChange={(e) => {
+                const selected = modelOptions.find((m) => m.id === e.target.value);
+                onChange({
+                  modelId: e.target.value || undefined,
+                  model: selected?.name ?? '',
+                  capacity: selected ? String(selected.capacity) : form.capacity,
+                });
+              }}
+              className="w-full rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <option value="">اختر الموديل</option>
+              {modelOptions.map((m) => (
+                <option key={m.id} value={m.id}>{m.nameAr} — {m.name} ({m.capacity} راكب)</option>
+              ))}
+            </select>
+          </div>
+
           <FormInput label={tp('busLabelYear')} name="year" type="number" value={form.year} onChange={(v) => onChange({ year: v })} placeholder="2020" />
           <FormInput label={tp('busLabelCapacity')} name="capacity" type="number" value={form.capacity} onChange={(v) => onChange({ capacity: v })} placeholder="30" />
           <FormInput label={tp('busLabelMileage')} name="mileage" type="number" value={form.mileage} onChange={(v) => onChange({ mileage: v })} placeholder="100000" />

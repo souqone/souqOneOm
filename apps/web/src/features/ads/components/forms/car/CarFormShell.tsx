@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
-import { useBrands, useCarModels, useCarYears, useCarListing, useCreateCarListing, useUpdateCarListing } from '@/lib/api/cars';
+import { useBrands, useCarModels, useCarTrims, useCarListing, useCreateCarListing, useUpdateCarListing } from '@/lib/api/cars';
 import { BaseFormShell } from '@/features/ads/components/base/BaseFormShell';
 import { useFormSteps } from '@/features/ads/hooks/use-form-steps';
 import { useDomainImages } from '@/features/ads/hooks/use-domain-images';
@@ -40,6 +40,7 @@ function mapCarToForm(car: Record<string, any>): Partial<ListingFormData> {
     title:              car.title || '',
     make:               car.make || '',
     model:              car.model || '',
+    trim:               car.trim || '',
     year:               car.year ?? new Date().getFullYear(),
     price:              car.price != null ? String(car.price) : '',
     currency:           car.currency || 'OMR',
@@ -101,6 +102,7 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
   const [form, setForm] = useState<ListingFormData>({ ...defaultListingData, ...propsInitialData });
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
+  const [selectedTrimId,  setSelectedTrimId]  = useState('');
   const [selectedGov, setSelectedGov] = useState('');
 
   const initialImageIdsRef = useRef<string[]>([]);
@@ -115,10 +117,10 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
   // Fetch existing listing in edit mode
   const { data: car, isLoading: isFetching, isError } = useCarListing(id ?? '');
 
-  // Brand / model / year dropdowns
+  // Brand / model / trim dropdowns
   const { data: brands = [] } = useBrands();
   const { data: models = [] } = useCarModels(selectedBrandId);
-  const { data: years  = [] } = useCarYears(selectedModelId);
+  const { data: trims  = [] } = useCarTrims(selectedModelId);
 
   const governorateOptions = getGovernorates('OM', locale);
   const cityOptions        = getCities('OM', selectedGov, locale);
@@ -157,6 +159,13 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
     if (match) setSelectedModelId(match.id);
   }, [models, form.model, selectedModelId]);
 
+  // Resolve trim ID once trims load (edit mode)
+  useEffect(() => {
+    if (!form.trim || !trims.length || selectedTrimId) return;
+    const match = trims.find((t) => t.name.toLowerCase() === form.trim.toLowerCase());
+    if (match) setSelectedTrimId(match.id);
+  }, [trims, form.trim, selectedTrimId]);
+
   const handleChange = useCallback((updates: Partial<ListingFormData>) => {
     setForm((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -164,12 +173,19 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
   function handleBrandChange(brandId: string, name: string) {
     setSelectedBrandId(brandId);
     setSelectedModelId('');
-    setForm((prev) => ({ ...prev, make: name, model: '', year: 0 }));
+    setSelectedTrimId('');
+    setForm((prev) => ({ ...prev, make: name, model: '', trim: '', year: 0 }));
   }
 
   function handleModelChange(modelId: string, name: string) {
     setSelectedModelId(modelId);
-    setForm((prev) => ({ ...prev, model: name, year: 0 }));
+    setSelectedTrimId('');
+    setForm((prev) => ({ ...prev, model: name, trim: '', year: 0 }));
+  }
+
+  function handleTrimChange(trimId: string, name: string, _yearFrom: number, _yearTo: number) {
+    setSelectedTrimId(trimId);
+    setForm((prev) => ({ ...prev, trim: name, year: 0 }));
   }
 
   async function handleSubmit() {
@@ -183,6 +199,7 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
         make:               form.make,
         model:              form.model,
         year:               form.year,
+        ...(form.trim && { trim: form.trim }),
         price:              isRental || isWanted ? (form.price ? parseFloat(form.price) : 0) : parseFloat(form.price),
         currency:           form.currency,
         description:        form.description,
@@ -331,11 +348,13 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
           onImagesChange={setImages}
           brands={brands}
           models={models}
-          years={years}
+          trims={trims}
           selectedBrandId={selectedBrandId}
           onBrandChange={handleBrandChange}
           selectedModelId={selectedModelId}
           onModelChange={handleModelChange}
+          selectedTrimId={selectedTrimId}
+          onTrimChange={handleTrimChange}
           isLoading={isLoading}
           condLabels={condLabels}
         />

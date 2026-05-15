@@ -2,9 +2,10 @@
 
 import { useMemo } from 'react';
 import { Link } from '@/i18n/navigation';
+import { ListingSearchBar } from '@/components/shared/listing-search-bar';
 import {
   Bus, Users, GraduationCap, Crown, Truck, MinusSquare,
-  ArrowLeft, Search, Plus, Shield, Star, MapPin, BadgeCheck,
+  ArrowLeft, Search, Plus, Shield, Star, MapPin,
   KeyRound, TrendingUp,
 } from 'lucide-react';
 
@@ -50,21 +51,6 @@ const BG_CLS: { [k: string]: string } = {
   '#e11d48': 'bg-rose-50 dark:bg-rose-950/40',
 };
 
-const ICON_BG_CLS: { [k: string]: string } = {
-  '#2563eb': 'bg-blue-100 dark:bg-blue-900/30',
-  '#16a34a': 'bg-green-100 dark:bg-green-900/30',
-  '#d97706': 'bg-amber-100 dark:bg-amber-900/30',
-  '#7c3aed': 'bg-violet-100 dark:bg-violet-900/30',
-  '#0d9488': 'bg-teal-100 dark:bg-teal-900/30',
-  '#e11d48': 'bg-rose-100 dark:bg-rose-900/30',
-};
-
-const STATS_STATIC = [
-  { label: 'بائع موثّق',    icon: BadgeCheck, color: '#16a34a', value: '+80'  },
-  { label: 'نوع حافلة',     icon: Star,       color: '#d97706', value: '6'    },
-  { label: 'محافظة مخدومة', icon: MapPin,     color: '#7c3aed', value: '11'   },
-] as const;
-
 const QUICK_LINKS = [
   { title: 'حافلات للبيع',   sublabel: 'جديدة ومستعملة',   icon: Bus,      color: '#2563eb', href: '/browse/buses?busListingType=BUS_SALE' },
   { title: 'حافلات للإيجار', sublabel: 'أسعار مرنة',       icon: KeyRound, color: '#16a34a', href: '/browse/buses?busListingType=BUS_RENT' },
@@ -105,11 +91,6 @@ interface Props {
 export function BusesLandingClient({ buses, totalBuses }: Props) {
   const { transformBus } = useItemTransformers();
 
-  const stats = useMemo(() => [
-    { label: 'حافلة متاحة', icon: Bus, color: '#2563eb', value: totalBuses > 0 ? `${totalBuses.toLocaleString('en-US')}+` : '+200' },
-    ...STATS_STATIC,
-  ], [totalBuses]);
-
   const busGroups = useMemo(() => {
     const groups: Record<string, BusListingItem[]> = {};
     for (const bus of buses) {
@@ -137,11 +118,11 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
           <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/4 translate-y-1/4" />
 
-          <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-10 sm:py-20 lg:py-24" style={{ paddingTop: '85px' }}>
+          <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-4 sm:py-[61px] lg:py-[74px]" style={{ paddingTop: '82px' }}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
               {/* Content */}
-              <div>
+              <div className="text-center sm:text-start">
                 <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 sm:px-4 py-1.5 mb-4 sm:mb-6">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                   <span className="text-xs font-bold text-white/90">
@@ -155,23 +136,25 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
                   <span className="text-[var(--color-brand-amber)]">أو بِعها اليوم</span>
                 </h1>
 
-                <p className="text-sm sm:text-lg text-white/75 mb-5 sm:mb-8 leading-relaxed max-w-lg">
+                <p className="text-sm sm:text-lg text-white/75 mb-5 sm:mb-8 leading-relaxed max-w-lg mx-auto sm:mx-0">
                   سوق متخصص يجمع بائعي ومستأجري الحافلات من جميع محافظات سلطنة عُمان.
                   أسعار تنافسية وبائعون موثّقون.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mb-6 sm:mb-8">
-                  <Link href="/browse/buses" className="btn-transport-primary text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto">
-                    <Bus size={18} />
+                <div className="flex flex-row gap-2 sm:gap-3 mb-4 sm:mb-8">
+                  <Link href="/browse/buses" className="btn-transport-primary flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-base !py-2 !px-3 sm:!py-3.5 sm:!px-6">
+                    <Bus size={13} className="sm:hidden" aria-hidden="true" />
+                    <Bus size={18} className="hidden sm:block" aria-hidden="true" />
                     تصفّح الحافلات
                   </Link>
-                  <Link href="/add-listing/bus" className="btn-outline-white text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto">
+                  <Link href="/add-listing/bus" className="btn-outline-white flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-base !py-2 !px-3 sm:!py-3.5 sm:!px-6">
                     أضف إعلانك مجاناً
-                    <ArrowLeft size={18} />
+                    <ArrowLeft size={13} className="sm:hidden" aria-hidden="true" />
+                    <ArrowLeft size={18} className="hidden sm:block" aria-hidden="true" />
                   </Link>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4">
                   {([
                     { icon: Shield, text: 'بائعون موثّقون' },
                     { icon: Star,   text: 'تقييمات حقيقية' },
@@ -202,27 +185,22 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
           </div>
         </section>
 
-        {/* ═══════════════════ 2. STATS BAR ═══════════════════ */}
-        <section className="py-5 sm:py-8">
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-              {stats.map(s => {
-                const Icon = s.icon;
-                return (
-                  <div key={s.label} className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-2xl ${BG_CLS[s.color]}`}>
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${ICON_BG_CLS[s.color]}`}>
-                      <Icon size={20} style={{ color: s.color }} />
-                    </div>
-                    <div>
-                      <p className="text-base sm:text-lg font-bold text-[var(--color-on-surface)]">{s.value}</p>
-                      <p className="text-[10px] sm:text-[11px] text-[var(--color-on-surface-variant)]">{s.label}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+        {/* ═══════════════════ 2. SEARCH BAR ═══════════════════ */}
+        <ListingSearchBar
+          categories={[{
+            key: 'buses',
+            label: 'حافلات',
+            route: '/browse/buses',
+            subcategories: [
+              { key: 'sale',          label: 'حافلات للبيع',          route: '/browse/buses?busListingType=BUS_SALE'              },
+              { key: 'rent',          label: 'حافلات للإيجار',        route: '/browse/buses?busListingType=BUS_RENT'              },
+              { key: 'contract',      label: 'حافلات للتعاقد',       route: '/browse/buses?busListingType=BUS_CONTRACT'          },
+              { key: 'sale_contract', label: 'بيع مع عقد تشغيل', route: '/browse/buses?busListingType=BUS_SALE_WITH_CONTRACT' },
+            ],
+          }]}
+          defaultCat="buses"
+          addListingHref="/add-listing/bus"
+        />
 
         {/* ═══════════════════ 3. QUICK LINKS ═══════════════════ */}
         <section className="py-8 sm:py-12">
@@ -337,9 +315,9 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
         </section>
 
         {/* ═══════════════════ 7. SELLER CTA ═══════════════════ */}
-        <section className="py-10 sm:py-16">
+        <section className="py-4 sm:py-16 pb-[calc(1rem+env(safe-area-inset-bottom,0px)+53px)] sm:pb-16">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-            <div className="gradient-navy rounded-2xl sm:rounded-3xl p-5 sm:p-12 text-white overflow-hidden relative">
+            <div className="gradient-navy rounded-2xl sm:rounded-3xl p-4 sm:p-12 text-white overflow-hidden relative">
               <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-[var(--color-brand-amber)]/10 translate-x-1/2 translate-y-1/2" />
 
@@ -358,7 +336,7 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
                   أضف إعلانك مجاناً وتواصل مع آلاف المشترين والمستأجرين المهتمين في جميع محافظات سلطنة عُمان.
                 </p>
 
-                <div className="flex flex-wrap gap-2.5 sm:gap-4 mb-6 sm:mb-8">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-4 mb-4 sm:mb-8">
                   {([
                     { icon: TrendingUp, label: 'مشاهدة يومياً', value: '+500',  color: '#16a34a' },
                     { icon: Star,       label: 'متوسط التقييم', value: '4.8',   color: '#d97706' },
@@ -366,7 +344,7 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
                   ] as const).map(stat => {
                     const Icon = stat.icon;
                     return (
-                      <div key={stat.label} className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2.5">
+                      <div key={stat.label} className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2 bg-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-center sm:text-start">
                         <Icon size={16} style={{ color: stat.color }} />
                         <div>
                           <p className="text-sm font-bold" style={{ fontWeight: 700 }}>{stat.value}</p>
@@ -377,17 +355,19 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
                   })}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                <div className="flex flex-row gap-2 sm:gap-3">
                   <Link
                     href="/add-listing/bus"
-                    className="btn-navy rounded-full w-full sm:w-auto justify-center sm:justify-start"
+                    className="btn-navy rounded-full flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-sm !py-2 !px-3 sm:!py-3 sm:!px-6"
                     style={{ background: 'var(--color-brand-amber)', color: '#fff' }}
                   >
-                    <Plus size={16} />
+                    <Plus size={13} className="sm:hidden" aria-hidden="true" />
+                    <Plus size={16} className="hidden sm:block" aria-hidden="true" />
                     أضف إعلانك مجاناً
                   </Link>
-                  <Link href="/browse/buses" className="btn-outline-white w-full sm:w-auto justify-center sm:justify-start">
-                    <Search size={16} />
+                  <Link href="/browse/buses" className="btn-outline-white flex-1 sm:flex-none sm:w-auto justify-center sm:justify-start whitespace-nowrap !text-[11px] sm:!text-sm !py-2 !px-3 sm:!py-3 sm:!px-6">
+                    <Search size={13} className="sm:hidden" aria-hidden="true" />
+                    <Search size={16} className="hidden sm:block" aria-hidden="true" />
                     تصفّح الحافلات أولاً
                   </Link>
                 </div>
