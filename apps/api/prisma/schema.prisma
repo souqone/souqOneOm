@@ -177,6 +177,14 @@ model Listing {
 
   viewCount         Int            @default(0)
 
+  // روابط master data (اختيارية للتوافق مع الإعلانات القديمة)
+  brandId           String?
+  brand             Brand?         @relation(fields: [brandId], references: [id])
+  carModelId        String?
+  carModel          CarModel?      @relation(fields: [carModelId], references: [id])
+  carTrimId         String?
+  carTrim           CarTrim?       @relation(fields: [carTrimId], references: [id])
+
   sellerId          String
   seller            User           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
@@ -189,6 +197,9 @@ model Listing {
   updatedAt         DateTime       @updatedAt
 
   @@index([sellerId])
+  @@index([brandId])
+  @@index([carModelId])
+  @@index([carTrimId])
   @@index([make])
   @@index([model])
   @@index([trim])
@@ -623,13 +634,15 @@ model DriverVerification {
 // العلامات التجارية — Brand
 // ──────────────────────────────────────
 model Brand {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  nameAr    String?
-  slug      String   @unique
-  isPopular Boolean  @default(false)
-  models    CarModel[]
-  createdAt DateTime @default(now())
+  id            String     @id @default(cuid())
+  name          String     @unique
+  nameAr        String?
+  slug          String     @unique
+  originCountry String?
+  isPopular     Boolean    @default(false)
+  models        CarModel[]
+  listings      Listing[]
+  createdAt     DateTime   @default(now())
 
   @@index([slug])
   @@index([isPopular])
@@ -644,10 +657,12 @@ model CarModel {
   name      String
   nameAr    String?
   slug      String
+  bodyType  String?
   brandId   String
   brand     Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
   years     CarYear[]
   trims     CarTrim[]
+  listings  Listing[]
   createdAt DateTime  @default(now())
 
   @@unique([name, brandId])
@@ -676,15 +691,26 @@ model CarYear {
 // فئات / تريمات السيارات — CarTrim
 // ──────────────────────────────────────
 model CarTrim {
-  id        String   @id @default(cuid())
-  name      String
-  nameAr    String?
-  slug      String
-  yearFrom  Int
-  yearTo    Int
-  modelId   String
-  model     CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  nameAr         String?
+  slug           String
+  yearFrom       Int
+  yearTo         Int
+  trimCode       String?
+  engineCapacity String?
+  cylinders      Int?
+  horsepower     Int?
+  torque         String?
+  driveType      String?
+  transmission   String?
+  fuelType       String?
+  seats          Int?
+  isFullOption   Boolean  @default(false)
+  modelId        String
+  model          CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  listings       Listing[]
+  createdAt      DateTime @default(now())
 
   @@unique([name, modelId])
   @@index([modelId])
