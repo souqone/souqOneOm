@@ -6,8 +6,6 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const prisma = new PrismaClient();
-
 function makeSlug(text: string): string {
   return text
     .toLowerCase()
@@ -18,27 +16,13 @@ function makeSlug(text: string): string {
     .replace(/^-|-$/g, '');
 }
 
-async function main() {
-  const dataPath = path.resolve(__dirname, '../../../../../cars_master_data_v8.json');
-  const raw = fs.readFileSync(dataPath, 'utf-8');
-  const data = JSON.parse(raw);
+function newClient() {
+  return new PrismaClient({ log: [] });
+}
 
-  const brands: any[] = data.brands;
-  console.log(`\n🚗 بدء import الداتا: ${brands.length} brand\n`);
-
-  // حذف الداتا القديمة بالترتيب الصح
-  console.log('🗑️  حذف الداتا القديمة...');
-  await prisma.carTrim.deleteMany({});
-  await prisma.carYear.deleteMany({});
-  await prisma.carModel.deleteMany({});
-  await prisma.brand.deleteMany({});
-  console.log('✅ تم حذف الداتا القديمة\n');
-
-  let totalModels = 0;
-  let totalTrims = 0;
-
-  for (let bi = 0; bi < brands.length; bi++) {
-    const b = brands[bi];
+async function seedBrand(b: any, bi: number, total: number): Promise<{ models: number; trims: number }> {
+  const prisma = newClient();
+  try {
     const brandSlug = makeSlug(b.name_en);
 
     const brand = await prisma.brand.create({
@@ -52,40 +36,27 @@ async function main() {
     });
 
     const models: any[] = b.models || [];
+    let trimCount = 0;
 
     for (const m of models) {
       const modelSlug = makeSlug(`${brandSlug}-${m.name_en}`);
 
-      // جمع كل السنوات من كل الـ generations
       const allYears = new Set<number>();
       for (const gen of (m.generations || [])) {
-        for (const y of (gen.years || [])) {
-          allYears.add(y);
-        }
+        for (const y of (gen.years || [])) allYears.add(y);
       }
 
-      // جمع كل الـ trims من كل الـ generations
-      const allTrims: Array<{
-        name: string; slug: string; yearFrom: number; yearTo: number;
-        trimCode: string | null; engineCapacity: string | null; cylinders: number | null;
-        horsepower: number | null; torque: string | null; driveType: string | null;
-        transmission: string | null; fuelType: string | null; seats: number | null;
-        isFullOption: boolean;
-      }> = [];
-
+      const allTrims: any[] = [];
       for (const gen of (m.generations || [])) {
         const yearFrom: number = gen.years_from;
         const yearTo:   number = gen.years_to;
-
         for (const t of (gen.trims || [])) {
           const trimName = t.display_name || t.trim_code || '';
           if (!trimName) continue;
-          const trimSlug = makeSlug(`${modelSlug}-${trimName}-${yearFrom}`);
           const specs = t.specs || {};
-
           allTrims.push({
             name:           trimName,
-            slug:           trimSlug,
+            slug:           makeSlug(`${modelSlug}-${trimName}-${yearFrom}`),
             yearFrom,
             yearTo,
             trimCode:       t.trim_code || null,
@@ -102,36 +73,61 @@ async function main() {
         }
       }
 
-      // إزالة duplicates من الـ trims (نفس الاسم لنفس الـ model)
-      const seenTrimNames = new Set<string>();
+      const seenNames = new Set<string>();
       const uniqueTrims = allTrims.filter((t) => {
-        if (seenTrimNames.has(t.name)) return false;
-        seenTrimNames.add(t.name);
+        if (seenNames.has(t.name)) return false;
+        seenNames.add(t.name);
         return true;
       });
 
-      const carModel = await prisma.carModel.create({
+      await prisma.carModel.create({
         data: {
           name:     m.name_en,
           nameAr:   m.name_ar || null,
           slug:     modelSlug,
           bodyType: m.body_type || null,
           brandId:  brand.id,
-          years: {
-            create: Array.from(allYears).map((y) => ({ year: y })),
-          },
-          trims: {
-            create: uniqueTrims,
-          },
+          years: { create: Array.from(allYears).map((y) => ({ year: y })) },
+          trims: { create: uniqueTrims },
         },
       });
 
-      totalModels++;
-      totalTrims += uniqueTrims.length;
-      void carModel;
+      trimCount += uniqueTrims.length;
     }
 
-    console.log(`✅ ${bi + 1}/${brands.length}: ${b.name_en} (${models.length} models)`);
+    console.log(`✅ ${bi + 1}/${total}: ${b.name_en} (${models.length} models, ${trimCount} trims)`);
+    return { models: models.length, trims: trimCount };
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function main() {
+  const dataPath = path.resolve(__dirname, '../../../../../cars_master_data_v8.json');
+  const raw = fs.readFileSync(dataPath, 'utf-8');
+  const data = JSON.parse(raw);
+  const brands: any[] = data.brands;
+
+  console.log(`\n🚗 بدء import الداتا: ${brands.length} brand\n`);
+
+  // حذف الداتا القديمة
+  console.log('🗑️  حذف الداتا القديمة...');
+  const prismaClean = newClient();
+  await prismaClean.carTrim.deleteMany({});
+  await prismaClean.carYear.deleteMany({});
+  await prismaClean.carModel.deleteMany({});
+  await prismaClean.brand.deleteMany({});
+  await prismaClean.$disconnect();
+  console.log('✅ تم حذف الداتا القديمة\n');
+
+  let totalModels = 0;
+  let totalTrims  = 0;
+
+  // كل brand في connection مستقلة
+  for (let bi = 0; bi < brands.length; bi++) {
+    const { models, trims } = await seedBrand(brands[bi], bi, brands.length);
+    totalModels += models;
+    totalTrims  += trims;
   }
 
   console.log(`\n🎉 تم بنجاح!`);
@@ -140,6 +136,4 @@ async function main() {
   console.log(`   Trims:  ${totalTrims}`);
 }
 
-main()
-  .catch((e) => { console.error('❌ Error:', e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+main().catch((e) => { console.error('❌ Error:', e); process.exit(1); });
