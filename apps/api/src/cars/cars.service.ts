@@ -155,7 +155,13 @@ export class CarsService {
     const trims = await this.prisma.carTrim.findMany({
       where: { modelId },
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, nameAr: true, slug: true, yearFrom: true, yearTo: true },
+      select: {
+        id: true, name: true, nameAr: true, slug: true,
+        yearFrom: true, yearTo: true,
+        engineCapacity: true, cylinders: true, horsepower: true,
+        torque: true, driveType: true, transmission: true,
+        fuelType: true, seats: true, isFullOption: true,
+      },
     });
 
     await this.redis.set(cacheKey, trims, 3600);

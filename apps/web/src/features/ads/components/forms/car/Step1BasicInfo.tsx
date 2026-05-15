@@ -9,7 +9,15 @@ import { condOptions, type ListingFormData } from './types';
 
 interface Brand    { id: string; name: string; nameAr?: string | null }
 interface CarModel { id: string; name: string; nameAr?: string | null }
-interface CarTrim  { id: string; name: string; nameAr: string | null; yearFrom: number; yearTo: number }
+interface CarTrim  {
+  id: string; name: string; nameAr: string | null;
+  yearFrom: number; yearTo: number;
+  engineCapacity: string | null; cylinders: number | null;
+  horsepower: number | null; torque: string | null;
+  driveType: string | null; transmission: string | null;
+  fuelType: string | null; seats: number | null;
+  isFullOption: boolean;
+}
 
 interface Step1Props {
   form: ListingFormData;
@@ -24,7 +32,7 @@ interface Step1Props {
   selectedModelId: string;
   onModelChange: (id: string, name: string) => void;
   selectedTrimId: string;
-  onTrimChange: (id: string, name: string, yearFrom: number, yearTo: number) => void;
+  onTrimChange: (id: string, trim: CarTrim) => void;
   isLoading: boolean;
   condLabels: Record<string, string>;
 }
@@ -157,12 +165,8 @@ export function Step1BasicInfo({
                 value={selectedTrimId}
                 onChange={(e) => {
                   const trim = trims.find((t) => t.id === e.target.value);
-                  onTrimChange(
-                    e.target.value,
-                    trim?.name ?? '',
-                    trim?.yearFrom ?? 1990,
-                    trim?.yearTo ?? 2026,
-                  );
+                  if (trim) onTrimChange(e.target.value, trim);
+                  else onTrimChange('', { id: '', name: '', nameAr: null, yearFrom: 1990, yearTo: 2026, engineCapacity: null, cylinders: null, horsepower: null, torque: null, driveType: null, transmission: null, fuelType: null, seats: null, isFullOption: false });
                 }}
                 className={inputCls}
                 disabled={!selectedModelId}

@@ -31,6 +31,15 @@ export interface CarTrimItem {
   slug: string;
   yearFrom: number;
   yearTo: number;
+  engineCapacity: string | null;
+  cylinders: number | null;
+  horsepower: number | null;
+  torque: string | null;
+  driveType: string | null;
+  transmission: string | null;
+  fuelType: string | null;
+  seats: number | null;
+  isFullOption: boolean;
 }
 
 export function useBrands(popular?: boolean) {
