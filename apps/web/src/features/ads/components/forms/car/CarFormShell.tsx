@@ -164,7 +164,7 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
     if (!form.trim || !trims.length || selectedTrimId) return;
     const match = trims.find((t) => t.name.toLowerCase() === form.trim.toLowerCase());
     if (match) setSelectedTrimId(match.id);
-  }, [trims, form.trim, selectedTrimId]);
+  }, [trims, form.trim, selectedTrimId]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = useCallback((updates: Partial<ListingFormData>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -183,9 +183,19 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
     setForm((prev) => ({ ...prev, model: name, trim: '', year: 0 }));
   }
 
-  function handleTrimChange(trimId: string, name: string, _yearFrom: number, _yearTo: number) {
+  function handleTrimChange(trimId: string, trim: { name: string; engineCapacity: string | null; horsepower: number | null; transmission: string | null; driveType: string | null; fuelType: string | null; seats: number | null }) {
     setSelectedTrimId(trimId);
-    setForm((prev) => ({ ...prev, trim: name, year: 0 }));
+    setForm((prev) => ({
+      ...prev,
+      trim:         trim.name,
+      year:         0,
+      ...(trim.engineCapacity && { engineSize:    trim.engineCapacity }),
+      ...(trim.horsepower     && { horsepower:    String(trim.horsepower) }),
+      ...(trim.transmission   && { transmission:  trim.transmission as any }),
+      ...(trim.driveType      && { driveType:     trim.driveType }),
+      ...(trim.fuelType       && { fuelType:      trim.fuelType as any }),
+      ...(trim.seats          && { seats:         String(trim.seats) }),
+    }));
   }
 
   async function handleSubmit() {
