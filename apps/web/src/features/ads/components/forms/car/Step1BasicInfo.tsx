@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { ImageUploader, type UploadedImage } from '@/features/ads/components/image-uploader';
 import { FormSection } from '@/features/ads/components/forms/shared';
 import { inputCls, labelCls, chipCls } from '@/lib/constants/form-styles';
@@ -55,21 +55,13 @@ export function Step1BasicInfo({
   condLabels,
 }: Step1Props) {
   const tp = useTranslations('pages');
+  const locale = useLocale();
 
-  // Build year options from selected trim's range, or from all trims for the model
   const yearOptions = useMemo(() => {
-    if (trims.length === 0) return [];
-    const selectedTrim = trims.find((t) => t.id === selectedTrimId);
-    const from = selectedTrim
-      ? selectedTrim.yearFrom
-      : Math.min(...trims.map((t) => t.yearFrom));
-    const to = selectedTrim
-      ? selectedTrim.yearTo
-      : Math.max(...trims.map((t) => t.yearTo));
     const years: number[] = [];
-    for (let y = to; y >= from; y--) years.push(y);
+    for (let y = 2026; y >= 1990; y--) years.push(y);
     return years;
-  }, [trims, selectedTrimId]);
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -133,7 +125,7 @@ export function Step1BasicInfo({
               >
                 <option value="">{tp('lfSelectBrand')}</option>
                 {brands.map((b) => (
-                  <option key={b.id} value={b.id}>{b.nameAr || b.name}</option>
+                  <option key={b.id} value={b.id}>{locale === 'ar' ? (b.nameAr || b.name) : b.name}</option>
                 ))}
               </select>
             </div>
@@ -151,32 +143,33 @@ export function Step1BasicInfo({
               >
                 <option value="">{selectedBrandId ? tp('lfSelectModel') : tp('lfSelectBrandFirst')}</option>
                 {models.map((m) => (
-                  <option key={m.id} value={m.id}>{m.nameAr || m.name}</option>
+                  <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Row 2: Trim + Year */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>الفئة / Trim</label>
-              <select
-                value={selectedTrimId}
-                onChange={(e) => {
-                  const trim = trims.find((t) => t.id === e.target.value);
-                  if (trim) onTrimChange(e.target.value, trim);
-                  else onTrimChange('', { id: '', name: '', nameAr: null, yearFrom: 1990, yearTo: 2026, engineCapacity: null, cylinders: null, horsepower: null, torque: null, driveType: null, transmission: null, fuelType: null, seats: null, isFullOption: false });
-                }}
-                className={inputCls}
-                disabled={!selectedModelId}
-              >
-                <option value="">{selectedModelId ? 'اختر الفئة' : 'اختر الموديل أولاً'}</option>
-                {trims.map((t) => (
-                  <option key={t.id} value={t.id}>{t.nameAr || t.name}</option>
-                ))}
-              </select>
-            </div>
+          {/* Row 2: Trim (conditional) + Year */}
+          <div className={`grid grid-cols-1 gap-4 ${selectedModelId && trims.length > 0 ? 'md:grid-cols-2' : ''}`}>
+            {selectedModelId && trims.length > 0 && (
+              <div>
+                <label className={labelCls}>الفئة / Trim</label>
+                <select
+                  value={selectedTrimId}
+                  onChange={(e) => {
+                    const trim = trims.find((t) => t.id === e.target.value);
+                    if (trim) onTrimChange(e.target.value, trim);
+                    else onTrimChange('', { id: '', name: '', nameAr: null, yearFrom: 1990, yearTo: 2026, engineCapacity: null, cylinders: null, horsepower: null, torque: null, driveType: null, transmission: null, fuelType: null, seats: null, isFullOption: false });
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">اختر الفئة</option>
+                  {trims.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className={labelCls}>{tp('lfYear')}</label>
               <select
@@ -184,9 +177,9 @@ export function Step1BasicInfo({
                 value={form.year || ''}
                 onChange={(e) => onChange({ year: parseInt(e.target.value) })}
                 className={inputCls}
-                disabled={yearOptions.length === 0}
+                disabled={!selectedModelId}
               >
-                <option value="">{yearOptions.length > 0 ? tp('lfSelectYear') : 'اختر الموديل أولاً'}</option>
+                <option value="">{selectedModelId ? tp('lfSelectYear') : tp('lfSelectModelFirst')}</option>
                 {yearOptions.map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
