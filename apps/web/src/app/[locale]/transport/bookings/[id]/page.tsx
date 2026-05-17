@@ -156,7 +156,7 @@ export default function BookingDetailPage() {
     }
   };
 
-  const isCarrier = user?.role === 'CARRIER';
+  const isCarrier = booking?.quote?.carrierId === user?.id; // carrier is the one who submitted the quote
   const isShipper = !isCarrier;
 
   if (loading) return <TransportPageLoader />;

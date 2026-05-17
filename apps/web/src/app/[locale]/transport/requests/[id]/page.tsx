@@ -355,7 +355,7 @@ export default function RequestDetailPage() {
   }
 
   const isOwner = user?.id === request.userId;
-  const isCarrier = user?.role === 'CARRIER';
+  const isCarrier = !!user; // backend validates carrier profile existence
   const quotes = request.quotes ?? [];
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
   const hasAlreadyQuoted = quotes.some((q) => q.carrierId === user?.id);
