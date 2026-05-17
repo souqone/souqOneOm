@@ -10,7 +10,6 @@ import { NotificationDropdown } from './navbar/notification-dropdown';
 import { ProfileDropdown } from './navbar/profile-dropdown';
 import { MobileDrawer } from './navbar/mobile-drawer';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LanguageSwitcher } from '@/components/language-switcher';
 import { useAuthModal } from '@/providers/auth-modal-provider';
 
 /* ─────────── Corify heights ─────────── */
@@ -188,7 +187,7 @@ export function Navbar() {
                   </>
                 )}
               </Link>
-              <LanguageSwitcher />
+              {/* <LanguageSwitcher /> */}
               <ThemeToggle />
             </div>
 
