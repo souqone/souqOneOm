@@ -288,6 +288,7 @@ export default function RequestDetailPage() {
   const [error, setError] = useState('');
   const [accepting, setAccepting] = useState<string | null>(null);
   const [quoteSent, setQuoteSent] = useState(false);
+  const [quotes, setQuotes] = useState<TransportQuote[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -306,6 +307,12 @@ export default function RequestDetailPage() {
     if (id) load();
   }, [id]);
 
+  // Fetch quotes for the request owner only (backend enforces this too)
+  useEffect(() => {
+    if (!request || !user || user.id !== request.userId) return;
+    transportApi.getQuotes(id).then(setQuotes).catch(() => {});
+  }, [request?.userId, user?.id, id]);
+
   const handleAcceptQuote = async (quoteId: string) => {
     setAccepting(quoteId);
     try {
@@ -318,13 +325,10 @@ export default function RequestDetailPage() {
 
   const handleQuoteSubmitted = (quote: TransportQuote) => {
     setQuoteSent(true);
+    setQuotes((prev) => [...prev, quote]);
     setRequest((prev) => {
       if (!prev) return prev;
-      return {
-        ...prev,
-        quotes: [...(prev.quotes ?? []), quote],
-        status: 'QUOTED',
-      };
+      return { ...prev, status: 'QUOTED' };
     });
   };
 
@@ -356,7 +360,6 @@ export default function RequestDetailPage() {
 
   const isOwner = user?.id === request.userId;
   const isCarrier = !!user; // backend validates carrier profile existence
-  const quotes = request.quotes ?? [];
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
   const hasAlreadyQuoted = quotes.some((q) => q.carrierId === user?.id);
   const canSubmitQuote =
@@ -533,8 +536,8 @@ export default function RequestDetailPage() {
               </div>
             )}
 
-            {/* Quotes */}
-            {(isOwner || quotes.length > 0) && (
+            {/* Quotes — only the owner can load and see submitted quotes */}
+            {isOwner && (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-bold text-[var(--color-on-surface)]">
@@ -586,7 +589,7 @@ export default function RequestDetailPage() {
               <div className="flex items-center gap-2 text-sm">
                 <MessageSquare size={13} className="text-[var(--color-brand-navy)]" />
                 <span className="text-[var(--color-on-surface-variant)]">
-                  {quotes.length} عرض مقدم
+                  {isOwner ? quotes.length : (request._count?.quotes ?? 0)} عرض مقدم
                 </span>
               </div>
             </div>
