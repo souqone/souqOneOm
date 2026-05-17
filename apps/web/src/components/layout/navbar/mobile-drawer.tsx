@@ -7,7 +7,6 @@ import type { NavLinkItem } from '../navbar';
 import { getImageUrl } from '@/lib/image-utils';
 import { useAuthModal } from '@/providers/auth-modal-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LanguageSwitcher } from '@/components/language-switcher';
 
 interface MobileDrawerProps {
   open: boolean;
