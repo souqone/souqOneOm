@@ -188,7 +188,6 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
     setForm((prev) => ({
       ...prev,
       trim:         trim.name,
-      year:         0,
       ...(trim.engineCapacity && { engineSize:    trim.engineCapacity }),
       ...(trim.horsepower     && { horsepower:    String(trim.horsepower) }),
       ...(trim.transmission   && { transmission:  trim.transmission as any }),
