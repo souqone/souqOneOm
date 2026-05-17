@@ -188,7 +188,7 @@ export function Navbar() {
                   </>
                 )}
               </Link>
-              <LanguageSwitcher />
+              {/* <LanguageSwitcher /> */}
               <ThemeToggle />
             </div>
 

@@ -152,7 +152,7 @@ export function MobileDrawer({ open, close, navLinks, flatNavLinks: _flatNavLink
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{t('settings')}</span>
             <div className="flex items-center gap-2">
-              <LanguageSwitcher />
+              {/* <LanguageSwitcher /> */}
               <ThemeToggle />
             </div>
           </div>

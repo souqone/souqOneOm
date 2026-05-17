@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SEED_BRANDS } from './data/seed-brands-v2';
 import { firstValueFrom } from 'rxjs';
 
 /* ── CarQuery API types ── */
@@ -59,13 +58,9 @@ export class CarImporterService {
 
     try {
       result = await this.importFromApi();
-      if (result.brands === 0) {
-        this.logger.warn('API returned 0 brands — falling back to seed data');
-        result = await this.importFromSeed();
-      }
     } catch (err: any) {
-      this.logger.warn(`CarQuery API failed: ${err?.message} — using seed data`);
-      result = await this.importFromSeed();
+      this.logger.error(`CarQuery API failed: ${err?.message}`);
+      result = { source: 'api', brands: 0, models: 0, years: 0, errors: [err?.message], durationMs: 0 };
     }
 
     result.durationMs = Date.now() - start;
@@ -138,41 +133,6 @@ export class CarImporterService {
         }
       } catch (err: any) {
         result.errors.push(`Brand ${make.make_display}: ${err?.message}`);
-      }
-    }
-
-    return result;
-  }
-
-  /* ═══════════════════════════════════════════
-     Seed Data Import (fallback)
-  ═══════════════════════════════════════════ */
-
-  private async importFromSeed(): Promise<ImportResult> {
-    const result: ImportResult = { source: 'seed', brands: 0, models: 0, years: 0, errors: [], durationMs: 0 };
-
-    this.logger.log(`Importing ${SEED_BRANDS.length} brands from seed data...`);
-
-    for (const seedBrand of SEED_BRANDS) {
-      try {
-        const brand = await this.upsertBrand(seedBrand.name, seedBrand.slug, seedBrand.isPopular);
-        result.brands++;
-
-        for (const seedModel of seedBrand.models) {
-          try {
-            const carModel = await this.upsertModel(seedModel.name, this.toSlug(seedModel.name), brand.id);
-            result.models++;
-
-            for (const year of seedModel.years) {
-              await this.upsertCarYear(year, carModel.id);
-              result.years++;
-            }
-          } catch (err: any) {
-            result.errors.push(`Model ${seedModel.name}: ${err?.message}`);
-          }
-        }
-      } catch (err: any) {
-        result.errors.push(`Brand ${seedBrand.name}: ${err?.message}`);
       }
     }
 

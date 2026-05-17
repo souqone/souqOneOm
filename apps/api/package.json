@@ -20,8 +20,6 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "import:cars": "npx ts-node -r dotenv/config src/cars/import-cars.command.ts",
-    "seed:cars": "npx ts-node src/cars/seed-cars.ts",
     "seed:marketplace": "npx tsx prisma/seed-marketplace.ts"
   },
   "dependencies": {
