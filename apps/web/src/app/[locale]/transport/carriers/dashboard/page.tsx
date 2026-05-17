@@ -3,19 +3,275 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, Package, MessageSquare, Loader2 } from 'lucide-react';
-import type { CarrierProfile, TransportRequest, TransportQuote } from '@/features/transport/types';
+import {
+  ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, Package,
+  MessageSquare, Loader2, Pencil, X, Phone, MessageCircle,
+} from 'lucide-react';
+import type {
+  CarrierProfile, TransportRequest, TransportQuote, VehicleType, TransportServiceType,
+} from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import {
   SERVICE_TYPE_LABELS,
+  SERVICE_TYPE_COLORS,
+  SERVICE_TYPE_BG_COLORS,
   VEHICLE_TYPE_LABELS,
   QUOTE_STATUS_LABELS,
   CURRENCY_LABEL,
   REQUEST_STATUS_LABELS,
+  OMAN_GOVERNORATES,
 } from '@/features/transport/constants';
 import { formatRelativeDate, formatBudgetRange } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { TransportPageLoader } from '@/features/transport/components/TransportPageState';
+
+const ALL_VEHICLE_TYPES: VehicleType[] = [
+  'PICKUP', 'VAN', 'TRUCK_SMALL', 'TRUCK_LARGE', 'TRAILER', 'EXCAVATOR', 'TIPPER', 'CRANE', 'OTHER',
+];
+
+const ALL_SERVICE_TYPES: TransportServiceType[] = [
+  'GOODS', 'FURNITURE', 'CONSTRUCTION', 'HEAVY', 'BACKLOAD', 'EQUIPMENT',
+];
+
+// ── Edit Profile Modal ────────────────────────────────────────────────────────
+
+interface EditProfileModalProps {
+  profile: CarrierProfile;
+  onClose: () => void;
+  onSaved: (updated: CarrierProfile) => void;
+}
+
+function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) {
+  const [companyName, setCompanyName] = useState(profile.companyName ?? '');
+  const [bio, setBio] = useState(profile.bio ?? '');
+  const [contactPhone, setContactPhone] = useState(profile.contactPhone ?? '');
+  const [whatsapp, setWhatsapp] = useState(profile.whatsapp ?? '');
+  const [governorate, setGovernorate] = useState(profile.governorate);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>(profile.vehicleTypes);
+  const [serviceTypes, setServiceTypes] = useState<TransportServiceType[]>(profile.serviceTypes);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const toggleVehicle = (v: VehicleType) =>
+    setVehicleTypes((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]);
+
+  const toggleService = (s: TransportServiceType) =>
+    setServiceTypes((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (vehicleTypes.length === 0) { setError('يرجى اختيار نوع مركبة واحد على الأقل'); return; }
+    if (serviceTypes.length === 0) { setError('يرجى اختيار نوع خدمة واحد على الأقل'); return; }
+    if (!governorate) { setError('يرجى اختيار المحافظة'); return; }
+
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await transportApi.updateCarrierProfile({
+        companyName: companyName || undefined,
+        bio: bio || undefined,
+        contactPhone: contactPhone || undefined,
+        whatsapp: whatsapp || undefined,
+        governorate,
+        vehicleTypes,
+        serviceTypes,
+      });
+      setSuccess(true);
+      onSaved(updated);
+      setTimeout(onClose, 1500);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      setError(msg || 'تعذّر حفظ التعديلات، حاول مجدداً');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-[var(--color-surface)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-outline-variant)] px-5 py-4 flex items-center justify-between rounded-t-2xl z-10">
+          <h2 className="text-lg font-bold text-[var(--color-on-surface)]">تعديل الملف الشخصي</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[var(--color-surface-container)] transition-all"
+          >
+            <X size={18} className="text-[var(--color-on-surface-muted)]" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-5">
+          {error && (
+            <div className="text-sm px-4 py-3 rounded-xl bg-[var(--color-error-light)] text-[var(--color-error)]">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="flex items-center gap-2 text-sm px-4 py-3 rounded-xl bg-[var(--color-success-light)] text-[var(--color-success)]">
+              <CheckCircle size={15} />
+              تم حفظ التعديلات بنجاح
+            </div>
+          )}
+
+          {/* Company Info */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+              معلومات الشركة
+            </h3>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+                اسم الشركة (اختياري)
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="مثال: شركة الحارثي للنقل"
+                className="input-base"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+                وصف (اختياري)
+              </label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="اكتب نبذة عن خدماتك وخبرتك..."
+                rows={3}
+                className="input-base resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Vehicle Types */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+              أنواع المركبات *
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {ALL_VEHICLE_TYPES.map((v) => {
+                const selected = vehicleTypes.includes(v);
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => toggleVehicle(v)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                      selected
+                        ? 'bg-[var(--color-brand-navy)] border-[var(--color-brand-navy)] text-white'
+                        : 'bg-white border-[var(--color-outline)] text-[var(--color-on-surface-variant)] hover:border-[var(--color-brand-navy)]'
+                    }`}
+                  >
+                    {selected && <CheckCircle size={12} />}
+                    {VEHICLE_TYPE_LABELS[v]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Service Types */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+              أنواع الخدمات *
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {ALL_SERVICE_TYPES.map((s) => {
+                const selected = serviceTypes.includes(s);
+                const color = SERVICE_TYPE_COLORS[s];
+                const bg = SERVICE_TYPE_BG_COLORS[s];
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleService(s)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                      selected
+                        ? 'border-2'
+                        : 'bg-white border-[var(--color-outline)] text-[var(--color-on-surface-variant)]'
+                    }`}
+                    style={selected ? { backgroundColor: bg, borderColor: color, color } : {}}
+                  >
+                    {selected && <CheckCircle size={12} />}
+                    {SERVICE_TYPE_LABELS[s]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Location & Contact */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+              مناطق الخدمة والتواصل
+            </h3>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+                المحافظة *
+              </label>
+              <select
+                value={governorate}
+                onChange={(e) => setGovernorate(e.target.value)}
+                className="input-base"
+              >
+                <option value="">اختر المحافظة</option>
+                {OMAN_GOVERNORATES.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+                  رقم التواصل
+                </label>
+                <div className="relative">
+                  <Phone size={13} className="absolute top-1/2 -translate-y-1/2 right-3 text-[var(--color-on-surface-muted)]" />
+                  <input
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="+968 9xxx xxxx"
+                    className="input-base pr-9"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+                  واتساب
+                </label>
+                <div className="relative">
+                  <MessageCircle size={13} className="absolute top-1/2 -translate-y-1/2 right-3 text-[var(--color-on-surface-muted)]" />
+                  <input
+                    type="tel"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="+968 9xxx xxxx"
+                    className="input-base pr-9"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving || success}
+            className="btn-primary w-full justify-center py-3"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+            حفظ التعديلات
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 function CarrierDashboardContent() {
   const router = useRouter();
@@ -25,6 +281,7 @@ function CarrierDashboardContent() {
   const [toggleError, setToggleError] = useState('');
   const [nearbyRequests, setNearbyRequests] = useState<TransportRequest[]>([]);
   const [recentQuotes, setRecentQuotes] = useState<TransportQuote[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -84,12 +341,21 @@ function CarrierDashboardContent() {
               {profile.companyName ?? profile.user?.displayName}
             </p>
           </div>
-          <Link
-            href={`/transport/carriers/${profile.id}`}
-            className="text-sm text-[var(--color-brand-navy)] font-semibold hover:underline"
-          >
-            عرض ملفي الشخصي
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--color-outline)] text-sm font-semibold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)] hover:text-[var(--color-brand-navy)] transition-all"
+            >
+              <Pencil size={14} />
+              تعديل الملف
+            </button>
+            <Link
+              href={`/transport/carriers/${profile.id}`}
+              className="text-sm text-[var(--color-brand-navy)] font-semibold hover:underline"
+            >
+              عرض ملفي الشخصي
+            </Link>
+          </div>
         </div>
 
         {/* Availability Toggle */}
@@ -108,7 +374,8 @@ function CarrierDashboardContent() {
             </p>
             <p className="text-white/60 text-xs mt-1">
               {profile.isAvailable
-                ? 'يمكن للشاحنين رؤية ملفك وإرسال طلبات' :'ملفك مخفي عن الشاحنين'}
+                ? 'يمكن للشاحنين رؤية ملفك وإرسال طلبات'
+                : 'ملفك مخفي عن الشاحنين'}
             </p>
           </div>
           <button
@@ -255,10 +522,10 @@ function CarrierDashboardContent() {
               <div className="flex flex-col gap-3">
                 {recentQuotes.map((q) => {
                   const statusColors: Record<string, { bg: string; text: string }> = {
-                    PENDING: { bg: 'var(--color-warning-light)', text: 'var(--color-warning)' },
-                    ACCEPTED: { bg: 'var(--color-success-light)', text: 'var(--color-success)' },
-                    REJECTED: { bg: 'var(--color-error-light)', text: 'var(--color-error)' },
-                    WITHDRAWN: { bg: 'var(--color-surface-container)', text: 'var(--color-on-surface-muted)' },
+                    PENDING:   { bg: 'var(--color-warning-light)',        text: 'var(--color-warning)'          },
+                    ACCEPTED:  { bg: 'var(--color-success-light)',        text: 'var(--color-success)'          },
+                    REJECTED:  { bg: 'var(--color-error-light)',          text: 'var(--color-error)'            },
+                    WITHDRAWN: { bg: 'var(--color-surface-container)',    text: 'var(--color-on-surface-muted)' },
                   };
                   const sc = statusColors[q.status] ?? statusColors['PENDING'];
                   return (
@@ -327,12 +594,21 @@ function CarrierDashboardContent() {
             </div>
           </div>
         </div>
-      {toggleError && (
-        <div className="fixed bottom-20 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-80 bg-[var(--color-error)] text-white text-sm px-4 py-3 rounded-xl shadow-lg z-50">
-          {toggleError}
-        </div>
-      )}
+
+        {toggleError && (
+          <div className="fixed bottom-20 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-80 bg-[var(--color-error)] text-white text-sm px-4 py-3 rounded-xl shadow-lg z-50">
+            {toggleError}
+          </div>
+        )}
       </div>
+
+      {editOpen && (
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => setProfile(updated)}
+        />
+      )}
     </div>
   );
 }
