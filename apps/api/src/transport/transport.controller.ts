@@ -3,6 +3,7 @@ import {
   UseGuards, ParseIntPipe, DefaultValuePipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { CarrierProfileService } from './carrier-profile.service';
@@ -91,9 +92,14 @@ export class TransportController {
     return this.transportRequestService.myRequests(user.sub, page, limit, status);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('requests/:id')
-  findOneRequest(@Param('id') id: string, @Req() req: Request) {
-    return this.transportRequestService.findOne(id, req.ip);
+  findOneRequest(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.transportRequestService.findOne(id, req.ip, user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -176,5 +182,11 @@ export class TransportController {
     @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
   ) {
     return this.transportBookingService.getMyBookings(user.sub, role, page, limit);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('bookings/:id')
+  findOneBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportBookingService.findOne(id, user.sub);
   }
 }

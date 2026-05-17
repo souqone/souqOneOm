@@ -168,6 +168,23 @@ export class TransportBookingService {
     return updated;
   }
 
+  async findOne(bookingId: string, userId: string) {
+    const booking = await this.prisma.transportBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        request: { include: { user: { select: USER_SELECT } } },
+        quote: { include: { carrier: { include: { user: { select: USER_SELECT } } } } },
+      },
+    });
+    if (!booking) throw new NotFoundException('الحجز غير موجود');
+
+    const isShipper = booking.request.userId === userId;
+    const isCarrier = booking.quote.carrier.userId === userId;
+    if (!isShipper && !isCarrier) throw new ForbiddenException('ليس لديك صلاحية لعرض هذا الحجز');
+
+    return booking;
+  }
+
   async getMyBookings(
     userId: string,
     role: 'shipper' | 'carrier',

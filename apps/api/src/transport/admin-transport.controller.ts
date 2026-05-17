@@ -1,6 +1,6 @@
 import {
   Controller, Get, Patch, Delete, Param, Query, Body,
-  UseGuards,
+  UseGuards, BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -8,6 +8,9 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
+import { TransportRequestStatus } from '@prisma/client';
+
+const VALID_REQUEST_STATUSES = new Set(Object.values(TransportRequestStatus));
 
 @Controller('admin/transport')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -111,9 +114,14 @@ export class AdminTransportController {
 
   @Patch('requests/:id')
   async updateRequestStatus(@Param('id') id: string, @Body('status') status: string) {
+    if (!status || !VALID_REQUEST_STATUSES.has(status as TransportRequestStatus)) {
+      throw new BadRequestException(
+        `الحالة غير صالحة. القيم المسموحة: ${[...VALID_REQUEST_STATUSES].join(', ')}`,
+      );
+    }
     return this.prisma.transportRequest.update({
       where: { id },
-      data: { status: status as any },
+      data: { status: status as TransportRequestStatus },
     });
   }
 

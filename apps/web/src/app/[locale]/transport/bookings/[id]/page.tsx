@@ -105,16 +105,11 @@ export default function BookingDetailPage() {
       setLoading(true);
       setError('');
       try {
-        const res = await transportApi.myBookings('shipper');
-        let found = res.items.find((b) => b.id === id);
-        if (!found) {
-          const res2 = await transportApi.myBookings('carrier');
-          found = res2.items.find((b) => b.id === id);
-        }
-        if (!found) throw new Error('not found');
-        setBooking({ ...found, carrier: found.quote?.carrier });
-      } catch {
-        setError('تعذّر تحميل تفاصيل الحجز');
+        const data = await transportApi.getBooking(id);
+        setBooking({ ...data, carrier: data.quote?.carrier });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '';
+        setError(msg || 'تعذّر تحميل تفاصيل الحجز');
       } finally {
         setLoading(false);
       }
