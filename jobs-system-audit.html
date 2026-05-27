@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تدقيق نظام الوظائف — SouqOne</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.7; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 2rem; font-weight: 800; color: #0f172a; border-bottom: 3px solid #f59e0b; padding-bottom: 12px; margin-bottom: 32px; }
+  h2 { font-size: 1.3rem; font-weight: 700; color: #1e40af; margin: 36px 0 16px; display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 1rem; font-weight: 700; color: #374151; margin: 20px 0 10px; }
+  p { margin-bottom: 10px; color: #374151; font-size: 0.95rem; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+  .badge-bug { background: #fee2e2; color: #dc2626; }
+  .badge-warn { background: #fef3c7; color: #d97706; }
+  .badge-ok  { background: #dcfce7; color: #16a34a; }
+  .badge-info { background: #dbeafe; color: #2563eb; }
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .card-red { border-color: #fca5a5; background: #fff5f5; }
+  .card-yellow { border-color: #fcd34d; background: #fffbeb; }
+  .card-green { border-color: #86efac; background: #f0fdf4; }
+  .card-blue  { border-color: #93c5fd; background: #eff6ff; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 16px; }
+  th { background: #1e40af; color: #fff; padding: 10px 14px; text-align: right; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e2e8f0; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .flow-step { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-right: 3px solid #e2e8f0; padding-right: 20px; position: relative; }
+  .flow-step:last-child { border-color: transparent; }
+  .flow-num { width: 32px; height: 32px; border-radius: 50%; background: #1e40af; color: #fff; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: absolute; right: -17px; }
+  .flow-content { margin-right: 28px; }
+  .flow-content strong { font-size: 0.95rem; display: block; margin-bottom: 2px; }
+  .flow-content span { font-size: 0.82rem; color: #64748b; }
+  .issue { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 12px; margin-bottom: 12px; }
+  .issue-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+  .issue-body strong { display: block; margin-bottom: 4px; font-size: 0.95rem; }
+  .issue-body p { font-size: 0.86rem; color: #475569; margin-bottom: 4px; }
+  .issue-body code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 0.82rem; color: #7c3aed; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .role-card { border-radius: 14px; padding: 20px; }
+  .role-driver { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; }
+  .role-employer { background: linear-gradient(135deg, #dbeafe, #bfdbfe); border: 2px solid #3b82f6; }
+  .tag { display: inline-block; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; font-family: monospace; color: #7c3aed; margin: 2px; }
+  ul { padding-right: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 6px; font-size: 0.9rem; }
+  .sev-critical { color: #dc2626; font-weight: 700; }
+  .sev-major   { color: #d97706; font-weight: 700; }
+  .sev-minor   { color: #2563eb; font-weight: 700; }
+  .route-table td:first-child { font-family: monospace; font-size: 0.82rem; color: #7c3aed; direction: ltr; text-align: left; }
+  .diagram { background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 20px; font-family: monospace; font-size: 0.82rem; line-height: 2; overflow-x: auto; margin: 16px 0; direction: ltr; text-align: left; }
+  .diagram .green { color: #4ade80; }
+  .diagram .yellow { color: #fbbf24; }
+  .diagram .red { color: #f87171; }
+  .diagram .blue { color: #60a5fa; }
+  .diagram .gray { color: #94a3b8; }
+  hr { border: none; border-top: 2px solid #e2e8f0; margin: 32px 0; }
+  .summary-box { background: linear-gradient(135deg, #1e40af, #1d4ed8); color: #fff; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+  .summary-box h2 { color: #fff; border: none; margin-top: 0; }
+  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .stat { background: rgba(255,255,255,0.15); border-radius: 10px; padding: 12px 20px; text-align: center; }
+  .stat strong { display: block; font-size: 1.6rem; font-weight: 800; }
+  .stat span { font-size: 0.8rem; opacity: 0.85; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🔍 تدقيق نظام الوظائف — SouqOne</h1>
+
+  <!-- SUMMARY -->
+  <div class="summary-box">
+    <h2>📊 ملخص التدقيق</h2>
+    <p style="opacity:.9;margin-bottom:12px;">نظام وظائف ثنائي الاتجاه للسائقين وأصحاب العمل في سلطنة عُمان</p>
+    <div class="stat-row">
+      <div class="stat"><strong style="color:#f87171">5</strong><span>مشاكل حرجة</span></div>
+      <div class="stat"><strong style="color:#fbbf24">4</strong><span>مشاكل رئيسية</span></div>
+      <div class="stat"><strong style="color:#60a5fa">3</strong><span>ملاحظات UX</span></div>
+      <div class="stat"><strong style="color:#4ade80">10</strong><span>صفحات</span></div>
+      <div class="stat"><strong style="color:#4ade80">2</strong><span>نوع مستخدم</span></div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <h2>🏗️ نظرة عامة على النظام</h2>
+  <div class="card">
+    <p>النظام سوق عمل مزدوج يجمع بين <strong>السائقين</strong> الباحثين عن فرص عمل و<strong>أصحاب العمل</strong> الباحثين عن سائقين في عُمان. يعتمد على نموذج "إعلان + عرض" حيث يمكن للطرفين نشر إعلانات والرد عليها.</p>
+
+    <div class="grid2" style="margin-top:16px;">
+      <div class="role-card role-driver">
+        <h3>🚛 السائق (Driver)</h3>
+        <p style="font-size:.85rem;margin-top:6px;">يُنشئ <strong>DriverProfile</strong> ويمكنه:</p>
+        <ul style="margin-top:6px;">
+          <li>نشر إعلان "عرض خدمة" <span class="tag">OFFERING</span></li>
+          <li>التقدم لإعلانات "طلب سائق" <span class="tag">HIRING</span></li>
+          <li>طلب التحقق من الهوية والرخصة</li>
+          <li>متابعة عروضه من لوحة التحكم</li>
+        </ul>
+      </div>
+      <div class="role-card role-employer">
+        <h3>👔 صاحب العمل (Employer)</h3>
+        <p style="font-size:.85rem;margin-top:6px;">يُنشئ <strong>EmployerProfile</strong> ويمكنه:</p>
+        <ul style="margin-top:6px;">
+          <li>نشر إعلان "طلب سائق" <span class="tag">HIRING</span></li>
+          <li>التقدم لإعلانات "عرض خدمة" <span class="tag">OFFERING</span></li>
+          <li>قبول أو رفض عروض السائقين</li>
+          <li>إدارة إعلاناته من لوحة التحكم</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:12px;background:#f1f5f9;border-radius:10px;">
+      <strong style="font-size:.85rem;">⚠️ ملاحظة مهمة:</strong>
+      <p style="font-size:.85rem;margin-top:4px;">المستخدم الواحد يمكنه إنشاء <strong>كلا البروفايلين</strong> (سائق + صاحب عمل) في نفس الوقت. هذا مقصود لكنه يُعقّد منطق التطبيق.</p>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <h2>📄 الصفحات والمسارات</h2>
+  <table class="route-table">
+    <tr>
+      <th>المسار</th>
+      <th>الاسم</th>
+      <th>من يستطيع الوصول</th>
+      <th>الحارس</th>
+    </tr>
+    <tr>
+      <td>/jobs</td>
+      <td>الصفحة الرئيسية للوظائف</td>
+      <td>الجميع</td>
+      <td><span class="badge badge-ok">بدون حارس</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/browse</td>
+      <td>تصفح الإعلانات</td>
+      <td>الجميع</td>
+      <td><span class="badge badge-ok">بدون حارس</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/[id]</td>
+      <td>تفاصيل إعلان</td>
+      <td>الجميع (التقديم يحتاج تسجيل)</td>
+      <td><span class="badge badge-ok">بدون حارس</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/onboarding</td>
+      <td>إنشاء البروفايل</td>
+      <td>مستخدم مسجّل فقط</td>
+      <td><span class="badge badge-info">AuthGuard</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/new</td>
+      <td>نشر إعلان جديد</td>
+      <td>يجب أن يكون لديه بروفايل</td>
+      <td><span class="badge badge-bug">AuthGuard فقط ❌</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/dashboard</td>
+      <td>لوحة التحكم الموحدة</td>
+      <td>أي مستخدم مسجّل</td>
+      <td><span class="badge badge-bug">AuthGuard فقط ❌</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/my</td>
+      <td>إعلاناتي (أصحاب العمل)</td>
+      <td>أصحاب العمل</td>
+      <td><span class="badge badge-bug">لا يوجد حارس ❌</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/my-proposals</td>
+      <td>عروضي (السائقون)</td>
+      <td>السائقون</td>
+      <td><span class="badge badge-bug">لا يوجد حارس ❌</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/verification</td>
+      <td>التحقق من الهوية</td>
+      <td>السائقون فقط</td>
+      <td><span class="badge badge-info">AuthGuard</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/drivers</td>
+      <td>تصفح السائقين</td>
+      <td>الجميع</td>
+      <td><span class="badge badge-ok">بدون حارس</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/drivers/[id]</td>
+      <td>بروفايل سائق</td>
+      <td>الجميع</td>
+      <td><span class="badge badge-ok">بدون حارس</span></td>
+    </tr>
+    <tr>
+      <td>/jobs/employers/[id]</td>
+      <td>بروفايل صاحب عمل</td>
+      <td>الجميع</td>
+      <td><span class="badge badge-ok">بدون حارس</span></td>
+    </tr>
+  </table>
+
+  <!-- USER FLOWS -->
+  <h2>🔄 مسارات المستخدم</h2>
+
+  <div class="grid2">
+    <div>
+      <h3>مسار السائق</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <strong>/jobs أو /jobs/browse</strong>
+            <span>يتصفح الإعلانات — لا يحتاج تسجيل</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <strong>تسجيل الدخول</strong>
+            <span>عند محاولة التقديم يُطلب منه تسجيل</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <strong>/jobs/onboarding → اختيار "سائق"</strong>
+            <span>يملأ بيانات الرخصة، الخبرة، المحافظة</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-content">
+            <strong>التقديم على إعلان HIRING</strong>
+            <span>يكتب رسالة تعريفية + رابط CV اختياري</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <div class="flow-content">
+            <strong>/jobs/dashboard أو /jobs/my-proposals</strong>
+            <span>يتابع حالة طلباته (PENDING / ACCEPTED / REJECTED)</span>
+          </div>
+        </div>
+        <div class="flow-step" style="border-color:transparent;">
+          <div class="flow-num" style="background:#f59e0b;">6</div>
+          <div class="flow-content">
+            <strong>/jobs/verification (اختياري)</strong>
+            <span>يرفع صورة الرخصة والهوية للتحقق</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>مسار صاحب العمل</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <strong>تسجيل الدخول أو التسجيل</strong>
+            <span>يجب أن يكون مسجلاً لنشر إعلان</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <strong>/jobs/onboarding → اختيار "صاحب عمل"</strong>
+            <span>اسم الشركة، المجال، المحافظة</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <strong>/jobs/new</strong>
+            <span>ينشر إعلان "طلب سائق" بالمتطلبات والراتب</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-content">
+            <strong>/jobs/[id] — ينتظر عروض السائقين</strong>
+            <span>يرى قائمة العروض المقدمة في صفحة الإعلان</span>
+          </div>
+        </div>
+        <div class="flow-step" style="border-color:transparent;">
+          <div class="flow-num">5</div>
+          <div class="flow-content">
+            <strong>/jobs/dashboard أو /jobs/my</strong>
+            <span>يقبل أو يرفض العروض، يغلق الإعلان</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA MODEL -->
+  <h2>🗄️ نموذج البيانات</h2>
+  <div class="diagram">
+<span class="blue">DriverJob</span> (إعلان الوظيفة)
+├── jobType:        <span class="yellow">HIRING</span> (صاحب عمل يبحث عن سائق)
+│                   <span class="yellow">OFFERING</span> (سائق يعرض خدمته)
+├── employmentType: FULL_TIME | PART_TIME | TEMPORARY | CONTRACT
+├── status:         <span class="green">ACTIVE</span> | <span class="red">CLOSED</span> | <span class="red">EXPIRED</span>
+├── licenseTypes:   LIGHT | HEAVY | TRANSPORT | BUS | MOTORCYCLE
+├── salary + salaryPeriod (DAILY | MONTHLY | YEARLY | NEGOTIABLE)
+└── _count.applications → عدد العروض
+
+<span class="blue">JobApplication</span> (عرض التقديم)
+├── status: <span class="yellow">PENDING</span> → <span class="green">ACCEPTED</span> | <span class="red">REJECTED</span> | <span class="gray">WITHDRAWN</span>
+├── message (رسالة تعريفية)
+├── resumeUrl (اختياري)
+└── isRevealed: <span class="gray">false</span> <span class="red">← مقصود لميزة مدفوعة غير مكتملة!</span>
+
+<span class="blue">DriverProfile</span>
+├── licenseTypes, experienceYears, vehicleTypes
+├── isAvailable: boolean
+├── isVerified: boolean (من Admin فقط)
+├── averageRating, completedJobs, completionRate
+└── responseTimeHours
+
+<span class="blue">EmployerProfile</span>
+├── companyName, companySize, industry
+├── averageRating, reviewCount
+└── isVerified: boolean (من User)
+  </div>
+
+  <!-- ISSUES -->
+  <h2>🚨 المشاكل المكتشفة</h2>
+
+  <!-- CRITICAL -->
+  <h3 class="sev-critical">⛔ حرجة — تؤثر على الأمان والوظائف الأساسية</h3>
+
+  <div class="issue card-red" style="border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5;">
+    <div class="issue-icon">🔒</div>
+    <div class="issue-body">
+      <strong>[1] صفحة /jobs/new بدون حارس بروفايل</strong>
+      <p>تستخدم <code>AuthGuard</code> فقط — أي مستخدم مسجّل بدون بروفايل يستطيع فتحها. يجب استخدام <code>JobsPageGuard</code> بدلاً منها.</p>
+      <p><strong>المشكلة:</strong> مستخدم بدون <code>EmployerProfile</code> يستطيع نشر إعلان — سيفشل الـ API لأن <code>employerProfileId</code> غير موجود.</p>
+      <p><strong>الحل:</strong> <code>&lt;JobsPageGuard role="employer"&gt;</code> في صفحة /jobs/new</p>
+    </div>
+  </div>
+
+  <div class="issue card-red" style="border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5;">
+    <div class="issue-icon">🔒</div>
+    <div class="issue-body">
+      <strong>[2] صفحة /jobs/my و /jobs/my-proposals بدون أي حارس</strong>
+      <p>لا <code>AuthGuard</code> ولا <code>JobsPageGuard</code> — أي زائر غير مسجّل يستطيع فتحها وسيرى حالة فارغة غريبة.</p>
+      <p><strong>الحل:</strong> إضافة <code>&lt;JobsPageGuard role="employer"&gt;</code> لـ /jobs/my و <code>role="driver"</code> لـ /jobs/my-proposals</p>
+    </div>
+  </div>
+
+  <div class="issue card-red" style="border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5;">
+    <div class="issue-icon">🐛</div>
+    <div class="issue-body">
+      <strong>[3] acceptedCount للـ Employer دائماً = 0</strong>
+      <p>في <code>dashboard/page.tsx</code> سطر 135:</p>
+      <p><code>const acceptedCount = isEmployer ? 0  // can't know from this shape</code></p>
+      <p>هذا hardcoded ومقصود لكنه يعطي بيانات خاطئة في الـ Dashboard Stats. بطاقة "مقبول" تعرض دائماً 0 لصاحب العمل حتى لو قبل عروضاً.</p>
+    </div>
+  </div>
+
+  <div class="issue card-red" style="border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5;">
+    <div class="issue-icon">🔗</div>
+    <div class="issue-body">
+      <strong>[4] صفحة /jobs/verification معزولة تماماً</strong>
+      <p>لا يوجد رابط لها من أي مكان في النظام — لا من onboarding، لا من dashboard، لا من بروفايل السائق. المستخدم لا يعرف أنها موجودة.</p>
+      <p><strong>الحل:</strong> إضافة بطاقة "اطلب التحقق من هويتك" في dashboard السائق مع رابط مباشر.</p>
+    </div>
+  </div>
+
+  <div class="issue card-red" style="border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5;">
+    <div class="issue-icon">🚫</div>
+    <div class="issue-body">
+      <strong>[5] isRevealed دائماً = false — ميزة مدفوعة نصف مكتملة</strong>
+      <p>الحقل <code>isRevealed</code> في <code>JobApplication</code> مبني لتوفير نظام "اكشف معلومات التواصل" المدفوع، لكنه hardcoded إلى <code>false</code> في dashboard.</p>
+      <p>يعني صاحب العمل يرى العروض لكن لا يعلم إذا يجب أن يدفع لرؤية تفاصيل السائق أم لا — UX مبهم.</p>
+    </div>
+  </div>
+
+  <!-- MAJOR -->
+  <h3 class="sev-major" style="margin-top:24px;">⚠️ رئيسية — تؤثر على تجربة المستخدم</h3>
+
+  <div class="issue card-yellow" style="border-radius:12px;margin-bottom:12px;border:1px solid #fcd34d;">
+    <div class="issue-icon">📋</div>
+    <div class="issue-body">
+      <strong>[6] تكرار صفحات: /jobs/my و /jobs/dashboard يعملان نفس الشيء</strong>
+      <p>لدينا 3 صفحات مشتتة:</p>
+      <ul>
+        <li><code>/jobs/dashboard</code> — لوحة موحدة (سائق + صاحب عمل)</li>
+        <li><code>/jobs/my</code> — إعلانات صاحب العمل فقط</li>
+        <li><code>/jobs/my-proposals</code> — عروض السائق فقط</li>
+      </ul>
+      <p>المستخدم لا يعرف أين يذهب. يجب دمجها في لوحة تحكم واحدة.</p>
+    </div>
+  </div>
+
+  <div class="issue card-yellow" style="border-radius:12px;margin-bottom:12px;border:1px solid #fcd34d;">
+    <div class="issue-icon">🔄</div>
+    <div class="issue-body">
+      <strong>[7] بعد الـ Onboarding يُعيد إلى /jobs/browse بدلاً من ما يناسب الدور</strong>
+      <p>بعد إنشاء بروفايل <strong>صاحب العمل</strong>: يُعاد لـ <code>/jobs/browse</code> — الأفضل إعادته لـ <code>/jobs/new</code> لنشر أول إعلان.</p>
+      <p>بعد إنشاء بروفايل <strong>السائق</strong>: يُعاد لـ <code>/jobs/browse</code> — الأفضل إعادته لـ <code>/jobs/dashboard</code> لرؤية عروض عليه.</p>
+    </div>
+  </div>
+
+  <div class="issue card-yellow" style="border-radius:12px;margin-bottom:12px;border:1px solid #fcd34d;">
+    <div class="issue-icon">✏️</div>
+    <div class="issue-body">
+      <strong>[8] لا توجد صفحة تعديل البروفايل</strong>
+      <p>المستخدم يُنشئ بروفايله من <code>/jobs/onboarding</code> لكن لا توجد طريقة لتعديله لاحقاً. إذا تغيرت محافظته أو رخصته — لا يستطيع التحديث.</p>
+      <p><strong>API موجود:</strong> <code>PATCH /jobs/driver-profile</code> و <code>PATCH /jobs/employer-profile</code> — لكن لا توجد واجهة.</p>
+    </div>
+  </div>
+
+  <div class="issue card-yellow" style="border-radius:12px;margin-bottom:12px;border:1px solid #fcd34d;">
+    <div class="issue-icon">🔔</div>
+    <div class="issue-body">
+      <strong>[9] الـ Backend يستدعي NotificationsService عند التقديم — لكن لا يوجد UI للإشعارات</strong>
+      <p>عند قبول/رفض عرض، الـ backend يرسل إشعاراً للسائق. لكن لا يوجد مكان في الـ frontend يعرض هذه الإشعارات خاصة بالوظائف.</p>
+    </div>
+  </div>
+
+  <!-- MINOR -->
+  <h3 class="sev-minor" style="margin-top:24px;">💡 ملاحظات UX</h3>
+
+  <div class="issue card-blue" style="border-radius:12px;margin-bottom:12px;border:1px solid #93c5fd;">
+    <div class="issue-icon">👁️</div>
+    <div class="issue-body">
+      <strong>[10] صفحة /jobs/browse تعرض OFFERING و HIRING مختلطين بدون تمييز واضح</strong>
+      <p>الـ filter بـ <code>jobType</code> موجود لكنه اختياري. الزائر الجديد يرى خليطاً من "طلب سائق" و"عرض خدمة" بدون شرح ما الفرق.</p>
+      <p><strong>الحل:</strong> تبويبات HIRING / OFFERING واضحة في أعلى الصفحة بدلاً من dropdown مخفي في الفلاتر.</p>
+    </div>
+  </div>
+
+  <div class="issue card-blue" style="border-radius:12px;margin-bottom:12px;border:1px solid #93c5fd;">
+    <div class="issue-icon">📄</div>
+    <div class="issue-body">
+      <strong>[11] /jobs/drivers صفحة لكن لا يوجد رابط لها من Navigation</strong>
+      <p>الصفحة موجودة لتصفح السائقين المتاحين، لكنها غير مدرجة في أي قائمة تنقل. أصحاب العمل لا يعرفون أنهم يستطيعون البحث عن سائق بشكل مستقل.</p>
+    </div>
+  </div>
+
+  <div class="issue card-blue" style="border-radius:12px;margin-bottom:12px;border:1px solid #93c5fd;">
+    <div class="issue-icon">🌐</div>
+    <div class="issue-body">
+      <strong>[12] اللغة الإنجليزية غير مدعومة</strong>
+      <p>كل نصوص نظام الوظائف hardcoded بالعربية في <code>constants.ts</code>. النظام غير جاهز للـ i18n على عكس بقية التطبيق الذي يستخدم <code>next-intl</code>.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- STATUS FLOW -->
+  <h2>📊 مسار حالة الإعلان والعرض</h2>
+  <div class="diagram">
+<span class="green">DriverJob Lifecycle:</span>
+ACTIVE → CLOSED (بواسطة صاحب الإعلان أو Admin)
+ACTIVE → EXPIRED (تلقائياً بواسطة JobExpiryService)
+CLOSED → ACTIVE (يمكن إعادة الفتح عبر PATCH /jobs/:id)
+
+<span class="green">JobApplication Lifecycle:</span>
+PENDING ─→ ACCEPTED  (بواسطة صاحب الإعلان)
+PENDING ─→ REJECTED  (بواسطة صاحب الإعلان)
+PENDING ─→ WITHDRAWN (بواسطة مقدّم العرض)
+
+<span class="yellow">ملاحظة:</span> لا يوجد انتقال من ACCEPTED/REJECTED → أي حالة أخرى (نهائي)
+<span class="red">مشكلة:</span> VALID_TRANSITIONS في الـ backend يسمح بـ WITHDRAWN من PENDING فقط
+           لكن في الـ frontend يظهر زر السحب فقط إذا status === 'PENDING' ✓
+  </div>
+
+  <!-- RECOMMENDATIONS -->
+  <h2>✅ التوصيات المرتبة حسب الأولوية</h2>
+
+  <div class="card">
+    <h3>🔴 فوري (قبل الإنتاج)</h3>
+    <ol style="padding-right:20px;line-height:2.2;">
+      <li>إضافة <code>JobsPageGuard role="employer"</code> على <code>/jobs/new</code></li>
+      <li>إضافة <code>JobsPageGuard</code> على <code>/jobs/my</code> و <code>/jobs/my-proposals</code></li>
+      <li>إصلاح <code>acceptedCount</code> في Dashboard — جلبه من API بشكل صحيح</li>
+      <li>إضافة رابط <code>/jobs/verification</code> من dashboard السائق</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>🟠 قريباً (Sprint القادم)</h3>
+    <ol style="padding-right:20px;line-height:2.2;">
+      <li>دمج <code>/jobs/my</code> و <code>/jobs/my-proposals</code> في <code>/jobs/dashboard</code> وحذف الصفحتين المكررتين</li>
+      <li>تغيير redirect بعد onboarding: صاحب عمل → <code>/jobs/new</code>، سائق → <code>/jobs/dashboard</code></li>
+      <li>إنشاء صفحة تعديل البروفايل <code>/jobs/profile/edit</code></li>
+      <li>إضافة تبويبات HIRING/OFFERING واضحة في <code>/jobs/browse</code></li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>🟢 مستقبلاً</h3>
+    <ol style="padding-right:20px;line-height:2.2;">
+      <li>تحديد ماذا تريد من <code>isRevealed</code> — إما تفعيل الميزة المدفوعة أو إزالتها</li>
+      <li>إضافة رابط <code>/jobs/drivers</code> في Navigation لأصحاب العمل</li>
+      <li>ترحيل نصوص الوظائف لـ <code>next-intl</code> لدعم الإنجليزية</li>
+      <li>ربط نظام الإشعارات بالـ frontend لإبلاغ السائق عند قبول/رفض عرضه</li>
+    </ol>
+  </div>
+
+  <hr>
+  <p style="text-align:center;color:#94a3b8;font-size:.82rem;margin-top:24px;">
+    تم إنشاء هذا التقرير بتاريخ: <strong><?php echo date('Y-m-d'); ?></strong> — SouqOne Jobs System Audit
+  </p>
+  <p style="text-align:center;color:#94a3b8;font-size:.82rem;">
+    الملفات المراجعة: job-detail-client.tsx · browse/page.tsx · dashboard/page.tsx · onboarding/page.tsx · jobs.service.ts · types.ts · constants.ts
+  </p>
+
+</div>
+</body>
+</html>

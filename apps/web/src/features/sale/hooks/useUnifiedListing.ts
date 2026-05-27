@@ -61,7 +61,12 @@ function transformCar(raw: ListingItem): UnifiedListing {
     type: 'car',
     title: raw.title,
     description: raw.description,
-    price: parsePrice(raw.price),
+    price: parsePrice(raw.listingType === 'RENTAL'
+      ? (raw.dailyPrice ?? raw.monthlyPrice ?? raw.price)
+      : raw.price),
+    priceLabel: raw.listingType === 'RENTAL'
+      ? (raw.dailyPrice ? 'يوم' : raw.monthlyPrice ? 'شهر' : undefined)
+      : undefined,
     currency: raw.currency,
     negotiable: raw.isPriceNegotiable,
     condition: raw.condition || '',
@@ -106,7 +111,12 @@ function transformBus(raw: BusListingItem): UnifiedListing {
     type: 'bus',
     title: raw.title,
     description: raw.description,
-    price: parsePrice(raw.price),
+    price: parsePrice(raw.busListingType === 'BUS_RENT'
+      ? (raw.dailyPrice ?? raw.monthlyPrice ?? raw.price)
+      : raw.price),
+    priceLabel: raw.busListingType === 'BUS_RENT'
+      ? (raw.dailyPrice ? 'يوم' : raw.monthlyPrice ? 'شهر' : undefined)
+      : undefined,
     currency: raw.currency,
     negotiable: raw.isPriceNegotiable,
     condition: raw.condition,
@@ -145,7 +155,16 @@ function transformEquipment(raw: EquipmentListingItem): UnifiedListing {
     type: 'equipment',
     title: raw.title,
     description: raw.description,
-    price: parsePrice(raw.price),
+    price: parsePrice(raw.listingType === 'EQUIPMENT_RENT'
+      ? (raw.dailyPrice ?? raw.monthlyPrice ?? raw.price)
+      : raw.listingType === 'EQUIPMENT_WANTED'
+      ? (raw.budgetMin ?? raw.budgetMax ?? raw.price)
+      : raw.price),
+    priceLabel: raw.listingType === 'EQUIPMENT_RENT'
+      ? (raw.dailyPrice ? 'يوم' : raw.monthlyPrice ? 'شهر' : undefined)
+      : raw.listingType === 'EQUIPMENT_WANTED'
+      ? ((raw.budgetMin || raw.budgetMax) ? 'ميزانية' : undefined)
+      : undefined,
     currency: raw.currency,
     negotiable: raw.isPriceNegotiable,
     condition: raw.condition,

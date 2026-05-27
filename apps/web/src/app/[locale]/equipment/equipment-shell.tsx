@@ -349,10 +349,11 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4">
               {operators.slice(0, 6).map(op => {
+                const cur = !op.currency || op.currency === 'OMR' ? 'ر.ع.' : op.currency;
                 const rate = op.dailyRate
-                  ? `${Number(op.dailyRate).toLocaleString('en-US')} ${op.currency}/يوم`
+                  ? `${Number(op.dailyRate).toLocaleString('en-US')} ${cur}/يوم`
                   : op.hourlyRate
-                  ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${op.currency}/ساعة`
+                  ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${cur}/ساعة`
                   : 'اتصل للسعر';
                 return (
                   <Link key={op.id} href={`/equipment/operators/${op.id}`} className="card-base card-hover p-4 sm:p-5 flex flex-col gap-3">

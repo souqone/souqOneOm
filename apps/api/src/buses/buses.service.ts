@@ -60,6 +60,9 @@ export class BusesService {
       make: bus.make,
       model: bus.model,
       price: bus.price ? Number(bus.price) : null,
+      dailyPrice: bus.dailyPrice ? Number(bus.dailyPrice) : null,
+      monthlyPrice: bus.monthlyPrice ? Number(bus.monthlyPrice) : null,
+      contractMonthly: bus.contractMonthly ? Number(bus.contractMonthly) : null,
       capacity: bus.capacity,
       governorate: bus.governorate,
       status: bus.status,
@@ -162,9 +165,17 @@ export class BusesService {
     if (query.userId) where.userId = query.userId;
 
     if (query.minPrice || query.maxPrice) {
-      where.price = {};
-      if (query.minPrice) where.price.gte = new Prisma.Decimal(query.minPrice);
-      if (query.maxPrice) where.price.lte = new Prisma.Decimal(query.maxPrice);
+      const minDec = query.minPrice ? new Prisma.Decimal(query.minPrice) : undefined;
+      const maxDec = query.maxPrice ? new Prisma.Decimal(query.maxPrice) : undefined;
+      const priceRange: Prisma.DecimalFilter = {};
+      if (minDec) priceRange.gte = minDec;
+      if (maxDec) priceRange.lte = maxDec;
+
+      where.OR = [
+        { price: priceRange },
+        { dailyPrice: priceRange },
+        { monthlyPrice: priceRange },
+      ];
     }
 
     if (query.minCapacity || query.maxCapacity) {

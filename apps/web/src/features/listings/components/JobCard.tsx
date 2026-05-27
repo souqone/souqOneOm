@@ -179,12 +179,12 @@ export function JobCard({ item, className = '' }: JobCardProps) {
           {salaryText ? (
             <span className="shrink-0 text-[20px] font-black text-primary leading-none">{salaryText}</span>
           ) : item.salary && item.salary > 0 ? (
-            <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
-              <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
-                {item.salary.toLocaleString('en-US')}
-              </span>
+            <span className="shrink-0 flex items-baseline gap-0.5 text-primary" dir="ltr">
               <span className="text-[10px] font-bold opacity-60">
                 {currencyLabel}{item.salaryPeriod ? ` / ${item.salaryPeriod}` : ''}
+              </span>
+              <span className="text-[20px] font-black leading-none tracking-tight">
+                {item.salary.toLocaleString('en-US')}
               </span>
             </span>
           ) : (

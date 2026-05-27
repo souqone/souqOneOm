@@ -100,7 +100,7 @@ export const ContractDetails = memo(function ContractDetails({ listing }: Contra
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden mb-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 overflow-hidden mb-2 shadow-sm">
       {/* ── Clickable Header ── */}
       <button
         type="button"

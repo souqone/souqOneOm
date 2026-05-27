@@ -234,16 +234,13 @@ export function UnifiedCard({ item, onSave, isSaved = false, className = '', hid
               {fallbackPriceText}
             </span>
           ) : item.price && item.price > 0 ? (
-            <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
-              {item.primaryBadge?.label === 'مطلوب' && (
-                <span className="text-[10px] font-bold opacity-60">الميزانية</span>
-              )}
-              <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
-                {item.price.toLocaleString('en-US')}
-              </span>
+            <span className="shrink-0 flex items-baseline gap-0.5 text-primary" dir="ltr">
               <span className="text-[10px] font-bold opacity-60">
-                {item.currency === 'OMR' ? ' ر.ع' : ` ${item.currency}`}
+                {item.currency === 'OMR' ? 'ر.ع' : item.currency}
                 {item.priceLabel && ` / ${item.priceLabel}`}
+              </span>
+              <span className="text-[20px] font-black leading-none tracking-tight">
+                {item.price.toLocaleString('en-US')}
               </span>
             </span>
           ) : (

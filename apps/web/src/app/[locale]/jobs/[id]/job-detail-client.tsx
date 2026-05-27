@@ -238,10 +238,14 @@ export default function JobDetailClient() {
                 {/* Poster info */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0',
-                    getAvatarColor(job.userId)
+                    'w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 overflow-hidden',
+                    !job.user.avatarUrl && getAvatarColor(job.userId)
                   )}>
-                    {getInitials(posterName)}
+                    {job.user.avatarUrl ? (
+                      <img src={job.user.avatarUrl} alt={posterName} className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(posterName)
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -274,116 +278,20 @@ export default function JobDetailClient() {
                 )}
               </div>
 
-              {/* Requirements / Profile Card */}
-              <div className="card-base rounded-2xl p-6">
-                <h2 className="font-bold text-base text-on-surface mb-4">
-                  {job.jobType === 'HIRING' ? 'متطلبات الوظيفة' : 'المؤهلات والخبرات'}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* License Types */}
-                  {job.licenseTypes.length > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-on-surface-variant mb-2">نوع الرخصة</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {job.licenseTypes.map(lt => (
-                          <span
-                            key={`detail-lic-${lt}`}
-                            className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container text-primary"
-                          >
-                            🪪 {LICENSE_TYPE_LABELS[lt] ?? lt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Employment Type */}
-                  <div>
-                    <p className="text-xs font-bold text-on-surface-variant mb-2">نوع التوظيف</p>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface">
-                      <Clock size={11} />
-                      {EMPLOYMENT_TYPE_LABELS[job.employmentType] ?? job.employmentType}
-                    </span>
-                  </div>
-
-                  {/* Experience */}
-                  {job.experienceYears !== undefined && (
-                    <div>
-                      <p className="text-xs font-bold text-on-surface-variant mb-1">الخبرة المطلوبة</p>
-                      <p className="text-sm font-bold text-on-surface">{job.experienceYears}+ سنوات</p>
-                    </div>
-                  )}
-
-                  {/* Vehicle Types */}
-                  {job.vehicleTypes.length > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-on-surface-variant mb-2">أنواع المركبات</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {job.vehicleTypes.map(vt => (
-                          <span key={`detail-veh-${vt}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface-variant">
-                            🚛 {vt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Has Own Vehicle */}
-                  <div>
-                    <p className="text-xs font-bold text-on-surface-variant mb-1">مركبة خاصة</p>
-                    <p className="text-sm font-bold text-on-surface">
-                      {job.hasOwnVehicle ? '✅ يمتلك مركبة' : '❌ لا يمتلك'}
-                    </p>
-                  </div>
-
-                  {/* Nationality */}
-                  {job.nationality && (
-                    <div>
-                      <p className="text-xs font-bold text-on-surface-variant mb-1">الجنسية</p>
-                      <p className="text-sm font-bold text-on-surface">🌍 {NATIONALITY_LABELS[job.nationality!] ?? job.nationality}</p>
-                    </div>
-                  )}
-
-                  {/* Languages */}
-                  {job.languages.length > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-on-surface-variant mb-2">اللغات</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {job.languages.map(lang => (
-                          <span key={`detail-lang-${lang}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface-variant">
-                            💬 {LANGUAGE_LABELS[lang] ?? lang}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Age Range */}
-                  {(job.minAge || job.maxAge) && (
-                    <div>
-                      <p className="text-xs font-bold text-on-surface-variant mb-1">الفئة العمرية</p>
-                      <p className="text-sm font-bold text-on-surface">
-                        {job.minAge ?? '—'} – {job.maxAge ?? '—'} سنة
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Salary Card */}
               {(job.salary || job.salaryPeriod) && (
                 <div className="card-base rounded-2xl p-6">
                   <h2 className="font-bold text-base text-on-surface mb-3">الراتب المتوقع</h2>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-1.5" dir="ltr">
+                    <span className="text-sm font-bold text-brand-amber opacity-70">
+                      {job.currency === 'OMR' ? 'ر.ع' : job.currency}
+                      {job.salaryPeriod && job.salaryPeriod !== 'NEGOTIABLE'
+                        ? ` / ${SALARY_PERIOD_LABELS[job.salaryPeriod]}`
+                        : ''}
+                    </span>
                     <span className="text-3xl font-extrabold text-brand-amber font-tabular">
                       {job.salary ?? '—'}
                     </span>
-                    <span className="text-base font-bold text-brand-amber">{job.currency}</span>
-                    {job.salaryPeriod && job.salaryPeriod !== 'NEGOTIABLE' && (
-                      <span className="text-sm text-on-surface-variant">
-                        / {SALARY_PERIOD_LABELS[job.salaryPeriod]}
-                      </span>
-                    )}
                     {job.salaryPeriod === 'NEGOTIABLE' && (
                       <span className="text-sm text-on-surface-variant">(قابل للتفاوض)</span>
                     )}
@@ -435,6 +343,84 @@ export default function JobDetailClient() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Requirements / Profile Card */}
+              <div className="card-base rounded-2xl p-6">
+                <h2 className="font-bold text-base text-on-surface mb-4">
+                  {job.jobType === 'HIRING' ? 'متطلبات الوظيفة' : 'المؤهلات والخبرات'}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {job.licenseTypes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-2">نوع الرخصة</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.licenseTypes.map(lt => (
+                          <span key={`detail-lic-${lt}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container text-primary">
+                            🪪 {LICENSE_TYPE_LABELS[lt] ?? lt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-bold text-on-surface-variant mb-2">نوع التوظيف</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface">
+                      <Clock size={11} />
+                      {EMPLOYMENT_TYPE_LABELS[job.employmentType] ?? job.employmentType}
+                    </span>
+                  </div>
+                  {job.experienceYears !== undefined && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-1">الخبرة المطلوبة</p>
+                      <p className="text-sm font-bold text-on-surface">{job.experienceYears}+ سنوات</p>
+                    </div>
+                  )}
+                  {job.vehicleTypes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-2">أنواع المركبات</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.vehicleTypes.map(vt => (
+                          <span key={`detail-veh-${vt}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface-variant">
+                            🚛 {vt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-bold text-on-surface-variant mb-1">مركبة خاصة</p>
+                    <p className="text-sm font-bold text-on-surface">
+                      {job.hasOwnVehicle ? '✅ يمتلك مركبة' : '❌ لا يمتلك'}
+                    </p>
+                  </div>
+                  {job.nationality && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-1">الجنسية</p>
+                      <p className="text-sm font-bold text-on-surface">🌍 {NATIONALITY_LABELS[job.nationality!] ?? job.nationality}</p>
+                    </div>
+                  )}
+                  {job.languages.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-2">اللغات</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.languages.map(lang => (
+                          <span key={`detail-lang-${lang}`} className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface text-on-surface-variant">
+                            💬 {LANGUAGE_LABELS[lang] ?? lang}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(job.minAge || job.maxAge) && (
+                    <div>
+                      <p className="text-xs font-bold text-on-surface-variant mb-1">الفئة العمرية</p>
+                      <p className="text-sm font-bold text-on-surface">
+                        {job.minAge ?? '—'} – {job.maxAge ?? '—'} سنة
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Proposals Section */}
@@ -505,37 +491,90 @@ export default function JobDetailClient() {
         <div className="w-full lg:w-80 xl:w-96 shrink-0 space-y-4">
           <div className="lg:sticky lg:top-24 space-y-4">
 
-            {/* Job Owner Management Panel */}
-            {!loading && isJobOwner && job && (
+            {/* Apply Form — most important CTA */}
+            {!loading && job && !isJobOwner && (
               <div className="card-base rounded-2xl p-5">
-                <h3 className="font-bold text-sm text-on-surface mb-4">إدارة الإعلان</h3>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
-                    <p className="text-xl font-extrabold text-primary font-tabular">{job._count.applications}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">عرض</p>
+                {!isAuthenticated ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm font-bold text-on-surface mb-3">سجّل دخولك لتقديم عرض</p>
+                    <Link href="/jobs/browse" className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
+                      {STRINGS.LOGIN}
+                    </Link>
                   </div>
-                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
-                    <p className="text-xl font-extrabold text-brand-amber font-tabular">{job.viewCount}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">مشاهدة</p>
+                ) : alreadyApplied && ownApplication ? (
+                  <div>
+                    <h3 className="font-bold text-sm text-on-surface mb-3">عرضك المقدم</h3>
+                    <div className="p-3 bg-surface-container-low rounded-xl mb-3">
+                      <p className="text-xs text-on-surface-variant mb-1">رسالتك:</p>
+                      <p className="text-sm text-on-surface line-clamp-3">{ownApplication.message}</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="status-pill">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: APPLICATION_STATUS_COLORS[ownApplication.status] ?? '#f59e0b' }} />
+                        {APPLICATION_STATUS_LABELS[ownApplication.status] ?? ownApplication.status}
+                      </span>
+                      {ownApplication.status === 'PENDING' && (
+                        <button onClick={() => handleWithdraw(ownApplication.id)} className="text-xs font-bold text-error hover:underline">
+                          {STRINGS.WITHDRAW}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
-                    <p className="text-xs font-bold text-on-surface mt-1">{timeAgo(job.createdAt)}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">نُشر</p>
-                  </div>
-                </div>
-                {job.status === 'ACTIVE' && (
-                  <button
-                    onClick={handleCloseJob}
-                    disabled={closingJob}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-error/40 text-error text-sm font-bold hover:bg-red-50 transition-colors disabled:opacity-50 active:scale-95"
-                  >
-                    {closingJob ? (
-                      <span className="animate-spin w-4 h-4 border-2 border-error border-t-transparent rounded-full" />
+                ) : canApply ? (
+                  <div>
+                    <h3 className="font-bold text-sm text-on-surface mb-4">{STRINGS.APPLY}</h3>
+                    {submitSuccess ? (
+                      <div className="text-center py-4">
+                        <CheckCircle size={32} className="text-green-600 mx-auto mb-2" />
+                        <p className="text-sm font-bold text-green-700">تم إرسال عرضك بنجاح!</p>
+                        <p className="text-xs text-on-surface-variant mt-1">سيتواصل معك صاحب الإعلان قريباً</p>
+                      </div>
                     ) : (
-                      <X size={15} />
+                      <form onSubmit={handleSubmit(onSubmitProposal)} noValidate>
+                        <div className="mb-4">
+                          <label className="block text-xs font-bold text-on-surface mb-1.5">
+                            رسالتك التعريفية <span className="text-error me-1">*</span>
+                          </label>
+                          <textarea
+                            {...register('message')}
+                            rows={4}
+                            placeholder="أخبر صاحب الإعلان عن خبرتك ولماذا أنت الخيار الأفضل..."
+                            className={cn('input-base resize-none text-sm', errors.message && 'border-error focus:ring-error focus:border-error')}
+                          />
+                          {errors.message && <p className="mt-1 text-xs text-error">{errors.message.message}</p>}
+                        </div>
+                        <div className="mb-4">
+                          <label className="block text-xs font-bold text-on-surface mb-1.5">رابط السيرة الذاتية (اختياري)</label>
+                          <input
+                            {...register('resumeUrl')}
+                            type="url"
+                            placeholder="https://..."
+                            className={cn('input-base text-sm', errors.resumeUrl && 'border-error focus:ring-error focus:border-error')}
+                          />
+                          {errors.resumeUrl && <p className="mt-1 text-xs text-error">{errors.resumeUrl.message}</p>}
+                        </div>
+                        <button type="submit" disabled={applyMutation.isPending} className="btn-amber w-full flex items-center justify-center gap-2">
+                          {applyMutation.isPending && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                          {applyMutation.isPending ? 'جاري الإرسال...' : STRINGS.SUBMIT_PROPOSAL}
+                        </button>
+                      </form>
                     )}
-                    {STRINGS.CLOSE_JOB}
-                  </button>
+                  </div>
+                ) : job.status !== 'ACTIVE' ? (
+                  <div className="text-center py-4">
+                    <AlertCircle size={24} className="text-on-surface-variant mx-auto mb-2" />
+                    <p className="text-sm text-on-surface-variant">هذا الإعلان {statusLabel}</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Briefcase size={24} className="text-on-surface-variant mx-auto mb-2" />
+                    <p className="text-sm font-bold text-on-surface mb-1">
+                      {job.jobType === 'HIRING' ? 'مخصص للسائقين فقط' : 'مخصص لأصحاب العمل فقط'}
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      {job.jobType === 'HIRING' ? 'يجب أن يكون لديك بروفايل سائق للتقديم' : 'يجب أن يكون لديك بروفايل صاحب عمل للتقديم'}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -595,109 +634,34 @@ export default function JobDetailClient() {
               </div>
             )}
 
-            {/* Apply Form */}
-            {!loading && job && (
+            {/* Job Owner Management Panel — last */}
+            {!loading && isJobOwner && job && (
               <div className="card-base rounded-2xl p-5">
-                {!isAuthenticated ? (
-                  <div className="text-center py-4">
-                    <p className="text-sm font-bold text-on-surface mb-3">سجّل دخولك لتقديم عرض</p>
-                    <Link href="/jobs/browse" className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
-                      {STRINGS.LOGIN}
-                    </Link>
+                <h3 className="font-bold text-sm text-on-surface mb-4">إدارة الإعلان</h3>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
+                    <p className="text-xl font-extrabold text-primary font-tabular">{job._count.applications}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">عرض</p>
                   </div>
-                ) : alreadyApplied && ownApplication ? (
-                  <div>
-                    <h3 className="font-bold text-sm text-on-surface mb-3">عرضك المقدم</h3>
-                    <div className="p-3 bg-surface-container-low rounded-xl mb-3">
-                      <p className="text-xs text-on-surface-variant mb-1">رسالتك:</p>
-                      <p className="text-sm text-on-surface line-clamp-3">{ownApplication.message}</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="status-pill">
-                        <span
-                          className="w-2 h-2 rounded-full inline-block"
-                          style={{ backgroundColor: APPLICATION_STATUS_COLORS[ownApplication.status] ?? '#f59e0b' }}
-                        />
-                        {APPLICATION_STATUS_LABELS[ownApplication.status] ?? ownApplication.status}
-                      </span>
-                      {ownApplication.status === 'PENDING' && (
-                        <button
-                          onClick={() => handleWithdraw(ownApplication.id)}
-                          className="text-xs font-bold text-error hover:underline"
-                        >
-                          {STRINGS.WITHDRAW}
-                        </button>
-                      )}
-                    </div>
+                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
+                    <p className="text-xl font-extrabold text-brand-amber font-tabular">{job.viewCount}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">مشاهدة</p>
                   </div>
-                ) : isJobOwner ? null : canApply ? (
-                  <div>
-                    <h3 className="font-bold text-sm text-on-surface mb-4">{STRINGS.APPLY}</h3>
-
-                    {submitSuccess ? (
-                      <div className="text-center py-4">
-                        <CheckCircle size={32} className="text-green-600 mx-auto mb-2" />
-                        <p className="text-sm font-bold text-green-700">تم إرسال عرضك بنجاح!</p>
-                        <p className="text-xs text-on-surface-variant mt-1">سيتواصل معك صاحب الإعلان قريباً</p>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleSubmit(onSubmitProposal)} noValidate>
-                        <div className="mb-4">
-                          <label className="block text-xs font-bold text-on-surface mb-1.5">
-                            رسالتك التعريفية
-                            <span className="text-error me-1">*</span>
-                          </label>
-                          <textarea
-                            {...register('message')}
-                            rows={4}
-                            placeholder="أخبر صاحب الإعلان عن خبرتك ولماذا أنت الخيار الأفضل..."
-                            className={cn(
-                              'input-base resize-none text-sm',
-                              errors.message && 'border-error focus:ring-error focus:border-error'
-                            )}
-                          />
-                          {errors.message && (
-                            <p className="mt-1 text-xs text-error">{errors.message.message}</p>
-                          )}
-                        </div>
-
-                        <div className="mb-4">
-                          <label className="block text-xs font-bold text-on-surface mb-1.5">
-                            رابط السيرة الذاتية (اختياري)
-                          </label>
-                          <input
-                            {...register('resumeUrl')}
-                            type="url"
-                            placeholder="https://..."
-                            className={cn(
-                              'input-base text-sm',
-                              errors.resumeUrl && 'border-error focus:ring-error focus:border-error'
-                            )}
-                          />
-                          {errors.resumeUrl && (
-                            <p className="mt-1 text-xs text-error">{errors.resumeUrl.message}</p>
-                          )}
-                        </div>
-
-                        <button
-                          type="submit"
-                          disabled={applyMutation.isPending}
-                          className="btn-amber w-full flex items-center justify-center gap-2"
-                        >
-                          {applyMutation.isPending ? (
-                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : null}
-                          {applyMutation.isPending ? 'جاري الإرسال...' : STRINGS.SUBMIT_PROPOSAL}
-                        </button>
-                      </form>
-                    )}
+                  <div className="text-center p-3 bg-surface-container-low rounded-xl">
+                    <p className="text-xs font-bold text-on-surface mt-1">{timeAgo(job.createdAt)}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">نُشر</p>
                   </div>
-                ) : job.status !== 'ACTIVE' ? (
-                  <div className="text-center py-4">
-                    <AlertCircle size={24} className="text-on-surface-variant mx-auto mb-2" />
-                    <p className="text-sm text-on-surface-variant">هذا الإعلان {statusLabel}</p>
-                  </div>
-                ) : null}
+                </div>
+                {job.status === 'ACTIVE' && (
+                  <button
+                    onClick={handleCloseJob}
+                    disabled={closingJob}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-error/40 text-error text-sm font-bold hover:bg-red-50 transition-colors disabled:opacity-50 active:scale-95"
+                  >
+                    {closingJob ? <span className="animate-spin w-4 h-4 border-2 border-error border-t-transparent rounded-full" /> : <X size={15} />}
+                    {STRINGS.CLOSE_JOB}
+                  </button>
+                )}
               </div>
             )}
           </div>

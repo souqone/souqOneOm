@@ -108,6 +108,29 @@ function BrowseJobsContent() {
         </p>
       </div>
 
+      {/* Job Type Tabs */}
+      <div className="flex items-center gap-2 mb-5">
+        {[
+          { value: '', label: 'الكل', emoji: '' },
+          { value: 'HIRING', label: 'طلب سائق', emoji: '🔵' },
+          { value: 'OFFERING', label: 'عرض خدمة', emoji: '🟢' },
+        ].map(tab => (
+          <button
+            key={`tab-${tab.value || 'all'}`}
+            onClick={() => handleFilterChange('jobType', tab.value)}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-150 border',
+              filters.jobType === tab.value
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white text-on-surface-variant border-outline-variant hover:border-outline hover:text-on-surface'
+            )}
+          >
+            {tab.emoji && <span>{tab.emoji}</span>}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search Bar */}
       <div className="relative mb-6">
         <Search size={18} className="absolute top-1/2 -translate-y-1/2 end-4 text-outline pointer-events-none" />

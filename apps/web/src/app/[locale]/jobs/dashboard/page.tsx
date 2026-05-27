@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, AlertCircle } from 'lucide-react';
+import { Plus, AlertCircle, ShieldCheck } from 'lucide-react';
 import { AuthGuard } from '@/components/auth-guard';
 import {
   useMyJobs,
@@ -92,7 +92,6 @@ function DashboardContent() {
       status: a.status,
       message: a.message ?? undefined,
       resumeUrl: a.resumeUrl ?? undefined,
-      isRevealed: false,
       createdAt: a.createdAt,
       job: {
         id: a.job.id,
@@ -132,7 +131,7 @@ function DashboardContent() {
     ? myJobs.reduce((s, j) => s + j._count.applications, 0)
     : myApps.length
   const acceptedCount = isEmployer
-    ? 0  // employer can't know total accepted from this data shape
+    ? myJobs.filter(j => j.status === 'CLOSED').length
     : myApps.filter(a => a.status === 'ACCEPTED').length
   const activeCount = isEmployer
     ? myJobs.filter(j => j.status === 'ACTIVE').length
@@ -177,15 +176,23 @@ function DashboardContent() {
             {isEmployer ? 'إدارة إعلاناتك والعروض المقدمة' : 'متابعة عروضك وحالتها'}
           </p>
         </div>
-        {isEmployer && (
+        <div className="flex items-center gap-2">
           <Link
-            href="/jobs/new"
-            className="btn-amber flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+            href="/jobs/profile/edit"
+            className="btn-outline flex items-center gap-2 px-4 py-2.5 text-sm font-bold"
           >
-            <Plus size={16} />
-            {STRINGS.POST_JOB}
+            تعديل البروفايل
           </Link>
-        )}
+          {isEmployer && (
+            <Link
+              href="/jobs/new"
+              className="btn-amber flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+            >
+              <Plus size={16} />
+              {STRINGS.POST_JOB}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -211,6 +218,23 @@ function DashboardContent() {
           acceptedCount={acceptedCount}
           activeCount={activeCount}
         />
+      )}
+
+      {/* Verification Banner — driver only, not yet verified */}
+      {!loading && isDriver && driver && !driver.isVerified && (
+        <Link
+          href="/jobs/verification"
+          className="flex items-center gap-4 p-4 rounded-2xl border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-xl bg-brand-amber/20 flex items-center justify-center shrink-0">
+            <ShieldCheck size={20} className="text-brand-amber" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-on-surface">وثّق بروفايلك لزيادة فرصك</p>
+            <p className="text-xs text-on-surface-variant mt-0.5">ارفع صورة الرخصة والهوية للحصول على شارة الموثّق ✓</p>
+          </div>
+          <span className="text-xs font-bold text-brand-amber shrink-0">ابدأ ←</span>
+        </Link>
       )}
 
       {/* Status Filter Tabs */}

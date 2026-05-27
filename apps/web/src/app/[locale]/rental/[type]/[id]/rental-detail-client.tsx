@@ -36,7 +36,7 @@ function Skeleton() {
 
 export default function RentalDetailClient() {
   const params = useParams<{ type: string; id: string }>();
-  const t = useTranslations('listing');
+  const t = useTranslations('sale');
   const enumT = useEnumTranslations();
 
   const isValidType = VALID_TYPES.includes(params.type as SaleEntityType);

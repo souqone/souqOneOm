@@ -41,20 +41,14 @@ export const MobileCTABar = memo(function MobileCTABar({
     >
       {/* Price row */}
       <div className="flex items-center gap-2 mb-2 flex-wrap" dir="ltr">
-        {listing.type === 'bus' && listing.busData?.contractMonthly ? (
-          <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
-            <span className="text-[10px] font-bold opacity-60">{currencyLabel} </span>
-            <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
-              {Number(listing.busData.contractMonthly).toLocaleString('en-US')}
-            </span>
-            <span className="text-[10px] text-on-surface-variant ms-1">/ {ts('contractMonthlyLabel')}</span>
-          </span>
-        ) : !listing.price || listing.price <= 0 ? (
+        {!listing.price || listing.price <= 0 ? (
           <span className="text-[14px] font-bold text-on-surface">{ts('contactForPrice')}</span>
         ) : (
-          <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
-            <span className="text-[10px] font-bold opacity-60">{currencyLabel} </span>
-            <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
+          <span className="shrink-0 flex items-baseline gap-0.5 text-primary" dir="ltr">
+            <span className="text-[10px] font-bold opacity-60">
+              {currencyLabel}{listing.priceLabel ? ` / ${listing.priceLabel}` : ''}
+            </span>
+            <span className="text-[20px] font-black leading-none tracking-tight">
               {listing.price.toLocaleString('en-US')}
             </span>
           </span>
