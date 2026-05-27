@@ -33,7 +33,7 @@ export async function generateMetadata({
 
     const title = data.title || 'وظيفة';
     const jobTypeLabel = JOB_TYPE_LABELS[data.jobType || ''] || '';
-    const salary = data.salary ? `${Number(data.salary).toLocaleString('en-US')} OMR` : '';
+    const salary = data.salary ? `${Number(data.salary).toLocaleString('en-US')} ر.ع` : '';
     const location = data.governorate || '';
     const descParts = [jobTypeLabel, salary, location].filter(Boolean);
     const description = descParts.join(' · ') || title;

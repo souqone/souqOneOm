@@ -230,15 +230,17 @@ export default function MyListingsPage() {
     return getImageUrl(item.images?.[0]?.url || item.imageUrl) || null;
   }
 
+  function formatCurrency(c?: string) { return !c || c === 'OMR' ? 'ر.ع' : c; }
+
   function getItemPrice(item: any): string | null {
     if (item.listingType === 'EQUIPMENT_WANTED') {
-      if (item.budgetMax) return `حتى ${Number(item.budgetMax).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
-      if (item.budgetMin) return `من ${Number(item.budgetMin).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
+      if (item.budgetMax) return `حتى ${Number(item.budgetMax).toLocaleString('en-US')} ${formatCurrency(item.currency)}`;
+      if (item.budgetMin) return `من ${Number(item.budgetMin).toLocaleString('en-US')} ${formatCurrency(item.currency)}`;
       return null;
     }
     const p = item.price || item.salary || item.priceFrom || item.basePrice || item.dailyPrice;
     if (!p) return null;
-    return `${Number(p).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
+    return `${Number(p).toLocaleString('en-US')} ${formatCurrency(item.currency)}`;
   }
 
   function getItemMeta(item: any): string {
