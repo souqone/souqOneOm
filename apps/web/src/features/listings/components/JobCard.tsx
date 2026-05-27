@@ -177,10 +177,10 @@ export function JobCard({ item, className = '' }: JobCardProps) {
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-on-surface-variant/50">{timeAgo(item.postedAt, tt)}</span>
           {salaryText ? (
-            <span className="text-[14px] font-black text-primary leading-none">{salaryText}</span>
+            <span className="shrink-0 text-[20px] font-black text-primary leading-none">{salaryText}</span>
           ) : item.salary && item.salary > 0 ? (
-            <span className="flex items-baseline gap-0.5 text-primary shrink-0">
-              <span className="text-[15px] font-black leading-none tracking-tight" dir="ltr">
+            <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
+              <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
                 {item.salary.toLocaleString('en-US')}
               </span>
               <span className="text-[10px] font-bold opacity-60">
@@ -188,7 +188,7 @@ export function JobCard({ item, className = '' }: JobCardProps) {
               </span>
             </span>
           ) : (
-            <span className="text-[11px] font-bold text-on-surface-variant">{tl('contactForPrice')}</span>
+            <span className="shrink-0 text-[11px] font-bold text-on-surface-variant">{tl('contactForPrice')}</span>
           )}
         </div>
 
