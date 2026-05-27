@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Plus, AlertCircle, ShieldCheck, Briefcase, Truck } from 'lucide-react';
 import { AuthGuard } from '@/components/auth-guard';
 import {
   useMyJobs,
@@ -19,6 +19,7 @@ import {
   STRINGS,
 } from '@/features/jobs/constants';
 import type { DriverJob, JobApplication } from '@/features/jobs/types';
+import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
   return (
@@ -36,9 +37,13 @@ function DashboardContent() {
   const withdrawApp = useWithdrawApplication()
 
   const [statusFilter, setStatusFilter] = useState('all')
+  const [activeRole, setActiveRole] = useState<'employer' | 'driver'>(
+    employer ? 'employer' : 'driver'
+  )
 
   const isEmployer = !!employer
   const isDriver = !!driver
+  const hasBothRoles = isEmployer && isDriver
   const loading = empLoading || drvLoading || jobsLoading || appsLoading
 
   // Map API items to feature types for components
@@ -125,19 +130,22 @@ function DashboardContent() {
     }))
   }, [appsData])
 
+  const showEmployer = hasBothRoles ? activeRole === 'employer' : isEmployer
+  const showDriver = hasBothRoles ? activeRole === 'driver' : isDriver
+
   // Stats
   const totalPosts = myJobs.length
-  const totalProposals = isEmployer
+  const totalProposals = showEmployer
     ? myJobs.reduce((s, j) => s + j._count.applications, 0)
     : myApps.length
-  const acceptedCount = isEmployer
+  const acceptedCount = showEmployer
     ? myJobs.filter(j => j.status === 'CLOSED').length
     : myApps.filter(a => a.status === 'ACCEPTED').length
-  const activeCount = isEmployer
+  const activeCount = showEmployer
     ? myJobs.filter(j => j.status === 'ACTIVE').length
     : myApps.filter(a => a.status === 'PENDING').length
 
-  const statusOptions = isEmployer
+  const statusOptions = showEmployer
     ? ['all', ...Object.keys(JOB_STATUS_LABELS)]
     : ['all', ...Object.keys(APPLICATION_STATUS_LABELS)]
   const statusLabels: Record<string, string> = {
@@ -173,7 +181,7 @@ function DashboardContent() {
         <div>
           <h1 className="text-2xl font-extrabold text-on-surface">{STRINGS.DASHBOARD}</h1>
           <p className="text-sm text-on-surface-variant mt-0.5">
-            {isEmployer ? 'إدارة إعلاناتك والعروض المقدمة' : 'متابعة عروضك وحالتها'}
+            {showEmployer ? 'إدارة إعلاناتك والعروض المقدمة' : 'متابعة عروضك وحالتها'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -183,7 +191,7 @@ function DashboardContent() {
           >
             تعديل البروفايل
           </Link>
-          {isEmployer && (
+          {showEmployer && (
             <Link
               href="/jobs/new"
               className="btn-amber flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
@@ -194,6 +202,36 @@ function DashboardContent() {
           )}
         </div>
       </div>
+
+      {/* Role Switcher Tabs — only when user has both profiles */}
+      {hasBothRoles && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setActiveRole('employer'); setStatusFilter('all') }}
+            className={cn(
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
+              activeRole === 'employer'
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+            )}
+          >
+            <Briefcase size={16} />
+            كصاحب عمل
+          </button>
+          <button
+            onClick={() => { setActiveRole('driver'); setStatusFilter('all') }}
+            className={cn(
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
+              activeRole === 'driver'
+                ? 'bg-brand-amber text-white shadow-sm'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+            )}
+          >
+            <Truck size={16} />
+            كسائق
+          </button>
+        </div>
+      )}
 
       {/* Stats */}
       {loading ? (
@@ -212,7 +250,7 @@ function DashboardContent() {
         </div>
       ) : (
         <DashboardStatsRow
-          isEmployer={isEmployer}
+          isEmployer={showEmployer}
           totalPosts={totalPosts}
           totalProposals={totalProposals}
           acceptedCount={acceptedCount}
@@ -221,7 +259,7 @@ function DashboardContent() {
       )}
 
       {/* Verification Banner — driver only, not yet verified */}
-      {!loading && isDriver && driver && !driver.isVerified && (
+      {!loading && showDriver && driver && !driver.isVerified && (
         <Link
           href="/jobs/verification"
           className="flex items-center gap-4 p-4 rounded-2xl border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors"
@@ -243,13 +281,21 @@ function DashboardContent() {
           <button
             key={`filter-${s}`}
             onClick={() => setStatusFilter(s)}
-            className={
+            className={cn(
+              'px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap',
               statusFilter === s
-                ? 'px-4 py-2 rounded-xl text-xs font-bold bg-brand-amber text-white transition-all'
-                : 'px-4 py-2 rounded-xl text-xs font-bold bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all'
-            }
+                ? 'bg-brand-amber text-white'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+            )}
           >
             {statusLabels[s] ?? s}
+            {s !== 'all' && (
+              <span className="ms-1.5 opacity-80">
+                {showEmployer
+                  ? myJobs.filter(j => j.status === s).length
+                  : myApps.filter(a => a.status === s).length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -267,7 +313,7 @@ function DashboardContent() {
             </div>
           ))}
         </div>
-      ) : isEmployer ? (
+      ) : showEmployer ? (
         <MyPostsList jobs={myJobs} statusFilter={statusFilter} />
       ) : (
         <MyProposalsList
