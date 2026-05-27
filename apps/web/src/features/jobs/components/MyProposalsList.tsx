@@ -2,6 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ExternalLink, RotateCcw } from 'lucide-react';
+import { useLocale } from 'next-intl';
 import type { JobApplication } from '@/features/jobs/types';
 import {
   APPLICATION_STATUS_LABELS,
@@ -10,6 +11,7 @@ import {
   STRINGS,
 } from '@/features/jobs/constants';
 import { timeAgo, cn } from '@/lib/utils';
+import { resolveLocationLabel } from '@/lib/location-data';
 import JobEmptyState from '@/features/jobs/components/JobEmptyState';
 
 interface MyProposalsListProps {
@@ -23,6 +25,7 @@ export default function MyProposalsList({
   statusFilter,
   onWithdraw,
 }: MyProposalsListProps) {
+  const locale = useLocale()
   const filtered = statusFilter === 'all'
     ? applications
     : applications.filter(a => a.status === statusFilter)
@@ -68,7 +71,10 @@ export default function MyProposalsList({
                   {job?.title ?? 'وظيفة'}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
-                  {job?.governorate ?? ''} · {timeAgo(app.createdAt)}
+                  {job?.user?.displayName || job?.user?.username || ''}
+                  {job?.governorate ? ` · ${resolveLocationLabel(job.governorate, locale) ?? job.governorate}` : ''}
+                  <span className="text-outline mx-1">·</span>
+                  {timeAgo(app.createdAt)}
                 </p>
               </div>
               {job && (
