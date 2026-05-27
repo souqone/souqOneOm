@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { AuthGuard } from '@/components/auth-guard';
+import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useMyApplications, useWithdrawApplication } from '@/lib/api';
 import { resolveLocationLabel } from '@/lib/location-data';
@@ -170,8 +170,8 @@ function MyProposalsContent() {
 
 export default function MyProposalsPage() {
   return (
-    <AuthGuard>
+    <JobsPageGuard role="driver">
       <MyProposalsContent />
-    </AuthGuard>
+    </JobsPageGuard>
   );
 }

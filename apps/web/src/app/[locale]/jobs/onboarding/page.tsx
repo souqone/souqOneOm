@@ -92,7 +92,7 @@ function OnboardingContent() {
         licenseTypes: data.licenseTypes as never[],
       })
       addToast('success', 'تم إنشاء بروفايل السائق بنجاح')
-      router.push('/jobs/browse')
+      router.push('/jobs/dashboard')
     } catch {
       addToast('error', 'حدث خطأ أثناء إنشاء البروفايل')
     } finally {
@@ -105,7 +105,7 @@ function OnboardingContent() {
     try {
       await createEmployer.mutateAsync(data)
       addToast('success', 'تم إنشاء بروفايل صاحب العمل بنجاح')
-      router.push('/jobs/browse')
+      router.push('/jobs/new')
     } catch {
       addToast('error', 'حدث خطأ أثناء إنشاء البروفايل')
     } finally {
@@ -168,7 +168,7 @@ function OnboardingContent() {
           )}
           {existingEmployer && (
             <button
-              onClick={() => router.push('/jobs/my')}
+              onClick={() => router.push('/jobs/dashboard')}
               className="relative p-6 rounded-2xl border-2 text-start transition-all duration-200 hover:shadow-card-hover border-brand-amber bg-amber-50"
             >
               <div className="absolute top-3 start-3">

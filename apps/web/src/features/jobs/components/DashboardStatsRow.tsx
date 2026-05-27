@@ -62,12 +62,12 @@ export default function DashboardStatsRow({
       bgColor: 'bg-amber-50',
     },
     {
-      label: 'عروض مقبولة',
+      label: 'إعلانات مغلقة',
       value: acceptedCount,
-      sub: `${acceptRate}% نسبة القبول`,
+      sub: 'تم إغلاقها أو انتهت',
       icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      color: 'text-slate-500',
+      bgColor: 'bg-slate-50',
     },
     {
       label: 'إعلانات نشطة',

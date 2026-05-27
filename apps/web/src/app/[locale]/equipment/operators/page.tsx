@@ -38,10 +38,11 @@ const EQUIP_TYPE_CHIPS = [
 
 function OperatorCard({ op, locale, tt }: { op: OperatorListingItem; locale: string; tt: ReturnType<typeof useTranslations> }) {
   const locationLabel = op.governorate ? resolveLocationLabel(op.governorate, locale) ?? op.governorate : null;
+  const cur = !op.currency || op.currency === 'OMR' ? 'ر.ع.' : op.currency;
   const rateText = op.dailyRate
-    ? `${Number(op.dailyRate).toLocaleString('en-US')} ${op.currency} / يوم`
+    ? `${Number(op.dailyRate).toLocaleString('en-US')} ${cur} / يوم`
     : op.hourlyRate
-    ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${op.currency} / ساعة`
+    ? `${Number(op.hourlyRate).toLocaleString('en-US')} ${cur} / ساعة`
     : 'اتصل للسعر';
 
   const initials = (op.user?.displayName ?? op.user?.username ?? '?').slice(0, 2).toUpperCase();

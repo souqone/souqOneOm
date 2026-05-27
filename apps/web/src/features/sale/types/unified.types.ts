@@ -111,6 +111,7 @@ export interface UnifiedListing {
   title: string;
   description?: string;
   price: number;
+  priceLabel?: string;
   currency: string;
   negotiable: boolean;
   condition: string;

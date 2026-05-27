@@ -61,12 +61,10 @@ const BUS_LINKS = [
 
 // ── Jobs links ────────────────────────────────────────────────────
 const JOBS_LINKS = [
-  { href: '/jobs',              label: 'الوظائف',       icon: Briefcase },
-  { href: '/jobs/browse',       label: 'تصفح الوظائف',  icon: Search },
-  { href: '/jobs/drivers',      label: 'السائقون',       icon: Users },
-  { href: '/jobs/my',           label: 'إعلاناتي',      icon: FileText },
-  { href: '/jobs/my-proposals', label: 'عروضي',          icon: MessageSquare },
-  { href: '/jobs/dashboard',    label: 'لوحة التحكم',   icon: LayoutDashboard },
+  { href: '/jobs',           label: 'الوظائف',       icon: Briefcase },
+  { href: '/jobs/browse',    label: 'تصفح الوظائف',  icon: Search },
+  { href: '/jobs/drivers',   label: 'السائقون',       icon: Users },
+  { href: '/jobs/dashboard', label: 'لوحة التحكم',   icon: LayoutDashboard },
 ]
 
 // ── Active link helper ───────────────────────────────────────────

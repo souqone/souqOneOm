@@ -100,7 +100,7 @@ export interface JobApplication {
   status: ApplicationStatus
   message?: string
   resumeUrl?: string
-  isRevealed: boolean
+  isRevealed?: boolean
   createdAt: string
 }
 

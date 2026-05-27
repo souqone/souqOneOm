@@ -17,12 +17,11 @@ import type { DriverJob, JobApplication } from '@/features/jobs/types';
 import {
   JOB_STATUS_LABELS, JOB_STATUS_COLORS, STRINGS
 } from '@/features/jobs/constants';
+import { JobsPageGuard } from '@/features/jobs/components/jobs-page-guard';
 import { useAuth } from '@/providers/auth-provider';
 import { timeAgo, cn } from '@/lib/utils';
 
-export default function MyPostsPage() {
-  const { isAuthenticated } = useAuth()
-
+function MyPostsContent() {
   const { data: jobsData, isLoading: loading, error, refetch } = useMyJobs()
   const jobs = (jobsData?.items ?? []) as unknown as DriverJob[]
 
@@ -45,17 +44,6 @@ export default function MyPostsPage() {
   const handleClose = async (jobId: string) => {
     await updateMutation.mutateAsync({ id: jobId, status: 'CLOSED' })
     refetch()
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-12 text-center">
-        <p className="text-sm text-on-surface-variant mb-4">{STRINGS.LOGIN_REQUIRED}</p>
-        <Link href="/jobs/browse" className="btn-primary text-sm">
-          {STRINGS.LOGIN}
-        </Link>
-      </div>
-    )
   }
 
   return (
@@ -212,6 +200,14 @@ export default function MyPostsPage() {
       )}
     </div>
   )
+}
+
+export default function MyPostsPage() {
+  return (
+    <JobsPageGuard role="employer">
+      <MyPostsContent />
+    </JobsPageGuard>
+  );
 }
 
 function ApplicationsPanel({ jobId }: { jobId: string }) {

@@ -59,12 +59,11 @@ const QUICK_LINKS = [
 ] as const;
 
 const BUS_TYPES = [
-  { label: 'حافلات سياحية', sublabel: 'رحلات وجولات سياحية',    icon: Bus,           color: '#2563eb', filter: 'TOURIST' },
-  { label: 'حافلات مدرسية', sublabel: 'نقل آمن للطلاب',         icon: GraduationCap, color: '#d97706', filter: 'SCHOOL' },
-  { label: 'نقل موظفين',    sublabel: 'حلول مرنة للعمالة',       icon: Users,         color: '#0d9488', filter: 'EMPLOYEE_TRANSPORT' },
-  { label: 'VIP',           sublabel: 'خدمات نقل فاخرة',         icon: Crown,         color: '#7c3aed', filter: 'VIP' },
-  { label: 'نقل عام',       sublabel: 'خطوط جماعية منتظمة',      icon: Truck,         color: '#16a34a', filter: 'PUBLIC' },
-  { label: 'ميني باص',      sublabel: 'مجموعات صغيرة',           icon: MinusSquare,   color: '#e11d48', filter: 'MINIBUS' },
+  { label: 'ميني باص',      sublabel: 'مجموعات صغيرة',        icon: MinusSquare,   color: '#2563eb', filter: 'MINI_BUS' },
+  { label: 'حافلة متوسطة',  sublabel: 'للرحلات والمناسبات',   icon: Bus,           color: '#16a34a', filter: 'MEDIUM_BUS' },
+  { label: 'حافلة كبيرة',   sublabel: 'أسطول نقل جماعي',      icon: Truck,         color: '#0d9488', filter: 'LARGE_BUS' },
+  { label: 'كوستر',         sublabel: 'مرونة عالية في النقل',  icon: Crown,         color: '#7c3aed', filter: 'COASTER' },
+  { label: 'حافلة مدرسية',  sublabel: 'نقل آمن للطلاب',       icon: GraduationCap, color: '#d97706', filter: 'SCHOOL_BUS' },
 ] as const;
 
 const HOW_STEPS = [
@@ -233,7 +232,7 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
               <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-on-surface)] mb-2">تصفّح حسب نوع الحافلة</h2>
               <p className="text-sm text-[var(--color-on-surface-variant)]">اختر نوع الحافلة المناسب لاحتياجك</p>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
               {BUS_TYPES.map(type => {
                 const Icon = type.icon;
                 return (

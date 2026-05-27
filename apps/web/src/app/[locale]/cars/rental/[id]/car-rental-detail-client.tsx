@@ -33,7 +33,7 @@ function Skeleton() {
 
 export default function CarRentalDetailClient() {
   const { id } = useParams<{ id: string }>();
-  const t = useTranslations('listing');
+  const t = useTranslations('sale');
   const enumT = useEnumTranslations();
 
   const { listing, isLoading, error } = useUnifiedListing('car', id);

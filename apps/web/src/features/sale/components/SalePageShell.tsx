@@ -84,7 +84,7 @@ function DropdownSection({ title, subtitle, icon, children }: { title: string; s
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden mb-1 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 overflow-hidden mb-2 shadow-sm">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -352,9 +352,9 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
 
   return (
     <div className="bg-background min-h-screen">
-      <main className="max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-28 lg:pb-16">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-28 lg:pb-16">
         {/* ══ A — TOP BAR ══ */}
-        <div className="flex items-center justify-between mb-8 bg-surface-container-lowest/60 backdrop-blur-md p-3 px-5 rounded-2xl border border-outline-variant/20 shadow-sm">
+        <div className="flex items-center justify-between mb-5 bg-surface-container-lowest/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-outline-variant/20 shadow-sm">
           <Breadcrumb listing={listing} config={config} homeLabel={ts('breadcrumbHome')} />
 
           {/* Share + Save */}
@@ -381,8 +381,8 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
         </div>
 
         {/* ══ B — TITLE SECTION ══ */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 flex-wrap mb-3">
+        <div className="mb-5">
+          <div className="flex items-center gap-2 flex-wrap mb-2.5">
             <h1 className="text-[24px] md:text-[28px] font-black text-on-surface leading-tight tracking-tight">
               {listing.title}
             </h1>
@@ -426,7 +426,7 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
         )}
 
         {/* ══ MOBILE/TABLET CTA BUTTONS — Below Gallery ══ */}
-        <div className="lg:hidden mb-5" ref={mobilePriceSectionRef}>
+        <div className="lg:hidden mb-4" ref={mobilePriceSectionRef}>
           {/* Price row */}
           <div className="flex items-baseline gap-1.5 mb-3">
             {listing.type === 'bus' && listing.busData?.contractMonthly ? (
@@ -522,12 +522,12 @@ export function SalePageShell({ listing, config }: SalePageShellProps) {
         </div>
 
         {/* ══ D — TWO-COLUMN LAYOUT ══ */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 lg:gap-8 items-start">
           {/* ════ LEFT COLUMN ════ */}
           <div>
             {/* Seller Row */}
             <SellerRow seller={listing.seller} />
-            <div className="h-[2px] w-50 rounded-full bg-primary mt-1 mx-auto" />
+            <div className="h-[2px] w-full rounded-full bg-primary/20 mt-1" />
 
             {/* Mobile stats — views + date (desktop shows these in PriceCard) */}
             <div className="lg:hidden flex items-center gap-4 text-[11px] text-on-surface-variant mb-4 mt-3">

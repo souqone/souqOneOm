@@ -11,8 +11,8 @@ export const ROUTES = {
     list: '/jobs',
     detail: (id: string) => `/jobs/${id}`,
     new: '/jobs/new',
-    my: '/jobs/my',
-    invites: '/jobs/invites',
+    dashboard: '/jobs/dashboard',
+    profileEdit: '/jobs/profile/edit',
     verification: '/jobs/verification',
   },
   equipment: {
