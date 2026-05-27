@@ -68,7 +68,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     text: 'text-violet-600',
     strip: 'bg-violet-500',
     border: 'border-violet-200',
-    labelKey: 'notifTypeJob',
+    labelKey: 'notifTypeJobApplication',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : null),
   },
   JOB_APPLICATION_ACCEPTED: {
@@ -77,7 +77,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     text: 'text-green-600',
     strip: 'bg-green-500',
     border: 'border-green-200',
-    labelKey: 'notifTypeJob',
+    labelKey: 'notifTypeJobAccepted',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : null),
   },
   JOB_APPLICATION_REJECTED: {
@@ -86,7 +86,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     text: 'text-error',
     strip: 'bg-error',
     border: 'border-error/20',
-    labelKey: 'notifTypeJob',
+    labelKey: 'notifTypeJobRejected',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : null),
   },
   JOB_RECOMMENDATION: {
@@ -95,7 +95,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     text: 'text-violet-600',
     strip: 'bg-violet-500',
     border: 'border-violet-200',
-    labelKey: 'notifTypeJob',
+    labelKey: 'notifTypeJobRecommendation',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : '/jobs'),
   },
   TRANSPORT_QUOTE_RECEIVED: {
