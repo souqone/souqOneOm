@@ -308,7 +308,7 @@ export default function OperatorDetailPage() {
                   {rateValue ? (
                     <div className="flex items-end gap-2 flex-wrap" dir="ltr">
                       <span className="text-3xl md:text-4xl font-black text-red-600 leading-none tracking-tight drop-shadow-sm">{rateValue}</span>
-                      <span className="text-base font-bold text-on-surface-variant mb-1">{op.currency}</span>
+                      <span className="text-base font-bold text-on-surface-variant mb-1">{op.currency === 'OMR' || !op.currency ? 'ر.ع' : op.currency}</span>
                     </div>
                   ) : (
                     <p className="text-xl font-black text-on-surface">{rate}</p>
@@ -397,7 +397,7 @@ export default function OperatorDetailPage() {
           <div className="flex items-center gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] max-w-lg mx-auto">
             <div className="flex-1 min-w-0">
               {rateValue ? (
-                <p className="text-red-600 font-black text-lg truncate leading-none" dir="ltr">{rateValue} <span className="text-xs text-on-surface-variant font-bold">{op.currency}</span></p>
+                <p className="text-red-600 font-black text-lg truncate leading-none" dir="ltr">{rateValue} <span className="text-xs text-on-surface-variant font-bold">{op.currency === 'OMR' || !op.currency ? 'ر.ع' : op.currency}</span></p>
               ) : (
                 <p className="text-on-surface font-black text-base truncate leading-none">{rate}</p>
               )}

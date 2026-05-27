@@ -23,7 +23,7 @@ export async function generateMetadata({
     const data = await serverFetch<OgData>(`/listings/${id}`, { revalidate: 60 });
 
     const title = data.title || 'سيارة';
-    const price = data.price ? `${Number(data.price).toLocaleString('en-US')} ${data.currency || 'OMR'}` : '';
+    const price = data.price ? `${Number(data.price).toLocaleString('en-US')} ${data.currency === 'OMR' || !data.currency ? 'ر.ع' : data.currency}` : '';
     const location = data.governorate || '';
     const descParts = [price, location, 'سيارة'].filter(Boolean);
     const description = descParts.join(' · ') || title;

@@ -48,10 +48,11 @@ export async function generateMetadata({
     const data = await serverFetch<RentalOgData>(`${apiPath}/${id}`, { revalidate: 60 });
 
     const title = data.title || TYPE_LABELS[type] || 'إيجار';
-    const daily = data.dailyPrice ? `${Number(data.dailyPrice).toLocaleString('en-US')} ${data.currency || 'OMR'}/يوم` : '';
-    const monthly = data.monthlyPrice ? `${Number(data.monthlyPrice).toLocaleString('en-US')} ${data.currency || 'OMR'}/شهر` : '';
+    const cur = data.currency === 'OMR' || !data.currency ? 'ر.ع' : data.currency;
+    const daily = data.dailyPrice ? `${Number(data.dailyPrice).toLocaleString('en-US')} ${cur}/يوم` : '';
+    const monthly = data.monthlyPrice ? `${Number(data.monthlyPrice).toLocaleString('en-US')} ${cur}/شهر` : '';
     const location = data.governorate || '';
-    const priceInfo = daily || monthly || (data.price ? `${Number(data.price).toLocaleString('en-US')} ${data.currency || 'OMR'}` : '');
+    const priceInfo = daily || monthly || (data.price ? `${Number(data.price).toLocaleString('en-US')} ${cur}` : '');
     const descParts = [priceInfo, location, TYPE_LABELS[type]].filter(Boolean);
     const description = descParts.join(' · ') || title;
     const image = getPrimaryImage(data.images);

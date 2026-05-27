@@ -262,15 +262,17 @@ export function ListingCard({ item }: ListingCardProps) {
         {/* Price */}
         <div className="flex justify-end">
           {item.price && item.price > 0 ? (
-            <p className="text-[20px] font-black text-primary leading-none">
-              {item.price.toLocaleString('en-US')}
-              <span className="text-[11px] font-normal text-on-surface-variant mr-1.5">
-                {item.currency === 'OMR' ? t('currencyUnit') : item.currency}
+            <span className="shrink-0 flex items-baseline gap-0.5 text-primary">
+              <span className="text-[20px] font-black leading-none tracking-tight" dir="ltr">
+                {item.price.toLocaleString('en-US')}
+              </span>
+              <span className="text-[10px] font-bold opacity-60">
+                {item.currency === 'OMR' ? ' ر.ع' : ` ${item.currency}`}
                 {item.priceLabel && ` / ${item.priceLabel}`}
               </span>
-            </p>
+            </span>
           ) : (
-            <p className="text-[14px] font-semibold text-on-surface-variant">{t('contactForPrice')}</p>
+            <span className="shrink-0 text-[11px] font-bold text-on-surface-variant">{t('contactForPrice')}</span>
           )}
         </div>
 
