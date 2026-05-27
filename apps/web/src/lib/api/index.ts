@@ -10,7 +10,6 @@ export * from './chat';
 export * from './notifications';
 export * from './uploads';
 export * from './cars';
-export * from './bookings';
 export * from './jobs';
 export * from './buses';
 export * from './parts';

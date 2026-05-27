@@ -154,16 +154,17 @@ export class TransportRequestService {
     return result;
   }
 
-  async findOne(id: string, ip?: string) {
-    const cacheKey = `transport:request:${id}`;
+  async findOne(id: string, ip?: string, userId?: string) {
+    // Separate cache keys so anonymous responses never contain booking data
+    const cacheKey = userId ? `transport:request:${id}:auth` : `transport:request:${id}`;
     const cached = await this.redis.get<any>(cacheKey);
 
-    const request = cached || await this.prisma.transportRequest.findUnique({
+    const request = cached ?? await this.prisma.transportRequest.findUnique({
       where: { id },
       include: {
         user: { select: USER_SELECT },
         _count: { select: { quotes: true } },
-        booking: true,
+        ...(userId ? { booking: true } : {}),
       },
     });
 
@@ -198,6 +199,7 @@ export class TransportRequestService {
 
     await this.redis.delPattern('transport:list:*');
     await this.redis.del(`transport:request:${id}`);
+    await this.redis.del(`transport:request:${id}:auth`);
 
     return updated;
   }

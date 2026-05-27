@@ -8,7 +8,7 @@ import { AuthGuard } from '@/components/auth-guard';
 import { ErrorState } from '@/components/error-state';
 import { useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/providers/auth-provider';
-import { useMe, useMyListings, useFavorites, useDeleteListing, useUpdateProfile, useChangePassword, useUploadImage, useMyBookings } from '@/lib/api';
+import { useMe, useMyListings, useFavorites, useDeleteListing, useUpdateProfile, useChangePassword, useUploadImage } from '@/lib/api';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import { ProfileHero } from './ProfileHero';
 import { ProfileHeroSkeleton } from './ProfileHeroSkeleton';
@@ -17,8 +17,6 @@ import { ProfileNavTabsSkeleton } from './ProfileNavTabsSkeleton';
 import { ProfileOverviewTab } from './ProfileOverviewTab';
 import { ProfileListingsTab } from './ProfileListingsTab';
 import { ProfileListingsTabSkeleton } from './ProfileListingsTabSkeleton';
-import { ProfileBookingsTab } from './ProfileBookingsTab';
-import { ProfileBookingsTabSkeleton } from './ProfileBookingsTabSkeleton';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
 import { ProfileSecurityTab } from './ProfileSecurityTab';
 import { ProfileVerificationStatus } from './ProfileVerificationStatus';
@@ -32,9 +30,7 @@ export function ProfilePageClient() {
   const { data: user, isLoading: userLoading, isError: userError, refetch: refetchUser } = useMe();
   const { data: myListings, isLoading: listingsLoading } = useMyListings({ limit: '50' });
   const { data: favorites } = useFavorites();
-  const { data: bookings, isLoading: bookingsLoading } = useMyBookings({ page: '1' });
-
-  const updateProfile = useUpdateProfile();
+const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
   const deleteListing = useDeleteListing();
   const uploadImage = useUploadImage();
@@ -67,7 +63,6 @@ export function ProfilePageClient() {
   const listings = useMemo(() => (myListings?.items ?? []).map(transformCar), [myListings?.items, transformCar]);
   const listingsCount = myListings?.meta?.total ?? listings.length;
   const favoritesCount = favorites?.meta?.total ?? favorites?.items?.length ?? 0;
-  const bookingsCount = bookings?.meta?.total ?? bookings?.items?.length ?? 0;
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -162,7 +157,6 @@ export function ProfilePageClient() {
   const navLabels = {
     overview: tp('profileTabOverview'),
     listings: tp('profileTabListings'),
-    bookings: tp('profileTabBookings'),
     settings: tp('profileTabSettings'),
     security: tp('profileTabSecurity'),
     logout: tp('profileLogout'),
@@ -176,7 +170,7 @@ export function ProfilePageClient() {
 
         <ProfileHero
           user={user}
-          stats={{ listingsCount, favoritesCount, bookingsCount }}
+          stats={{ listingsCount, favoritesCount }}
           onAvatarClick={() => fileInputRef.current?.click()}
           avatarUploading={avatarUploading}
           labels={{
@@ -184,7 +178,6 @@ export function ProfilePageClient() {
             memberSince: tp('profileMemberSinceYear', { year: new Date(user.createdAt).getFullYear() }),
             listings: tp('profileStatsListings'),
             favorites: tp('profileStatsFavorites'),
-            bookings: tp('profileStatsBookings'),
           }}
         />
 
@@ -199,10 +192,10 @@ export function ProfilePageClient() {
           }}
         />
 
-        <ProfileNavTabs active={activeTab} onChange={setActiveTab} counts={{ listings: listingsCount, bookings: bookingsCount }} labels={navLabels} className="md:hidden" />
+        <ProfileNavTabs active={activeTab} onChange={setActiveTab} counts={{ listings: listingsCount }} labels={navLabels} className="md:hidden" />
 
         <div className="md:flex md:flex-row-reverse md:max-w-5xl md:mx-auto md:px-6 md:gap-6 md:pt-4">
-          <ProfileNavTabs active={activeTab} onChange={setActiveTab} counts={{ listings: listingsCount, bookings: bookingsCount }} labels={navLabels} variant="sidebar" onLogout={handleLogout} className="hidden md:block" />
+          <ProfileNavTabs active={activeTab} onChange={setActiveTab} counts={{ listings: listingsCount }} labels={navLabels} variant="sidebar" onLogout={handleLogout} className="hidden md:block" />
 
           <main className="flex-1 min-w-0 pb-24 md:pb-8" id="main-content">
             {activeTab === 'overview' && (
@@ -247,20 +240,7 @@ export function ProfilePageClient() {
               )
             )}
 
-            {activeTab === 'bookings' && (
-              bookingsLoading ? <ProfileBookingsTabSkeleton /> : (
-                <ProfileBookingsTab
-                  bookings={bookings?.items ?? []}
-                  labels={{
-                    emptyTitle: tp('profileNoBookings'),
-                    emptyDescription: tp('profileNoBookingsDesc'),
-                    currency: tp('profileCurrency'),
-                  }}
-                />
-              )
-            )}
-
-            {activeTab === 'settings' && (
+{activeTab === 'settings' && (
               <ProfileSettingsTab
                 user={user}
                 displayName={displayName}

@@ -35,7 +35,6 @@ export function getMainCategories(t: T): MainCategory[] {
         { value: 'bus-sale', label: t('busSale'), route: '/add-listing/bus?type=BUS_SALE', available: true },
         { value: 'bus-sale-contract', label: t('busSaleContract'), route: '/add-listing/bus?type=BUS_SALE_WITH_CONTRACT', available: true },
         { value: 'bus-rent', label: t('busRent'), route: '/add-listing/bus?type=BUS_RENT', available: true },
-        { value: 'bus-contract', label: t('busContract'), route: '/add-listing/bus?type=BUS_CONTRACT', available: true },
       ],
     },
     {

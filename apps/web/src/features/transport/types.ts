@@ -118,6 +118,7 @@ export interface TransportQuote {
   request?: TransportRequest
   carrierId: string
   carrier?: CarrierProfile
+  booking?: { id: string }
   status: QuoteStatus
   price: number
   currency: string

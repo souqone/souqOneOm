@@ -1,15 +1,14 @@
-export type ProfileTab = 'overview' | 'listings' | 'bookings' | 'settings' | 'security';
+export type ProfileTab = 'overview' | 'listings' | 'settings' | 'security';
 
 interface ProfileNavTabsProps {
   active: ProfileTab;
   onChange: (tab: ProfileTab) => void;
-  counts: { listings: number; bookings: number };
+  counts: { listings: number };
   variant?: 'tabs' | 'sidebar';
   onLogout?: () => void;
   labels: {
     overview: string;
     listings: string;
-    bookings: string;
     settings: string;
     security: string;
     logout: string;
@@ -17,10 +16,9 @@ interface ProfileNavTabsProps {
   className?: string;
 }
 
-const TAB_META: Array<{ key: ProfileTab; icon: string; countKey?: 'listings' | 'bookings' }> = [
+const TAB_META: Array<{ key: ProfileTab; icon: string; countKey?: 'listings' }> = [
   { key: 'overview', icon: 'grid_view' },
   { key: 'listings', icon: 'list_alt', countKey: 'listings' },
-  { key: 'bookings', icon: 'calendar_month', countKey: 'bookings' },
   { key: 'settings', icon: 'manage_accounts' },
   { key: 'security', icon: 'lock' },
 ];

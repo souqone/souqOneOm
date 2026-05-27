@@ -68,17 +68,7 @@ export function BusFormShell({ mode, id }: BusFormProps) {
       contractExpiry:    busData.contractExpiry?.slice(0, 10) ?? '',
       dailyPrice:        String(busData.dailyPrice ?? ''),
       monthlyPrice:      String(busData.monthlyPrice ?? ''),
-      minRentalDays:     String(busData.minRentalDays ?? ''),
       withDriver:        busData.withDriver ?? false,
-      deliveryAvailable: busData.deliveryAvailable ?? false,
-      depositAmount:     String(busData.depositAmount ?? ''),
-      insuranceIncluded: busData.insuranceIncluded ?? false,
-      availableFrom:     busData.availableFrom?.slice(0, 10) ?? '',
-      availableTo:       busData.availableTo?.slice(0, 10) ?? '',
-      cancellationPolicy: busData.cancellationPolicy ?? '',
-      requestPassengers: String(busData.requestPassengers ?? ''),
-      requestRoute:      busData.requestRoute ?? '',
-      requestSchedule:   busData.requestSchedule ?? '',
       governorate:       busData.governorate ?? '',
       city:              busData.city ?? '',
       latitude:          busData.latitude ?? null,
@@ -93,15 +83,14 @@ export function BusFormShell({ mode, id }: BusFormProps) {
   const governorateOptions = getGovernorates('OM', locale);
   const cityOptions = getCities('OM', selectedGov, locale);
 
-  const isContract = form.busListingType === 'BUS_CONTRACT';
   const isSale     = form.busListingType === 'BUS_SALE' || form.busListingType === 'BUS_SALE_WITH_CONTRACT';
   const isRent     = form.busListingType === 'BUS_RENT';
-  const hasContract = form.busListingType === 'BUS_SALE_WITH_CONTRACT' || isContract;
+  const hasContract = form.busListingType === 'BUS_SALE_WITH_CONTRACT';
 
   const allSteps = [
     { label: tp('busStepAdType') },
     { label: tp('busStepBusInfo') },
-    { label: isContract ? tp('busStepContractDetails') : tp('busStepPriceDetails') },
+    { label: tp('busStepPriceDetails') },
     { label: tp('busStepLocationPhotos') },
   ];
   const steps = isEdit ? allSteps.slice(1) : allSteps;
@@ -153,17 +142,7 @@ export function BusFormShell({ mode, id }: BusFormProps) {
       if (form.contractExpiry)    payload.contractExpiry = form.contractExpiry;
       if (form.dailyPrice)        payload.dailyPrice = parseFloat(form.dailyPrice);
       if (form.monthlyPrice)      payload.monthlyPrice = parseFloat(form.monthlyPrice);
-      if (form.minRentalDays)     payload.minRentalDays = parseInt(form.minRentalDays);
       payload.withDriver         = form.withDriver;
-      payload.deliveryAvailable  = form.deliveryAvailable;
-      if (form.depositAmount)     payload.depositAmount = parseFloat(form.depositAmount);
-      if (isRent)                 payload.insuranceIncluded = form.insuranceIncluded;
-      if (form.availableFrom)     payload.availableFrom = form.availableFrom;
-      if (form.availableTo)       payload.availableTo = form.availableTo;
-      if (form.cancellationPolicy) payload.cancellationPolicy = form.cancellationPolicy;
-      if (form.requestPassengers) payload.requestPassengers = parseInt(form.requestPassengers);
-      if (form.requestRoute)      payload.requestRoute = form.requestRoute;
-      if (form.requestSchedule)   payload.requestSchedule = form.requestSchedule;
       if (form.governorate)       payload.governorate = form.governorate;
       if (form.city)              payload.city = form.city;
       if (form.latitude)          payload.latitude = form.latitude;
@@ -226,7 +205,6 @@ export function BusFormShell({ mode, id }: BusFormProps) {
           onChange={onChange}
           isSale={isSale}
           isRent={isRent}
-          isContract={isContract}
           hasContract={hasContract}
         />
       )}

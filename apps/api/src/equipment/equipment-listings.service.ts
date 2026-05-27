@@ -34,13 +34,18 @@ export class EquipmentListingsService {
         features: dto.features ?? [],
         price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
         dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
-        weeklyPrice: dto.weeklyPrice != null ? new Prisma.Decimal(dto.weeklyPrice) : null,
         monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
         currency: dto.currency ?? 'OMR',
         isPriceNegotiable: dto.isPriceNegotiable ?? false,
         withOperator: dto.withOperator ?? false,
         deliveryAvailable: dto.deliveryAvailable ?? false,
-        minRentalDays: dto.minRentalDays,
+        budgetMin: dto.budgetMin != null ? new Prisma.Decimal(dto.budgetMin) : null,
+        budgetMax: dto.budgetMax != null ? new Prisma.Decimal(dto.budgetMax) : null,
+        rentalDuration: dto.rentalDuration,
+        startDate: dto.startDate ? new Date(dto.startDate) : null,
+        endDate: dto.endDate ? new Date(dto.endDate) : null,
+        quantity: dto.quantity,
+        siteDetails: dto.siteDetails,
         governorate: dto.governorate,
         city: dto.city,
         latitude: dto.latitude,
@@ -166,13 +171,18 @@ export class EquipmentListingsService {
     if (dto.features !== undefined) data.features = dto.features;
     if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);
     if (dto.dailyPrice !== undefined) data.dailyPrice = new Prisma.Decimal(dto.dailyPrice);
-    if (dto.weeklyPrice !== undefined) data.weeklyPrice = new Prisma.Decimal(dto.weeklyPrice);
     if (dto.monthlyPrice !== undefined) data.monthlyPrice = new Prisma.Decimal(dto.monthlyPrice);
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
     if (dto.withOperator !== undefined) data.withOperator = dto.withOperator;
     if (dto.deliveryAvailable !== undefined) data.deliveryAvailable = dto.deliveryAvailable;
-    if (dto.minRentalDays !== undefined) data.minRentalDays = dto.minRentalDays;
+    if (dto.budgetMin !== undefined) data.budgetMin = dto.budgetMin != null ? new Prisma.Decimal(dto.budgetMin) : null;
+    if (dto.budgetMax !== undefined) data.budgetMax = dto.budgetMax != null ? new Prisma.Decimal(dto.budgetMax) : null;
+    if (dto.rentalDuration !== undefined) data.rentalDuration = dto.rentalDuration;
+    if (dto.startDate !== undefined) data.startDate = dto.startDate ? new Date(dto.startDate) : null;
+    if (dto.endDate !== undefined) data.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    if (dto.quantity !== undefined) data.quantity = dto.quantity;
+    if (dto.siteDetails !== undefined) data.siteDetails = dto.siteDetails;
     if (dto.governorate !== undefined) data.governorate = dto.governorate;
     if (dto.city !== undefined) data.city = dto.city;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;

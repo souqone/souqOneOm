@@ -230,6 +230,7 @@ export class TransportQuoteService {
           request: {
             include: { user: { select: USER_SELECT } },
           },
+          booking: { select: { id: true } },
         },
       }),
       this.prisma.transportQuote.count({ where }),

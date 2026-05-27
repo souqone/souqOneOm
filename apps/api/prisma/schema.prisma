@@ -45,18 +45,13 @@ model User {
   conversations ConversationParticipant[]
   notifications Notification[]
   refreshTokens RefreshToken[]
-  renterBookings Booking[]               @relation("RenterBookings")
-  ownerBookings  Booking[]               @relation("OwnerBookings")
   driverJobs     DriverJob[]
   jobApplications JobApplication[]
   messageReactions MessageReaction[]
   spareParts        SparePart[]        @relation("UserSpareParts")
   carServices       CarService[]       @relation("UserCarServices")
   busListings       BusListing[]       @relation("UserBusListings")
-  busOffers         BusListingOffer[]  @relation("UserBusOffers")
   equipmentListings  EquipmentListing[]  @relation("UserEquipmentListings")
-  equipmentRequests  EquipmentRequest[]  @relation("UserEquipmentRequests")
-  equipmentBids      EquipmentBid[]      @relation("UserEquipmentBids")
   operatorListings   OperatorListing[]   @relation("UserOperatorListings")
   reviewsGiven       Review[]            @relation("ReviewsGiven")
   reviewsReceived    Review[]            @relation("ReviewsReceived")
@@ -149,19 +144,10 @@ model Listing {
   currency          String         @default("OMR")
   isPriceNegotiable Boolean        @default(false)
 
-  // أسعار الإيجار
+  // سعر الإيجار الاسترشادي
   dailyPrice        Decimal?       @db.Decimal(12, 2)
-  weeklyPrice       Decimal?       @db.Decimal(12, 2)
   monthlyPrice      Decimal?       @db.Decimal(12, 2)
-  minRentalDays     Int?           @default(1)
-  depositAmount     Decimal?       @db.Decimal(12, 2)
-  kmLimitPerDay     Int?
   withDriver        Boolean        @default(false)
-  deliveryAvailable Boolean        @default(false)
-  insuranceIncluded Boolean        @default(false)
-  cancellationPolicy CancellationPolicy?
-  availableFrom     DateTime?
-  availableTo       DateTime?
 
   // الحالة والعرض
   condition         ItemCondition  @default(USED)
@@ -191,7 +177,6 @@ model Listing {
   images            ListingImage[]
   favorites         Favorite[]
   conversations     Conversation[]
-  bookings          Booking[]
 
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -211,66 +196,6 @@ model Listing {
   @@index([slug])
   @@index([listingType])
   @@map("listings")
-}
-
-// ──────────────────────────────────────
-// الحجوزات — Booking
-// ──────────────────────────────────────
-model Booking {
-  id                 String             @id @default(cuid())
-
-  entityType         String             @default("CAR") // CAR, BUS, EQUIPMENT
-
-  listingId          String?
-  listing            Listing?           @relation(fields: [listingId], references: [id], onDelete: Cascade)
-
-  busListingId       String?
-  busListing         BusListing?        @relation(fields: [busListingId], references: [id], onDelete: Cascade)
-
-  equipmentListingId String?
-  equipmentListing   EquipmentListing?  @relation(fields: [equipmentListingId], references: [id], onDelete: Cascade)
-
-
-  renterId           String
-  renter             User               @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
-
-  ownerId            String
-  owner              User               @relation("OwnerBookings", fields: [ownerId], references: [id], onDelete: Cascade)
-
-  startDate          DateTime
-  endDate            DateTime
-  totalDays          Int
-  totalPrice         Decimal            @db.Decimal(12, 2)
-  depositAmount      Decimal?           @db.Decimal(12, 2)
-  currency           String             @default("OMR")
-
-  status             BookingStatus      @default(PENDING)
-  cancellationPolicy CancellationPolicy @default(FREE)
-
-  driverRequested    Boolean            @default(false)
-  insuranceSelected  Boolean            @default(false)
-
-  pickupLocation     String?
-  dropoffLocation    String?
-  notes              String?
-
-  confirmedAt        DateTime?
-  cancelledAt        DateTime?
-  completedAt        DateTime?
-
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-
-  @@index([listingId])
-  @@index([busListingId])
-  @@index([equipmentListingId])
-  @@index([entityType])
-  @@index([renterId])
-  @@index([ownerId])
-  @@index([status])
-  @@index([startDate])
-  @@index([endDate])
-  @@map("bookings")
 }
 
 // ──────────────────────────────────────
@@ -741,22 +666,6 @@ enum ListingStatus {
   SUSPENDED
 }
 
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  ACTIVE
-  COMPLETED
-  CANCELLED
-  REJECTED
-}
-
-enum CancellationPolicy {
-  FREE
-  FLEXIBLE
-  MODERATE
-  STRICT
-}
-
 enum ItemCondition {
   NEW
   USED
@@ -839,12 +748,6 @@ enum NotificationType {
   LISTING_FAVORITED
   PRICE_DROP
   SYSTEM
-  BOOKING_REQUEST
-  BOOKING_CONFIRMED
-  BOOKING_REJECTED
-  BOOKING_CANCELLED
-  BOOKING_COMPLETED
-  RETURN_REMINDER
   JOB_APPLICATION
   JOB_APPLICATION_ACCEPTED
   JOB_APPLICATION_REJECTED
@@ -1040,14 +943,6 @@ enum BusListingType {
   BUS_SALE
   BUS_SALE_WITH_CONTRACT
   BUS_RENT
-  BUS_CONTRACT
-  BUS_REQUEST
-}
-
-enum BusOfferStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
 }
 
 enum BusType {
@@ -1127,21 +1022,10 @@ model BusListing {
   contractDuration  Int?
   contractExpiry    DateTime?
 
+  // سعر الإيجار الاسترشادي
   dailyPrice        Decimal?        @db.Decimal(12, 2)
   monthlyPrice      Decimal?        @db.Decimal(12, 2)
-  minRentalDays     Int?
-  depositAmount     Decimal?        @db.Decimal(12, 2)
-  kmLimitPerDay     Int?
   withDriver        Boolean         @default(false)
-  deliveryAvailable Boolean         @default(false)
-  insuranceIncluded Boolean         @default(false)
-  cancellationPolicy CancellationPolicy?
-  availableFrom     DateTime?
-  availableTo       DateTime?
-
-  requestPassengers Int?
-  requestRoute      String?
-  requestSchedule   String?
 
   governorate       String?
   city              String?
@@ -1159,10 +1043,8 @@ model BusListing {
   userId            String
   user              User            @relation("UserBusListings", fields: [userId], references: [id], onDelete: Cascade)
   images            BusListingImage[]
-  offers            BusListingOffer[] @relation("BusRequestOffers")
   statusLogs        BusListingStatusLog[] @relation("BusStatusLogs")
   priceHistory      BusListingPriceHistory[] @relation("BusPriceHistory")
-  bookings          Booking[]
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -1220,28 +1102,6 @@ model BusListingStatusLog {
   @@map("bus_listing_status_logs")
 }
 
-model BusListingOffer {
-  id                String          @id @default(cuid())
-  message           String?
-  proposedPrice     Decimal?        @db.Decimal(12, 2)
-
-  status            BusOfferStatus  @default(PENDING)
-
-  requestListingId  String
-  requestListing    BusListing      @relation("BusRequestOffers", fields: [requestListingId], references: [id], onDelete: Cascade)
-
-  sellerUserId      String
-  seller            User            @relation("UserBusOffers", fields: [sellerUserId], references: [id], onDelete: Cascade)
-
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@unique([requestListingId, sellerUserId])
-  @@index([requestListingId])
-  @@index([sellerUserId])
-  @@map("bus_listing_offers")
-}
-
 // ══════════════════════════════════════════════════
 // سوق المعدات والخدمات — Equipment & Services Marketplace
 // ══════════════════════════════════════════════════
@@ -1267,20 +1127,7 @@ enum EquipmentType {
 enum EquipmentListingType {
   EQUIPMENT_SALE
   EQUIPMENT_RENT
-}
-
-enum EquipmentRequestStatus {
-  OPEN
-  IN_PROGRESS
-  CLOSED
-  CANCELLED
-}
-
-enum BidStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  WITHDRAWN
+  EQUIPMENT_WANTED
 }
 
 enum OperatorType {
@@ -1313,20 +1160,22 @@ model EquipmentListing {
   features            String[]
 
   price               Decimal?             @db.Decimal(12, 2)
+  // سعر الإيجار الاسترشادي
   dailyPrice          Decimal?             @db.Decimal(12, 2)
-  weeklyPrice         Decimal?             @db.Decimal(12, 2)
   monthlyPrice        Decimal?             @db.Decimal(12, 2)
   currency            String               @default("OMR")
   isPriceNegotiable   Boolean              @default(false)
   withOperator        Boolean              @default(false)
   deliveryAvailable   Boolean              @default(false)
-  minRentalDays       Int?
-  depositAmount       Decimal?             @db.Decimal(12, 2)
-  kmLimitPerDay       Int?
-  insuranceIncluded   Boolean              @default(false)
-  cancellationPolicy  CancellationPolicy?
-  availableFrom       DateTime?
-  availableTo         DateTime?
+
+  // حقول EQUIPMENT_WANTED
+  budgetMin           Decimal?             @db.Decimal(12, 2)
+  budgetMax           Decimal?             @db.Decimal(12, 2)
+  rentalDuration      String?
+  startDate           DateTime?
+  endDate             DateTime?
+  quantity            Int?
+  siteDetails         String?
 
   governorate         String?
   city                String?
@@ -1344,7 +1193,6 @@ model EquipmentListing {
   userId              String
   user                User                 @relation("UserEquipmentListings", fields: [userId], references: [id], onDelete: Cascade)
   images              EquipmentListingImage[]
-  bookings            Booking[]
 
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -1370,95 +1218,6 @@ model EquipmentListingImage {
 
   @@index([equipmentListingId])
   @@map("equipment_listing_images")
-}
-
-// ──────────────────────────────────────
-// طلب معدات — EquipmentRequest
-// ──────────────────────────────────────
-model EquipmentRequest {
-  id                  String                  @id @default(cuid())
-  title               String
-  slug                String                  @unique
-  description         String
-
-  equipmentType       EquipmentType
-  quantity            Int                     @default(1)
-
-  budgetMin           Decimal?                @db.Decimal(12, 2)
-  budgetMax           Decimal?                @db.Decimal(12, 2)
-  currency            String                  @default("OMR")
-  rentalDuration      String?
-  startDate           DateTime?
-  endDate             DateTime?
-  withOperator        Boolean                 @default(false)
-
-  governorate         String?
-  city                String?
-  siteDetails         String?
-  latitude            Float?
-  longitude           Float?
-
-  contactPhone        String?
-  whatsapp            String?
-
-  requestStatus       EquipmentRequestStatus  @default(OPEN)
-  viewCount           Int                     @default(0)
-
-  userId              String
-  user                User                    @relation("UserEquipmentRequests", fields: [userId], references: [id], onDelete: Cascade)
-  bids                EquipmentBid[]
-  images              EquipmentRequestImage[]
-
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-
-  @@index([userId])
-  @@index([equipmentType])
-  @@index([requestStatus])
-  @@index([governorate])
-  @@index([createdAt])
-  @@index([slug])
-  @@map("equipment_requests")
-}
-
-// صور طلبات المعدات — EquipmentRequestImage
-model EquipmentRequestImage {
-  id          String           @id @default(cuid())
-  url         String
-  requestId   String
-  request     EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  createdAt   DateTime         @default(now())
-
-  @@index([requestId])
-  @@map("equipment_request_images")
-}
-
-// ──────────────────────────────────────
-// عروض المعدات — EquipmentBid
-// ──────────────────────────────────────
-model EquipmentBid {
-  id                  String                @id @default(cuid())
-  price               Decimal               @db.Decimal(12, 2)
-  currency            String                @default("OMR")
-  availability        String
-  notes               String?
-  withOperator        Boolean               @default(false)
-
-  bidStatus           BidStatus             @default(PENDING)
-
-  requestId           String
-  request             EquipmentRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
-
-  userId              String
-  user                User                  @relation("UserEquipmentBids", fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-
-  @@index([requestId])
-  @@index([userId])
-  @@index([bidStatus])
-  @@map("equipment_bids")
 }
 
 // ──────────────────────────────────────
@@ -1514,7 +1273,6 @@ enum ReviewEntityType {
   LISTING
   BUS_LISTING
   EQUIPMENT_LISTING
-  BOOKING
   OPERATOR_LISTING
   DRIVER_PROFILE
   EMPLOYER_PROFILE

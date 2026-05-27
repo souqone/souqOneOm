@@ -9,7 +9,6 @@ export const ENTITY_KEYS: Record<string, string> = {
   CAR_SERVICE: 'entityCarService',
   JOB: 'entityJob',
   EQUIPMENT_LISTING: 'entityEquipmentListing',
-  EQUIPMENT_REQUEST: 'entityEquipmentRequest',
   OPERATOR_LISTING: 'entityOperatorListing',
 };
 
@@ -20,7 +19,6 @@ export const ENTITY_BADGE_COLORS: Record<string, string> = {
   CAR_SERVICE: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
   JOB: 'bg-violet-500/10 text-violet-600 border-violet-200',
   EQUIPMENT_LISTING: 'bg-orange-500/10 text-orange-600 border-orange-200',
-  EQUIPMENT_REQUEST: 'bg-pink-500/10 text-pink-600 border-pink-200',
   OPERATOR_LISTING: 'bg-teal-500/10 text-teal-600 border-teal-200',
 };
 
@@ -32,6 +30,5 @@ export const ENTITY_NAVIGATE: Record<string, (entityId: string) => string | null
   CAR_SERVICE: (id) => `/sale/service/${id}`,
   JOB: (id) => `/jobs/${id}`,
   EQUIPMENT_LISTING: (id) => `/sale/equipment/${id}`,
-  EQUIPMENT_REQUEST: (id) => `/equipment/requests/${id}`,
   OPERATOR_LISTING: (id) => `/equipment/operators/${id}`,
 };

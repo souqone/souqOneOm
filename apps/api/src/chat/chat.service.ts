@@ -54,11 +54,6 @@ export class ChatService {
         if (!e) throw new NotFoundException('إعلان المعدة غير موجود');
         return { ownerId: e.userId, title: e.title };
       }
-      case 'EQUIPMENT_REQUEST': {
-        const e = await this.prisma.equipmentRequest.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
-        if (!e) throw new NotFoundException('طلب المعدة غير موجود');
-        return { ownerId: e.userId, title: e.title };
-      }
       case 'OPERATOR_LISTING': {
         const e = await this.prisma.operatorListing.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
         if (!e) throw new NotFoundException('إعلان المشغل غير موجود');

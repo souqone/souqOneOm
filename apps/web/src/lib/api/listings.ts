@@ -29,17 +29,8 @@ export interface ListingItem {
   isPriceNegotiable: boolean;
   listingType?: 'SALE' | 'RENTAL' | 'WANTED';
   dailyPrice?: string | null;
-  weeklyPrice?: string | null;
   monthlyPrice?: string | null;
-  minRentalDays?: number | null;
-  depositAmount?: string | null;
-  kmLimitPerDay?: number | null;
   withDriver?: boolean;
-  deliveryAvailable?: boolean;
-  insuranceIncluded?: boolean;
-  cancellationPolicy?: string | null;
-  availableFrom?: string | null;
-  availableTo?: string | null;
   city: string | null;
   latitude: number | null;
   longitude: number | null;

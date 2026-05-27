@@ -96,9 +96,6 @@ function transformBus(raw: BusListingItem): UnifiedListing {
     year: raw.year,
     features: raw.features.length > 0 ? raw.features : undefined,
     plateNumber: raw.plateNumber ?? undefined,
-    requestPassengers: raw.requestPassengers ?? undefined,
-    requestRoute: raw.requestRoute ?? undefined,
-    requestSchedule: raw.requestSchedule ?? undefined,
   };
 
   const seller = normalizeSeller(raw.user, raw.governorate, { phone: raw.contactPhone, whatsapp: raw.whatsapp });

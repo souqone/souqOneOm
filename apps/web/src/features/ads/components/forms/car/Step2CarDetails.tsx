@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { FormSection, FormToggle } from '@/features/ads/components/forms/shared';
 import { inputCls, labelCls, chipCls, sectionCls, sectionTitleCls } from '@/lib/constants/form-styles';
 import { fuelOptions, transOptions, CAR_FEATURE_KEYS, type ListingFormData } from './types';
-import { BODY_OPTIONS, DRIVE_OPTIONS, CANCEL_OPTIONS } from '@/lib/constants/mappings';
+import { BODY_OPTIONS, DRIVE_OPTIONS } from '@/lib/constants/mappings';
 
 interface ColorOption { value: string; label: string; hex?: string }
 
@@ -13,7 +13,6 @@ interface Step2Props {
   onChange: (updates: Partial<ListingFormData>) => void;
   fuelLabels: Record<string, string>;
   transLabels: Record<string, string>;
-  cancelLabels: Record<string, string>;
   extColors: ColorOption[];
   intColors: ColorOption[];
 }
@@ -23,7 +22,6 @@ export function Step2CarDetails({
   onChange,
   fuelLabels,
   transLabels,
-  cancelLabels,
   extColors,
   intColors,
 }: Step2Props) {
@@ -148,30 +146,7 @@ export function Step2CarDetails({
       {/* Rental-specific */}
       {form.listingType === 'RENTAL' && (
         <FormSection icon="car_rental" title={tp('lfRentalDetailsTitle')}>
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className={labelCls}>{tp('lfMinRentalDays')}</label>
-                <input type="number" min="1" value={form.minRentalDays} onChange={(e) => onChange({ minRentalDays: e.target.value })} placeholder="1" className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{tp('lfKmLimitPerDay')}</label>
-                <input type="number" value={form.kmLimitPerDay} onChange={(e) => onChange({ kmLimitPerDay: e.target.value })} placeholder="250" className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{tp('lfCancelPolicy')}</label>
-                <select value={form.cancellationPolicy} onChange={(e) => onChange({ cancellationPolicy: e.target.value })} className={inputCls}>
-                  <option value="">{tp('lfSelect')}</option>
-                  {CANCEL_OPTIONS.map((c) => <option key={c} value={c}>{cancelLabels[c]}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormToggle name="withDriver" label={tp('lfWithDriver')} checked={form.withDriver} onChange={(v) => onChange({ withDriver: v })} />
-              <FormToggle name="deliveryAvailable" label={tp('lfDeliveryAvailable')} checked={form.deliveryAvailable} onChange={(v) => onChange({ deliveryAvailable: v })} />
-              <FormToggle name="insuranceIncluded" label={tp('lfInsuranceIncluded')} checked={form.insuranceIncluded} onChange={(v) => onChange({ insuranceIncluded: v })} />
-            </div>
-          </div>
+          <FormToggle name="withDriver" label={tp('lfWithDriver')} checked={form.withDriver} onChange={(v) => onChange({ withDriver: v })} />
         </FormSection>
       )}
     </div>

@@ -7,7 +7,7 @@ import {
   Search, Shield, Star, TrendingUp,
   Zap, Truck, Wind, Droplets, RefreshCw,
 } from 'lucide-react';
-import type { EquipmentListingItem, EquipmentRequestItem, OperatorListingItem } from '@/lib/api/equipment';
+import type { EquipmentListingItem, OperatorListingItem } from '@/lib/api/equipment';
 import { UnifiedCard } from '@/features/listings/components/UnifiedCard';
 import { useItemTransformers } from '@/features/listings/hooks/useItemTransformers';
 import type { UnifiedListingItem } from '@/features/listings/types/unified-item.types';
@@ -81,7 +81,7 @@ interface EquipmentShellProps {
   saleEquipment: EquipmentListingItem[];
   rentalEquipment: EquipmentListingItem[];
   operators: OperatorListingItem[];
-  requests: EquipmentRequestItem[];
+  requests: EquipmentListingItem[];
 }
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -310,11 +310,11 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-[var(--color-on-surface)] line-clamp-1">{req.title}</h3>
                       <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5">
-                        الكمية: {req.quantity}
+                        {req.quantity && req.quantity > 1 && `الكمية: ${req.quantity}`}
                         {req.budgetMax && ` · ميزانية: ${Number(req.budgetMax).toLocaleString('en-US')} ${req.currency}`}
                       </p>
                     </div>
-                    <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold flex-shrink-0">مفتوح</span>
+                    <span className="px-2 py-0.5 rounded-lg bg-orange-600 text-white text-[10px] font-bold flex-shrink-0">مطلوب</span>
                   </div>
                   {req.description && (
                     <p className="text-xs text-[var(--color-on-surface-variant)] line-clamp-2">{req.description}</p>
@@ -323,9 +323,6 @@ export function EquipmentShell({ saleEquipment, rentalEquipment, operators, requ
                     {req.governorate && (
                       <span className="flex items-center gap-1"><MapPin size={12} />{req.governorate}</span>
                     )}
-                    <span className="flex items-center gap-1 font-bold" style={{ color: '#2563eb' }}>
-                      <Search size={12} />{req._count?.bids ?? 0} عروض
-                    </span>
                   </div>
                 </Link>
               ))}

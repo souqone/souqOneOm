@@ -17,7 +17,6 @@ import { UploadsModule } from './uploads/uploads.module';
 import { MailModule } from './mail/mail.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { CarsModule } from './cars/cars.module';
-import { BookingsModule } from './bookings/bookings.module';
 import { JobsModule } from './jobs/jobs.module';
 import { PartsModule } from './parts/parts.module';
 import { ServicesModule } from './services/services.module';
@@ -47,7 +46,6 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     MailModule,
     CloudinaryModule,
     CarsModule,
-    BookingsModule,
     JobsModule,
     PartsModule,
     ServicesModule,

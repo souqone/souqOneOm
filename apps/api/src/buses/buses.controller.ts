@@ -11,8 +11,6 @@ import type { JwtPayload } from '../auth/auth.types';
 import { BusesService } from './buses.service';
 import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
-import { CreateBusOfferDto } from './dto/create-bus-offer.dto';
-import { UpdateBusOfferDto } from './dto/update-bus-offer.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
 
 @Controller('buses')
@@ -80,8 +78,6 @@ export class BusesController {
     return this.busesService.removeImage(imageId, user.sub);
   }
 
-  // ── Observability endpoints ──
-
   @UseGuards(JwtAuthGuard)
   @Get(':id/status-history')
   getStatusHistory(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
@@ -92,25 +88,5 @@ export class BusesController {
   @Get(':id/stats')
   getStats(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.getStats(id, user.sub);
-  }
-
-  // ── Offer endpoints ──
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/offers')
-  createOffer(@Param('id') id: string, @Body() dto: CreateBusOfferDto, @CurrentUser() user: JwtPayload) {
-    return this.busesService.createOffer(id, user.sub, dto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get(':id/offers')
-  getOffers(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.busesService.getOffers(id, user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch('offers/:offerId')
-  updateOffer(@Param('offerId') offerId: string, @Body() dto: UpdateBusOfferDto, @CurrentUser() user: JwtPayload) {
-    return this.busesService.updateOffer(offerId, user.sub, dto);
   }
 }

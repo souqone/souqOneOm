@@ -237,9 +237,9 @@ export default function MyQuotesPage() {
                           سحب العرض
                         </button>
                       )}
-                      {quote.status === 'ACCEPTED' && (
+                      {quote.status === 'ACCEPTED' && quote.booking?.id && (
                         <Link
-                          href="/transport/my-requests"
+                          href={`/transport/bookings/${quote.booking.id}`}
                           className="flex items-center gap-1.5 text-xs text-[var(--color-success)] font-bold bg-[var(--color-success-light)] px-3 py-1.5 rounded-xl hover:opacity-80 transition-all"
                         >
                           <ExternalLink size={12} />

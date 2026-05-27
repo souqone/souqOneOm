@@ -119,7 +119,6 @@ export const FILTERS_CONFIG: Record<ListingCategory, FilterField[]> = {
         { value: 'BUS_SALE',               labelAr: 'للبيع' },
         { value: 'BUS_SALE_WITH_CONTRACT', labelAr: 'بيع مع عقد' },
         { value: 'BUS_RENT',               labelAr: 'للإيجار' },
-        { value: 'BUS_CONTRACT',           labelAr: 'تعاقد' },
       ],
     },
     {

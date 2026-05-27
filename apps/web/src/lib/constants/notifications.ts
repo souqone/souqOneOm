@@ -2,7 +2,7 @@
 
 import {
   MessageCircle, ShoppingBag, Heart, Tag, AlertCircle,
-  Calendar, CheckCheck, Briefcase, Bell, type LucideIcon,
+  CheckCheck, Briefcase, Bell, type LucideIcon,
 } from 'lucide-react';
 import { createElement } from 'react';
 
@@ -61,60 +61,6 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     border: 'border-outline-variant/30',
     labelKey: 'notifTypeSystem',
     navigateTo: () => null,
-  },
-  BOOKING_REQUEST: {
-    icon: Calendar,
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-600',
-    strip: 'bg-blue-500',
-    border: 'border-blue-200',
-    labelKey: 'notifTypeBooking',
-    navigateTo: () => '/bookings',
-  },
-  BOOKING_CONFIRMED: {
-    icon: CheckCheck,
-    bg: 'bg-green-500/10',
-    text: 'text-green-600',
-    strip: 'bg-green-500',
-    border: 'border-green-200',
-    labelKey: 'notifTypeBooking',
-    navigateTo: () => '/bookings',
-  },
-  BOOKING_REJECTED: {
-    icon: AlertCircle,
-    bg: 'bg-error/10',
-    text: 'text-error',
-    strip: 'bg-error',
-    border: 'border-error/20',
-    labelKey: 'notifTypeBooking',
-    navigateTo: () => '/bookings',
-  },
-  BOOKING_CANCELLED: {
-    icon: AlertCircle,
-    bg: 'bg-orange-500/10',
-    text: 'text-orange-500',
-    strip: 'bg-orange-500',
-    border: 'border-orange-200',
-    labelKey: 'notifTypeBooking',
-    navigateTo: () => '/bookings',
-  },
-  BOOKING_COMPLETED: {
-    icon: CheckCheck,
-    bg: 'bg-green-500/10',
-    text: 'text-green-600',
-    strip: 'bg-green-500',
-    border: 'border-green-200',
-    labelKey: 'notifTypeBooking',
-    navigateTo: () => '/bookings',
-  },
-  RETURN_REMINDER: {
-    icon: Calendar,
-    bg: 'bg-yellow-500/10',
-    text: 'text-yellow-600',
-    strip: 'bg-yellow-500',
-    border: 'border-yellow-200',
-    labelKey: 'notifTypeReminder',
-    navigateTo: () => '/bookings',
   },
   JOB_APPLICATION: {
     icon: Briefcase,

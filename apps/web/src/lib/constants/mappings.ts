@@ -85,38 +85,6 @@ export function driveLabels(t: T): Record<string, string> {
   return { FWD: t('driveFWD'), RWD: t('driveRWD'), AWD: t('driveAWD'), '4WD': t('drive4WD') };
 }
 
-// ─── Cancellation Policy ───
-export const CANCEL_OPTIONS = ['FREE', 'FLEXIBLE', 'MODERATE', 'STRICT'] as const;
-
-export function cancelLabels(t: T): Record<string, string> {
-  return { FREE: t('cancelFree'), FLEXIBLE: t('cancelFlexible'), MODERATE: t('cancelModerate'), STRICT: t('cancelStrict') };
-}
-
-// ─── Booking Status ───
-export function bookingStatusLabels(t: T): Record<string, string> {
-  return { PENDING: t('bookingPending'), CONFIRMED: t('bookingConfirmed'), ACTIVE: t('bookingActive'), COMPLETED: t('bookingCompleted'), CANCELLED: t('bookingCancelled'), REJECTED: t('bookingRejected') };
-}
-
-export const BOOKING_STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-amber-900/20 text-amber-400 border-s-4 border-amber-400',
-  CONFIRMED: 'bg-green-900/20 text-green-400 border-s-4 border-green-400',
-  ACTIVE: 'bg-blue-900/20 text-blue-400 border-s-4 border-blue-400',
-  COMPLETED: 'bg-white/5 text-on-surface-variant border-s-4 border-outline-variant',
-  CANCELLED: 'bg-red-900/20 text-red-400 border-s-4 border-red-400',
-  REJECTED: 'bg-red-900/20 text-red-400 border-s-4 border-red-400',
-};
-
-export const BOOKING_STATUS_COLORS_BORDER: Record<string, string> = {
-  PENDING: 'bg-amber-900/20 text-amber-400 border-amber-500',
-  CONFIRMED: 'bg-green-900/20 text-green-400 border-green-500',
-  ACTIVE: 'bg-blue-900/20 text-blue-400 border-blue-500',
-  COMPLETED: 'bg-white/5 text-on-surface-variant border-outline-variant',
-  CANCELLED: 'bg-red-900/20 text-red-400 border-red-500',
-  REJECTED: 'bg-red-900/20 text-red-400 border-red-500',
-};
-
-export const BOOKING_STATUS_FILTERS = ['', 'PENDING', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED'] as const;
-
 // ─── Exterior Colors ───
 const EXTERIOR_COLOR_DATA: { key: string; hex: string }[] = [
   { key: 'white', hex: '#FFFFFF' },

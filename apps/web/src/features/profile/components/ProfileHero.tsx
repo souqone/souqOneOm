@@ -11,7 +11,6 @@ interface ProfileHeroProps {
   stats: {
     listingsCount: number;
     favoritesCount: number;
-    bookingsCount: number;
   };
   onAvatarClick: () => void;
   avatarUploading: boolean;
@@ -20,7 +19,6 @@ interface ProfileHeroProps {
     memberSince: string;
     listings: string;
     favorites: string;
-    bookings: string;
   };
 }
 
@@ -90,11 +88,10 @@ export function ProfileHero({ user, stats, onAvatarClick, avatarUploading, label
 
           {user.bio && <p className="text-[12px] text-on-surface-variant mt-2 leading-relaxed">{user.bio}</p>}
 
-          <div className="grid grid-cols-3 gap-2 mt-4">
+          <div className="grid grid-cols-2 gap-2 mt-4">
             {[
               { label: labels.listings, value: stats.listingsCount },
               { label: labels.favorites, value: stats.favoritesCount },
-              { label: labels.bookings, value: stats.bookingsCount },
             ].map((s) => (
               <div key={s.label} className="bg-surface-container-low rounded-xl p-3 text-center">
                 <p className="text-[18px] font-semibold text-on-surface">{s.value}</p>
