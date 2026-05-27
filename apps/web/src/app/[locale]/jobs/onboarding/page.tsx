@@ -63,6 +63,12 @@ function OnboardingContent() {
 
   const { data: existingDriver, isLoading: loadingDriver } = useMyDriverProfile()
   const { data: existingEmployer, isLoading: loadingEmployer } = useMyEmployerProfile()
+
+  if (!loadingDriver && !loadingEmployer && existingDriver && existingEmployer) {
+    router.replace('/jobs/dashboard')
+    return null
+  }
+
   const createDriver = useCreateDriverProfile()
   const createEmployer = useCreateEmployerProfile()
 

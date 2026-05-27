@@ -271,6 +271,7 @@ export function useMyDriverProfile(enabled = true) {
   return useQuery<DriverProfileItem>({
     queryKey: ['driver-profile', 'me'],
     queryFn: () => apiRequest<DriverProfileItem>('/jobs/driver-profile/me'),
+    staleTime: 0,
     retry: false,
     enabled,
   });
