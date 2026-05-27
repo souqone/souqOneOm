@@ -7,6 +7,7 @@ import JobEmptyState from '@/features/jobs/components/JobEmptyState';
 import { useDrivers } from '@/lib/api/jobs';
 import { OMAN_GOVERNORATES, LICENSE_TYPE_LABELS, STRINGS } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import type { DriverProfile } from '@/features/jobs/types';
 
 const PAGE_SIZE = 12
@@ -52,6 +53,7 @@ function DriverCardSkeleton() {
 }
 
 function BrowseDriversContent() {
+  const t = useTranslations('jobs')
   const searchParams = useSearchParams()
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -238,7 +240,7 @@ function BrowseDriversContent() {
           type="search"
           value={searchQuery}
           onChange={e => handleSearchChange(e.target.value)}
-          placeholder="ابحث عن سائق..."
+          placeholder={t('searchDriversPlaceholder')}
           className="input-base pe-11 text-sm h-11"
         />
         {searchQuery && (
@@ -297,8 +299,8 @@ function BrowseDriversContent() {
             </div>
           ) : drivers.length === 0 ? (
             <JobEmptyState
-              title="لا يوجد سائقون"
-              description="جرب تغيير الفلاتر أو البحث بكلمات مختلفة."
+              title={t('noDriversTitle')}
+              description={t('tryChangeFilters')}
               onClear={handleClearFilters}
             />
           ) : (

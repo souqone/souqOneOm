@@ -21,35 +21,8 @@ import {
   STRINGS,
 } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
-const driverSchema = z.object({
-  licenseTypes: z.array(z.string()).min(1, 'اختر نوع رخصة واحد على الأقل'),
-  experienceYears: z.number().optional(),
-  vehicleTypes: z.array(z.string()),
-  hasOwnVehicle: z.boolean(),
-  bio: z.string().optional(),
-  governorate: z.string().min(1, 'اختر المحافظة'),
-  city: z.string().optional(),
-  contactPhone: z.string().optional(),
-  whatsapp: z.string().optional(),
-  languages: z.array(z.string()),
-  nationality: z.string().optional(),
-  isAvailable: z.boolean(),
-})
-
-const employerSchema = z.object({
-  companyName: z.string().optional(),
-  companySize: z.string().optional(),
-  industry: z.string().optional(),
-  bio: z.string().optional(),
-  governorate: z.string().min(1, 'اختر المحافظة'),
-  city: z.string().optional(),
-  contactPhone: z.string().optional(),
-  whatsapp: z.string().optional(),
-})
-
-type DriverFormData = z.infer<typeof driverSchema>
-type EmployerFormData = z.infer<typeof employerSchema>
 type TabType = 'driver' | 'employer'
 
 export default function EditProfilePage() {
@@ -61,6 +34,7 @@ export default function EditProfilePage() {
 }
 
 function EditProfileContent() {
+  const t = useTranslations('jobs')
   const router = useRouter()
   const { addToast } = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('driver')
@@ -74,6 +48,35 @@ function EditProfileContent() {
   const hasDriver = !!driverProfile
   const hasEmployer = !!employerProfile
   const loading = driverLoading || employerLoading
+
+  const driverSchema = z.object({
+    licenseTypes: z.array(z.string()).min(1, t('selectAtLeastOneLicense')),
+    experienceYears: z.number().optional(),
+    vehicleTypes: z.array(z.string()),
+    hasOwnVehicle: z.boolean(),
+    bio: z.string().optional(),
+    governorate: z.string().min(1, t('selectGovernorate')),
+    city: z.string().optional(),
+    contactPhone: z.string().optional(),
+    whatsapp: z.string().optional(),
+    languages: z.array(z.string()),
+    nationality: z.string().optional(),
+    isAvailable: z.boolean(),
+  })
+
+  const employerSchema = z.object({
+    companyName: z.string().optional(),
+    companySize: z.string().optional(),
+    industry: z.string().optional(),
+    bio: z.string().optional(),
+    governorate: z.string().min(1, t('selectGovernorate')),
+    city: z.string().optional(),
+    contactPhone: z.string().optional(),
+    whatsapp: z.string().optional(),
+  })
+
+  type DriverFormData = z.infer<typeof driverSchema>
+  type EmployerFormData = z.infer<typeof employerSchema>
 
   const driverForm = useForm<DriverFormData>({
     resolver: zodResolver(driverSchema),
@@ -240,7 +243,7 @@ function EditProfileContent() {
           {/* License Types */}
           <div className="card-base rounded-2xl p-5">
             <label className="block text-sm font-bold text-on-surface mb-3">
-              أنواع الرخص <span className="text-error">*</span>
+              {t('licenseTypesLabel')} <span className="text-error">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(LICENSE_TYPE_LABELS).map(([value, label]) => {
@@ -268,16 +271,16 @@ function EditProfileContent() {
           {/* Experience + Vehicle */}
           <div className="card-base rounded-2xl p-5 space-y-4">
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">سنوات الخبرة</label>
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('experienceYearsLabel')}</label>
               <input
                 type="number" min={0} max={50}
                 {...driverForm.register('experienceYears', { valueAsNumber: true })}
                 className="input-base text-sm w-full"
-                placeholder="مثال: 5"
+                placeholder={t('placeholderExperience')}
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-2">أنواع المركبات</label>
+              <label className="block text-sm font-bold text-on-surface mb-2">{t('vehicleTypesLabel')}</label>
               <div className="flex flex-wrap gap-2">
                 {VEHICLE_TYPE_OPTIONS.map(vt => {
                   const selected = driverForm.watch('vehicleTypes').includes(vt)
@@ -298,7 +301,7 @@ function EditProfileContent() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-on-surface">يمتلك مركبته الخاصة</span>
+              <span className="text-sm font-bold text-on-surface">{t('hasOwnVehicleLabel')}</span>
               <button
                 type="button"
                 onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
@@ -317,7 +320,7 @@ function EditProfileContent() {
 
           {/* Languages */}
           <div className="card-base rounded-2xl p-5">
-            <label className="block text-sm font-bold text-on-surface mb-2">اللغات</label>
+            <label className="block text-sm font-bold text-on-surface mb-2">{t('languagesLabel')}</label>
             <div className="flex flex-wrap gap-2">
               {LANGUAGE_OPTIONS.map(lang => {
                 const selected = driverForm.watch('languages').includes(lang)
@@ -341,20 +344,20 @@ function EditProfileContent() {
           {/* Bio + Location + Contact */}
           <div className="card-base rounded-2xl p-5 space-y-4">
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">نبذة عنك</label>
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('bioLabel')}</label>
               <textarea
                 {...driverForm.register('bio')}
                 rows={3}
                 className="input-base text-sm w-full resize-none"
-                placeholder="اكتب نبذة مختصرة عن خبرتك..."
+                placeholder={t('placeholderBio')}
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-on-surface mb-1.5">
-                المحافظة <span className="text-error">*</span>
+                {t('governorateLabel')} <span className="text-error">*</span>
               </label>
               <select {...driverForm.register('governorate')} className="input-base text-sm w-full">
-                <option value="">اختر المحافظة</option>
+                <option value="">{t('selectGovernorateOption')}</option>
                 {OMAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
               {driverForm.formState.errors.governorate && (
@@ -362,16 +365,16 @@ function EditProfileContent() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">المدينة</label>
-              <input {...driverForm.register('city')} className="input-base text-sm w-full" placeholder="اختياري" />
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('cityLabel')}</label>
+              <input {...driverForm.register('city')} className="input-base text-sm w-full" placeholder={t('optional')} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">رقم الهاتف</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                 <input {...driverForm.register('contactPhone')} className="input-base text-sm w-full" placeholder="+968..." />
               </div>
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">واتساب</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                 <input {...driverForm.register('whatsapp')} className="input-base text-sm w-full" placeholder="+968..." />
               </div>
             </div>
@@ -383,7 +386,7 @@ function EditProfileContent() {
             className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {submitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={16} />}
-            {submitting ? STRINGS.LOADING : 'حفظ التغييرات'}
+            {submitting ? STRINGS.LOADING : t('saveChanges')}
           </button>
         </form>
       )}
@@ -393,31 +396,31 @@ function EditProfileContent() {
         <form onSubmit={employerForm.handleSubmit(handleEmployerSubmit)} className="space-y-5">
           <div className="card-base rounded-2xl p-5 space-y-4">
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">اسم الشركة</label>
-              <input {...employerForm.register('companyName')} className="input-base text-sm w-full" placeholder="اختياري" />
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('companyNameLabel')}</label>
+              <input {...employerForm.register('companyName')} className="input-base text-sm w-full" placeholder={t('optional')} />
             </div>
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">حجم الشركة</label>
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('companySizeLabel')}</label>
               <select {...employerForm.register('companySize')} className="input-base text-sm w-full">
-                <option value="">اختياري</option>
-                <option value="1-10">1-10 موظفين</option>
-                <option value="10-50">10-50 موظف</option>
-                <option value="50-200">50-200 موظف</option>
-                <option value="200-500">200-500 موظف</option>
-                <option value="500+">أكثر من 500</option>
+                <option value="">{t('optional')}</option>
+                <option value="1-10">{t('companySize1to10')}</option>
+                <option value="10-50">{t('companySize10to50')}</option>
+                <option value="50-200">{t('companySize50to200')}</option>
+                <option value="200-500">{t('companySize200to500')}</option>
+                <option value="500+">{t('companySize500plus')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">المجال</label>
-              <input {...employerForm.register('industry')} className="input-base text-sm w-full" placeholder="مثال: نقل وشحن" />
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('industryLabel')}</label>
+              <input {...employerForm.register('industry')} className="input-base text-sm w-full" placeholder={t('placeholderIndustry')} />
             </div>
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">نبذة عن الشركة</label>
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('companyBioLabel')}</label>
               <textarea
                 {...employerForm.register('bio')}
                 rows={3}
                 className="input-base text-sm w-full resize-none"
-                placeholder="اكتب نبذة مختصرة..."
+                placeholder={t('placeholderCompanyBio')}
               />
             </div>
           </div>
@@ -425,10 +428,10 @@ function EditProfileContent() {
           <div className="card-base rounded-2xl p-5 space-y-4">
             <div>
               <label className="block text-sm font-bold text-on-surface mb-1.5">
-                المحافظة <span className="text-error">*</span>
+                {t('governorateLabel')} <span className="text-error">*</span>
               </label>
               <select {...employerForm.register('governorate')} className="input-base text-sm w-full">
-                <option value="">اختر المحافظة</option>
+                <option value="">{t('selectGovernorateOption')}</option>
                 {OMAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
               {employerForm.formState.errors.governorate && (
@@ -436,16 +439,16 @@ function EditProfileContent() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-bold text-on-surface mb-1.5">المدينة</label>
-              <input {...employerForm.register('city')} className="input-base text-sm w-full" placeholder="اختياري" />
+              <label className="block text-sm font-bold text-on-surface mb-1.5">{t('cityLabel')}</label>
+              <input {...employerForm.register('city')} className="input-base text-sm w-full" placeholder={t('optional')} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">رقم الهاتف</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                 <input {...employerForm.register('contactPhone')} className="input-base text-sm w-full" placeholder="+968..." />
               </div>
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">واتساب</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                 <input {...employerForm.register('whatsapp')} className="input-base text-sm w-full" placeholder="+968..." />
               </div>
             </div>
@@ -457,7 +460,7 @@ function EditProfileContent() {
             className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {submitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={16} />}
-            {submitting ? STRINGS.LOADING : 'حفظ التغييرات'}
+            {submitting ? STRINGS.LOADING : t('saveChanges')}
           </button>
         </form>
       )}
