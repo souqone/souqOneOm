@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import type {
   TransportRequest,
@@ -316,8 +317,16 @@ export default function RequestDetailPage() {
   const handleAcceptQuote = async (quoteId: string) => {
     setAccepting(quoteId);
     try {
-      const booking = await transportApi.acceptQuote(quoteId);
-      router.push(`/transport/bookings/${booking.id}`);
+      await transportApi.acceptQuote(quoteId);
+      const bookings = await transportApi.myBookings('shipper', 1, 1);
+      const booking = bookings.items?.[0];
+      if (booking) {
+        router.push(`/transport/bookings/${booking.id}`);
+      } else {
+        router.push('/transport/my-requests');
+      }
+    } catch {
+      setError('تعذّر قبول العرض. حاول مرة أخرى.');
     } finally {
       setAccepting(null);
     }
@@ -330,6 +339,21 @@ export default function RequestDetailPage() {
       if (!prev) return prev;
       return { ...prev, status: 'QUOTED' };
     });
+  };
+
+  const [renewing, setRenewing] = useState(false);
+
+  const handleRenewRequest = async () => {
+    if (!request) return;
+    setRenewing(true);
+    try {
+      const updated = await transportApi.renewRequest(request.id);
+      setRequest(updated);
+    } catch {
+      setError('تعذّر تجديد الطلب. حاول مرة أخرى.');
+    } finally {
+      setRenewing(false);
+    }
   };
 
   if (loading) {
@@ -593,6 +617,27 @@ export default function RequestDetailPage() {
                 </span>
               </div>
             </div>
+
+            {/* Renew expired request */}
+            {isOwner && request.status === 'EXPIRED' && (
+              <div className="card-base p-5 flex flex-col gap-3 border-2 border-[var(--color-warning)]">
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={18} className="text-[var(--color-warning)]" />
+                  <h2 className="text-sm font-bold text-[var(--color-warning)]">انتهت صلاحية هذا الطلب</h2>
+                </div>
+                <p className="text-xs text-[var(--color-on-surface-muted)]">
+                  يمكنك تجديد الطلب لإعادة نشره واستقبال عروض جديدة
+                </p>
+                <button
+                  onClick={handleRenewRequest}
+                  disabled={renewing}
+                  className="btn-primary w-full justify-center"
+                >
+                  {renewing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  تجديد الطلب
+                </button>
+              </div>
+            )}
 
             {/* Carrier CTA */}
             {!isOwner && request.status === 'OPEN' && (

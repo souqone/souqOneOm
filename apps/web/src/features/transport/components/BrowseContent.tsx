@@ -2,10 +2,13 @@
 
 import { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { Truck } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import RequestsGrid from './RequestsGrid';
 import ActiveFilterChips from './ActiveFilterChips';
 import MobileFilterSheet from './MobileFilterSheet';
+import { useAuth } from '@/providers/auth-provider';
 import type { GetRequestsParams, TransportServiceType, TransportRequestStatus } from '../types';
 
 export interface BrowseFilters {
@@ -34,6 +37,7 @@ function parseSortBy(sortBy?: string): Pick<GetRequestsParams, 'sortBy' | 'sortO
 
 export default function BrowseContent() {
   const searchParams = useSearchParams();
+  const { isAuthenticated } = useAuth();
 
   const [filters, setFilters] = useState<BrowseFilters>({
     serviceType: searchParams.get('serviceType') ?? undefined,
@@ -71,6 +75,27 @@ export default function BrowseContent() {
             ابحث عن طلبات النقل المناسبة وقدّم عروضك
           </p>
         </div>
+
+        {/* Carrier CTA for unauthenticated visitors */}
+        {!isAuthenticated && (
+          <div className="mb-6 p-4 rounded-2xl bg-[var(--color-brand-navy)]/10 border border-[var(--color-brand-navy)]/20 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-brand-navy)] flex items-center justify-center flex-shrink-0">
+                <Truck size={20} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--color-on-surface)]">ناقل؟ سجّل وابدأ تقديم عروض على الطلبات</p>
+                <p className="text-xs text-[var(--color-on-surface-variant)]">انضم لشبكة ناقلي SouqOne وحقق دخلاً إضافياً</p>
+              </div>
+            </div>
+            <Link
+              href="/transport/carriers/register"
+              className="btn-primary text-sm px-4 py-2 flex-shrink-0"
+            >
+              سجّل كناقل
+            </Link>
+          </div>
+        )}
 
         {/* Mobile filter trigger */}
         <div className="flex items-center gap-3 mb-4 lg:hidden">

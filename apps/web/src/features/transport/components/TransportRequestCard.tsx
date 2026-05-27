@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
   MapPin, Weight, Calendar, MessageSquare, Clock, ChevronLeft,
+  Eye,
 } from 'lucide-react';
 import type { TransportRequest, TransportServiceType } from '../types';
 import {
@@ -121,6 +122,12 @@ export default function TransportRequestCard({ request }: Props) {
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-brand-navy)]">
               <MessageSquare size={12} />
               {quotesCount} عرض
+            </span>
+          )}
+          {request.viewCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--color-on-surface-muted)]">
+              <Eye size={12} />
+              {request.viewCount}
             </span>
           )}
         </div>

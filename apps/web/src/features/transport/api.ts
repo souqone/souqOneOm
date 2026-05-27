@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { apiRequest, apiFetch } from '@/lib/auth'
 import type {
   TransportRequest,
@@ -47,6 +48,10 @@ export const transportApi = {
 
   cancelRequest(id: string) {
     return apiRequest<TransportRequest>(`/transport/requests/${id}/cancel`, { method: 'PATCH' })
+  },
+
+  renewRequest(id: string) {
+    return apiRequest<TransportRequest>(`/transport/requests/${id}/renew`, { method: 'PATCH' })
   },
 
   // ── Quotes ───────────────────────────────────────
@@ -156,4 +161,13 @@ export const transportApi = {
       '/transport/stats',
     )
   },
+}
+
+export function useMyCarrierProfile(enabled = true) {
+  return useQuery<CarrierProfile>({
+    queryKey: ['my-carrier-profile'],
+    queryFn: () => transportApi.getMyCarrierProfile(),
+    retry: false,
+    enabled,
+  });
 }

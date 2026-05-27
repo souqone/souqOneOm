@@ -30,11 +30,39 @@ import {
 import { formatRelativeDate, formatScheduledDate } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
+import { ReviewForm } from '@/components/reviews/review-form';
 
 const BOOKING_STEPS = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
 
-function BookingTimeline({ status }: { status: string }) {
+function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?: string }) {
+  if (status === 'CANCELLED') {
+    return (
+      <div className="flex items-center gap-0" dir="rtl">
+        {BOOKING_STEPS.map((step, idx) => (
+          <div key={step} className="flex items-center flex-shrink-0">
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-[var(--color-error)] border-[var(--color-error)]">
+                <XCircle size={18} className="text-white" />
+              </div>
+              <span className="text-xs font-semibold whitespace-nowrap text-[var(--color-error)]">
+                {BOOKING_STATUS_LABELS[step as BookingStatus] ?? step}
+              </span>
+            </div>
+            {idx < BOOKING_STEPS.length - 1 && (
+              <div className="h-0.5 w-16 sm:w-24 mx-2 mb-5 flex-shrink-0 bg-[var(--color-error)]" />
+            )}
+          </div>
+        ))}
+        {cancelledAt && (
+          <p className="text-xs text-[var(--color-error)] mr-4 font-semibold">
+            تم الإلغاء: {new Date(cancelledAt).toLocaleDateString('ar-OM')}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   const currentIdx = BOOKING_STEPS.indexOf(status as (typeof BOOKING_STEPS)[number]);
   return (
     <div className="flex items-center gap-0" dir="rtl">
@@ -99,6 +127,8 @@ export default function BookingDetailPage() {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [showCancelForm, setShowCancelForm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -141,11 +171,16 @@ export default function BookingDetailPage() {
 
   const handleCancel = async () => {
     if (!booking) return;
+    if (!showCancelForm) {
+      setShowCancelForm(true);
+      return;
+    }
     setActionLoading(true);
     try {
-      await transportApi.cancelBooking(booking.id);
+      await transportApi.cancelBooking(booking.id, cancelReason.trim() || undefined);
       setCancelled(true);
-      setBooking((prev) => prev ? { ...prev, status: 'CANCELLED' } : prev);
+      setShowCancelForm(false);
+      setBooking((prev) => prev ? { ...prev, status: 'CANCELLED', cancelledAt: new Date().toISOString(), cancellationReason: cancelReason.trim() || undefined } : prev);
     } finally {
       setActionLoading(false);
     }
@@ -173,11 +208,11 @@ export default function BookingDetailPage() {
       <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
         {/* Back */}
         <Link
-          href="/transport/my-requests"
+          href={isCarrier ? '/transport/my-quotes' : '/transport/my-bookings'}
           className="inline-flex items-center gap-2 text-sm text-[var(--color-on-surface-variant)] hover:text-[var(--color-brand-navy)] font-semibold mb-6 transition-colors"
         >
           <ArrowRight size={16} />
-          طلباتي
+          {isCarrier ? 'عروضي' : 'حجوزاتي'}
         </Link>
 
         {/* Status Header */}
@@ -214,11 +249,9 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Timeline */}
-        {booking.status !== 'CANCELLED' && (
-          <div className="card-base p-5 mb-6 overflow-x-auto">
-            <BookingTimeline status={booking.status} />
-          </div>
-        )}
+        <div className="card-base p-5 mb-6 overflow-x-auto">
+          <BookingTimeline status={booking.status} cancelledAt={booking.cancelledAt} />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           {/* Main */}
@@ -383,14 +416,50 @@ export default function BookingDetailPage() {
                     استلمت — اكتمل
                   </button>
                 )}
+                {showCancelForm && (
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
+                      سبب الإلغاء (اختياري)
+                    </label>
+                    <textarea
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder="اكتب سبب الإلغاء..."
+                      rows={2}
+                      className="w-full rounded-xl border border-[var(--color-outline)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-error)]"
+                    />
+                  </div>
+                )}
                 <button
                   onClick={handleCancel}
                   disabled={actionLoading || cancelled}
                   className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[var(--color-error)] text-[var(--color-error)] text-sm font-semibold hover:bg-[var(--color-error-light)] transition-all disabled:opacity-50"
                 >
                   {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                  إلغاء الحجز
+                  {showCancelForm ? 'تأكيد الإلغاء' : 'إلغاء الحجز'}
                 </button>
+                {showCancelForm && (
+                  <button
+                    onClick={() => { setShowCancelForm(false); setCancelReason(''); }}
+                    className="text-xs text-[var(--color-on-surface-muted)] hover:text-[var(--color-on-surface)] font-semibold"
+                  >
+                    تراجع
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Rating — after completion */}
+            {booking.status === 'COMPLETED' && booking.carrier && (
+              <div className="card-base p-5 flex flex-col gap-3">
+                <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+                  قيّم الناقل
+                </h2>
+                <ReviewForm
+                  entityType="TRANSPORT_BOOKING"
+                  entityId={booking.id}
+                  revieweeId={booking.carrier.userId}
+                />
               </div>
             )}
           </div>

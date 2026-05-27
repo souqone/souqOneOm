@@ -63,6 +63,7 @@ function OnboardingContent() {
 
   const { data: existingDriver, isLoading: loadingDriver } = useMyDriverProfile()
   const { data: existingEmployer, isLoading: loadingEmployer } = useMyEmployerProfile()
+
   const createDriver = useCreateDriverProfile()
   const createEmployer = useCreateEmployerProfile()
 
@@ -80,6 +81,11 @@ function OnboardingContent() {
     resolver: zodResolver(employerSchema),
     defaultValues: {},
   })
+
+  if (!loadingDriver && !loadingEmployer && existingDriver && existingEmployer) {
+    router.replace('/jobs/dashboard')
+    return null
+  }
 
   const handleSelectType = (type: ProfileType) => {
     setProfileType(type)
