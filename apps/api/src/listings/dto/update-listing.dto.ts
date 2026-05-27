@@ -1,5 +1,5 @@
-import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsDateString, IsArray, Min, Max, MaxLength } from 'class-validator';
-import { FuelType, Transmission, ItemCondition, ListingStatus, ListingType, CancellationPolicy } from '@prisma/client';
+import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength } from 'class-validator';
+import { FuelType, Transmission, ItemCondition, ListingStatus, ListingType } from '@prisma/client';
 
 export class UpdateListingDto {
   @IsOptional()
@@ -102,6 +102,7 @@ export class UpdateListingDto {
   @IsEnum(ListingType)
   listingType?: ListingType;
 
+  // سعر الإيجار الاسترشادي
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -110,51 +111,11 @@ export class UpdateListingDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  weeklyPrice?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
   monthlyPrice?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  minRentalDays?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  depositAmount?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  kmLimitPerDay?: number;
 
   @IsOptional()
   @IsBoolean()
   withDriver?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  deliveryAvailable?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  insuranceIncluded?: boolean;
-
-  @IsOptional()
-  @IsEnum(CancellationPolicy)
-  cancellationPolicy?: CancellationPolicy;
-
-  @IsOptional()
-  @IsDateString()
-  availableFrom?: string;
-
-  @IsOptional()
-  @IsDateString()
-  availableTo?: string;
 
   @IsOptional()
   @IsString()

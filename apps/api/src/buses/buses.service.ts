@@ -7,12 +7,9 @@ import {
 import { ListingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { SearchService, INDEXES } from '../search/search.service';
 import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
-import { CreateBusOfferDto } from './dto/create-bus-offer.dto';
-import { UpdateBusOfferDto } from './dto/update-bus-offer.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
 import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
 
@@ -34,7 +31,6 @@ export class BusesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly notifications: NotificationsService,
     private readonly search: SearchService,
   ) {}
 
@@ -107,12 +103,7 @@ export class BusesService {
         contractExpiry: dto.contractExpiry ? new Date(dto.contractExpiry) : null,
         dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
         monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
-        minRentalDays: dto.minRentalDays,
         withDriver: dto.withDriver ?? false,
-        deliveryAvailable: dto.deliveryAvailable ?? false,
-        requestPassengers: dto.requestPassengers,
-        requestRoute: dto.requestRoute,
-        requestSchedule: dto.requestSchedule,
         governorate: dto.governorate,
         city: dto.city,
         latitude: dto.latitude,
@@ -130,42 +121,10 @@ export class BusesService {
     await this.invalidateCache();
     this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(bus)).catch(() => {});
 
-    // Async: notify sellers in same governorate when a REQUEST is created
-    if (bus.busListingType === 'BUS_REQUEST' && bus.governorate) {
-      this.notifySellersInArea(bus.id, bus.title, bus.governorate, userId);
-    }
 
     return bus;
   }
 
-  private notifySellersInArea(listingId: string, title: string, governorate: string, requesterId: string) {
-    Promise.resolve().then(async () => {
-      try {
-        const sellers = await this.prisma.busListing.findMany({
-          where: {
-            governorate,
-            status: 'ACTIVE',
-            busListingType: { in: ['BUS_SALE', 'BUS_RENT', 'BUS_CONTRACT', 'BUS_SALE_WITH_CONTRACT'] },
-            userId: { not: requesterId },
-          },
-          select: { userId: true },
-          distinct: ['userId'],
-        });
-
-        for (const s of sellers) {
-          await this.notifications.create({
-            type: 'SYSTEM',
-            title: '\u0637\u0644\u0628 \u062d\u0627\u0641\u0644\u0629 \u0641\u064a \u0645\u0646\u0637\u0642\u062a\u0643',
-            body: title,
-            userId: s.userId,
-            data: { link: `/buses/${listingId}` },
-          });
-        }
-      } catch {
-        // Fire & forget — don't crash the main flow
-      }
-    });
-  }
 
   private cacheKey(suffix: string) { return `busListing:${suffix}`; }
 
@@ -455,123 +414,6 @@ export class BusesService {
   }
 
   // ════════════════════════════════════════════
-  // Offer methods (Phase 3)
-  // ════════════════════════════════════════════
-
-  async createOffer(listingId: string, sellerUserId: string, dto: CreateBusOfferDto) {
-    const listing = await this.prisma.busListing.findUnique({ where: { id: listingId } });
-    if (!listing) throw new NotFoundException('إعلان الحافلة غير موجود');
-    if (listing.busListingType !== 'BUS_REQUEST') {
-      throw new BadRequestException('لا يمكن تقديم عرض إلا على طلب حافلة');
-    }
-    if (listing.userId === sellerUserId) {
-      throw new BadRequestException('لا يمكنك تقديم عرض على طلبك الخاص');
-    }
-
-    const existing = await this.prisma.busListingOffer.findUnique({
-      where: { requestListingId_sellerUserId: { requestListingId: listingId, sellerUserId } },
-    });
-    if (existing) throw new BadRequestException('لقد قدمت عرضاً بالفعل على هذا الطلب');
-
-    const offer = await this.prisma.busListingOffer.create({
-      data: {
-        message: dto.message,
-        proposedPrice: dto.proposedPrice != null ? new Prisma.Decimal(dto.proposedPrice) : null,
-        requestListingId: listingId,
-        sellerUserId,
-      },
-      include: { seller: { select: USER_SELECT } },
-    });
-
-    // Async: notify the requester
-    Promise.resolve().then(async () => {
-      try {
-        await this.notifications.create({
-          type: 'SYSTEM',
-          title: 'عرض جديد على طلبك',
-          body: dto.message || 'تم تقديم عرض جديد على طلب الحافلة',
-          userId: listing.userId,
-          data: { link: `/buses/${listingId}` },
-        });
-      } catch {
-        // Fire & forget
-      }
-    });
-
-    return offer;
-  }
-
-  async getOffers(listingId: string, userId: string) {
-    const listing = await this.prisma.busListing.findUnique({ where: { id: listingId } });
-    if (!listing) throw new NotFoundException('إعلان الحافلة غير موجود');
-    if (listing.userId !== userId) throw new ForbiddenException('غير مصرح لك بعرض العروض');
-
-    return this.prisma.busListingOffer.findMany({
-      where: { requestListingId: listingId },
-      include: { seller: { select: USER_SELECT } },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async updateOffer(offerId: string, userId: string, dto: UpdateBusOfferDto) {
-    const offer = await this.prisma.busListingOffer.findUnique({
-      where: { id: offerId },
-      include: { requestListing: { select: { userId: true, id: true } } },
-    });
-    if (!offer) throw new NotFoundException('العرض غير موجود');
-    if (offer.requestListing.userId !== userId) {
-      throw new ForbiddenException('فقط صاحب الطلب يمكنه قبول أو رفض العروض');
-    }
-
-    // Rule: ACCEPTED → REJECTED not allowed
-    if (offer.status === 'ACCEPTED') {
-      throw new BadRequestException('لا يمكن تغيير حالة عرض تم قبوله');
-    }
-
-    // Rule: Max 1 ACCEPTED per request
-    if (dto.status === 'ACCEPTED') {
-      const alreadyAccepted = await this.prisma.busListingOffer.findFirst({
-        where: { requestListingId: offer.requestListingId, status: 'ACCEPTED' },
-      });
-      if (alreadyAccepted) {
-        throw new BadRequestException('يوجد عرض مقبول بالفعل على هذا الطلب');
-      }
-    }
-
-    const updated = await this.prisma.busListingOffer.update({
-      where: { id: offerId },
-      data: { status: dto.status },
-      include: { seller: { select: USER_SELECT } },
-    });
-
-    // When accepted, archive the request
-    if (dto.status === 'ACCEPTED') {
-      await this.prisma.busListing.update({
-        where: { id: offer.requestListingId },
-        data: { status: 'ARCHIVED' },
-      });
-    }
-
-    // Notify the seller about the decision
-    Promise.resolve().then(async () => {
-      try {
-        const statusText = dto.status === 'ACCEPTED' ? 'تم قبول عرضك' : 'تم رفض عرضك';
-        await this.notifications.create({
-          type: 'SYSTEM',
-          title: statusText,
-          body: `${statusText} على طلب الحافلة`,
-          userId: offer.sellerUserId,
-          data: { link: `/buses/${offer.requestListingId}` },
-        });
-      } catch {
-        // Fire & forget
-      }
-    });
-
-    return updated;
-  }
-
-  // ════════════════════════════════════════════
   // Observability (Phase 4)
   // ════════════════════════════════════════════
 
@@ -591,22 +433,16 @@ export class BusesService {
     if (!listing) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (listing.userId !== userId) throw new ForbiddenException('غير مصرح');
 
-    const [statusHistory, offersCount] = await Promise.all([
-      this.prisma.busListingStatusLog.findMany({
-        where: { busListingId: listingId },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.busListingOffer.count({
-        where: { requestListingId: listingId },
-      }),
-    ]);
+    const statusHistory = await this.prisma.busListingStatusLog.findMany({
+      where: { busListingId: listingId },
+      orderBy: { createdAt: 'desc' },
+    });
 
     return {
       viewCount: listing.viewCount,
       status: listing.status,
       createdAt: listing.createdAt,
       statusHistory,
-      offersCount,
     };
   }
 }

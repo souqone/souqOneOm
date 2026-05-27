@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useListings } from '@/lib/api/listings'
 import { useBusListings } from '@/lib/api/buses'
-import { useEquipmentListings, useEquipmentRequests, useOperatorListings } from '@/lib/api/equipment'
+import { useEquipmentListings, useOperatorListings } from '@/lib/api/equipment'
 import { useParts } from '@/lib/api/parts'
 import { useCarServices } from '@/lib/api/services'
 
@@ -44,49 +44,48 @@ export function useUnifiedListings(
 
   const carsQuery      = useListings(p,    category === 'cars')
   const busesQuery     = useBusListings(p, category === 'buses')
-  const equipmentQuery = useEquipmentListings(p, category === 'equipment')
-  const equipmentRequestsQuery = useEquipmentRequests(p, category === 'equipment-requests')
+  const equipmentQuery = useEquipmentListings(p, category === 'equipment' || category === 'equipment-requests')
   const operatorsQuery = useOperatorListings(p, category === 'operators')
   const partsQuery     = useParts(p,       category === 'parts')
   const servicesQuery  = useCarServices(p, category === 'services')
   const raw = {
-    cars:      carsQuery.data,
-    buses:     busesQuery.data,
-    equipment: equipmentQuery.data,
-    'equipment-requests': equipmentRequestsQuery.data,
-    operators:  operatorsQuery.data,
-    parts:     partsQuery.data,
-    services:  servicesQuery.data,
+    cars:                 carsQuery.data,
+    buses:                busesQuery.data,
+    equipment:            equipmentQuery.data,
+    'equipment-requests': equipmentQuery.data,
+    operators:            operatorsQuery.data,
+    parts:                partsQuery.data,
+    services:             servicesQuery.data,
   }[category]
 
   const isLoading = {
-    cars:      carsQuery.isLoading,
-    buses:     busesQuery.isLoading,
-    equipment: equipmentQuery.isLoading,
-    'equipment-requests': equipmentRequestsQuery.isLoading,
-    operators:  operatorsQuery.isLoading,
-    parts:     partsQuery.isLoading,
-    services:  servicesQuery.isLoading,
+    cars:                 carsQuery.isLoading,
+    buses:                busesQuery.isLoading,
+    equipment:            equipmentQuery.isLoading,
+    'equipment-requests': equipmentQuery.isLoading,
+    operators:            operatorsQuery.isLoading,
+    parts:                partsQuery.isLoading,
+    services:             servicesQuery.isLoading,
   }[category]
 
   const isFetching = {
-    cars:      carsQuery.isFetching,
-    buses:     busesQuery.isFetching,
-    equipment: equipmentQuery.isFetching,
-    'equipment-requests': equipmentRequestsQuery.isFetching,
-    operators:  operatorsQuery.isFetching,
-    parts:     partsQuery.isFetching,
-    services:  servicesQuery.isFetching,
+    cars:                 carsQuery.isFetching,
+    buses:                busesQuery.isFetching,
+    equipment:            equipmentQuery.isFetching,
+    'equipment-requests': equipmentQuery.isFetching,
+    operators:            operatorsQuery.isFetching,
+    parts:                partsQuery.isFetching,
+    services:             servicesQuery.isFetching,
   }[category]
 
   const error = {
-    cars:      carsQuery.error,
-    buses:     busesQuery.error,
-    equipment: equipmentQuery.error,
-    'equipment-requests': equipmentRequestsQuery.error,
-    operators:  operatorsQuery.error,
-    parts:     partsQuery.error,
-    services:  servicesQuery.error,
+    cars:                 carsQuery.error,
+    buses:                busesQuery.error,
+    equipment:            equipmentQuery.error,
+    'equipment-requests': equipmentQuery.error,
+    operators:            operatorsQuery.error,
+    parts:                partsQuery.error,
+    services:             servicesQuery.error,
   }[category] as Error | null
 
   const items = useMemo<UnifiedListingItem[]>(() => {

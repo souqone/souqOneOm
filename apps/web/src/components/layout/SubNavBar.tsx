@@ -55,7 +55,7 @@ const BUS_LINKS = [
   { href: '/buses',                                          label: 'الرئيسية',        icon: Bus       },
   { href: '/browse/buses?busListingType=BUS_SALE',           label: 'حافلات للبيع',   icon: Search    },
   { href: '/browse/buses?busListingType=BUS_RENT',           label: 'حافلات للإيجار', icon: KeyRound  },
-  { href: '/browse/buses?busListingType=BUS_CONTRACT',       label: 'عقود تشغيل',     icon: Truck     },
+  { href: '/browse/buses?busListingType=BUS_SALE_WITH_CONTRACT', label: 'بيع مع عقد', icon: Truck },
   { href: '/add-listing/bus',                                label: 'أضف حافلتك',     icon: PlusCircle },
 ]
 

@@ -15,7 +15,6 @@ import {
   fuelLabels as fuelLabelsT,
   transmissionLabels as transLabelsT,
   conditionLabels as condLabelsT,
-  cancelLabels as cancelLabelsT,
   exteriorColors as exteriorColorsT,
   interiorColors as interiorColorsT,
 } from '@/lib/constants/mappings';
@@ -65,17 +64,8 @@ function mapCarToForm(car: Record<string, any>): Partial<ListingFormData> {
     isPriceNegotiable:  car.isPriceNegotiable ?? false,
     listingType:        (car.listingType as 'SALE' | 'RENTAL' | 'WANTED') ?? 'SALE',
     dailyPrice:         car.dailyPrice != null ? String(car.dailyPrice) : '',
-    weeklyPrice:        car.weeklyPrice != null ? String(car.weeklyPrice) : '',
     monthlyPrice:       car.monthlyPrice != null ? String(car.monthlyPrice) : '',
-    minRentalDays:      car.minRentalDays != null ? String(car.minRentalDays) : '1',
-    depositAmount:      car.depositAmount != null ? String(car.depositAmount) : '',
-    kmLimitPerDay:      car.kmLimitPerDay != null ? String(car.kmLimitPerDay) : '',
     withDriver:         car.withDriver ?? false,
-    deliveryAvailable:  car.deliveryAvailable ?? false,
-    insuranceIncluded:  car.insuranceIncluded ?? false,
-    cancellationPolicy: car.cancellationPolicy || '',
-    availableFrom:      car.availableFrom?.slice(0, 10) ?? '',
-    availableTo:        car.availableTo?.slice(0, 10) ?? '',
     whatsapp:           car.whatsapp || '',
     contactPhone:       car.contactPhone || '',
   };
@@ -92,7 +82,6 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
   const fuelLabels  = fuelLabelsT(tm);
   const transLabels = transLabelsT(tm);
   const condLabels  = condLabelsT(tm);
-  const cancelLabels = cancelLabelsT(tm);
   const extColors   = exteriorColorsT(tc);
   const intColors   = interiorColorsT(tc);
 
@@ -237,18 +226,9 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
       if (form.contactPhone)       payload.contactPhone   = form.contactPhone;
 
       if (isRental) {
-        if (form.dailyPrice)        payload.dailyPrice        = parseFloat(form.dailyPrice);
-        if (form.weeklyPrice)       payload.weeklyPrice       = parseFloat(form.weeklyPrice);
-        if (form.monthlyPrice)      payload.monthlyPrice      = parseFloat(form.monthlyPrice);
-        if (form.minRentalDays)     payload.minRentalDays     = parseInt(form.minRentalDays);
-        if (form.depositAmount)     payload.depositAmount     = parseFloat(form.depositAmount);
-        if (form.kmLimitPerDay)     payload.kmLimitPerDay     = parseInt(form.kmLimitPerDay);
-        if (form.cancellationPolicy) payload.cancellationPolicy = form.cancellationPolicy;
-        if (form.availableFrom)     payload.availableFrom     = form.availableFrom;
-        if (form.availableTo)       payload.availableTo       = form.availableTo;
-        payload.withDriver         = form.withDriver;
-        payload.deliveryAvailable  = form.deliveryAvailable;
-        payload.insuranceIncluded  = form.insuranceIncluded;
+        if (form.dailyPrice)   payload.dailyPrice   = parseFloat(form.dailyPrice);
+        if (form.monthlyPrice) payload.monthlyPrice = parseFloat(form.monthlyPrice);
+        payload.withDriver = form.withDriver;
       }
 
       // Zod validation
@@ -374,7 +354,6 @@ export function CarFormShell({ mode, id, initialData: propsInitialData }: CarFor
           onChange={handleChange}
           fuelLabels={fuelLabels}
           transLabels={transLabels}
-          cancelLabels={cancelLabels}
           extColors={extColors}
           intColors={intColors}
         />

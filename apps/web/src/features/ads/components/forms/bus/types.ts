@@ -1,8 +1,7 @@
 export const BUS_LISTING_TYPE_KEYS = [
-  { value: 'BUS_SALE',              labelKey: 'busTypeSale',         icon: 'sell',          descKey: 'busTypeSaleDesc' },
-  { value: 'BUS_SALE_WITH_CONTRACT', labelKey: 'busTypeSaleContract', icon: 'assignment',    descKey: 'busTypeSaleContractDesc' },
-  { value: 'BUS_RENT',              labelKey: 'busTypeRent',         icon: 'car_rental',    descKey: 'busTypeRentDesc' },
-  { value: 'BUS_CONTRACT',          labelKey: 'busTypeContract',     icon: 'request_quote', descKey: 'busTypeContractDesc' },
+  { value: 'BUS_SALE',              labelKey: 'busTypeSale',         icon: 'sell',       descKey: 'busTypeSaleDesc' },
+  { value: 'BUS_SALE_WITH_CONTRACT', labelKey: 'busTypeSaleContract', icon: 'assignment', descKey: 'busTypeSaleContractDesc' },
+  { value: 'BUS_RENT',              labelKey: 'busTypeRent',         icon: 'car_rental', descKey: 'busTypeRentDesc' },
 ] as const;
 
 export const BUS_TYPE_KEYS = [
@@ -67,17 +66,7 @@ export interface BusFormData {
   contractExpiry: string;
   dailyPrice: string;
   monthlyPrice: string;
-  minRentalDays: string;
   withDriver: boolean;
-  deliveryAvailable: boolean;
-  depositAmount: string;
-  insuranceIncluded: boolean;
-  availableFrom: string;
-  availableTo: string;
-  cancellationPolicy: string;
-  requestPassengers: string;
-  requestRoute: string;
-  requestSchedule: string;
   governorate: string;
   city: string;
   latitude: number | null;
@@ -112,17 +101,7 @@ export const DEFAULT_BUS_FORM: BusFormData = {
   contractExpiry: '',
   dailyPrice: '',
   monthlyPrice: '',
-  minRentalDays: '',
   withDriver: false,
-  deliveryAvailable: false,
-  depositAmount: '',
-  insuranceIncluded: false,
-  availableFrom: '',
-  availableTo: '',
-  cancellationPolicy: '',
-  requestPassengers: '',
-  requestRoute: '',
-  requestSchedule: '',
   governorate: '',
   city: '',
   latitude: null,

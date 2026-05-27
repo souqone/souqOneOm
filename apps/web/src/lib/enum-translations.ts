@@ -114,11 +114,9 @@ export function useEnumTranslations() {
 
     // ─── Bus Listing Type ─────────────────────────────────────
     busListingType: {
-      BUS_SALE:              t('enumBusSale'),
+      BUS_SALE:               t('enumBusSale'),
       BUS_SALE_WITH_CONTRACT: t('enumBusSaleContract'),
-      BUS_RENT:              t('enumBusRent'),
-      BUS_CONTRACT:          t('enumBusContract'),
-      BUS_REQUEST:           t('enumBusRequest'),
+      BUS_RENT:               t('enumBusRent'),
     },
 
     // ─── Contract Type ────────────────────────────────────────
@@ -151,8 +149,9 @@ export function useEnumTranslations() {
 
     // ─── Equipment Listing Type ───────────────────────────────
     equipmentListingType: {
-      EQUIPMENT_SALE: t('enumEquipSale'),
-      EQUIPMENT_RENT: t('enumEquipRent'),
+      EQUIPMENT_SALE:   t('enumEquipSale'),
+      EQUIPMENT_RENT:   t('enumEquipRent'),
+      EQUIPMENT_WANTED: t('enumEquipWanted'),
     },
 
     // ─── Operator Type ────────────────────────────────────────
@@ -205,21 +204,6 @@ export function useEnumTranslations() {
       NEGOTIABLE: t('enumSalNegotiable'),
     },
 
-    // ─── Cancellation Policy ──────────────────────────────────
-    cancellationPolicy: {
-      FREE:     t('cancelFree'),
-      FLEXIBLE: t('cancelFlexible'),
-      MODERATE: t('cancelModerate'),
-      STRICT:   t('cancelStrict'),
-    },
-
-    // ─── Equipment Request Status ──────────────────────────────
-    equipmentRequestStatus: {
-      OPEN:        t('enumReqOpen'),
-      IN_PROGRESS: t('enumReqInProgress'),
-      CLOSED:      t('enumReqClosed'),
-      CANCELLED:   t('enumReqCancelled'),
-    },
   };
 }
 

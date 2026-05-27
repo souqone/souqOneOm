@@ -45,24 +45,22 @@ export interface EquipmentFormData {
   features: string[];
   price: string;
   dailyPrice: string;
-  weeklyPrice: string;
   monthlyPrice: string;
   isPriceNegotiable: boolean;
   withOperator: boolean;
-  deliveryAvailable: boolean;
-  minRentalDays: string;
-  depositAmount: string;
-  insuranceIncluded: boolean;
-  availableFrom: string;
-  availableTo: string;
-  cancellationPolicy: string;
+  budgetMin: string;
+  budgetMax: string;
+  rentalDuration: string;
+  startDate: string;
+  endDate: string;
+  quantity: string;
+  siteDetails: string;
   governorate: string;
   city: string;
   latitude: number | null;
   longitude: number | null;
   contactPhone: string;
   whatsapp: string;
-  kmLimitPerDay: string;
   currency: string;
 }
 
@@ -82,23 +80,21 @@ export const DEFAULT_EQUIPMENT_FORM: EquipmentFormData = {
   features: [],
   price: '',
   dailyPrice: '',
-  weeklyPrice: '',
   monthlyPrice: '',
   isPriceNegotiable: false,
   withOperator: false,
-  deliveryAvailable: false,
-  minRentalDays: '',
-  depositAmount: '',
-  insuranceIncluded: false,
-  availableFrom: '',
-  availableTo: '',
-  cancellationPolicy: '',
+  budgetMin: '',
+  budgetMax: '',
+  rentalDuration: '',
+  startDate: '',
+  endDate: '',
+  quantity: '',
+  siteDetails: '',
   governorate: '',
   city: '',
   latitude: null,
   longitude: null,
   contactPhone: '',
   whatsapp: '',
-  kmLimitPerDay: '',
   currency: 'OMR',
 };

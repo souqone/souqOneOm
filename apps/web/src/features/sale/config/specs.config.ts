@@ -85,9 +85,6 @@ export function getSaleConfig(
         { key: 'condition', label: t('specCondition'), icon: 'Star', format: 'enum', enumKey: 'condition' },
         { key: 'governorate', label: t('specGovernorate'), icon: 'MapPin' },
         { key: 'city', label: t('specCity'), icon: 'Building2', hideIfEmpty: true },
-        { key: 'busData.requestPassengers', label: t('specRequestPassengers'), icon: 'Users', hideIfEmpty: true },
-        { key: 'busData.requestRoute', label: t('specRequestRoute'), icon: 'Route', hideIfEmpty: true },
-        { key: 'busData.requestSchedule', label: t('specRequestSchedule'), icon: 'Clock', hideIfEmpty: true },
       ],
       highlightFields: [
         {

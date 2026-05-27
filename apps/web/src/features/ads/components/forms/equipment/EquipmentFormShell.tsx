@@ -60,18 +60,16 @@ export function EquipmentFormShell({ mode, id }: EquipmentFormProps) {
       features:          equip.features ?? [],
       price:             String(equip.price ?? ''),
       dailyPrice:        String(equip.dailyPrice ?? ''),
-      weeklyPrice:       String(equip.weeklyPrice ?? ''),
       monthlyPrice:      String(equip.monthlyPrice ?? ''),
       isPriceNegotiable: equip.isPriceNegotiable ?? false,
       withOperator:      equip.withOperator ?? false,
-      deliveryAvailable: equip.deliveryAvailable ?? false,
-      minRentalDays:     String(equip.minRentalDays ?? ''),
-      depositAmount:     String(equip.depositAmount ?? ''),
-      insuranceIncluded: equip.insuranceIncluded ?? false,
-      availableFrom:     equip.availableFrom?.slice(0, 10) ?? '',
-      availableTo:       equip.availableTo?.slice(0, 10) ?? '',
-      cancellationPolicy: equip.cancellationPolicy ?? '',
-      kmLimitPerDay:     String(equip.kmLimitPerDay ?? ''),
+      budgetMin:         String(equip.budgetMin ?? ''),
+      budgetMax:         String(equip.budgetMax ?? ''),
+      rentalDuration:    equip.rentalDuration ?? '',
+      startDate:         equip.startDate?.slice(0, 10) ?? '',
+      endDate:           equip.endDate?.slice(0, 10) ?? '',
+      quantity:          String(equip.quantity ?? ''),
+      siteDetails:       equip.siteDetails ?? '',
       currency:          equip.currency ?? 'OMR',
       governorate:       equip.governorate ?? '',
       city:              equip.city ?? '',
@@ -136,23 +134,21 @@ export function EquipmentFormShell({ mode, id }: EquipmentFormProps) {
       if (form.features.length) payload.features = form.features;
       if (form.price)           payload.price = Number(form.price);
       if (form.dailyPrice)      payload.dailyPrice = Number(form.dailyPrice);
-      if (form.weeklyPrice)     payload.weeklyPrice = Number(form.weeklyPrice);
       if (form.monthlyPrice)    payload.monthlyPrice = Number(form.monthlyPrice);
       payload.isPriceNegotiable = form.isPriceNegotiable;
       payload.withOperator      = form.withOperator;
-      payload.deliveryAvailable = form.deliveryAvailable;
-      if (form.minRentalDays)    payload.minRentalDays = Number(form.minRentalDays);
-      if (form.depositAmount)    payload.depositAmount = Number(form.depositAmount);
-      if (isRent)                payload.insuranceIncluded = form.insuranceIncluded;
-      if (form.availableFrom)    payload.availableFrom = form.availableFrom;
-      if (form.availableTo)      payload.availableTo = form.availableTo;
-      if (form.cancellationPolicy) payload.cancellationPolicy = form.cancellationPolicy;
-      if (form.governorate)      payload.governorate = form.governorate;
-      if (form.city)             payload.city = form.city;
-      if (form.latitude)         payload.latitude = form.latitude;
-      if (form.longitude)        payload.longitude = form.longitude;
-      if (form.kmLimitPerDay)    payload.kmLimitPerDay = Number(form.kmLimitPerDay);
-      payload.currency           = form.currency;
+      if (form.budgetMin)       payload.budgetMin = Number(form.budgetMin);
+      if (form.budgetMax)       payload.budgetMax = Number(form.budgetMax);
+      if (form.rentalDuration)  payload.rentalDuration = form.rentalDuration;
+      if (form.startDate)       payload.startDate = form.startDate;
+      if (form.endDate)         payload.endDate = form.endDate;
+      if (form.quantity)        payload.quantity = Number(form.quantity);
+      if (form.siteDetails)     payload.siteDetails = form.siteDetails;
+      if (form.governorate)     payload.governorate = form.governorate;
+      if (form.city)            payload.city = form.city;
+      if (form.latitude)        payload.latitude = form.latitude;
+      if (form.longitude)       payload.longitude = form.longitude;
+      payload.currency          = form.currency;
       if (form.contactPhone)     payload.contactPhone = form.contactPhone;
       if (form.whatsapp)         payload.whatsapp = form.whatsapp;
 

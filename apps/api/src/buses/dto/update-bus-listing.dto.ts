@@ -8,10 +8,6 @@ import {
   FuelType, Transmission, ItemCondition, ListingStatus,
 } from '@prisma/client';
 
-/**
- * DTO for updating a bus listing.
- * All fields optional. Explicitly excludes: userId, slug, viewCount, createdAt.
- */
 export class UpdateBusListingDto {
   @IsOptional()
   @IsString()
@@ -94,7 +90,7 @@ export class UpdateBusListingDto {
   @IsBoolean()
   isPriceNegotiable?: boolean;
 
-  // ── Contract (sale with contract) ──
+  // ── Contract (BUS_SALE_WITH_CONTRACT) ──
   @IsOptional()
   @IsEnum(ContractType)
   contractType?: ContractType;
@@ -119,7 +115,7 @@ export class UpdateBusListingDto {
   @IsDateString()
   contractExpiry?: string;
 
-  // ── Rental ──
+  // ── Rental (سعر استرشادي) ──
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
@@ -133,61 +129,8 @@ export class UpdateBusListingDto {
   monthlyPrice?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  minRentalDays?: number;
-
-  @IsOptional()
   @IsBoolean()
   withDriver?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  deliveryAvailable?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(0)
-  depositAmount?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(0)
-  kmLimitPerDay?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  insuranceIncluded?: boolean;
-
-  @IsOptional()
-  @IsString()
-  cancellationPolicy?: string;
-
-  @IsOptional()
-  @IsDateString()
-  availableFrom?: string;
-
-  @IsOptional()
-  @IsDateString()
-  availableTo?: string;
-
-  // ── Contract request ──
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  requestPassengers?: number;
-
-  @IsOptional()
-  @IsString()
-  requestRoute?: string;
-
-  @IsOptional()
-  @IsString()
-  requestSchedule?: string;
 
   // ── Location ──
   @IsOptional()

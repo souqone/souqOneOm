@@ -70,7 +70,7 @@ export function normalizeCar(raw: any): UnifiedListingItem {
 
 const BUS_TYPE_LABELS: Record<string, string> = {
   BUS_SALE: 'للبيع', BUS_SALE_WITH_CONTRACT: 'بيع بعقد',
-  BUS_RENT: 'للإيجار', BUS_CONTRACT: 'تعاقد',
+  BUS_RENT: 'للإيجار',
 }
 
 export function normalizeBus(raw: any): UnifiedListingItem {
@@ -121,13 +121,13 @@ const EQUIP_TYPE_AR: Record<string, string> = {
 
 export function normalizeEquipment(raw: any): UnifiedListingItem {
   const isRent = raw.listingType === 'EQUIPMENT_RENT'
-  const price = resolvePrice(isRent ? (raw.dailyPrice ?? raw.monthlyPrice) : raw.price)
+  const isWanted = raw.listingType === 'EQUIPMENT_WANTED'
+  const price = resolvePrice(isRent ? (raw.dailyPrice ?? raw.monthlyPrice) : isWanted ? (raw.budgetMax ?? raw.budgetMin) : raw.price)
   const priceLabel = isRent ? (raw.dailyPrice ? '/ يوم' : '/ شهر') : null
 
-  const primaryBadge: Badge | null = {
-    label: isRent ? 'للإيجار' : 'للبيع',
-    color: isRent ? 'green' : 'blue',
-  }
+  const primaryBadge: Badge | null = isWanted
+    ? { label: 'مطلوب', color: 'orange' }
+    : { label: isRent ? 'للإيجار' : 'للبيع', color: isRent ? 'green' : 'blue' }
 
   const conditionMap: Record<string, string> = {
     NEW: 'جديد', LIKE_NEW: 'شبه جديد', USED: 'مستعمل', GOOD: 'جيد', FAIR: 'مقبول',
@@ -259,25 +259,6 @@ export function normalizeService(raw: any): UnifiedListingItem {
 
 // ─── Dispatcher ─────────────────────────────────────────────────────────────
 
-function normalizeEquipmentRequest(raw: any): UnifiedListingItem {
-  return {
-    id: raw.id,
-    category: 'equipment-requests',
-    title: raw.title || '',
-    price: raw.budgetMax ? Number(raw.budgetMax) : raw.budgetMin ? Number(raw.budgetMin) : null,
-    priceLabel: null,
-    currency: raw.currency || 'OMR',
-    images: [],
-    governorate: raw.governorate ?? null,
-    createdAt: raw.createdAt ?? new Date().toISOString(),
-    primaryBadge: { label: 'طلب معدة', color: 'orange' },
-    secondaryBadge: raw.withOperator ? { label: 'مع مشغل', color: 'green' } : null,
-    details: [],
-    href: `/equipment/requests/${raw.slug || raw.id}`,
-    favoriteEntityType: 'EQUIPMENT_REQUEST',
-  }
-}
-
 function normalizeOperator(raw: any): UnifiedListingItem {
   return {
     id: raw.id,
@@ -301,7 +282,7 @@ export const NORMALIZERS: Record<ListingCategory, (raw: any) => UnifiedListingIt
   cars: normalizeCar,
   buses: normalizeBus,
   equipment: normalizeEquipment,
-  'equipment-requests': normalizeEquipmentRequest,
+  'equipment-requests': normalizeEquipment,
   operators: normalizeOperator,
   parts: normalizePart,
   services: normalizeService,

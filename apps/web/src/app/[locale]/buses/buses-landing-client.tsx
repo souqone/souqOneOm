@@ -52,10 +52,10 @@ const BG_CLS: { [k: string]: string } = {
 };
 
 const QUICK_LINKS = [
-  { title: 'حافلات للبيع',   sublabel: 'جديدة ومستعملة',   icon: Bus,      color: '#2563eb', href: '/browse/buses?busListingType=BUS_SALE' },
-  { title: 'حافلات للإيجار', sublabel: 'أسعار مرنة',       icon: KeyRound, color: '#16a34a', href: '/browse/buses?busListingType=BUS_RENT' },
-  { title: 'عقود تشغيل',     sublabel: 'تعاقد طويل الأمد', icon: Truck,    color: '#7c3aed', href: '/browse/buses?busListingType=BUS_CONTRACT' },
-  { title: 'أضف حافلتك',     sublabel: 'مجاناً الآن',      icon: Plus,     color: '#d97706', href: '/add-listing/bus' },
+  { title: 'حافلات للبيع',       sublabel: 'جديدة ومستعملة',   icon: Bus,      color: '#2563eb', href: '/browse/buses?busListingType=BUS_SALE' },
+  { title: 'حافلات للإيجار',    sublabel: 'أسعار مرنة',       icon: KeyRound, color: '#16a34a', href: '/browse/buses?busListingType=BUS_RENT' },
+  { title: 'بيع مع عقد تشغيل', sublabel: 'شراء مع ضمان عقد', icon: Truck,    color: '#7c3aed', href: '/browse/buses?busListingType=BUS_SALE_WITH_CONTRACT' },
+  { title: 'أضف حافلتك',        sublabel: 'مجاناً الآن',      icon: Plus,     color: '#d97706', href: '/add-listing/bus' },
 ] as const;
 
 const BUS_TYPES = [
@@ -77,7 +77,6 @@ const HOW_STEPS = [
 const BUS_SECTIONS_CONFIG = [
   { type: 'BUS_SALE',               title: 'حافلات للبيع',      subtitle: 'حافلات جديدة ومستعملة بأفضل الأسعار',   color: '#2563eb', href: '/browse/buses?busListingType=BUS_SALE' },
   { type: 'BUS_RENT',               title: 'حافلات للإيجار',    subtitle: 'خيارات إيجار مرنة تناسب كل الاحتياجات', color: '#16a34a', href: '/browse/buses?busListingType=BUS_RENT' },
-  { type: 'BUS_CONTRACT',           title: 'حافلات للتعاقد',    subtitle: 'عقود تشغيل طويلة المدى',                 color: '#7c3aed', href: '/browse/buses?busListingType=BUS_CONTRACT' },
   { type: 'BUS_SALE_WITH_CONTRACT', title: 'بيع مع عقد تشغيل', subtitle: 'شراء الحافلة مع ضمان العقد',             color: '#d97706', href: '/browse/buses?busListingType=BUS_SALE_WITH_CONTRACT' },
 ] as const;
 
@@ -192,9 +191,8 @@ export function BusesLandingClient({ buses, totalBuses }: Props) {
             label: 'حافلات',
             route: '/browse/buses',
             subcategories: [
-              { key: 'sale',          label: 'حافلات للبيع',          route: '/browse/buses?busListingType=BUS_SALE'              },
-              { key: 'rent',          label: 'حافلات للإيجار',        route: '/browse/buses?busListingType=BUS_RENT'              },
-              { key: 'contract',      label: 'حافلات للتعاقد',       route: '/browse/buses?busListingType=BUS_CONTRACT'          },
+              { key: 'sale',          label: 'حافلات للبيع',      route: '/browse/buses?busListingType=BUS_SALE'              },
+              { key: 'rent',          label: 'حافلات للإيجار',    route: '/browse/buses?busListingType=BUS_RENT'              },
               { key: 'sale_contract', label: 'بيع مع عقد تشغيل', route: '/browse/buses?busListingType=BUS_SALE_WITH_CONTRACT' },
             ],
           }]}

@@ -36,8 +36,6 @@ export const ROUTES = {
   },
   messages: '/messages',
   conversation: (id: string) => `/messages/${id}`,
-  bookings: '/bookings',
-  booking: (id: string) => `/bookings/${id}`,
   favorites: '/favorites',
   notifications: '/notifications',
   profile: {

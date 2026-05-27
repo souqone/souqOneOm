@@ -61,9 +61,6 @@ export interface BusSpecificData {
   contractMonthly?: string;
   contractExpiry?: string;
   plateNumber?: string;
-  requestPassengers?: number;
-  requestRoute?: string;
-  requestSchedule?: string;
 }
 
 /** Equipment-specific data fields */

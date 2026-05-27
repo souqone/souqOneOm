@@ -48,17 +48,8 @@ export const carListingSchema = z.object({
   listingType: z.enum(['SALE', 'RENTAL', 'WANTED']),
 
   dailyPrice: z.coerce.number().optional(),
-  weeklyPrice: z.coerce.number().optional(),
   monthlyPrice: z.coerce.number().optional(),
-  minRentalDays: z.coerce.number().optional(),
-  depositAmount: z.coerce.number().optional(),
-  kmLimitPerDay: z.coerce.number().optional(),
   withDriver: z.boolean().optional(),
-  deliveryAvailable: z.boolean().optional(),
-  insuranceIncluded: z.boolean().optional(),
-  cancellationPolicy: z.string().optional(),
-  availableFrom: z.string().optional(),
-  availableTo: z.string().optional(),
 
   whatsapp: z.string().optional(),
   contactPhone: z.string().optional(),

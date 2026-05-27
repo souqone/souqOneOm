@@ -109,17 +109,8 @@ export class ListingsService {
         condition: dto.condition ?? 'USED',
         listingType: dto.listingType ?? 'SALE',
         dailyPrice: dto.dailyPrice ? new Prisma.Decimal(dto.dailyPrice) : undefined,
-        weeklyPrice: dto.weeklyPrice ? new Prisma.Decimal(dto.weeklyPrice) : undefined,
         monthlyPrice: dto.monthlyPrice ? new Prisma.Decimal(dto.monthlyPrice) : undefined,
-        minRentalDays: dto.minRentalDays,
-        depositAmount: dto.depositAmount ? new Prisma.Decimal(dto.depositAmount) : undefined,
-        kmLimitPerDay: dto.kmLimitPerDay,
         withDriver: dto.withDriver ?? false,
-        deliveryAvailable: dto.deliveryAvailable ?? false,
-        insuranceIncluded: dto.insuranceIncluded ?? false,
-        cancellationPolicy: dto.cancellationPolicy,
-        availableFrom: dto.availableFrom ? new Date(dto.availableFrom) : undefined,
-        availableTo: dto.availableTo ? new Date(dto.availableTo) : undefined,
         governorate: dto.governorate,
         city: dto.city,
         latitude: dto.latitude,
@@ -340,17 +331,8 @@ export class ListingsService {
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.listingType !== undefined) data.listingType = dto.listingType;
     if (dto.dailyPrice !== undefined) data.dailyPrice = dto.dailyPrice ? new Prisma.Decimal(dto.dailyPrice) : null;
-    if (dto.weeklyPrice !== undefined) data.weeklyPrice = dto.weeklyPrice ? new Prisma.Decimal(dto.weeklyPrice) : null;
     if (dto.monthlyPrice !== undefined) data.monthlyPrice = dto.monthlyPrice ? new Prisma.Decimal(dto.monthlyPrice) : null;
-    if (dto.minRentalDays !== undefined) data.minRentalDays = dto.minRentalDays;
-    if (dto.depositAmount !== undefined) data.depositAmount = dto.depositAmount ? new Prisma.Decimal(dto.depositAmount) : null;
-    if (dto.kmLimitPerDay !== undefined) data.kmLimitPerDay = dto.kmLimitPerDay;
     if (dto.withDriver !== undefined) data.withDriver = dto.withDriver;
-    if (dto.deliveryAvailable !== undefined) data.deliveryAvailable = dto.deliveryAvailable;
-    if (dto.insuranceIncluded !== undefined) data.insuranceIncluded = dto.insuranceIncluded;
-    if (dto.cancellationPolicy !== undefined) data.cancellationPolicy = dto.cancellationPolicy;
-    if (dto.availableFrom !== undefined) data.availableFrom = dto.availableFrom ? new Date(dto.availableFrom) : null;
-    if (dto.availableTo !== undefined) data.availableTo = dto.availableTo ? new Date(dto.availableTo) : null;
     if (dto.brandId !== undefined)    data.brand    = dto.brandId    ? { connect: { id: dto.brandId    } } : { disconnect: true };
     if (dto.carModelId !== undefined) data.carModel = dto.carModelId ? { connect: { id: dto.carModelId } } : { disconnect: true };
     if (dto.carTrimId !== undefined)  data.carTrim  = dto.carTrimId  ? { connect: { id: dto.carTrimId  } } : { disconnect: true };

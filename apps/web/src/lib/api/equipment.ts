@@ -25,19 +25,17 @@ export interface EquipmentListingItem {
   features: string[];
   price?: string;
   dailyPrice?: string;
-  weeklyPrice?: string;
   monthlyPrice?: string;
   currency: string;
   isPriceNegotiable: boolean;
   withOperator: boolean;
-  deliveryAvailable: boolean;
-  minRentalDays?: number;
-  depositAmount?: string;
-  kmLimitPerDay?: number;
-  insuranceIncluded: boolean;
-  cancellationPolicy?: string;
-  availableFrom?: string;
-  availableTo?: string;
+  budgetMin?: string;
+  budgetMax?: string;
+  rentalDuration?: string;
+  startDate?: string;
+  endDate?: string;
+  quantity?: number;
+  siteDetails?: string;
   governorate?: string;
   city?: string;
   latitude?: number;
@@ -49,52 +47,6 @@ export interface EquipmentListingItem {
   userId: string;
   user: UserSummary;
   images: ImageItem[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface EquipmentRequestItem {
-  id: string;
-  title: string;
-  slug: string;
-  description: string;
-  equipmentType: string;
-  quantity: number;
-  budgetMin?: string;
-  budgetMax?: string;
-  currency: string;
-  rentalDuration?: string;
-  startDate?: string;
-  endDate?: string;
-  withOperator: boolean;
-  governorate?: string;
-  city?: string;
-  siteDetails?: string;
-  latitude?: number;
-  longitude?: number;
-  contactPhone?: string;
-  whatsapp?: string;
-  requestStatus: string;
-  viewCount: number;
-  userId: string;
-  user: UserSummary;
-  bids?: EquipmentBidItem[];
-  _count?: { bids: number };
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface EquipmentBidItem {
-  id: string;
-  price: string;
-  currency: string;
-  availability: string;
-  notes?: string;
-  withOperator: boolean;
-  bidStatus: string;
-  requestId: string;
-  userId: string;
-  user: UserSummary;
   createdAt: string;
   updatedAt: string;
 }
@@ -221,93 +173,6 @@ export function useUpdateEquipmentListing() {
 
 export function useDeleteEquipmentListing() {
   return useDeleteListingHook('equipment', (id) => `/equipment/${id}`);
-}
-
-// ═══════════════════════════════════════
-// Equipment Requests
-// ═══════════════════════════════════════
-
-export function useEquipmentRequests(params?: Record<string, string>, enabled = true) {
-  const qs = new URLSearchParams(params).toString();
-  return useQuery<Paginated<EquipmentRequestItem>>({
-    queryKey: ['equipment-requests', params],
-    queryFn: () => apiRequest(`/equipment-requests${qs ? `?${qs}` : ''}`),
-    enabled,
-  });
-}
-
-export function useEquipmentRequest(id: string) {
-  return useQuery<EquipmentRequestItem>({
-    queryKey: ['equipment-requests', id],
-    queryFn: () => apiRequest(`/equipment-requests/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useMyEquipmentRequests() {
-  return useMyListingsHook<EquipmentRequestItem>('equipment-requests', '/equipment-requests/my');
-}
-
-export function useCreateEquipmentRequest() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Record<string, unknown>) =>
-      apiRequest<EquipmentRequestItem>('/equipment-requests', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
-}
-
-export function useUpdateEquipmentRequest() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      apiRequest<EquipmentRequestItem>(`/equipment-requests/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
-}
-
-export function useChangeRequestStatus() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, requestStatus }: { id: string; requestStatus: string }) =>
-      apiRequest<EquipmentRequestItem>(`/equipment-requests/${id}/status`, { method: 'PATCH', body: JSON.stringify({ requestStatus }) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
-}
-
-export function useDeleteEquipmentRequest() {
-  return useDeleteListingHook('equipment-requests', (id) => `/equipment-requests/${id}`);
-}
-
-// ═══════════════════════════════════════
-// Bids
-// ═══════════════════════════════════════
-
-export function useCreateBid() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requestId, data }: { requestId: string; data: Record<string, unknown> }) =>
-      apiRequest<EquipmentBidItem>(`/equipment-requests/${requestId}/bids`, { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
-}
-
-export function useAcceptBid() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requestId, bidId }: { requestId: string; bidId: string }) =>
-      apiRequest<EquipmentBidItem>(`/equipment-requests/${requestId}/bids/${bidId}/accept`, { method: 'PATCH' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
-}
-
-export function useRejectBid() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requestId, bidId }: { requestId: string; bidId: string }) =>
-      apiRequest<EquipmentBidItem>(`/equipment-requests/${requestId}/bids/${bidId}/reject`, { method: 'PATCH' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['equipment-requests'] }); },
-  });
 }
 
 // ═══════════════════════════════════════

@@ -50,7 +50,7 @@ const CATEGORY_ENTITY_TYPE: Record<ListingCategory | 'jobs', string> = {
   cars:      'LISTING',
   buses:     'BUS_LISTING',
   equipment: 'EQUIPMENT_LISTING',
-  'equipment-requests': 'EQUIPMENT_REQUEST',
+  'equipment-requests': 'EQUIPMENT_LISTING',
   operators: 'OPERATOR_LISTING',
   parts:     'SPARE_PART',
   services:  'CAR_SERVICE',

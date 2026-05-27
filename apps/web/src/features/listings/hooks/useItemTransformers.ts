@@ -9,7 +9,7 @@ import { translateEnum } from '@/lib/translate-enum'
 
 import type { ListingItem } from '@/lib/api/listings'
 import type { BusListingItem } from '@/lib/api/buses'
-import type { EquipmentListingItem, EquipmentRequestItem, OperatorListingItem } from '@/lib/api/equipment'
+import type { EquipmentListingItem, OperatorListingItem } from '@/lib/api/equipment'
 import type { SparePartItem } from '@/lib/api/parts'
 import type { CarServiceItem } from '@/lib/api/services'
 import type { JobItem } from '@/lib/api/jobs'
@@ -43,8 +43,8 @@ function formatMoney(value: number, currency: string | undefined, t: T): string 
 function getListingTypeBadge(type: string, enums: EnumTranslations): Badge {
   const colorMap: Record<string, Badge['color']> = {
     SALE: 'blue', RENTAL: 'green', WANTED: 'orange',
-    BUS_SALE: 'blue', BUS_SALE_WITH_CONTRACT: 'blue', BUS_RENT: 'green', BUS_CONTRACT: 'purple', BUS_REQUEST: 'orange',
-    EQUIPMENT_SALE: 'blue', EQUIPMENT_RENT: 'green',
+    BUS_SALE: 'blue', BUS_SALE_WITH_CONTRACT: 'blue', BUS_RENT: 'green',
+    EQUIPMENT_SALE: 'blue', EQUIPMENT_RENT: 'green', EQUIPMENT_WANTED: 'orange',
   }
   const map = type.startsWith('BUS_')
     ? enums.busListingType
@@ -78,13 +78,13 @@ function translateEquipmentType(v: string, enums: EnumTranslations): string { re
 
 const ENTITY_CATEGORY: Record<string, ListingCategory | 'jobs'> = {
   LISTING: 'cars', BUS_LISTING: 'buses', EQUIPMENT_LISTING: 'equipment',
-  EQUIPMENT_REQUEST: 'equipment-requests', OPERATOR_LISTING: 'operators',
+  OPERATOR_LISTING: 'operators',
   SPARE_PART: 'parts', CAR_SERVICE: 'services', JOB: 'jobs',
 }
 
 const ENTITY_ROUTE: Record<string, string> = {
   LISTING: '/sale/car', BUS_LISTING: '/sale/bus', EQUIPMENT_LISTING: '/sale/equipment',
-  EQUIPMENT_REQUEST: '/equipment/requests', OPERATOR_LISTING: '/equipment/operators',
+  OPERATOR_LISTING: '/equipment/operators',
   SPARE_PART: '/sale/part', CAR_SERVICE: '/sale/service', JOB: '/jobs',
 }
 
@@ -165,12 +165,8 @@ export function useItemTransformers() {
           features: raw.features, engineSize: raw.engineSize, horsepower: raw.horsepower,
           doors: raw.doors, seats: raw.seats, driveType: raw.driveType,
           description: raw.description, listingType: raw.listingType,
-          dailyPrice: raw.dailyPrice, weeklyPrice: raw.weeklyPrice, monthlyPrice: raw.monthlyPrice,
-          minRentalDays: raw.minRentalDays, depositAmount: raw.depositAmount,
-          kmLimitPerDay: raw.kmLimitPerDay, withDriver: raw.withDriver,
-          deliveryAvailable: raw.deliveryAvailable, insuranceIncluded: raw.insuranceIncluded,
-          cancellationPolicy: raw.cancellationPolicy, availableFrom: raw.availableFrom,
-          availableTo: raw.availableTo, city: raw.city, latitude: raw.latitude,
+          dailyPrice: raw.dailyPrice, monthlyPrice: raw.monthlyPrice,
+          withDriver: raw.withDriver, city: raw.city, latitude: raw.latitude,
           longitude: raw.longitude, isPremium: raw.isPremium, featuredUntil: raw.featuredUntil,
           status: raw.status,
         },
@@ -181,13 +177,12 @@ export function useItemTransformers() {
 
     function transformBus(raw: BusListingItem): UnifiedListingItem {
       const isRental = raw.busListingType === 'BUS_RENT'
-      const isContract = raw.busListingType === 'BUS_CONTRACT'
       const price = isRental
         ? toPrice(raw.dailyPrice ?? raw.monthlyPrice ?? raw.price)
-        : toPrice(isContract ? (raw.contractMonthly ?? raw.price) : raw.price)
+        : toPrice(raw.price)
       const priceLabel = isRental
         ? raw.dailyPrice ? t('daily') : raw.monthlyPrice ? t('monthly') : null
-        : isContract && raw.contractMonthly ? t('monthly') : null
+        : null
 
       const details: DetailItem[] = [
         raw.year         ? { icon: 'Calendar',  value: String(raw.year) }                                     : null,
@@ -226,12 +221,7 @@ export function useItemTransformers() {
           contractType: raw.contractType, contractClient: raw.contractClient,
           contractMonthly: raw.contractMonthly, contractDuration: raw.contractDuration,
           contractExpiry: raw.contractExpiry, dailyPrice: raw.dailyPrice,
-          monthlyPrice: raw.monthlyPrice, minRentalDays: raw.minRentalDays,
-          withDriver: raw.withDriver, deliveryAvailable: raw.deliveryAvailable,
-          depositAmount: raw.depositAmount, kmLimitPerDay: raw.kmLimitPerDay,
-          insuranceIncluded: raw.insuranceIncluded, cancellationPolicy: raw.cancellationPolicy,
-          availableFrom: raw.availableFrom, availableTo: raw.availableTo,
-          requestPassengers: raw.requestPassengers, city: raw.city,
+          monthlyPrice: raw.monthlyPrice, withDriver: raw.withDriver, city: raw.city,
           latitude: raw.latitude, longitude: raw.longitude, status: raw.status,
         },
       }
@@ -281,53 +271,12 @@ export function useItemTransformers() {
           listingType: raw.listingType, make: raw.make, model: raw.model, year: raw.year,
           condition: raw.condition, capacity: raw.capacity, power: raw.power,
           weight: raw.weight, hoursUsed: raw.hoursUsed, features: raw.features,
-          price: raw.price, dailyPrice: raw.dailyPrice, weeklyPrice: raw.weeklyPrice,
-          monthlyPrice: raw.monthlyPrice, currency: raw.currency, withOperator: raw.withOperator,
-          deliveryAvailable: raw.deliveryAvailable, minRentalDays: raw.minRentalDays,
-          depositAmount: raw.depositAmount, kmLimitPerDay: raw.kmLimitPerDay,
-          insuranceIncluded: raw.insuranceIncluded, cancellationPolicy: raw.cancellationPolicy,
-          availableFrom: raw.availableFrom, availableTo: raw.availableTo,
+          price: raw.price, dailyPrice: raw.dailyPrice, monthlyPrice: raw.monthlyPrice,
+          currency: raw.currency, withOperator: raw.withOperator,
+          budgetMin: raw.budgetMin, budgetMax: raw.budgetMax, rentalDuration: raw.rentalDuration,
+          startDate: raw.startDate, endDate: raw.endDate, quantity: raw.quantity,
+          siteDetails: raw.siteDetails,
           city: raw.city, latitude: raw.latitude, longitude: raw.longitude, status: raw.status,
-        },
-      }
-    }
-
-    // ── Equipment Request ────────────────────────────────────────────────
-
-    function transformEquipmentRequest(raw: EquipmentRequestItem): UnifiedListingItem {
-      const budgetMax = toPrice(raw.budgetMax)
-      const budgetMin = toPrice(raw.budgetMin)
-      const details: DetailItem[] = [
-        raw.equipmentType ? { icon: 'Wrench', value: translateEquipmentType(raw.equipmentType, enums) } : null,
-        raw.quantity ? { icon: 'Tag', value: `${t('quantity')}: ${raw.quantity}` } : null,
-        raw.rentalDuration ? { icon: 'Calendar', value: raw.rentalDuration } : null,
-        raw.withOperator ? { icon: 'HardHat', value: t('withOperator') } : null,
-        raw.governorate ? { icon: 'MapPin', value: resolveLocationLabel(raw.governorate, locale) ?? raw.governorate } : null,
-      ].filter(Boolean) as DetailItem[]
-
-      return {
-        id: raw.id, category: 'equipment-requests', title: raw.title,
-        price: budgetMax ?? budgetMin, priceLabel: null,
-        priceText: budgetMax ? `${t('budget')}: ${formatMoney(budgetMax, raw.currency, t)}` : null,
-        currency: raw.currency || 'OMR', images: [],
-        governorate: raw.governorate ?? null, createdAt: raw.createdAt, viewCount: raw.viewCount,
-        primaryBadge: { label: t('equipmentRequest'), color: 'orange' },
-        secondaryBadge: raw.requestStatus ? {
-          label: translateEnum(enums.equipmentRequestStatus, raw.requestStatus),
-          color: raw.requestStatus === 'OPEN' ? 'green' : raw.requestStatus === 'IN_PROGRESS' ? 'orange' : 'gray',
-        } : null,
-        details: details.slice(0, 5),
-        href: `/equipment/requests/${raw.slug || raw.id}`,
-        phoneNumber: raw.contactPhone ?? raw.user?.phone ?? null,
-        whatsappNumber: raw.whatsapp ?? null,
-        sellerVerified: raw.user?.isVerified ?? false,
-        favoriteEntityType: 'EQUIPMENT_REQUEST',
-        attributes: {
-          slug: raw.slug, description: raw.description, equipmentType: raw.equipmentType,
-          quantity: raw.quantity, budgetMin: raw.budgetMin, budgetMax: raw.budgetMax,
-          currency: raw.currency, rentalDuration: raw.rentalDuration, startDate: raw.startDate,
-          endDate: raw.endDate, withOperator: raw.withOperator, city: raw.city,
-          requestStatus: raw.requestStatus, bidsCount: raw._count?.bids,
         },
       }
     }
@@ -551,8 +500,8 @@ export function useItemTransformers() {
       switch (category) {
         case 'cars':               return transformCar(item as ListingItem)
         case 'buses':              return transformBus(item as BusListingItem)
-        case 'equipment':          return transformEquipment(item as EquipmentListingItem)
-        case 'equipment-requests': return transformEquipmentRequest(item as EquipmentRequestItem)
+        case 'equipment':
+        case 'equipment-requests': return transformEquipment(item as EquipmentListingItem)
         case 'operators':          return transformOperator(item as OperatorListingItem)
         case 'parts':              return transformPart(item as SparePartItem)
         case 'services':           return transformService(item as CarServiceItem)
@@ -564,7 +513,6 @@ export function useItemTransformers() {
       transformCar,
       transformBus,
       transformEquipment,
-      transformEquipmentRequest,
       transformOperator,
       transformPart,
       transformJob,

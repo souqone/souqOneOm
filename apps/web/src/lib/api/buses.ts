@@ -30,18 +30,7 @@ export interface BusListingItem {
   contractExpiry?: string;
   dailyPrice?: string;
   monthlyPrice?: string;
-  minRentalDays?: number;
   withDriver: boolean;
-  deliveryAvailable: boolean;
-  depositAmount?: string;
-  kmLimitPerDay?: number;
-  insuranceIncluded: boolean;
-  cancellationPolicy?: string;
-  availableFrom?: string;
-  availableTo?: string;
-  requestPassengers?: number;
-  requestRoute?: string;
-  requestSchedule?: string;
   governorate?: string;
   city?: string;
   latitude?: number;

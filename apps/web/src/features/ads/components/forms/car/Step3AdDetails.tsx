@@ -85,32 +85,14 @@ export function Step3AdDetails({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>{tp('lfDailyPrice')}</label>
                 <input type="number" required step="0.001" value={form.dailyPrice} onChange={(e) => onChange({ dailyPrice: e.target.value })} placeholder="15.000" className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>{tp('lfWeeklyPrice')}</label>
-                <input type="number" step="0.001" value={form.weeklyPrice} onChange={(e) => onChange({ weeklyPrice: e.target.value })} placeholder="90.000" className={inputCls} />
-              </div>
-              <div>
                 <label className={labelCls}>{tp('lfMonthlyPrice')}</label>
                 <input type="number" step="0.001" value={form.monthlyPrice} onChange={(e) => onChange({ monthlyPrice: e.target.value })} placeholder="300.000" className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>{tp('lfDepositAmount')}</label>
-              <input type="number" step="0.001" value={form.depositAmount} onChange={(e) => onChange({ depositAmount: e.target.value })} placeholder="50.000" className={inputCls} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>{tp('lfAvailableFrom')}</label>
-                <input type="date" value={form.availableFrom} onChange={(e) => onChange({ availableFrom: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{tp('lfAvailableTo')}</label>
-                <input type="date" value={form.availableTo} onChange={(e) => onChange({ availableTo: e.target.value })} className={inputCls} />
               </div>
             </div>
           </div>

@@ -27,7 +27,6 @@ export function MobileDrawer({ open, close, navLinks, flatNavLinks: _flatNavLink
   const accountLinks = [
     { href: '/profile', icon: 'person', label: t('profile') },
     { href: '/my-listings', icon: 'directions_car', label: t('myListings') },
-    { href: '/bookings', icon: 'event_note', label: t('myBookings') },
     { href: '/messages', icon: 'chat', label: t('messages') },
     { href: '/favorites', icon: 'favorite', label: t('favorites') },
     { href: '/profile?tab=settings', icon: 'settings', label: t('settings') },

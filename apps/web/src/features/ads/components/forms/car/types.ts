@@ -27,17 +27,8 @@ export interface ListingFormData {
   isPriceNegotiable: boolean;
   listingType: 'SALE' | 'RENTAL' | 'WANTED';
   dailyPrice: string;
-  weeklyPrice: string;
   monthlyPrice: string;
-  minRentalDays: string;
-  depositAmount: string;
-  kmLimitPerDay: string;
   withDriver: boolean;
-  deliveryAvailable: boolean;
-  insuranceIncluded: boolean;
-  cancellationPolicy: string;
-  availableFrom: string;
-  availableTo: string;
   whatsapp: string;
   contactPhone: string;
 }
@@ -71,17 +62,8 @@ export const defaultListingData: ListingFormData = {
   isPriceNegotiable: false,
   listingType: 'SALE',
   dailyPrice: '',
-  weeklyPrice: '',
   monthlyPrice: '',
-  minRentalDays: '1',
-  depositAmount: '',
-  kmLimitPerDay: '',
   withDriver: false,
-  deliveryAvailable: false,
-  insuranceIncluded: false,
-  cancellationPolicy: '',
-  availableFrom: '',
-  availableTo: '',
   whatsapp: '',
   contactPhone: '',
 };

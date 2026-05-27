@@ -3,23 +3,23 @@ import {
   IsNumber, IsArray, Min, Max, MinLength, IsDateString,
 } from 'class-validator';
 
-/**
- * Whitelist of updatable fields — excludes userId, status, slug, viewCount.
- */
+const EQUIPMENT_TYPES = [
+  'EXCAVATOR','CRANE','LOADER','BULLDOZER','FORKLIFT','CONCRETE_MIXER',
+  'GENERATOR','COMPRESSOR','SCAFFOLDING','WELDING_MACHINE','TRUCK',
+  'DUMP_TRUCK','WATER_TANKER','LIGHT_EQUIPMENT','OTHER_EQUIPMENT',
+];
+
 export class UpdateEquipmentListingDto {
-  @IsOptional() @IsString() @MinLength(5, { message: 'العنوان يجب أن يكون 5 أحرف على الأقل' })
+  @IsOptional() @IsString() @MinLength(5)
   title?: string;
 
-  @IsOptional() @IsString() @MinLength(10, { message: 'الوصف يجب أن يكون 10 أحرف على الأقل' })
+  @IsOptional() @IsString() @MinLength(10)
   description?: string;
 
-  @IsOptional() @IsEnum(
-    ['EXCAVATOR','CRANE','LOADER','BULLDOZER','FORKLIFT','CONCRETE_MIXER','GENERATOR','COMPRESSOR','SCAFFOLDING','WELDING_MACHINE','TRUCK','DUMP_TRUCK','WATER_TANKER','LIGHT_EQUIPMENT','OTHER_EQUIPMENT'],
-    { message: 'نوع المعدة غير صالح' },
-  )
+  @IsOptional() @IsEnum(EQUIPMENT_TYPES, { message: 'نوع المعدة غير صالح' })
   equipmentType?: string;
 
-  @IsOptional() @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT'], { message: 'نوع الإعلان غير صالح' })
+  @IsOptional() @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT', 'EQUIPMENT_WANTED'])
   listingType?: string;
 
   @IsOptional() @IsString()
@@ -56,9 +56,6 @@ export class UpdateEquipmentListingDto {
   dailyPrice?: number;
 
   @IsOptional() @IsNumber() @Min(0)
-  weeklyPrice?: number;
-
-  @IsOptional() @IsNumber() @Min(0)
   monthlyPrice?: number;
 
   @IsOptional() @IsString()
@@ -73,26 +70,27 @@ export class UpdateEquipmentListingDto {
   @IsOptional() @IsBoolean()
   deliveryAvailable?: boolean;
 
-  @IsOptional() @IsInt() @Min(1)
-  minRentalDays?: number;
+  // ── حقول EQUIPMENT_WANTED ──
+  @IsOptional() @IsNumber() @Min(0)
+  budgetMin?: number;
 
   @IsOptional() @IsNumber() @Min(0)
-  depositAmount?: number;
-
-  @IsOptional() @IsInt() @Min(0)
-  kmLimitPerDay?: number;
-
-  @IsOptional() @IsBoolean()
-  insuranceIncluded?: boolean;
+  budgetMax?: number;
 
   @IsOptional() @IsString()
-  cancellationPolicy?: string;
+  rentalDuration?: string;
 
   @IsOptional() @IsDateString()
-  availableFrom?: string;
+  startDate?: string;
 
   @IsOptional() @IsDateString()
-  availableTo?: string;
+  endDate?: string;
+
+  @IsOptional() @IsInt() @Min(1)
+  quantity?: number;
+
+  @IsOptional() @IsString()
+  siteDetails?: string;
 
   @IsOptional() @IsString()
   governorate?: string;

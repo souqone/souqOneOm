@@ -70,7 +70,6 @@ const BUSES_CONFIG: FilterBarConfig = [
       { value: 'BUS_SALE', label: 'للبيع' },
       { value: 'BUS_SALE_WITH_CONTRACT', label: 'بيع مع عقد' },
       { value: 'BUS_RENT', label: 'للإيجار' },
-      { value: 'BUS_CONTRACT', label: 'تعاقد' },
     ],
     showInBar: true,
   },

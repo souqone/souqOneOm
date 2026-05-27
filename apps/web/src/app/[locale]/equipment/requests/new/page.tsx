@@ -6,7 +6,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { AuthGuard } from '@/components/auth-guard';
 import { MultiStepForm } from '@/components/ui/multi-step-form';
 import { FormErrorOverlay } from '@/components/form-error-overlay';
-import { useCreateEquipmentRequest } from '@/lib/api/equipment';
+import { useCreateEquipmentListing } from '@/lib/api/equipment';
 import { useToast } from '@/components/toast';
 import { getGovernorates, type LocationOption } from '@/lib/location-data';
 import { useTranslations, useLocale } from 'next-intl';
@@ -40,7 +40,7 @@ export default function NewEquipmentRequestPage() {
   const tp = useTranslations('pages');
   const router = useRouter();
   const { addToast } = useToast();
-  const createReq = useCreateEquipmentRequest();
+  const createReq = useCreateEquipmentListing();
 
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
@@ -90,6 +90,7 @@ export default function NewEquipmentRequestPage() {
     try {
       const data: Record<string, unknown> = {
         title, description, equipmentType,
+        listingType: 'EQUIPMENT_WANTED',
         quantity: quantity ? Number(quantity) : 1,
         budgetMin: budgetMin ? Number(budgetMin) : undefined,
         budgetMax: budgetMax ? Number(budgetMax) : undefined,

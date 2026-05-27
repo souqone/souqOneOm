@@ -6,8 +6,6 @@ export { ProfileNavTabsSkeleton } from './components/ProfileNavTabsSkeleton';
 export { ProfileOverviewTab } from './components/ProfileOverviewTab';
 export { ProfileListingsTab } from './components/ProfileListingsTab';
 export { ProfileListingsTabSkeleton } from './components/ProfileListingsTabSkeleton';
-export { ProfileBookingsTab } from './components/ProfileBookingsTab';
-export { ProfileBookingsTabSkeleton } from './components/ProfileBookingsTabSkeleton';
 export { ProfileSettingsCard } from './components/ProfileSettingsCard';
 export { ProfileSettingsTab } from './components/ProfileSettingsTab';
 export { ProfileSecurityTab } from './components/ProfileSecurityTab';

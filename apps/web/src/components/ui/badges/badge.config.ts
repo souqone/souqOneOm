@@ -76,24 +76,12 @@ export const LISTING_TYPE_INTENT: Record<string, BadgeIntent> = {
   WANTED:                 'orange',
   BUS_SALE:               'primary',
   BUS_RENT:               'success',
-  BUS_CONTRACT:           'primary',
   BUS_SALE_WITH_CONTRACT: 'orange',
-  BUS_REQUEST:            'orange',
   EQUIPMENT_SALE:         'primary',
   EQUIPMENT_RENT:         'success',
+  EQUIPMENT_WANTED:       'orange',
   PART:                   'neutral',
   SERVICE:                'success',
-}
-
-// ── Booking status → Intent mapping ─────────────────────────────────────────
-
-export const BOOKING_STATUS_INTENT: Record<string, BadgeIntent> = {
-  PENDING:   'orange',
-  CONFIRMED: 'success',
-  ACTIVE:    'primary',
-  COMPLETED: 'success',
-  CANCELLED: 'danger',
-  REJECTED:  'danger',
 }
 
 // ── Listing status → Intent mapping ─────────────────────────────────────────

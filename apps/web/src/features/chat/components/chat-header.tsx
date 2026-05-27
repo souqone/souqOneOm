@@ -36,7 +36,7 @@ interface ChatHeaderProps {
 
 function listingBannerIcon(entityType?: string) {
   if (entityType === 'BUS_LISTING') return 'directions_bus';
-  if (entityType === 'EQUIPMENT_LISTING' || entityType === 'EQUIPMENT_REQUEST') return 'construction';
+  if (entityType === 'EQUIPMENT_LISTING') return 'construction';
   if (entityType === 'JOB') return 'work';
   if (entityType === 'OPERATOR_LISTING') return 'engineering';
   if (entityType === 'SPARE_PART') return 'build';

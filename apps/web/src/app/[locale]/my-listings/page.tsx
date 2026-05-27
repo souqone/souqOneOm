@@ -8,7 +8,7 @@ import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
 import { useMyListings, useDeleteListing } from '@/lib/api';
 import { useMyBusListings, useDeleteBusListing } from '@/lib/api/buses';
-import { useMyEquipmentListings, useDeleteEquipmentListing, useMyOperatorListings, useDeleteOperatorListing, useMyEquipmentRequests, useDeleteEquipmentRequest } from '@/lib/api/equipment';
+import { useMyEquipmentListings, useDeleteEquipmentListing, useMyOperatorListings, useDeleteOperatorListing } from '@/lib/api/equipment';
 import { useMyParts, useDeletePart } from '@/lib/api/parts';
 import { useMyCarServices, useDeleteCarService } from '@/lib/api/services';
 import { useMyJobs, useDeleteJob } from '@/lib/api/jobs';
@@ -27,7 +27,6 @@ const SECTION_TABS = [
   { key: 'buses', icon: 'directions_bus', labelKey: 'sectionBuses' },
   { key: 'equipment', icon: 'construction', labelKey: 'sectionEquipment' },
   { key: 'operators', icon: 'engineering', labelKey: 'sectionOperators' },
-  { key: 'equipment-requests', icon: 'assignment', labelKey: 'sectionEquipmentRequests' },
   { key: 'parts', icon: 'build', labelKey: 'sectionParts' },
   { key: 'services', icon: 'car_repair', labelKey: 'sectionServices' },
   { key: 'jobs', icon: 'work', labelKey: 'sectionJobs' },
@@ -37,8 +36,7 @@ type SectionKey = typeof SECTION_TABS[number]['key'];
 
 const SECTION_LABEL_MAP: Record<SectionKey, string> = {
   cars: 'sectionCars', buses: 'sectionBuses', equipment: 'sectionEquipment',
-  operators: 'sectionOperators', 'equipment-requests': 'sectionEquipmentRequests',
-  parts: 'sectionParts', services: 'sectionServices', jobs: 'sectionJobs',
+  operators: 'sectionOperators', parts: 'sectionParts', services: 'sectionServices', jobs: 'sectionJobs',
 };
 
 // ─── Dropdown menu component ───
@@ -128,8 +126,6 @@ export default function MyListingsPage() {
   const deleteEquipment = useDeleteEquipmentListing();
   const operators = useMyOperatorListings();
   const deleteOperator = useDeleteOperatorListing();
-  const equipmentRequests = useMyEquipmentRequests();
-  const deleteEquipmentRequest = useDeleteEquipmentRequest();
   const parts = useMyParts();
   const deleteParts = useDeletePart();
   const services = useMyCarServices();
@@ -165,7 +161,6 @@ export default function MyListingsPage() {
       case 'buses': return { items: buses.data ?? [], isLoading: buses.isLoading, refetch: buses.refetch };
       case 'equipment': return { items: equipment.data ?? [], isLoading: equipment.isLoading, refetch: equipment.refetch };
       case 'operators': return { items: operators.data ?? [], isLoading: operators.isLoading, refetch: operators.refetch };
-      case 'equipment-requests': return { items: equipmentRequests.data ?? [], isLoading: equipmentRequests.isLoading, refetch: equipmentRequests.refetch };
       case 'parts': return { items: parts.data ?? [], isLoading: parts.isLoading, refetch: parts.refetch };
       case 'services': return { items: services.data ?? [], isLoading: services.isLoading, refetch: services.refetch };
       case 'jobs': return { items: jobs.data?.items ?? [], isLoading: jobs.isLoading, refetch: jobs.refetch };
@@ -179,7 +174,6 @@ export default function MyListingsPage() {
       case 'buses': return (id, opts) => deleteBus.mutate(id, opts);
       case 'equipment': return (id, opts) => deleteEquipment.mutate(id, opts);
       case 'operators': return (id, opts) => deleteOperator.mutate(id, opts);
-      case 'equipment-requests': return (id, opts) => deleteEquipmentRequest.mutate(id, opts);
       case 'parts': return (id, opts) => deleteParts.mutate(id, opts);
       case 'services': return (id, opts) => deleteService.mutate(id, opts);
       case 'jobs': return (id, opts) => deleteJob.mutate(id, opts);
@@ -193,7 +187,6 @@ export default function MyListingsPage() {
       case 'buses': return `/edit-listing/bus/${id}`;
       case 'equipment': return `/edit-listing/equipment/${id}`;
       case 'operators': return `/edit-listing/operator/${id}`;
-      case 'equipment-requests': return `/equipment/requests/${id}`;
       case 'parts': return `/edit-listing/parts/${id}`;
       case 'services': return `/edit-listing/service/${id}`;
       case 'jobs': return `/edit-listing/job/${id}`;
@@ -203,16 +196,13 @@ export default function MyListingsPage() {
 
   const ENTITY_TYPE_MAP: Record<SectionKey, string> = {
     cars: 'LISTING', buses: 'BUS_LISTING', equipment: 'EQUIPMENT_LISTING',
-    operators: 'OPERATOR_LISTING', 'equipment-requests': 'EQUIPMENT_REQUEST',
-    parts: 'SPARE_PART', services: 'CAR_SERVICE', jobs: 'JOB',
+    operators: 'OPERATOR_LISTING', parts: 'SPARE_PART', services: 'CAR_SERVICE', jobs: 'JOB',
   };
 
   const sectionData = getSectionData();
   const deleteFn = getDeleteFn();
 
-  // Normalize status field — equipment-requests use requestStatus, everything else uses status
-  const isRequestSection = activeSection === 'equipment-requests';
-  const getItemStatus = (item: any): string => isRequestSection ? item.requestStatus : item.status;
+  const getItemStatus = (item: any): string => item.status;
 
   // Filter by status
   const filteredItems = activeSection === 'cars'
@@ -221,28 +211,18 @@ export default function MyListingsPage() {
       ? sectionData.items
       : sectionData.items.filter((item: any) => getItemStatus(item) === statusFilter);
 
-  // Status filter chips — show request-specific statuses for equipment-requests tab
-  const activeStatusFilters: { key: StatusFilter; label: string }[] = isRequestSection
-    ? [
-        { key: 'ALL',         label: tp('myListingsFilterAll') },
-        { key: 'OPEN',        label: 'مفتوح' },
-        { key: 'IN_PROGRESS', label: 'قيد التنفيذ' },
-        { key: 'CLOSED',      label: 'مغلق' },
-        { key: 'CANCELLED',   label: 'ملغي' },
-      ]
-    : statusFilters;
+  const activeStatusFilters = statusFilters;
 
   // ─── Stats ───
   const stats = useMemo(() => {
     const all = sectionData.items;
-    const activeCount = all.filter((i: any) => { const s = isRequestSection ? i.requestStatus : i.status; return s === 'ACTIVE' || s === 'OPEN'; }).length;
-    const expiredCount = all.filter((i: any) => { const s = isRequestSection ? i.requestStatus : i.status; return s === 'EXPIRED' || s === 'SOLD' || s === 'CLOSED' || s === 'CANCELLED'; }).length;
+    const activeCount = all.filter((i: any) => i.status === 'ACTIVE').length;
+    const expiredCount = all.filter((i: any) => i.status === 'EXPIRED' || i.status === 'SOLD' || i.status === 'CANCELLED').length;
     const totalViews = all.reduce((sum: number, i: any) => sum + (i.viewCount || 0), 0);
     return { activeCount, expiredCount, totalViews };
-  }, [sectionData.items, isRequestSection]);
+  }, [sectionData.items]);
 
   function getItemImage(item: any): string | null {
-    if (isRequestSection) return null;
     if (activeSection === 'cars') {
       const img = item.images?.find((i: any) => i.isPrimary) ?? item.images?.[0];
       return getImageUrl(img?.url) || null;
@@ -251,7 +231,7 @@ export default function MyListingsPage() {
   }
 
   function getItemPrice(item: any): string | null {
-    if (isRequestSection) {
+    if (item.listingType === 'EQUIPMENT_WANTED') {
       if (item.budgetMax) return `حتى ${Number(item.budgetMax).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
       if (item.budgetMin) return `من ${Number(item.budgetMin).toLocaleString('en-US')} ${item.currency || 'OMR'}`;
       return null;
@@ -265,7 +245,6 @@ export default function MyListingsPage() {
     const metaParts: string[] = [];
     metaParts.push(tp(SECTION_LABEL_MAP[activeSection]));
     if (item.governorate) metaParts.push(resolveLocationLabel(item.governorate, locale) ?? item.governorate);
-    if (isRequestSection && item._count?.bids !== undefined) metaParts.push(`${item._count.bids} عرض`);
     if (item.createdAt) metaParts.push(relativeTimeT(item.createdAt, tt, locale));
     return metaParts.join(' · ');
   }
@@ -414,7 +393,7 @@ export default function MyListingsPage() {
                     <ActionMenu
                       itemId={item.id}
                       isActive={itemStatus === 'ACTIVE' || itemStatus === 'OPEN'}
-                      isExpired={!isRequestSection && (itemStatus === 'EXPIRED' || itemStatus === 'SOLD')}
+                      isExpired={itemStatus === 'EXPIRED' || itemStatus === 'SOLD'}
                       tp={tp}
                       onEdit={() => {
                         window.location.href = `/${locale}${getEditRoute(item.id)}`;
