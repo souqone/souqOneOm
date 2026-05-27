@@ -26,14 +26,6 @@ const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
-  busListingOffer: {
-    create: jest.fn(),
-    findUnique: jest.fn(),
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-    update: jest.fn(),
-    count: jest.fn(),
-  },
   busListingStatusLog: {
     create: jest.fn(),
     findMany: jest.fn(),
@@ -382,137 +374,6 @@ describe('BusesService', () => {
   });
 
   // ════════════════════════════════════════════
-  // Phase 3 — Offers
-  // ════════════════════════════════════════════
-
-  const mockRequestListing = {
-    ...mockBus,
-    id: 'req-1',
-    busListingType: 'BUS_REQUEST',
-    governorate: 'مسقط',
-    userId: 'requester-1',
-  };
-
-  const mockOffer = {
-    id: 'offer-1',
-    message: 'عرض ممتاز',
-    proposedPrice: { toNumber: () => 5000 },
-    status: 'PENDING',
-    requestListingId: 'req-1',
-    sellerUserId: 'seller-1',
-    requestListing: { userId: 'requester-1', id: 'req-1' },
-    seller: { id: 'seller-1', username: 'seller' },
-  };
-
-  describe('createOffer', () => {
-    it('should create an offer on a REQUEST listing', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockRequestListing);
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue(null);
-      mockPrisma.busListingOffer.create.mockResolvedValue(mockOffer);
-
-      const result = await service.createOffer('req-1', 'seller-1', { message: 'عرض ممتاز', proposedPrice: 5000 });
-
-      expect(result.id).toBe('offer-1');
-      expect(mockPrisma.busListingOffer.create).toHaveBeenCalled();
-    });
-
-    it('should reject offer on non-REQUEST listing', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockBus); // BUS_SALE
-
-      await expect(
-        service.createOffer('bus-1', 'seller-1', { message: 'test' }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should reject self-offer', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockRequestListing);
-
-      await expect(
-        service.createOffer('req-1', 'requester-1', { message: 'test' }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should reject duplicate offer from same seller', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockRequestListing);
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue(mockOffer);
-
-      await expect(
-        service.createOffer('req-1', 'seller-1', { message: 'again' }),
-      ).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe('getOffers', () => {
-    it('should return offers for request owner', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockRequestListing);
-      mockPrisma.busListingOffer.findMany.mockResolvedValue([mockOffer]);
-
-      const result = await service.getOffers('req-1', 'requester-1');
-
-      expect(result).toHaveLength(1);
-    });
-
-    it('should reject non-owner from viewing offers', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockRequestListing);
-
-      await expect(
-        service.getOffers('req-1', 'other-user'),
-      ).rejects.toThrow(ForbiddenException);
-    });
-  });
-
-  describe('updateOffer', () => {
-    it('should accept an offer', async () => {
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue(mockOffer);
-      mockPrisma.busListingOffer.findFirst.mockResolvedValue(null); // no existing accepted
-      mockPrisma.busListingOffer.update.mockResolvedValue({ ...mockOffer, status: 'ACCEPTED' });
-      mockPrisma.busListing.update.mockResolvedValue({});
-
-      const result = await service.updateOffer('offer-1', 'requester-1', { status: 'ACCEPTED' as any });
-
-      expect(result.status).toBe('ACCEPTED');
-      // Should archive the request
-      expect(mockPrisma.busListing.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: 'ARCHIVED' } }),
-      );
-    });
-
-    it('should reject an offer', async () => {
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue(mockOffer);
-      mockPrisma.busListingOffer.update.mockResolvedValue({ ...mockOffer, status: 'REJECTED' });
-
-      const result = await service.updateOffer('offer-1', 'requester-1', { status: 'REJECTED' as any });
-
-      expect(result.status).toBe('REJECTED');
-    });
-
-    it('should not allow changing an already ACCEPTED offer', async () => {
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue({ ...mockOffer, status: 'ACCEPTED' });
-
-      await expect(
-        service.updateOffer('offer-1', 'requester-1', { status: 'REJECTED' as any }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should not allow a second ACCEPTED offer', async () => {
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue(mockOffer);
-      mockPrisma.busListingOffer.findFirst.mockResolvedValue({ id: 'other-accepted' });
-
-      await expect(
-        service.updateOffer('offer-1', 'requester-1', { status: 'ACCEPTED' as any }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should reject non-owner from updating offer', async () => {
-      mockPrisma.busListingOffer.findUnique.mockResolvedValue(mockOffer);
-
-      await expect(
-        service.updateOffer('offer-1', 'other-user', { status: 'ACCEPTED' as any }),
-      ).rejects.toThrow(ForbiddenException);
-    });
-  });
-
-  // ════════════════════════════════════════════
   // Phase 4 — Observability
   // ════════════════════════════════════════════
 
@@ -583,12 +444,10 @@ describe('BusesService', () => {
     it('should return stats for owner', async () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
       mockPrisma.busListingStatusLog.findMany.mockResolvedValue([]);
-      mockPrisma.busListingOffer.count.mockResolvedValue(3);
 
       const result = await service.getStats('bus-1', 'user-1');
 
       expect(result.viewCount).toBe(5);
-      expect(result.offersCount).toBe(3);
       expect(result.statusHistory).toEqual([]);
     });
 
