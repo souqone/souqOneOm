@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, Package,
-  MessageSquare, Loader2, Pencil, X, Phone, MessageCircle,
+  MessageSquare, Loader2, Pencil, X, Phone, MessageCircle, AlertCircle,
 } from 'lucide-react';
 import type {
   CarrierProfile, TransportRequest, TransportQuote, VehicleType, TransportServiceType,
@@ -277,6 +277,7 @@ function CarrierDashboardContent() {
   const router = useRouter();
   const [profile, setProfile] = useState<CarrierProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState('');
   const [nearbyRequests, setNearbyRequests] = useState<TransportRequest[]>([]);
@@ -286,6 +287,7 @@ function CarrierDashboardContent() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setError('');
       try {
         const [p, reqRes, quotesRes] = await Promise.all([
           transportApi.getMyCarrierProfile(),
@@ -295,20 +297,19 @@ function CarrierDashboardContent() {
         setProfile(p);
         setNearbyRequests(reqRes.items);
         setRecentQuotes(quotesRes.items.slice(0, 5));
-      } catch {
-        // profile load failed → auto-redirect to register via useEffect
+      } catch (err: any) {
+        if (err?.status === 404) {
+          // no carrier profile → redirect to registration
+          router.replace('/transport/carriers/register');
+        } else {
+          setError('تعذّر تحميل البروفايل. حاول مرة أخرى.');
+        }
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !profile) {
-      router.replace('/transport/carriers/register');
-    }
-  }, [loading, profile, router]);
+  }, [router]);
 
   const handleToggleAvailability = async () => {
     if (!profile) return;
@@ -325,6 +326,23 @@ function CarrierDashboardContent() {
   };
 
   if (loading) return <TransportPageLoader />;
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" dir="rtl">
+        <div className="flex flex-col items-center gap-4 text-center px-4">
+          <AlertCircle size={40} className="text-[var(--color-error)]" />
+          <p className="text-base font-semibold">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) return <TransportPageLoader />;
 

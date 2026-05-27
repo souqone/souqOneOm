@@ -20,6 +20,7 @@ const TABS: TabDef[] = [
   { key: 'ALL', label: 'الكل' },
   { key: 'OPEN', label: 'مفتوح' },
   { key: 'QUOTED', label: 'وصلت عروض' },
+  { key: 'EXPIRED', label: 'منتهي' },
   { key: 'COMPLETED', label: 'مكتمل' },
   { key: 'CANCELLED', label: 'ملغى' },
 ];

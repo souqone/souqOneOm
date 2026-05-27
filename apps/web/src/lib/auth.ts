@@ -140,7 +140,10 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(data?.message || data?.error || 'SERVER_ERROR');
+    throw Object.assign(
+      new Error(data?.message || data?.error || 'SERVER_ERROR'),
+      { status: response.status },
+    );
   }
 
   return data as T;

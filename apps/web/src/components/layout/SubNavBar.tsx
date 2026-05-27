@@ -20,16 +20,12 @@ import {
   Wrench,
   Bus,
   KeyRound,
+  CalendarCheck,
 } from 'lucide-react'
+import { useAuth } from '@/providers/auth-provider'
+import { useMyCarrierProfile } from '@/features/transport/api'
 
-// ── Transport links ──────────────────────────────────────────────
-const TRANSPORT_LINKS = [
-  { href: '/transport/browse',             label: 'تصفح الطلبات',  icon: Search },
-  { href: '/transport/my-requests',        label: 'طلباتي',         icon: FileText },
-  { href: '/transport/my-quotes',          label: 'عروضي',          icon: MessageSquare },
-  { href: '/transport/carriers/dashboard', label: 'لوحة الناقل',   icon: LayoutDashboard },
-  { href: '/transport/carriers/register',  label: 'سجّل كناقل',    icon: Truck },
-]
+// ── Transport links (dynamic, see useTransportLinks below) ─────
 
 // ── Equipment links ──────────────────────────────────────────────
 const EQUIPMENT_LINKS = [
@@ -77,11 +73,40 @@ function isLinkActive(href: string, pathname: string): boolean {
   return bare === href || bare.startsWith(href + '/')
 }
 
+interface NavLink { href: string; label: string; icon: React.ComponentType<{ size?: number }> }
+
+function useTransportLinks(): NavLink[] {
+  const { isAuthenticated } = useAuth()
+  const { data: carrier } = useMyCarrierProfile(isAuthenticated)
+  const isCarrier = !!carrier
+
+  const links: NavLink[] = [
+    { href: '/transport/browse', label: 'تصفح الطلبات', icon: Search },
+  ]
+
+  if (isAuthenticated) {
+    if (isCarrier) {
+      links.push(
+        { href: '/transport/my-quotes', label: 'عروضي', icon: MessageSquare },
+        { href: '/transport/carriers/dashboard', label: 'لوحة الناقل', icon: LayoutDashboard },
+      )
+    } else {
+      links.push(
+        { href: '/transport/my-requests', label: 'طلباتي', icon: FileText },
+        { href: '/transport/my-bookings', label: 'حجوزاتي', icon: CalendarCheck },
+        { href: '/transport/carriers/register', label: 'سجّل كناقل', icon: Truck },
+      )
+    }
+  }
+
+  return links
+}
+
 // ── Route → links mapping (landing pages only) ───────────────────
-function getLinksForPath(pathname: string) {
+function getLinksForPath(pathname: string, transportLinks: NavLink[]) {
   const bare = pathname.replace(/^\/[a-z]{2,5}/, '') || '/'
   if (bare === '/equipment') return EQUIPMENT_LINKS
-  if (bare === '/transport') return TRANSPORT_LINKS
+  if (bare === '/transport') return transportLinks
   if (bare === '/jobs')      return JOBS_LINKS
   if (bare === '/cars')      return CARS_LINKS
   if (bare === '/buses')     return BUS_LINKS
@@ -90,7 +115,8 @@ function getLinksForPath(pathname: string) {
 
 export default function SubNavBar() {
   const pathname = usePathname()
-  const links = getLinksForPath(pathname)
+  const transportLinks = useTransportLinks()
+  const links = getLinksForPath(pathname, transportLinks)
   const topOffset = pathname.includes('/transport') ? 70 : 70
 
   if (!links) return null
