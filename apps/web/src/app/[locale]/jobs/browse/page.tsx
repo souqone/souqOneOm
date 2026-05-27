@@ -11,6 +11,7 @@ import { apiRequest } from '@/lib/auth';
 import type { DriverJob } from '@/features/jobs/types';
 import { STRINGS, SORT_OPTIONS, LICENSE_TYPE_LABELS, EMPLOYMENT_TYPE_LABELS } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 const DEFAULT_FILTERS: JobFilters = {
   jobType: '',
@@ -24,6 +25,7 @@ const DEFAULT_FILTERS: JobFilters = {
 const PAGE_SIZE = 9
 
 function BrowseJobsContent() {
+  const t = useTranslations('jobs')
   const searchParams = useSearchParams()
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -104,16 +106,16 @@ function BrowseJobsContent() {
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-on-surface">{STRINGS.BROWSE_JOBS}</h1>
         <p className="text-sm text-on-surface-variant mt-1">
-          تصفّح جميع إعلانات الوظائف والسائقين في السلطنة
+          {t('browseSubtitle')}
         </p>
       </div>
 
       {/* Job Type Tabs */}
       <div className="flex items-center gap-2 mb-5">
         {[
-          { value: '', label: 'الكل', emoji: '' },
-          { value: 'HIRING', label: 'طلب سائق', emoji: '🔵' },
-          { value: 'OFFERING', label: 'عرض خدمة', emoji: '🟢' },
+          { value: '', label: t('tabAll'), emoji: '' },
+          { value: 'HIRING', label: t('tabHiring'), emoji: '🔵' },
+          { value: 'OFFERING', label: t('tabOffering'), emoji: '🟢' },
         ].map(tab => (
           <button
             key={`tab-${tab.value || 'all'}`}
@@ -156,7 +158,7 @@ function BrowseJobsContent() {
         <div className="flex flex-wrap gap-2 mb-4">
           {searchQuery && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
-              بحث: {searchQuery}
+              {t('searchLabel', { q: searchQuery })}
               <button onClick={() => handleSearchChange('')} className="hover:text-error transition-colors">
                 <X size={11} />
               </button>
@@ -164,7 +166,7 @@ function BrowseJobsContent() {
           )}
           {filters.jobType && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
-              {filters.jobType === 'HIRING' ? 'طلب سائق' : 'عرض خدمة'}
+              {filters.jobType === 'HIRING' ? t('tabHiring') : t('tabOffering')}
               <button onClick={() => handleFilterChange('jobType', '')} className="hover:text-error transition-colors">
                 <X size={11} />
               </button>
@@ -219,7 +221,7 @@ function BrowseJobsContent() {
                 {STRINGS.RESULTS_COUNT(totalCount)}
               </span>
               {loading && (
-                <span className="text-xs text-on-surface-variant animate-pulse">جاري التحميل...</span>
+                <span className="text-xs text-on-surface-variant animate-pulse">{t('loading')}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -229,7 +231,7 @@ function BrowseJobsContent() {
                 className="lg:hidden flex items-center gap-1.5 btn-outline text-sm py-2 px-3"
               >
                 <SlidersHorizontal size={14} />
-                فلترة
+                {t('filterButton')}
               </button>
               {/* Sort select */}
               <select
@@ -252,7 +254,7 @@ function BrowseJobsContent() {
                 onClick={() => loadJobs(filters, searchQuery, currentPage)}
                 className="mt-2 text-xs font-bold text-primary hover:underline"
               >
-                حاول مرة أخرى
+                {t('retry')}
               </button>
             </div>
           )}
@@ -267,9 +269,9 @@ function BrowseJobsContent() {
           ) : jobs.length === 0 ? (
             <JobEmptyState
               title={STRINGS.EMPTY_JOBS}
-              description="جرب تغيير الفلاتر أو البحث بكلمات مختلفة للعثور على ما تبحث عنه."
+              description={t('tryChangeFilters')}
               onClear={handleClearFilters}
-              ctaLabel="أنشئ أول إعلان"
+              ctaLabel={t('postFirstJob')}
               ctaHref="/jobs/new"
             />
           ) : (

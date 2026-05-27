@@ -33,16 +33,11 @@ import {
 import { useAuth } from '@/providers/auth-provider';
 import { useMyDriverProfile, useMyEmployerProfile } from '@/lib/api/jobs';
 import { timeAgo, getInitials, getAvatarColor, cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import { resolveLocationLabel } from '@/lib/location-data';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-
-const applySchema = z.object({
-  message: z.string().min(10, 'الرسالة يجب أن تكون على الأقل 10 أحرف').max(500, 'الرسالة طويلة جداً'),
-  resumeUrl: z.string().url('رابط غير صالح').optional().or(z.literal('')),
-})
-type ApplyFormData = z.infer<typeof applySchema>
 
 function DetailSkeleton() {
   return (
@@ -72,6 +67,7 @@ function DetailSkeleton() {
 }
 
 export default function JobDetailClient() {
+  const t = useTranslations('jobs')
   const params = useParams()
   const jobId = (params?.id as string) ?? ''
   const { user, isAuthenticated } = useAuth()
@@ -94,6 +90,12 @@ export default function JobDetailClient() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [closingJob, setClosingJob] = useState(false)
   const [appsExpanded, setAppsExpanded] = useState(true)
+
+  const applySchema = z.object({
+    message: z.string().min(10, t('messageTooShort')).max(500, t('messageTooLong')),
+    resumeUrl: z.string().url(t('invalidUrl')).optional().or(z.literal('')),
+  })
+  type ApplyFormData = z.infer<typeof applySchema>
 
   const {
     register,
@@ -538,7 +540,7 @@ export default function JobDetailClient() {
                           <textarea
                             {...register('message')}
                             rows={4}
-                            placeholder="أخبر صاحب الإعلان عن خبرتك ولماذا أنت الخيار الأفضل..."
+                            placeholder={t('applyMessagePlaceholder')}
                             className={cn('input-base resize-none text-sm', errors.message && 'border-error focus:ring-error focus:border-error')}
                           />
                           {errors.message && <p className="mt-1 text-xs text-error">{errors.message.message}</p>}

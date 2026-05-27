@@ -8,15 +8,20 @@ import { useToast } from '@/components/toast';
 import { Link } from '@/i18n/navigation';
 import { STRINGS } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 interface UploadZoneProps {
   label: string
+  dragLabel: string
+  fileTypesLabel: string
+  uploadedLabel: string
+  removeLabel: string
   icon: string
   file: File | null
   onFileChange: (file: File | null) => void
 }
 
-function UploadZone({ label, icon, file, onFileChange }: UploadZoneProps) {
+function UploadZone({ label, dragLabel, fileTypesLabel, uploadedLabel, removeLabel, icon, file, onFileChange }: UploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -56,7 +61,7 @@ function UploadZone({ label, icon, file, onFileChange }: UploadZoneProps) {
       {file ? (
         <div className="flex flex-col items-center gap-2">
           <CheckCircle size={32} className="text-green-500" />
-          <p className="text-sm font-bold text-green-700">تم رفع الملف بنجاح</p>
+          <p className="text-sm font-bold text-green-700">{uploadedLabel}</p>
           <p className="text-xs text-green-600">{file.name}</p>
           <button
             type="button"
@@ -64,15 +69,15 @@ function UploadZone({ label, icon, file, onFileChange }: UploadZoneProps) {
             className="flex items-center gap-1 text-xs text-error hover:underline"
           >
             <X size={12} />
-            إزالة
+            {removeLabel}
           </button>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2">
           <div className="text-4xl">{icon}</div>
           <p className="font-bold text-sm text-on-surface">{label}</p>
-          <p className="text-xs text-on-surface-variant">اختر ملف أو اسحب هنا</p>
-          <p className="text-xs text-outline">JPG, PNG — حد أقصى 5MB</p>
+          <p className="text-xs text-on-surface-variant">{dragLabel}</p>
+          <p className="text-xs text-outline">{fileTypesLabel}</p>
         </div>
       )}
     </div>
@@ -80,6 +85,7 @@ function UploadZone({ label, icon, file, onFileChange }: UploadZoneProps) {
 }
 
 function VerificationContent() {
+  const t = useTranslations('jobs')
   const { addToast } = useToast()
   const { data: profile, isLoading: profileLoading } = useMyDriverProfile()
   const { data: verifications, isLoading: verLoading } = useMyVerificationStatus()
@@ -176,19 +182,27 @@ function VerificationContent() {
           {submitted && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
               <Clock size={18} className="text-amber-500 shrink-0" />
-              <p className="text-sm font-bold text-amber-700">تم إرسال طلبك بنجاح — سيتم الرد خلال 24 ساعة</p>
+              <p className="text-sm font-bold text-amber-700">{t('verificationSubmitted')}</p>
             </div>
           )}
 
           <UploadZone
-            label="صورة الرخصة"
+            label={t('licensePhotoLabel')}
+            dragLabel={t('chooseFileOrDrag')}
+            fileTypesLabel={t('fileTypesMaxSize')}
+            uploadedLabel={t('fileUploadedSuccessfully')}
+            removeLabel={t('remove')}
             icon="📄"
             file={licenseFile}
             onFileChange={setLicenseFile}
           />
 
           <UploadZone
-            label="صورة الهوية الوطنية"
+            label={t('idPhotoLabel')}
+            dragLabel={t('chooseFileOrDrag')}
+            fileTypesLabel={t('fileTypesMaxSize')}
+            uploadedLabel={t('fileUploadedSuccessfully')}
+            removeLabel={t('remove')}
             icon="🪪"
             file={idFile}
             onFileChange={setIdFile}
@@ -196,14 +210,14 @@ function VerificationContent() {
 
           <div>
             <label className="block text-sm font-bold text-on-surface mb-1.5">
-              ملاحظات إضافية — اختياري
+              {t('additionalNotesLabel')}
             </label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={3}
               className="input-base text-sm w-full resize-none"
-              placeholder="أي معلومات إضافية تريد إضافتها..."
+              placeholder={t('additionalNotesPlaceholder')}
             />
           </div>
 
@@ -212,7 +226,7 @@ function VerificationContent() {
             disabled={submitting || submitted}
             className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
           >
-            {submitting ? STRINGS.LOADING : 'إرسال طلب التوثيق'}
+            {submitting ? STRINGS.LOADING : t('submitVerificationRequest')}
           </button>
         </div>
       )}

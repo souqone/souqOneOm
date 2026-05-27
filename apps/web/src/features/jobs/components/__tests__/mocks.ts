@@ -58,7 +58,6 @@ export const mockApplication: JobApplication = {
   job: mockJob,
   status: 'PENDING',
   message: 'أنا مهتم بهذه الوظيفة',
-  isRevealed: false,
   createdAt: new Date('2024-01-01').toISOString(),
 }
 

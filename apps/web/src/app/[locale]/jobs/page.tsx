@@ -9,6 +9,7 @@ import { useJobs, useDrivers } from '@/lib/api/jobs';
 import SubNavBar from '@/components/layout/SubNavBar';
 import { ListingSearchBar } from '@/components/shared/listing-search-bar';
 import type { DriverJob, DriverProfile } from '@/features/jobs/types';
+import { useTranslations } from 'next-intl';
 
 function mapJob(item: Record<string, any>): DriverJob {
   return {
@@ -28,6 +29,7 @@ function mapDriver(item: Record<string, any>): DriverProfile {
 }
 
 export default function LandingPage() {
+  const t = useTranslations('jobs')
   const { data: hiringData, isLoading: loadingHiring } = useJobs({ jobType: 'HIRING', limit: '6' });
   const { data: offeringData, isLoading: loadingOffering } = useJobs({ jobType: 'OFFERING', limit: '4' });
   const { data: driversData, isLoading: loadingDrivers } = useDrivers({ isAvailable: 'true', limit: '4' });
@@ -56,28 +58,28 @@ export default function LandingPage() {
         <div className="relative max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 text-center py-4 sm:py-[61px] lg:py-[74px]" style={{ paddingTop: '82px' }}>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs font-bold mb-6 border border-white/20">
             <span className="w-2 h-2 rounded-full bg-green-400 motion-safe:animate-pulse-soft inline-block" />
-            1,240+ سائق نشط في عُمان
+            {t('heroBadge')}
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
-            بورصة الوظائف للسائقين
+            {t('heroTitle')}
             <br />
-            <span className="text-[var(--color-brand-amber)]">في سلطنة عُمان</span>
+            <span className="text-[var(--color-brand-amber)]">{t('heroTitleAccent')}</span>
           </h1>
           <p className="text-base md:text-lg text-white/70 mb-8 max-w-xl mx-auto">
-            ابحث عن سائق محترف أو أعلن عن خدماتك — الأسرع، الأموثوق، الأشمل
+            {t('heroSubtitle')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/jobs/new?type=HIRING"
               className="btn-amber text-base py-3 px-6 w-full sm:w-auto"
             >
-              أعلن عن وظيفة
+              {t('postJobBtn')}
             </Link>
             <Link
               href="/jobs/new?type=OFFERING"
               className="flex items-center justify-center gap-2 border-2 border-white/40 text-white font-bold rounded-xl px-6 py-3 text-base w-full sm:w-auto hover:bg-white/10 transition-all duration-150 active:scale-95"
             >
-              أنا سائق — أعلن عن نفسك
+              {t('postServiceBtn')}
             </Link>
           </div>
         </div>
@@ -86,17 +88,17 @@ export default function LandingPage() {
       <ListingSearchBar
         categories={[{
           key: 'jobs',
-          label: 'وظائف',
+          label: t('jobs'),
           route: '/jobs/browse',
           subcategories: [
-            { key: 'hiring',   label: 'طلبات توظيف',    route: '/jobs/browse?type=HIRING'   },
-            { key: 'offering', label: 'سائقون متاحون',    route: '/jobs/browse?type=OFFERING' },
-            { key: 'drivers',  label: 'ملفات السائقين', route: '/jobs/drivers'              },
+            { key: 'hiring',   label: t('subcatHiring'),    route: '/jobs/browse?type=HIRING'   },
+            { key: 'offering', label: t('subcatOffering'),    route: '/jobs/browse?type=OFFERING' },
+            { key: 'drivers',  label: t('subcatDrivers'), route: '/jobs/drivers'              },
           ],
         }]}
         defaultCat="jobs"
         addListingHref="/jobs/new"
-        addListingLabel="أضف إعلان"
+        addListingLabel={t('addListing')}
       />
 
       {/* Latest HIRING Jobs */}
@@ -104,14 +106,14 @@ export default function LandingPage() {
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-extrabold text-on-surface">أحدث طلبات التوظيف</h2>
-              <p className="text-sm text-on-surface-variant mt-0.5">شركات تبحث عن سائقين الآن</p>
+              <h2 className="text-xl font-extrabold text-on-surface">{t('latestHiringTitle')}</h2>
+              <p className="text-sm text-on-surface-variant mt-0.5">{t('latestHiringSubtitle')}</p>
             </div>
             <Link
               href="/jobs/browse?type=HIRING"
               className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
             >
-              عرض الكل
+              {t('viewAll')}
               <ArrowLeft size={14} />
             </Link>
           </div>
@@ -122,7 +124,7 @@ export default function LandingPage() {
           ) : hiringJobs.length === 0 ? (
             <div className="text-center py-12 text-on-surface-variant">
               <Briefcase size={32} className="mx-auto mb-3 opacity-40" />
-              <p className="font-medium text-sm">لا توجد طلبات توظيف حالياً</p>
+              <p className="font-medium text-sm">{t('noHiringJobs')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -137,14 +139,14 @@ export default function LandingPage() {
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-extrabold text-on-surface">سائقون متميزون</h2>
-              <p className="text-sm text-on-surface-variant mt-0.5">محترفون متاحون للعمل الآن</p>
+              <h2 className="text-xl font-extrabold text-on-surface">{t('featuredDriversTitle')}</h2>
+              <p className="text-sm text-on-surface-variant mt-0.5">{t('featuredDriversSubtitle')}</p>
             </div>
             <Link
               href="/jobs/drivers"
               className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
             >
-              عرض جميع السائقين
+              {t('viewAllDrivers')}
               <ArrowLeft size={14} />
             </Link>
           </div>
@@ -173,14 +175,14 @@ export default function LandingPage() {
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-extrabold text-on-surface">سائقون يعرضون خدماتهم</h2>
-              <p className="text-sm text-on-surface-variant mt-0.5">يبحثون عن فرصة عمل الآن</p>
+              <h2 className="text-xl font-extrabold text-on-surface">{t('offeringTitle')}</h2>
+              <p className="text-sm text-on-surface-variant mt-0.5">{t('offeringSubtitle')}</p>
             </div>
             <Link
               href="/jobs/browse?type=OFFERING"
               className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
             >
-              عرض الكل
+              {t('viewAll')}
               <ArrowLeft size={14} />
             </Link>
           </div>
@@ -191,7 +193,7 @@ export default function LandingPage() {
           ) : offeringJobs.length === 0 ? (
             <div className="text-center py-12 text-on-surface-variant">
               <Users size={32} className="mx-auto mb-3 opacity-40" />
-              <p className="font-medium text-sm">لا يوجد سائقون يعرضون خدماتهم حالياً</p>
+              <p className="font-medium text-sm">{t('noOfferingJobs')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -204,12 +206,12 @@ export default function LandingPage() {
       {/* How It Works */}
       <section className="py-14">
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
-          <h2 className="text-xl font-extrabold text-on-surface text-center mb-10">كيف يعمل سوق ون؟</h2>
+          <h2 className="text-xl font-extrabold text-on-surface text-center mb-10">{t('howItWorksTitle')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { step: '1', title: 'أنشئ إعلانك', desc: 'سواء كنت صاحب عمل تبحث عن سائق أو سائق تعرض خدماتك، أنشئ إعلانك في دقيقتين.', color: 'bg-primary' },
-              { step: '2', title: 'استقبل العروض', desc: 'الطرف الآخر يتصفح إعلانك ويرسل عرضه مع رسالة تعريفية وتقييماته.', color: 'bg-brand-amber' },
-              { step: '3', title: 'تواصل وابدأ', desc: 'اقبل أفضل عرض وتواصل مباشرة عبر الهاتف أو واتساب لإتمام الاتفاق.', color: 'bg-brand-green' },
+              { step: '1', title: t('howStep1Title'), desc: t('howStep1Desc'), color: 'bg-primary' },
+              { step: '2', title: t('howStep2Title'), desc: t('howStep2Desc'), color: 'bg-brand-amber' },
+              { step: '3', title: t('howStep3Title'), desc: t('howStep3Desc'), color: 'bg-brand-green' },
             ].map(item => (
               <div key={`how-${item.step}`} className="card-base rounded-2xl p-6 text-center">
                 <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center text-white text-xl font-extrabold mx-auto mb-4`}>
@@ -230,13 +232,13 @@ export default function LandingPage() {
       >
         <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">
-            انضم لأكبر بورصة سائقين في عُمان
+            {t('ctaTitle')}
           </h2>
           <p className="text-white/70 text-base mb-6 max-w-md mx-auto">
-            أكثر من 1,200 سائق وصاحب عمل يثقون بنا يومياً
+            {t('ctaSubtitle')}
           </p>
           <Link href="/jobs/browse" className="btn-amber text-base py-3 px-8 inline-flex">
-            ابدأ الآن — مجاناً
+            {t('ctaButton')}
           </Link>
         </div>
       </section>

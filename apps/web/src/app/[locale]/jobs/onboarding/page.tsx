@@ -13,36 +13,9 @@ import {
   LANGUAGE_OPTIONS, STRINGS
 } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 type ProfileType = 'DRIVER' | 'EMPLOYER' | null
-
-const driverSchema = z.object({
-  licenseTypes: z.array(z.string()).min(1, 'اختر نوع رخصة واحد على الأقل'),
-  experienceYears: z.number().optional(),
-  vehicleTypes: z.array(z.string()),
-  hasOwnVehicle: z.boolean(),
-  bio: z.string().optional(),
-  governorate: z.string().min(1, 'اختر المحافظة'),
-  city: z.string().optional(),
-  contactPhone: z.string().optional(),
-  whatsapp: z.string().optional(),
-  languages: z.array(z.string()),
-  nationality: z.string().optional(),
-})
-
-const employerSchema = z.object({
-  companyName: z.string().optional(),
-  companySize: z.string().optional(),
-  industry: z.string().optional(),
-  bio: z.string().optional(),
-  governorate: z.string().min(1, 'اختر المحافظة'),
-  city: z.string().optional(),
-  contactPhone: z.string().optional(),
-  whatsapp: z.string().optional(),
-})
-
-type DriverFormData = z.infer<typeof driverSchema>
-type EmployerFormData = z.infer<typeof employerSchema>
 
 export default function OnboardingPage() {
   return (
@@ -53,11 +26,40 @@ export default function OnboardingPage() {
 }
 
 function OnboardingContent() {
+  const t = useTranslations('jobs')
   const router = useRouter()
   const { addToast } = useToast()
   const [step, setStep] = useState(1)
   const [profileType, setProfileType] = useState<ProfileType>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const driverSchema = z.object({
+    licenseTypes: z.array(z.string()).min(1, t('selectAtLeastOneLicense')),
+    experienceYears: z.number().optional(),
+    vehicleTypes: z.array(z.string()),
+    hasOwnVehicle: z.boolean(),
+    bio: z.string().optional(),
+    governorate: z.string().min(1, t('selectGovernorate')),
+    city: z.string().optional(),
+    contactPhone: z.string().optional(),
+    whatsapp: z.string().optional(),
+    languages: z.array(z.string()),
+    nationality: z.string().optional(),
+  })
+
+  const employerSchema = z.object({
+    companyName: z.string().optional(),
+    companySize: z.string().optional(),
+    industry: z.string().optional(),
+    bio: z.string().optional(),
+    governorate: z.string().min(1, t('selectGovernorate')),
+    city: z.string().optional(),
+    contactPhone: z.string().optional(),
+    whatsapp: z.string().optional(),
+  })
+
+  type DriverFormData = z.infer<typeof driverSchema>
+  type EmployerFormData = z.infer<typeof employerSchema>
 
   const { data: existingDriver, isLoading: loadingDriver } = useMyDriverProfile()
   const { data: existingEmployer, isLoading: loadingEmployer } = useMyEmployerProfile()
@@ -91,10 +93,10 @@ function OnboardingContent() {
         ...data,
         licenseTypes: data.licenseTypes as never[],
       })
-      addToast('success', 'تم إنشاء بروفايل السائق بنجاح')
+      addToast('success', t('driverProfileCreated'))
       router.push('/jobs/dashboard')
     } catch {
-      addToast('error', 'حدث خطأ أثناء إنشاء البروفايل')
+      addToast('error', t('profileCreateError'))
     } finally {
       setSubmitting(false)
     }
@@ -104,10 +106,10 @@ function OnboardingContent() {
     setSubmitting(true)
     try {
       await createEmployer.mutateAsync(data)
-      addToast('success', 'تم إنشاء بروفايل صاحب العمل بنجاح')
+      addToast('success', t('employerProfileCreated'))
       router.push('/jobs/new')
     } catch {
-      addToast('error', 'حدث خطأ أثناء إنشاء البروفايل')
+      addToast('error', t('profileCreateError'))
     } finally {
       setSubmitting(false)
     }
@@ -140,8 +142,8 @@ function OnboardingContent() {
   if ((existingDriver || existingEmployer) && !profileType) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-10">
-        <h1 className="text-2xl font-extrabold text-on-surface text-center mb-2">إدارة بروفايلك</h1>
-        <p className="text-sm text-on-surface-variant text-center mb-8">اختر ما تريد القيام به</p>
+        <h1 className="text-2xl font-extrabold text-on-surface text-center mb-2">{t('manageProfileTitle')}</h1>
+        <p className="text-sm text-on-surface-variant text-center mb-8">{t('chooseAction')}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {existingDriver && (
             <button
@@ -152,8 +154,8 @@ function OnboardingContent() {
                 <CheckCircle size={18} className="text-brand-amber" fill="currentColor" />
               </div>
               <div className="text-4xl mb-3">🚛</div>
-              <h3 className="font-extrabold text-base text-on-surface mb-1">لوحة تحكم السائق</h3>
-              <p className="text-sm text-on-surface-variant">إدارة طلباتك ودعواتك</p>
+              <h3 className="font-extrabold text-base text-on-surface mb-1">{t('driverDashboard')}</h3>
+              <p className="text-sm text-on-surface-variant">{t('manageDriverRequests')}</p>
             </button>
           )}
           {!existingDriver && (
@@ -162,8 +164,8 @@ function OnboardingContent() {
               className="relative p-6 rounded-2xl border-2 text-start transition-all duration-200 hover:shadow-card-hover border-outline-variant bg-white hover:border-outline"
             >
               <div className="text-4xl mb-3">🚛</div>
-              <h3 className="font-extrabold text-base text-on-surface mb-1">أنا سائق</h3>
-              <p className="text-sm text-on-surface-variant">أريد إنشاء بروفايل سائق</p>
+              <h3 className="font-extrabold text-base text-on-surface mb-1">{t('typeDriver')}</h3>
+              <p className="text-sm text-on-surface-variant">{t('typeDriverDesc')}</p>
             </button>
           )}
           {existingEmployer && (
@@ -175,8 +177,8 @@ function OnboardingContent() {
                 <CheckCircle size={18} className="text-brand-amber" fill="currentColor" />
               </div>
               <div className="text-4xl mb-3">👔</div>
-              <h3 className="font-extrabold text-base text-on-surface mb-1">إعلاناتي</h3>
-              <p className="text-sm text-on-surface-variant">إدارة وظائفك المنشورة</p>
+              <h3 className="font-extrabold text-base text-on-surface mb-1">{t('myListings')}</h3>
+              <p className="text-sm text-on-surface-variant">{t('manageJobs')}</p>
             </button>
           )}
           {!existingEmployer && (
@@ -185,8 +187,8 @@ function OnboardingContent() {
               className="relative p-6 rounded-2xl border-2 text-start transition-all duration-200 hover:shadow-card-hover border-outline-variant bg-white hover:border-outline"
             >
               <div className="text-4xl mb-3">👔</div>
-              <h3 className="font-extrabold text-base text-on-surface mb-1">أنا صاحب عمل</h3>
-              <p className="text-sm text-on-surface-variant">أبحث عن سائقين</p>
+              <h3 className="font-extrabold text-base text-on-surface mb-1">{t('typeEmployer')}</h3>
+              <p className="text-sm text-on-surface-variant">{t('typeEmployerDesc')}</p>
             </button>
           )}
         </div>
@@ -220,13 +222,13 @@ function OnboardingContent() {
       {/* Step 1 — Choose Profile Type */}
       {step === 1 && (
         <div>
-          <h1 className="text-2xl font-extrabold text-on-surface text-center mb-2">اختر نوع بروفايلك</h1>
-          <p className="text-sm text-on-surface-variant text-center mb-8">حدد نوع حسابك للبدء</p>
+          <h1 className="text-2xl font-extrabold text-on-surface text-center mb-2">{t('step1Title')}</h1>
+          <p className="text-sm text-on-surface-variant text-center mb-8">{t('step1Subtitle')}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { type: 'DRIVER' as ProfileType, icon: '🚛', title: 'أنا سائق', desc: 'أريد إنشاء بروفايل سائق' },
-              { type: 'EMPLOYER' as ProfileType, icon: '👔', title: 'أنا صاحب عمل', desc: 'أبحث عن سائقين' },
+              { type: 'DRIVER' as ProfileType, icon: '🚛', title: t('typeDriver'), desc: t('typeDriverDesc') },
+              { type: 'EMPLOYER' as ProfileType, icon: '👔', title: t('typeEmployer'), desc: t('typeEmployerDesc') },
             ].map(option => (
               <button
                 key={`type-${option.type}`}
@@ -259,16 +261,16 @@ function OnboardingContent() {
             className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant hover:text-on-surface mb-6 transition-colors"
           >
             <ChevronRight size={16} />
-            رجوع
+            {t('back')}
           </button>
-          <h1 className="text-xl font-extrabold text-on-surface mb-6">بروفايل السائق</h1>
+          <h1 className="text-xl font-extrabold text-on-surface mb-6">{t('driverProfileTitle')}</h1>
 
           <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-5">
 
             {/* License Types */}
             <div className="card-base rounded-2xl p-5">
               <label className="block text-sm font-bold text-on-surface mb-3">
-                أنواع الرخص <span className="text-error">*</span>
+                {t('licenseTypesLabel')} <span className="text-error">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(LICENSE_TYPE_LABELS).map(([value, label]) => {
@@ -301,19 +303,19 @@ function OnboardingContent() {
             {/* Experience + Vehicle */}
             <div className="card-base rounded-2xl p-5 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">سنوات الخبرة</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('experienceYearsLabel')}</label>
                 <input
                   type="number"
                   min={0}
                   max={50}
                   {...driverForm.register('experienceYears', { valueAsNumber: true })}
                   className="input-base text-sm w-full"
-                  placeholder="مثال: 5"
+                  placeholder={t('placeholderExperience')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-2">أنواع المركبات</label>
+                <label className="block text-sm font-bold text-on-surface mb-2">{t('vehicleTypesLabel')}</label>
                 <div className="flex flex-wrap gap-2">
                   {VEHICLE_TYPE_OPTIONS.map(vt => {
                     const selected = driverForm.watch('vehicleTypes').includes(vt)
@@ -340,7 +342,7 @@ function OnboardingContent() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-on-surface">يمتلك مركبته الخاصة</span>
+                <span className="text-sm font-bold text-on-surface">{t('hasOwnVehicleLabel')}</span>
                 <button
                   type="button"
                   onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
@@ -359,7 +361,7 @@ function OnboardingContent() {
 
             {/* Languages */}
             <div className="card-base rounded-2xl p-5">
-              <label className="block text-sm font-bold text-on-surface mb-2">اللغات</label>
+              <label className="block text-sm font-bold text-on-surface mb-2">{t('languagesLabel')}</label>
               <div className="flex flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map(lang => {
                   const selected = driverForm.watch('languages').includes(lang)
@@ -388,21 +390,21 @@ function OnboardingContent() {
             {/* Bio + Location + Contact */}
             <div className="card-base rounded-2xl p-5 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">نبذة عنك</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('bioLabel')}</label>
                 <textarea
                   {...driverForm.register('bio')}
                   rows={3}
                   className="input-base text-sm w-full resize-none"
-                  placeholder="اكتب نبذة مختصرة عن خبرتك..."
+                  placeholder={t('placeholderBio')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">
-                  المحافظة <span className="text-error">*</span>
+                  {t('governorateLabel')} <span className="text-error">*</span>
                 </label>
                 <select {...driverForm.register('governorate')} className="input-base text-sm w-full">
-                  <option value="">اختر المحافظة</option>
+                  <option value="">{t('selectGovernorateOption')}</option>
                   {OMAN_GOVERNORATES.map(g => (
                     <option key={g} value={g}>{g}</option>
                   ))}
@@ -413,17 +415,17 @@ function OnboardingContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">المدينة</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('cityLabel')}</label>
                 <input
                   {...driverForm.register('city')}
                   className="input-base text-sm w-full"
-                  placeholder="مثال: مسقط"
+                  placeholder={t('placeholderCity')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-1.5">رقم الهاتف</label>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                   <input
                     {...driverForm.register('contactPhone')}
                     className="input-base text-sm w-full"
@@ -431,7 +433,7 @@ function OnboardingContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-1.5">واتساب</label>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                   <input
                     {...driverForm.register('whatsapp')}
                     className="input-base text-sm w-full"
@@ -446,7 +448,7 @@ function OnboardingContent() {
               disabled={submitting}
               className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
             >
-              {submitting ? STRINGS.LOADING : 'إنشاء البروفايل'}
+              {submitting ? STRINGS.LOADING : t('createProfile')}
             </button>
           </form>
         </div>
@@ -460,50 +462,50 @@ function OnboardingContent() {
             className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant hover:text-on-surface mb-6 transition-colors"
           >
             <ChevronRight size={16} />
-            رجوع
+            {t('back')}
           </button>
-          <h1 className="text-xl font-extrabold text-on-surface mb-6">بروفايل صاحب العمل</h1>
+          <h1 className="text-xl font-extrabold text-on-surface mb-6">{t('employerProfileTitle')}</h1>
 
           <form onSubmit={employerForm.handleSubmit(handleEmployerSubmit)} className="space-y-5">
 
             <div className="card-base rounded-2xl p-5 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">اسم الشركة</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('companyNameLabel')}</label>
                 <input
                   {...employerForm.register('companyName')}
                   className="input-base text-sm w-full"
-                  placeholder="اختياري"
+                  placeholder={t('optional')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">حجم الشركة</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('companySizeLabel')}</label>
                 <select {...employerForm.register('companySize')} className="input-base text-sm w-full">
-                  <option value="">اختياري</option>
-                  <option value="1-10">1-10 موظفين</option>
-                  <option value="10-50">10-50 موظف</option>
-                  <option value="50-200">50-200 موظف</option>
-                  <option value="200-500">200-500 موظف</option>
-                  <option value="500+">أكثر من 500</option>
+                  <option value="">{t('optional')}</option>
+                  <option value="1-10">{t('companySize1to10')}</option>
+                  <option value="10-50">{t('companySize10to50')}</option>
+                  <option value="50-200">{t('companySize50to200')}</option>
+                  <option value="200-500">{t('companySize200to500')}</option>
+                  <option value="500+">{t('companySize500plus')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">المجال</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('industryLabel')}</label>
                 <input
                   {...employerForm.register('industry')}
                   className="input-base text-sm w-full"
-                  placeholder="مثال: نقل وشحن"
+                  placeholder={t('placeholderIndustry')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">نبذة عن الشركة</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('companyBioLabel')}</label>
                 <textarea
                   {...employerForm.register('bio')}
                   rows={3}
                   className="input-base text-sm w-full resize-none"
-                  placeholder="اكتب نبذة مختصرة..."
+                  placeholder={t('placeholderCompanyBio')}
                 />
               </div>
             </div>
@@ -511,10 +513,10 @@ function OnboardingContent() {
             <div className="card-base rounded-2xl p-5 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">
-                  المحافظة <span className="text-error">*</span>
+                  {t('governorateLabel')} <span className="text-error">*</span>
                 </label>
                 <select {...employerForm.register('governorate')} className="input-base text-sm w-full">
-                  <option value="">اختر المحافظة</option>
+                  <option value="">{t('selectGovernorateOption')}</option>
                   {OMAN_GOVERNORATES.map(g => (
                     <option key={g} value={g}>{g}</option>
                   ))}
@@ -525,17 +527,17 @@ function OnboardingContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">المدينة</label>
+                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('cityLabel')}</label>
                 <input
                   {...employerForm.register('city')}
                   className="input-base text-sm w-full"
-                  placeholder="اختياري"
+                  placeholder={t('optional')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-1.5">رقم الهاتف</label>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                   <input
                     {...employerForm.register('contactPhone')}
                     className="input-base text-sm w-full"
@@ -543,7 +545,7 @@ function OnboardingContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-1.5">واتساب</label>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                   <input
                     {...employerForm.register('whatsapp')}
                     className="input-base text-sm w-full"
@@ -558,7 +560,7 @@ function OnboardingContent() {
               disabled={submitting}
               className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
             >
-              {submitting ? STRINGS.LOADING : 'إنشاء البروفايل'}
+              {submitting ? STRINGS.LOADING : t('createProfile')}
             </button>
           </form>
         </div>
