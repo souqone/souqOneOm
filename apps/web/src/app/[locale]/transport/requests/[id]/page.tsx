@@ -424,7 +424,7 @@ export default function RequestDetailPage() {
     !isOwner &&
     isCarrier &&
     !!carrierProfile &&
-    request.status === 'OPEN' &&
+    ['OPEN', 'QUOTED'].includes(request.status) &&
     !hasAlreadyQuoted &&
     !quoteSent;
 
