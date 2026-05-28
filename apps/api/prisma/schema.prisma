@@ -230,6 +230,8 @@ model Conversation {
   listingId  String?
   listing    Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
+  transportBooking TransportBooking?
+
   participants ConversationParticipant[]
   messages     Message[]
 
@@ -1587,6 +1589,11 @@ model TransportBooking {
   completedAt     DateTime?
   cancelledAt     DateTime?
   cancellationReason String?
+
+  conversationId  String?       @unique
+  conversation    Conversation? @relation(fields: [conversationId], references: [id])
+
+  deliveryNote    String?
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

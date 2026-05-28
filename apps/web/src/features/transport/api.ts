@@ -109,9 +109,10 @@ export const transportApi = {
     })
   },
 
-  completeBooking(bookingId: string) {
+  completeBooking(bookingId: string, deliveryNote?: string) {
     return apiRequest<TransportBooking>(`/transport/bookings/${bookingId}/complete`, {
       method: 'PATCH',
+      body: deliveryNote ? JSON.stringify({ deliveryNote }) : undefined,
     })
   },
 

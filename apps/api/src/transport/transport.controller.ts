@@ -187,8 +187,12 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('bookings/:id/complete')
-  completeBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.transportBookingService.complete(id, user.sub);
+  completeBooking(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body('deliveryNote') deliveryNote?: string,
+  ) {
+    return this.transportBookingService.complete(id, user.sub, deliveryNote);
   }
 
   @UseGuards(JwtAuthGuard)

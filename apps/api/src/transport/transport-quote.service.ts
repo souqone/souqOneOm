@@ -161,13 +161,33 @@ export class TransportQuoteService {
           requestId: quote.requestId,
           quoteId: quote.id,
         },
+      });
+
+      // Create conversation
+      const conversation = await tx.conversation.create({
+        data: {
+          entityType: 'TRANSPORT_BOOKING',
+          entityId: booking.id,
+          participants: {
+            create: [
+              { userId: quote.request.userId },
+              { userId: quote.carrier.userId },
+            ],
+          },
+        },
+      });
+
+      // Update booking to link conversation
+      const finalBooking = await tx.transportBooking.update({
+        where: { id: booking.id },
+        data: { conversationId: conversation.id },
         include: {
           request: { include: { user: { select: USER_SELECT } } },
           quote: { include: { carrier: { include: { user: { select: USER_SELECT } } } } },
         },
       });
 
-      return { booking, pendingQuotes };
+      return { booking: finalBooking, pendingQuotes };
     });
 
     // Notify accepted carrier
