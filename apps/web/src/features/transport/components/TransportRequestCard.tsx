@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import {
   Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
@@ -11,7 +12,7 @@ import {
   SERVICE_TYPE_LABELS,
   SERVICE_TYPE_COLORS,
   SERVICE_TYPE_BG_COLORS,
-  REQUEST_STATUS_LABELS,
+  getRequestStatusLabel,
 } from '../constants';
 import {
   formatBudgetRange,
@@ -37,11 +38,12 @@ interface Props {
 }
 
 export default function TransportRequestCard({ request, onRenew, renewing }: Props) {
+  const t = useTranslations();
   const ServiceIcon = SERVICE_ICONS[request.serviceType] ?? Package;
   const iconColor = SERVICE_TYPE_COLORS[request.serviceType] ?? '#9ca3af';
   const iconBg = SERVICE_TYPE_BG_COLORS[request.serviceType] ?? '#f3f4f6';
   const statusBadgeClass = getRequestStatusBadgeClass(request.status);
-  const statusLabel = REQUEST_STATUS_LABELS[request.status] ?? request.status;
+  const statusLabel = getRequestStatusLabel(request.status, t);
   const dotColor = getStatusDotColor(request.status);
   const quotesCount = request.quotesCount ?? request._count?.quotes ?? 0;
 

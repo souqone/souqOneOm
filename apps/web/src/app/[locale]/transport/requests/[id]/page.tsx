@@ -29,7 +29,7 @@ import type {
   TransportQuote,
   CreateQuoteDto,
 } from '@/features/transport/types';
-import { transportApi } from '@/features/transport/api';
+import { transportApi, useMyCarrierProfile } from '@/features/transport/api';
 import {
   SERVICE_TYPE_LABELS,
   SERVICE_TYPE_COLORS,
@@ -290,9 +290,13 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
 export default function RequestDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { open: openAuth } = useAuthModal();
   const id = params?.id as string;
+
+  const { data: carrierProfile, isLoading: checkingCarrier } = useMyCarrierProfile(
+    isAuthenticated && user?.role === 'CARRIER'
+  );
 
   const [request, setRequest] = useState<TransportRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -393,12 +397,13 @@ export default function RequestDetailPage() {
   }
 
   const isOwner = user?.id === request.userId;
-  const isCarrier = !!user; // backend validates carrier profile existence
+  const isCarrier = user?.role === 'CARRIER';
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
   const hasAlreadyQuoted = quotes.some((q) => q.carrierId === user?.id);
   const canSubmitQuote =
     !isOwner &&
     isCarrier &&
+    !!carrierProfile &&
     request.status === 'OPEN' &&
     !hasAlreadyQuoted &&
     !quoteSent;
@@ -683,9 +688,21 @@ export default function RequestDetailPage() {
                     </button>
                   </div>
                 ) : (
-                  canSubmitQuote && (
-                    <SubmitQuoteForm requestId={id} onSubmitted={handleQuoteSubmitted} />
-                  )
+                  <>
+                    {isCarrier && !checkingCarrier && !carrierProfile && (
+                      <div className="card-base p-4 text-center flex flex-col gap-3">
+                        <p className="text-sm text-[var(--color-on-surface-muted)]">
+                          يجب إنشاء ملف ناقل أولاً لتقديم عروض
+                        </p>
+                        <Link href="/transport/carriers/register" className="btn-primary w-full justify-center">
+                          سجّل كناقل الآن
+                        </Link>
+                      </div>
+                    )}
+                    {canSubmitQuote && (
+                      <SubmitQuoteForm requestId={id} onSubmitted={handleQuoteSubmitted} />
+                    )}
+                  </>
                 )}
               </div>
             )}
