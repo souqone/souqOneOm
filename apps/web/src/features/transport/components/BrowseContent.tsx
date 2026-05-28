@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useSearchParams, usePathname } from 'next/navigation';
-import { Link, useRouter } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
+import { Link, useRouter, usePathname } from '@/i18n/navigation';
 import { Truck } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import RequestsGrid from './RequestsGrid';
