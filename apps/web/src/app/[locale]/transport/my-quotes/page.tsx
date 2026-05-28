@@ -49,21 +49,18 @@ export default function MyQuotesPage() {
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
-  const load = async (tab: TabStatus) => {
+
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError('');
-    try {
-      const res = await transportApi.myQuotes(1, 50, tab === 'ALL' ? undefined : tab);
-      setQuotes(res.items);
-    } catch {
-      setError('تعذّر تحميل عروضك');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    transportApi.myQuotes(1, 50, activeTab === 'ALL' ? undefined : activeTab)
+      .then((res) => { if (!cancelled) setQuotes(res.items); })
+      .catch(() => { if (!cancelled) setError('تعذّر تحميل عروضك'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(activeTab); }, [activeTab]);
+  }, [activeTab]);
 
   const handleWithdraw = async (quoteId: string) => {
     setWithdrawing(quoteId);
@@ -150,7 +147,7 @@ export default function MyQuotesPage() {
         {loading ? (
           <TransportPageLoader />
         ) : error ? (
-          <TransportPageError message={error} onRetry={() => load(activeTab)} />
+          <TransportPageError message={error} onRetry={() => window.location.reload()} />
         ) : quotes.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">

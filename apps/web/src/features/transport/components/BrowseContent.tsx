@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Link } from '@/i18n/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { Truck } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import RequestsGrid from './RequestsGrid';
@@ -37,6 +37,8 @@ function parseSortBy(sortBy?: string): Pick<GetRequestsParams, 'sortBy' | 'sortO
 
 export default function BrowseContent() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const { isAuthenticated } = useAuth();
 
   const [filters, setFilters] = useState<BrowseFilters>({
@@ -51,7 +53,16 @@ export default function BrowseContent() {
   const handleFilterChange = useCallback((newFilters: BrowseFilters) => {
     setFilters(newFilters);
     setCurrentPage(1);
-  }, []);
+    // Sync to URL
+    const params = new URLSearchParams();
+    if (newFilters.serviceType) params.set('serviceType', newFilters.serviceType);
+    if (newFilters.status) params.set('status', newFilters.status);
+    if (newFilters.fromGovernorate) params.set('fromGovernorate', newFilters.fromGovernorate);
+    if (newFilters.toGovernorate) params.set('toGovernorate', newFilters.toGovernorate);
+    if (newFilters.sortBy) params.set('sortBy', newFilters.sortBy);
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}` as any, { scroll: false });
+  }, [pathname, router]);
 
   const requestParams: GetRequestsParams = {
     page: currentPage,

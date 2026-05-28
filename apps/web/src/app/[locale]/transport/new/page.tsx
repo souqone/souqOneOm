@@ -1,4 +1,3 @@
-import { Toaster } from 'sonner';
 import { AuthGuard } from '@/components/auth-guard';
 import CreateRequestWizard from '@/features/transport/components/CreateRequestWizard';
 
@@ -16,7 +15,7 @@ export default function CreateRequestPage() {
         </main>
         <div className="h-16 md:hidden" />
       </div>
-      <Toaster position="top-center" richColors />
     </AuthGuard>
   );
 }
+
