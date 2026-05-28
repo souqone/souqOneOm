@@ -430,3 +430,77 @@ jobs:
           else
             echo "⚠️  PROD_WEB_URL secret not set — skipping health check"
           fi
+
+  # ════════════════════════════════════════
+  # 8. Transport E2E Tests (Vercel)
+  # ════════════════════════════════════════
+  test-transport-e2e:
+    name: Transport E2E (Vercel)
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Restore node_modules
+        id: cache-modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx turbo run db:generate
+
+      - name: Install Playwright (chromium only)
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Seed Vercel database
+        run: npx tsx prisma/seed.ts
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Wait for Vercel to be healthy
+        run: |
+          echo "Checking Vercel deployment health..."
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PROD_WEB_URL }}" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Vercel is healthy"
+              break
+            fi
+            echo "⏳ Attempt $i — status $STATUS, waiting 10s..."
+            sleep 10
+          done
+
+      - name: Run Transport E2E Tests
+        run: npx playwright test e2e/transport/ --project=chromium
+        working-directory: apps/web
+        env:
+          BASE_URL: ${{ secrets.PROD_WEB_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.PROD_API_URL }}
+          CI: true
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transport-e2e-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 14

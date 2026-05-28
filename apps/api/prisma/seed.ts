@@ -373,6 +373,156 @@ async function main() {
   console.log('\n🎉 تم إضافة 10 إعلانات تجريبية بنجاح!');
   console.log('👤 بيانات الدخول: seller@carone.om / Test1234');
   console.log('👤 بيانات الدخول: ahmed@carone.om / Test1234');
+
+  // ─── Transport Test Users ────────────────────────────────────────────────────
+
+  const transportShipper = await prisma.user.upsert({
+    where: { email: 'shipper@souqone.om' },
+    update: {},
+    create: {
+      email: 'shipper@souqone.om',
+      username: 'transport_shipper',
+      displayName: 'شاحن تجريبي',
+      passwordHash: await bcrypt.hash('Test1234', 10),
+      role: 'USER',
+      isVerified: true,
+    },
+  });
+
+  const transportCarrierUser = await prisma.user.upsert({
+    where: { email: 'carrier@souqone.om' },
+    update: {},
+    create: {
+      email: 'carrier@souqone.om',
+      username: 'transport_carrier',
+      displayName: 'ناقل تجريبي',
+      passwordHash: await bcrypt.hash('Test1234', 10),
+      role: 'CARRIER',
+      isVerified: true,
+    },
+  });
+
+  const transportOtherUser = await prisma.user.upsert({
+    where: { email: 'other@souqone.om' },
+    update: {},
+    create: {
+      email: 'other@souqone.om',
+      username: 'transport_other',
+      displayName: 'مستخدم آخر',
+      passwordHash: await bcrypt.hash('Test1234', 10),
+      role: 'USER',
+      isVerified: true,
+    },
+  });
+
+  // ─── Carrier Profile ──────────────────────────────────────────────────────────
+
+  const carrierProfile = await prisma.carrierProfile.upsert({
+    where: { userId: transportCarrierUser.id },
+    update: {},
+    create: {
+      userId: transportCarrierUser.id,
+      companyName: 'شركة النقل التجريبية',
+      governorate: 'مسقط',
+      phone: '+96891000001',
+      vehicleTypes: ['شاحنة', 'ونيت'],
+      serviceAreas: ['مسقط', 'صلالة'],
+      isAvailable: true,
+      isVerified: true,
+      bio: 'ناقل تجريبي للـ E2E tests',
+    },
+  });
+
+  // ─── Seed Transport Requests ──────────────────────────────────────────────────
+
+  // Request 1: OPEN — owned by shipper (main test subject)
+  await prisma.transportRequest.upsert({
+    where: { id: 'seed-tr-open-001' },
+    update: {},
+    create: {
+      id: 'seed-tr-open-001',
+      userId: transportShipper.id,
+      serviceType: 'GOODS',
+      fromGovernorate: 'مسقط',
+      fromCity: 'الموالح',
+      fromAddress: 'شارع الموالح، بناية 5',
+      toGovernorate: 'صلالة',
+      toCity: 'المدينة',
+      toAddress: 'شارع صلالة الرئيسي',
+      cargoDescription: 'أثاث منزلي — صناديق متنوعة للتجربة',
+      weightTons: 2.5,
+      budgetMin: 50,
+      budgetMax: 150,
+      timingType: 'ASAP',
+      status: 'OPEN',
+    },
+  });
+
+  // Request 2: OPEN — owned by other user (for ownership/security tests)
+  await prisma.transportRequest.upsert({
+    where: { id: 'seed-tr-other-002' },
+    update: {},
+    create: {
+      id: 'seed-tr-other-002',
+      userId: transportOtherUser.id,
+      serviceType: 'FURNITURE',
+      fromGovernorate: 'مسقط',
+      fromCity: 'بوشر',
+      fromAddress: 'حي بوشر',
+      toGovernorate: 'نزوى',
+      toCity: 'نزوى',
+      toAddress: 'وسط المدينة',
+      cargoDescription: 'أثاث مكتبي — خزائن ومكاتب',
+      weightTons: 1.0,
+      budgetMin: 80,
+      budgetMax: 200,
+      timingType: 'ASAP',
+      status: 'OPEN',
+    },
+  });
+
+  // Request 3: QUOTED — owned by shipper, has pending quote from carrier
+  const quotedRequest = await prisma.transportRequest.upsert({
+    where: { id: 'seed-tr-quoted-003' },
+    update: {},
+    create: {
+      id: 'seed-tr-quoted-003',
+      userId: transportShipper.id,
+      serviceType: 'GOODS',
+      fromGovernorate: 'مسقط',
+      fromCity: 'الرحاب',
+      fromAddress: 'طريق السلطان قابوس',
+      toGovernorate: 'مسقط',
+      toCity: 'العذيبة',
+      toAddress: 'المنطقة الصناعية',
+      cargoDescription: 'بضائع تجارية — طرود صغيرة',
+      weightTons: 0.5,
+      budgetMin: 30,
+      budgetMax: 80,
+      timingType: 'ASAP',
+      status: 'QUOTED',
+    },
+  });
+
+  await prisma.transportQuote.upsert({
+    where: { id: 'seed-tq-pending-001' },
+    update: {},
+    create: {
+      id: 'seed-tq-pending-001',
+      requestId: quotedRequest.id,
+      carrierId: carrierProfile.id,
+      price: 60,
+      estimatedHours: 3,
+      message: 'يسعدني تنفيذ هذه الرحلة بأفضل خدمة',
+      status: 'PENDING',
+    },
+  });
+
+  console.log('✅ Transport seed data created');
+  console.log('   shipper@souqone.om / Test1234');
+  console.log('   carrier@souqone.om / Test1234');
+  console.log('   other@souqone.om   / Test1234');
+  console.log('   Requests: seed-tr-open-001, seed-tr-other-002, seed-tr-quoted-003');
 }
 
 main()
