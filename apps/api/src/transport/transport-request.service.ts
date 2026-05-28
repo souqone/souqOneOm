@@ -194,10 +194,33 @@ export class TransportRequestService {
       throw new BadRequestException('لا يمكن إلغاء هذا الطلب في حالته الحالية');
     }
 
+    const pendingQuotes = await this.prisma.transportQuote.findMany({
+      where: { requestId: id, status: 'PENDING' },
+      include: { carrier: true },
+    });
+
     const updated = await this.prisma.transportRequest.update({
       where: { id },
       data: { status: 'CANCELLED' },
     });
+
+    if (pendingQuotes.length > 0) {
+      await this.prisma.transportQuote.updateMany({
+        where: { id: { in: pendingQuotes.map((q) => q.id) } },
+        data: { status: 'REJECTED' },
+      });
+
+      const notifications = pendingQuotes.map((q) =>
+        this.notifications.create({
+          type: 'TRANSPORT_REQUEST_CANCELLED',
+          title: 'إلغاء طلب نقل',
+          body: 'تم إلغاء طلب النقل الذي قدمت عرضاً عليه',
+          userId: q.carrier.userId,
+          data: { requestId: id },
+        }),
+      );
+      await Promise.allSettled(notifications);
+    }
 
     await this.redis.delPattern('transport:list:*');
     await this.redis.del(`transport:request:${id}`);

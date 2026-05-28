@@ -131,15 +131,23 @@ export class TransportQuoteService {
         data: { status: 'ACCEPTED' },
       });
 
-      // Reject all other pending quotes
-      await tx.transportQuote.updateMany({
+      // Find all pending quotes except the accepted one
+      const pendingQuotes = await tx.transportQuote.findMany({
         where: {
           requestId: quote.requestId,
           id: { not: quoteId },
           status: 'PENDING',
         },
-        data: { status: 'REJECTED' },
+        include: { carrier: true },
       });
+
+      // Reject all other pending quotes
+      if (pendingQuotes.length > 0) {
+        await tx.transportQuote.updateMany({
+          where: { id: { in: pendingQuotes.map((q) => q.id) } },
+          data: { status: 'REJECTED' },
+        });
+      }
 
       // Update request status
       await tx.transportRequest.update({
@@ -148,7 +156,7 @@ export class TransportQuoteService {
       });
 
       // Create booking
-      return tx.transportBooking.create({
+      const booking = await tx.transportBooking.create({
         data: {
           requestId: quote.requestId,
           quoteId: quote.id,
@@ -158,18 +166,34 @@ export class TransportQuoteService {
           quote: { include: { carrier: { include: { user: { select: USER_SELECT } } } } },
         },
       });
+
+      return { booking, pendingQuotes };
     });
 
     // Notify accepted carrier
     await this.notifications.create({
-      type: 'TRANSPORT_BOOKING_CONFIRMED',
+      type: 'TRANSPORT_QUOTE_ACCEPTED',
       title: 'تم قبول عرضك',
       body: 'تم قبول عرضك على طلب النقل',
       userId: quote.carrier.userId,
-      data: { requestId: quote.requestId, bookingId: booking.id },
+      data: { requestId: quote.requestId, bookingId: booking.booking.id },
     });
 
-    return booking;
+    // Notify rejected carriers
+    if (booking.pendingQuotes.length > 0) {
+      const rejectedNotifications = booking.pendingQuotes.map((q) =>
+        this.notifications.create({
+          type: 'TRANSPORT_QUOTE_REJECTED',
+          title: 'تم رفض عرضك',
+          body: 'تم قبول عرض آخر لطلب النقل',
+          userId: q.carrier.userId,
+          data: { requestId: quote.requestId },
+        })
+      );
+      await Promise.allSettled(rejectedNotifications);
+    }
+
+    return booking.booking;
   }
 
   async withdrawQuote(quoteId: string, userId: string) {
