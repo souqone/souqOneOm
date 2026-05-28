@@ -130,26 +130,26 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
               </div>
             </div>
 
-            {/* Governorates + Wilayat */}
+            {/* Governorates + City */}
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من محافظة</p>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">من محافظة</label>
                   <select
+                    className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                     value={local.fromGovernorate ?? ''}
-                    onChange={(e) => setLocal((p) => ({ ...p, fromGovernorate: e.target.value || undefined, fromWilayat: undefined }))}
-                    className="input-base text-sm"
+                    onChange={(e) => setLocal((p) => ({ ...p, fromGovernorate: e.target.value || undefined, fromCity: undefined }))}
                   >
                     <option value="">الكل</option>
                     {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من ولاية</p>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
                   <select
-                    value={local.fromWilayat ?? ''}
-                    onChange={(e) => setLocal((p) => ({ ...p, fromWilayat: e.target.value || undefined }))}
-                    className="input-base text-sm"
+                    className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
+                    value={local.fromCity ?? ''}
+                    onChange={(e) => setLocal((p) => ({ ...p, fromCity: e.target.value || undefined }))}
                     disabled={!local.fromGovernorate}
                   >
                     <option value="">الكل</option>
@@ -159,22 +159,22 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى محافظة</p>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">إلى محافظة</label>
                   <select
+                    className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                     value={local.toGovernorate ?? ''}
-                    onChange={(e) => setLocal((p) => ({ ...p, toGovernorate: e.target.value || undefined, toWilayat: undefined }))}
-                    className="input-base text-sm"
+                    onChange={(e) => setLocal((p) => ({ ...p, toGovernorate: e.target.value || undefined, toCity: undefined }))}
                   >
                     <option value="">الكل</option>
                     {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى ولاية</p>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
                   <select
-                    value={local.toWilayat ?? ''}
-                    onChange={(e) => setLocal((p) => ({ ...p, toWilayat: e.target.value || undefined }))}
-                    className="input-base text-sm"
+                    className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
+                    value={local.toCity ?? ''}
+                    onChange={(e) => setLocal((p) => ({ ...p, toCity: e.target.value || undefined }))}
                     disabled={!local.toGovernorate}
                   >
                     <option value="">الكل</option>

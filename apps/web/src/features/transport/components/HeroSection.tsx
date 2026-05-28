@@ -1,8 +1,11 @@
 import { Link } from '@/i18n/navigation';
 import { ArrowLeft, Truck, Shield, Star } from 'lucide-react';
-
+import { useTranslations } from 'next-intl';
 
 export default function HeroSection() {
+  const t = useTranslations('transport.landing');
+  const tCommon = useTranslations('transport');
+
   return (
     <section
       className="relative overflow-hidden gradient-navy text-white"
@@ -30,7 +33,7 @@ export default function HeroSection() {
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 sm:px-4 py-1.5 mb-4 sm:mb-6">
               <span className="w-2 h-2 rounded-full bg-[var(--color-brand-green-light)] animate-pulse" />
               <span className="text-xs font-bold text-white/90">
-                منصة عُمانية متخصصة في الشحن والنقل
+                {tCommon('title')}
               </span>
             </div>
 
@@ -38,14 +41,13 @@ export default function HeroSection() {
               className="text-2xl sm:text-4xl lg:text-5xl text-white leading-tight mb-3 sm:mb-4"
               style={{ fontWeight: 800, lineHeight: 1.3 }}
             >
-              اطلب خدمة نقل
+              {t('heroSubtitle').split('—')[0]}
               <br />
-              <span className="text-[var(--color-brand-amber)]">أو قدّم عرضاً</span>
+              <span className="text-[var(--color-brand-amber)]">{tCommon('subtitle')}</span>
             </h1>
 
             <p className="text-sm sm:text-lg text-white/75 mb-5 sm:mb-8 leading-relaxed max-w-lg">
-              سوق متخصص يربط أصحاب الشحنات بمزودي خدمات النقل الموثوقين في جميع محافظات سلطنة عُمان.
-              أسعار تنافسية وخدمة موثوقة.
+              {t('heroSubtitle')}
             </p>
 
             {/* CTAs */}
@@ -55,13 +57,13 @@ export default function HeroSection() {
                 className="btn-transport-primary text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto"
               >
                 <Truck size={18} />
-                أنشئ طلب نقل
+                {t('heroAddCta')}
               </Link>
               <Link
                 href="/transport/carriers/register"
                 className="btn-outline-white text-sm sm:text-base py-3 sm:py-3.5 px-6 justify-center sm:justify-start w-full sm:w-auto"
               >
-                أنا مزود خدمة
+                {tCommon('becomeCarrier')}
                 <ArrowLeft size={18} />
               </Link>
             </div>
@@ -69,7 +71,7 @@ export default function HeroSection() {
             {/* Trust signals */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               {[
-                { icon: Shield, text: 'مزودون موثّقون' },
+                { icon: Shield, text: t('why2Title') },
                 { icon: Star, text: 'تقييمات حقيقية' },
                 { icon: Truck, text: 'تغطية 18 محافظة' },
               ]?.map(({ icon: Icon, text }) => (
@@ -95,13 +97,13 @@ export default function HeroSection() {
                       <Truck size={16} className="text-blue-600" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-[var(--color-on-surface)]">بضائع عامة</div>
+                      <div className="text-xs font-bold text-[var(--color-on-surface)]">{tCommon('serviceTypes.GOODS')}</div>
                       <div className="text-[10px] text-[var(--color-on-surface-muted)] font-mono">#A3F91C</div>
                     </div>
                   </div>
                   <span className="badge-open inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold">
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-status-open)]" />
-                    مفتوح
+                    {tCommon('status.OPEN')}
                   </span>
                 </div>
 

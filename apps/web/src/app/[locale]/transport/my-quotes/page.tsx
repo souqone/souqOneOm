@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import {
   MessageSquare,
@@ -49,20 +49,31 @@ export default function MyQuotesPage() {
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
+  const pendingWithdrawals = useRef<Set<string>>(new Set());
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = async (tab: TabStatus) => {
     setLoading(true);
     setError('');
-    transportApi.myQuotes(1, 50, activeTab === 'ALL' ? undefined : activeTab)
-      .then((res) => { if (!cancelled) setQuotes(res.items); })
-      .catch(() => { if (!cancelled) setError('تعذّر تحميل عروضك'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    try {
+      const res = await transportApi.myQuotes(1, 50, tab === 'ALL' ? undefined : tab);
+      const newQuotes = res.items.map((q) =>
+        pendingWithdrawals.current.has(q.id) ? { ...q, status: 'WITHDRAWN' as QuoteStatus } : q
+      );
+      setQuotes(newQuotes);
+    } catch {
+      setError('تعذّر تحميل عروضك');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load(activeTab);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const handleWithdraw = async (quoteId: string) => {
+    pendingWithdrawals.current.add(quoteId);
     setWithdrawing(quoteId);
     setWithdrawError(null);
     try {
@@ -73,6 +84,7 @@ export default function MyQuotesPage() {
     } catch {
       setWithdrawError('تعذّر سحب العرض، حاول مجدداً');
     } finally {
+      pendingWithdrawals.current.delete(quoteId);
       setWithdrawing(null);
     }
   };
@@ -147,7 +159,7 @@ export default function MyQuotesPage() {
         {loading ? (
           <TransportPageLoader />
         ) : error ? (
-          <TransportPageError message={error} onRetry={() => window.location.reload()} />
+          <TransportPageError message={error} onRetry={() => load(activeTab)} />
         ) : quotes.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">

@@ -24,7 +24,15 @@ export class QueryTransportRequestsDto {
 
   @IsOptional()
   @IsString()
+  fromCity?: string;
+
+  @IsOptional()
+  @IsString()
   toGovernorate?: string;
+
+  @IsOptional()
+  @IsString()
+  toCity?: string;
 
   @IsOptional()
   @IsString()

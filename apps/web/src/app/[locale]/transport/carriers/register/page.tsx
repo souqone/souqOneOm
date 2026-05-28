@@ -64,8 +64,9 @@ export default function CarrierRegistrationPage() {
 
   if (checkingProfile) {
     return (
-      <div className="flex-1 min-h-[60vh] flex items-center justify-center">
+      <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader2 size={28} className="animate-spin text-[var(--color-brand-navy)]" />
+        <p className="text-sm text-[var(--color-on-surface-variant)]">جارٍ التحقق من ملفك...</p>
       </div>
     );
   }

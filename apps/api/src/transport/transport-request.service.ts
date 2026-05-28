@@ -121,7 +121,9 @@ export class TransportRequestService {
     where.status = (query.status as any) || 'OPEN';
     if (query.serviceType) where.serviceType = query.serviceType as any;
     if (query.fromGovernorate) where.fromGovernorate = query.fromGovernorate;
+    if (query.fromCity) where.fromCity = query.fromCity;
     if (query.toGovernorate) where.toGovernorate = query.toGovernorate;
+    if (query.toCity) where.toCity = query.toCity;
     if (query.userId) where.userId = query.userId;
 
     const orderBy: Prisma.TransportRequestOrderByWithRelationInput = {};

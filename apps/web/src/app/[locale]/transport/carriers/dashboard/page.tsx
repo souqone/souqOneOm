@@ -324,6 +324,12 @@ function CarrierDashboardContent() {
     }
   };
 
+  useEffect(() => {
+    if (!toggleError) return;
+    const timer = setTimeout(() => setToggleError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [toggleError]);
+
   if (loading) return <TransportPageLoader />;
 
   if (error) {
@@ -549,7 +555,7 @@ function CarrierDashboardContent() {
                     <div key={q.id} className="card-base p-4 flex items-center justify-between gap-3">
                       <div className="flex flex-col gap-1 min-w-0">
                         <p className="text-xs text-[var(--color-on-surface-muted)] font-mono">
-                          #{q.requestId}
+                          #{q.requestId.slice(0, 8)}…
                         </p>
                         <p className="text-sm font-bold text-[var(--color-brand-navy)]">
                           {q.price} {CURRENCY_LABEL}
@@ -613,8 +619,15 @@ function CarrierDashboardContent() {
         </div>
 
         {toggleError && (
-          <div className="fixed bottom-20 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-80 bg-[var(--color-error)] text-white text-sm px-4 py-3 rounded-xl shadow-lg z-50">
-            {toggleError}
+          <div className="fixed bottom-20 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-80 bg-[var(--color-error)] text-white text-sm px-4 py-3 rounded-xl shadow-lg z-50 flex items-center justify-between gap-3">
+            <span>{toggleError}</span>
+            <button
+              onClick={() => setToggleError('')}
+              className="text-white/80 hover:text-white text-lg leading-none flex-shrink-0"
+              aria-label="إغلاق"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
       </div>

@@ -115,7 +115,7 @@ export default function MyRequestsPage() {
         {loading ? (
           <TransportPageLoader />
         ) : error ? (
-          <TransportPageError message={error} onRetry={() => window.location.reload()} />
+          <TransportPageError message={error} onRetry={() => load(activeTab)} />
         ) : requests.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">

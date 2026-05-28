@@ -4,6 +4,8 @@ import { useFormContext } from 'react-hook-form';
 import { Package, Weight, Users, FileText } from 'lucide-react';
 import type { CreateRequestFormData } from './CreateRequestWizard';
 
+import { useTranslations } from 'next-intl';
+
 export default function Step3Cargo() {
   const {
     register,
@@ -14,14 +16,17 @@ export default function Step3Cargo() {
 
   const requiresHelper = watch('requiresHelper');
 
+  const t = useTranslations('transport.steps');
+  const tCommon = useTranslations('transport');
+
   return (
     <div dir="rtl">
       <div className="mb-6">
         <h2 className="text-xl text-[var(--color-on-surface)] mb-1" style={{ fontWeight: 700 }}>
-          تفاصيل البضاعة
+          {t('cargo')}
         </h2>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
-          وصف دقيق للبضاعة يساعد المزودين على تقديم عروض مناسبة
+          {t('cargoDesc')}
         </p>
       </div>
 
@@ -30,15 +35,15 @@ export default function Step3Cargo() {
         <div>
           <label className="flex items-center gap-2 text-sm font-bold text-[var(--color-on-surface)] mb-1.5">
             <Package size={15} className="text-[var(--color-brand-amber)]" />
-            وصف البضاعة <span className="text-[var(--color-error)]">*</span>
+            {tCommon('fields.cargo')} <span className="text-[var(--color-error)]">*</span>
           </label>
           <p className="text-[11px] text-[var(--color-on-surface-muted)] mb-2">
-            اذكر نوع البضاعة وأي تفاصيل مهمة (هشاشة، احتياج تبريد، إلخ)
+            {t('cargoInputDesc')}
           </p>
           <textarea
             {...register('cargoDescription')}
             rows={3}
-            placeholder="مثال: بضائع تجارية متنوعة — إلكترونيات ومعدات مكتبية. البضاعة غير قابلة للكسر ولا تحتاج تبريداً."
+            placeholder={t('cargoExample')}
             className={`input-base text-sm resize-none ${errors.cargoDescription ? 'border-[var(--color-error)]' : ''}`}
           />
           {errors.cargoDescription && (
@@ -52,8 +57,8 @@ export default function Step3Cargo() {
         <div>
           <label className="flex items-center gap-2 text-sm font-bold text-[var(--color-on-surface)] mb-1.5">
             <Weight size={15} className="text-[var(--color-brand-amber)]" />
-            الوزن التقريبي (بالطن)
-            <span className="text-[var(--color-on-surface-muted)] font-normal text-xs">(اختياري)</span>
+            {t('weightLabel')}
+            <span className="text-[var(--color-on-surface-muted)] font-normal text-xs">({tCommon('fields.optional')})</span>
           </label>
           <div className="relative">
             <input
@@ -61,11 +66,11 @@ export default function Step3Cargo() {
               type="number"
               step="0.1"
               min="0.1"
-              placeholder="مثال: 5.5"
+              placeholder={t('weightPlaceholder')}
               className={`input-base text-sm pe-16 ${errors.weightTons ? 'border-[var(--color-error)]' : ''}`}
             />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--color-on-surface-muted)]">
-              طن
+              {tCommon('fields.tons')}
             </span>
           </div>
           {errors.weightTons && (
@@ -79,13 +84,13 @@ export default function Step3Cargo() {
         <div>
           <p className="flex items-center gap-2 text-sm font-bold text-[var(--color-on-surface)] mb-3">
             <Users size={15} className="text-[var(--color-brand-amber)]" />
-            هل تحتاج مساعدة في التحميل والتفريغ؟
+            {t('helpersDesc')}
           </p>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { value: false, label: 'لا، لدي عمال', sublabel: 'لديّ من يساعد في التحميل' },
-              { value: true, label: 'نعم، أحتاج مساعدة', sublabel: 'يشمل السعر عمال التحميل' },
-            ].map(({ value, label, sublabel }) => (
+              { value: false, label: t('noHelpers') },
+              { value: true, label: t('yesHelpers') },
+            ].map(({ value, label }) => (
               <button
                 key={`helper-${String(value)}`}
                 type="button"
@@ -102,7 +107,6 @@ export default function Step3Cargo() {
                 >
                   {label}
                 </div>
-                <div className="text-xs text-[var(--color-on-surface-muted)]">{sublabel}</div>
               </button>
             ))}
           </div>
@@ -112,13 +116,13 @@ export default function Step3Cargo() {
         <div>
           <label className="flex items-center gap-2 text-sm font-bold text-[var(--color-on-surface)] mb-1.5">
             <FileText size={15} className="text-[var(--color-brand-amber)]" />
-            ملاحظات إضافية
-            <span className="text-[var(--color-on-surface-muted)] font-normal text-xs">(اختياري)</span>
+            {tCommon('fields.notes')}
+            <span className="text-[var(--color-on-surface-muted)] font-normal text-xs">({tCommon('fields.optional')})</span>
           </label>
           <textarea
             {...register('notes')}
             rows={2}
-            placeholder="مثال: يرجى الحضور قبل الساعة 7 صباحاً. يوجد رافعة في الموقع."
+            placeholder={t('notesDesc')}
             className="input-base text-sm resize-none"
           />
         </div>

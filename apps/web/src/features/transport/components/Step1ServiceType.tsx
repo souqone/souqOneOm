@@ -4,6 +4,7 @@ import { useFormContext } from 'react-hook-form';
 import { Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench } from 'lucide-react';
 import type { CreateRequestFormData } from './CreateRequestWizard';
 import type { TransportServiceType } from '../types';
+import { useTranslations } from 'next-intl';
 
 const SERVICE_OPTIONS: {
   type: TransportServiceType;
@@ -29,12 +30,14 @@ export default function Step1ServiceType() {
   } = useFormContext<CreateRequestFormData>();
 
   const selected = watch('serviceType');
+  const t = useTranslations('transport.steps');
+  const tCommon = useTranslations('transport');
 
   return (
     <div dir="rtl">
       <div className="mb-6">
         <h2 className="text-xl text-[var(--color-on-surface)] mb-1" style={{ fontWeight: 700 }}>
-          نوع الخدمة
+          {t('serviceType')}
         </h2>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
           اختر نوع البضاعة أو الخدمة التي تريد نقلها
@@ -66,7 +69,7 @@ export default function Step1ServiceType() {
                 className={`text-sm font-bold mb-0.5 ${isSelected ? 'text-[var(--color-brand-navy)]' : 'text-[var(--color-on-surface)]'}`}
                 style={{ fontWeight: 700 }}
               >
-                {opt.label}
+                {tCommon(`serviceTypes.${opt.type}`)}
               </p>
               <p className="text-[11px] text-[var(--color-on-surface-muted)]">{opt.sublabel}</p>
             </button>

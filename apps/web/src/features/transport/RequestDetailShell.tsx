@@ -53,15 +53,30 @@ function QuoteSubmitForm({ requestId, onSubmitted }: { requestId: string; onSubm
   const [msg,   setMsg]       = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr]         = useState<string | null>(null)
+  const [priceError, setPriceError] = useState('')
 
   async function submit() {
-    if (!price) { setErr('أدخل السعر'); return }
+    // Price validation
+    const priceNum = parseFloat(price);
+    if (!price || isNaN(priceNum) || priceNum <= 0) {
+      setPriceError('يرجى إدخال سعر صحيح أكبر من صفر');
+      return;
+    }
+    setPriceError('');
+    // Hours validation
+    const hoursNum = hours ? parseFloat(hours) : undefined;
+    if (hoursNum !== undefined && (hoursNum <= 0 || !Number.isFinite(hoursNum))) {
+      setErr('عدد الساعات يجب أن يكون رقماً موجباً');
+      return;
+    }
+    // Whitespace-only message
+    const cleanMsg = msg.trim() || undefined;
     setLoading(true); setErr(null)
     try {
       await transportApi.submitQuote(requestId, {
-        price: parseFloat(price),
-        estimatedHours: hours ? parseFloat(hours) : undefined,
-        message: msg || undefined,
+        price: priceNum,
+        estimatedHours: hoursNum,
+        message: cleanMsg,
       })
       setPrice(''); setHours(''); setMsg('')
       onSubmitted()
@@ -80,9 +95,12 @@ function QuoteSubmitForm({ requestId, onSubmitted }: { requestId: string; onSubm
       <div className="flex flex-col gap-4">
         <div>
           <label className="block text-body-sm font-bold text-secondary mb-1">{t('fields.price')}</label>
-          <input type="number" value={price} onChange={e => setPrice(e.target.value)}
-            className="w-full h-[40px] bg-[#fafafa] border border-outline-variant/50 rounded-lg px-4 text-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          <input type="number" value={price} onChange={e => { setPrice(e.target.value); if (priceError) setPriceError(''); }}
+            className={`w-full h-[40px] bg-[#fafafa] border rounded-lg px-4 text-body-md focus:ring-1 transition-all ${
+              priceError ? 'border-error ring-error' : 'border-outline-variant/50 focus:border-primary focus:ring-primary'
+            }`}
             placeholder="مثال: ٦٥٠" />
+          {priceError && <p className="text-body-sm text-error mt-1">{priceError}</p>}
         </div>
         <div>
           <label className="block text-body-sm font-bold text-secondary mb-1">{t('fields.estimatedHours')}</label>
@@ -108,6 +126,7 @@ function QuoteSubmitForm({ requestId, onSubmitted }: { requestId: string; onSubm
     </div>
   )
 }
+
 
 function QuoteCard({ quote, isOwner, onAccept, acceptLabel }: {
   quote: TransportQuote
@@ -276,7 +295,7 @@ export default function RequestDetailShell({ id }: { id: string }) {
               <div className="w-20 h-20 rounded-full bg-surface-container-high flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-4xl text-on-surface-variant">person</span>
               </div>
-              <h3 className="text-title-md text-brand-navy font-bold mb-1">
+              <h3 className="text-title-md text-brand-navy font-bold mb-1 truncate max-w-[120px]">
                 {req.user?.displayName ?? req.user?.username}
               </h3>
               <p className="text-body-sm text-secondary flex items-center gap-1 justify-center">

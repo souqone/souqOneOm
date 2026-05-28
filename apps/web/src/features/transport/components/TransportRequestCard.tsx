@@ -103,7 +103,7 @@ export default function TransportRequestCard({ request, onRenew, renewing }: Pro
       {/* Cargo */}
       <div className="bg-[var(--color-surface-container)] rounded-xl px-3 py-2 mb-3">
         <p className="text-xs text-[var(--color-on-surface-variant)] line-clamp-2 leading-relaxed">
-          {request.cargoDescription}
+          {request.cargoDescription || 'لم يتم تحديد وصف للبضاعة'}
         </p>
       </div>
 

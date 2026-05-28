@@ -4,6 +4,8 @@ import { Link } from '@/i18n/navigation';
 import { Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench } from 'lucide-react';
 import type { TransportServiceType } from '../types';
 
+import { useTranslations } from 'next-intl';
+
 const SERVICE_CARDS: {
   type: TransportServiceType;
   label: string;
@@ -63,15 +65,18 @@ const SERVICE_CARDS: {
 ];
 
 export default function ServiceTypesGrid() {
+  const t = useTranslations('transport.landing');
+  const tCommon = useTranslations('transport');
+
   return (
     <section className="py-8 sm:py-12" dir="rtl">
       <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
         <div className="text-center mb-5 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-on-surface)] mb-2">
-            أنواع خدمات النقل
+            {t('typesTitle')}
           </h2>
           <p className="text-sm text-[var(--color-on-surface-variant)]">
-            اختر نوع الخدمة المناسب لطلبك
+            {t('typesSubtitle')}
           </p>
         </div>
 
@@ -92,7 +97,7 @@ export default function ServiceTypesGrid() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-                    {card.label}
+                    {tCommon(`serviceTypes.${card.type}`)}
                   </p>
                   <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5 leading-tight">
                     {card.sublabel}

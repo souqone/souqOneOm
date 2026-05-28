@@ -6,9 +6,15 @@ import type { CreateRequestFormData } from './CreateRequestWizard';
 import { SERVICE_TYPE_LABELS, SERVICE_TYPE_COLORS, SERVICE_TYPE_BG_COLORS } from '../constants';
 import type { TransportServiceType } from '../types';
 
+import { useTranslations, useLocale } from 'next-intl';
+
 export default function Step5Review() {
   const { watch } = useFormContext<CreateRequestFormData>();
   const data = watch();
+
+  const t = useTranslations('transport.steps');
+  const tCommon = useTranslations('transport');
+  const locale = useLocale();
 
   const serviceColor = SERVICE_TYPE_COLORS[data.serviceType as TransportServiceType] ?? '#9ca3af';
   const serviceBg = SERVICE_TYPE_BG_COLORS[data.serviceType as TransportServiceType] ?? '#f3f4f6';
@@ -18,32 +24,32 @@ export default function Step5Review() {
 
   const budgetText =
     data.budgetMin && data.budgetMax
-      ? `${data.budgetMin} – ${data.budgetMax} ر.ع.`
+      ? `${data.budgetMin} – ${data.budgetMax} ${tCommon('currency')}`
       : data.budgetMin
-      ? `من ${data.budgetMin} ر.ع.`
+      ? `${t('from')} ${data.budgetMin} ${tCommon('currency')}`
       : data.budgetMax
-      ? `حتى ${data.budgetMax} ر.ع.`
-      : 'قابل للتفاوض';
+      ? `${t('to')} ${data.budgetMax} ${tCommon('currency')}`
+      : t('negotiable');
 
   const timingText =
     data.timingType === 'scheduled' && data.scheduledAt
-      ? new Date(data.scheduledAt).toLocaleString('ar-OM-u-nu-latn', {
+      ? new Date(data.scheduledAt).toLocaleString(locale === 'ar' ? 'ar-OM-u-nu-latn' : 'en-US', {
           weekday: 'short',
           day: 'numeric',
           month: 'short',
           hour: '2-digit',
           minute: '2-digit',
-        }) + (data.isFlexible ? ' (مرن)' : '')
-      : 'في أقرب وقت ممكن';
+        }) + (data.isFlexible ? ` (${t('flexibleLabel')})` : '')
+      : t('asapLabel');
 
   return (
     <div dir="rtl">
       <div className="mb-6">
         <h2 className="text-xl text-[var(--color-on-surface)] mb-1" style={{ fontWeight: 700 }}>
-          مراجعة الطلب
+          {t('review')}
         </h2>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
-          تأكد من صحة جميع البيانات قبل الإرسال
+          {t('reviewDesc')}
         </p>
       </div>
 
@@ -59,7 +65,7 @@ export default function Step5Review() {
             </div>
             <div>
               <p className="text-[11px] font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider">
-                نوع الخدمة
+                {tCommon('fields.serviceType')}
               </p>
               <p className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
                 {serviceLabel}
@@ -72,7 +78,7 @@ export default function Step5Review() {
         <div className="p-4 bg-[var(--color-surface-container)] rounded-2xl">
           <p className="text-[11px] font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-3 flex items-center gap-1.5">
             <MapPin size={12} />
-            المسار
+            {t('route')}
           </p>
           <div className="flex gap-3">
             <div className="flex flex-col items-center pt-1 flex-shrink-0">
@@ -89,6 +95,12 @@ export default function Step5Review() {
                 <p className="text-xs text-[var(--color-on-surface-variant)] truncate mt-0.5">
                   {data.fromAddress || '—'}
                 </p>
+                {(data.fromLat && data.fromLng) && (
+                  <span className="inline-flex items-center gap-1 text-xs text-[var(--color-success)] mt-1">
+                    <MapPin size={10} />
+                    {t('locationSetOnMap')}
+                  </span>
+                )}
               </div>
               <div>
                 <p className="text-sm font-bold text-[var(--color-on-surface)] truncate">
@@ -98,6 +110,12 @@ export default function Step5Review() {
                 <p className="text-xs text-[var(--color-on-surface-variant)] truncate mt-0.5">
                   {data.toAddress || '—'}
                 </p>
+                {(data.toLat && data.toLng) && (
+                  <span className="inline-flex items-center gap-1 text-xs text-[var(--color-success)] mt-1">
+                    <MapPin size={10} />
+                    {t('locationSetOnMap')}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -107,7 +125,7 @@ export default function Step5Review() {
         <div className="p-4 bg-[var(--color-surface-container)] rounded-2xl">
           <p className="text-[11px] font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Package size={12} />
-            البضاعة
+            {t('cargo')}
           </p>
           <p className="text-sm text-[var(--color-on-surface)] leading-relaxed">
             {data.cargoDescription || '—'}
@@ -115,12 +133,12 @@ export default function Step5Review() {
           <div className="flex flex-wrap gap-3 mt-3">
             {data.weightTons && (
               <span className="text-xs font-bold text-[var(--color-brand-navy)] bg-[var(--color-brand-navy)]/8 px-2.5 py-1 rounded-full">
-                {data.weightTons} طن
+                {data.weightTons} {tCommon('fields.tons')}
               </span>
             )}
             <span className="flex items-center gap-1 text-xs font-bold text-[var(--color-on-surface-variant)] bg-white border border-[var(--color-outline-variant)] px-2.5 py-1 rounded-full">
               <Users size={11} />
-              {data.requiresHelper ? 'يحتاج مساعدة في التحميل' : 'لديه عمال'}
+              {data.requiresHelper ? t('needsHelpers') : t('hasHelpers')}
             </span>
           </div>
         </div>
@@ -130,7 +148,7 @@ export default function Step5Review() {
           <div className="p-4 bg-[var(--color-surface-container)] rounded-2xl">
             <p className="text-[11px] font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Calendar size={12} />
-              الموعد
+              {t('timing')}
             </p>
             <p className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
               {timingText}
@@ -139,7 +157,7 @@ export default function Step5Review() {
           <div className="p-4 bg-[var(--color-surface-container)] rounded-2xl">
             <p className="text-[11px] font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <DollarSign size={12} />
-              الميزانية
+              {t('budget')}
             </p>
             <p className="text-sm font-bold text-[var(--color-brand-amber)]" style={{ fontWeight: 700 }}>
               {budgetText}
@@ -151,7 +169,7 @@ export default function Step5Review() {
         <div className="flex items-start gap-3 p-3 bg-[var(--color-success-light)] border border-green-200 rounded-2xl">
           <CheckCircle size={16} className="text-[var(--color-brand-green)] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-[var(--color-brand-green)] leading-relaxed">
-            بالضغط على &quot;إرسال الطلب&quot; ستبدأ في استقبال عروض المزودين. يمكنك مراجعة العروض والاختيار لاحقاً.
+            {t('submitNotice')}
           </p>
         </div>
       </div>

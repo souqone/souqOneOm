@@ -15,9 +15,9 @@ export interface BrowseFilters {
   serviceType?: string;
   status?: string;
   fromGovernorate?: string;
-  fromWilayat?: string;
+  fromCity?: string;
   toGovernorate?: string;
-  toWilayat?: string;
+  toCity?: string;
   sortBy?: string;
 }
 
@@ -70,7 +70,9 @@ export default function BrowseContent() {
     ...(filters.serviceType && { serviceType: filters.serviceType as TransportServiceType }),
     ...(filters.status && { status: filters.status as TransportRequestStatus }),
     ...(filters.fromGovernorate && { fromGovernorate: filters.fromGovernorate }),
+    ...(filters.fromCity && { fromCity: filters.fromCity }),
     ...(filters.toGovernorate && { toGovernorate: filters.toGovernorate }),
+    ...(filters.toCity && { toCity: filters.toCity }),
     ...parseSortBy(filters.sortBy),
   };
 
@@ -125,7 +127,13 @@ export default function BrowseContent() {
 
           {/* Results */}
           <div className="flex-1 min-w-0">
-            <RequestsGrid params={requestParams} onPageChange={setCurrentPage} />
+            <RequestsGrid 
+              params={requestParams} 
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} 
+            />
           </div>
         </div>
       </div>

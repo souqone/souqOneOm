@@ -348,7 +348,7 @@ export default function BookingDetailPage() {
                     className="w-12 h-12 rounded-full"
                   />
                   <div>
-                    <p className="text-base font-bold text-[var(--color-on-surface)]">
+                    <p className="text-base font-bold text-[var(--color-on-surface)] truncate">
                       {booking.carrier.companyName ?? booking.carrier.user?.displayName}
                     </p>
                     <div className="flex items-center gap-1">

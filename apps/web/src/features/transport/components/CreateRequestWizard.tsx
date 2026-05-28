@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useRouter } from '@/i18n/navigation';
 import { toast, Toaster } from 'sonner';
@@ -43,13 +43,14 @@ const STEP_FIELDS: Record<number, (keyof CreateRequestFormData)[]> = {
   1: ['serviceType'],
   2: ['fromGovernorate', 'fromAddress', 'toGovernorate', 'toAddress'],
   3: ['cargoDescription'],
-  4: [],
+  4: ['timingType', 'scheduledAt'],
   5: [],
 };
 
 export default function CreateRequestWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittedRef = useRef(false);
   const router = useRouter();
 
   const methods = useForm<CreateRequestFormData>({
@@ -80,6 +81,8 @@ export default function CreateRequestWizard() {
   }
 
   async function onSubmit(data: CreateRequestFormData) {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     setIsSubmitting(true);
     try {
       const dto: CreateTransportRequestDto = {
@@ -108,6 +111,7 @@ export default function CreateRequestWizard() {
       toast.success('تم إرسال طلبك بنجاح! ستبدأ في استقبال العروض قريباً.');
       router.push('/transport/my-requests');
     } catch {
+      submittedRef.current = false;
       toast.error('حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.');
     } finally {
       setIsSubmitting(false);
