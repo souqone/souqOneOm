@@ -23,6 +23,7 @@ import {
   ChevronUp,
   ExternalLink,
   RefreshCw,
+  XCircle,
 } from 'lucide-react';
 import type {
   TransportRequest,
@@ -370,6 +371,22 @@ export default function RequestDetailPage() {
     }
   };
 
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancelRequest = async () => {
+    if (!request) return;
+    if (!confirm('هل تريد إلغاء هذا الطلب؟')) return;
+    setCancelling(true);
+    try {
+      await transportApi.cancelRequest(request.id);
+      setRequest((prev) => prev ? { ...prev, status: 'CANCELLED' } : prev);
+    } catch {
+      // Error is handled inside apiRequest usually
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" dir="rtl">
@@ -399,7 +416,9 @@ export default function RequestDetailPage() {
   const isOwner = user?.id === request.userId;
   const isCarrier = user?.role === 'CARRIER';
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
-  const hasAlreadyQuoted = quotes.some((q) => q.carrierId === user?.id);
+  const hasAlreadyQuoted = carrierProfile?.id
+    ? quotes.some((q) => q.carrierId === carrierProfile.id)
+    : false;
   const canSubmitQuote =
     !isOwner &&
     isCarrier &&
@@ -572,6 +591,22 @@ export default function RequestDetailPage() {
                   <ExternalLink size={15} />
                   عرض تفاصيل الحجز
                 </Link>
+              </div>
+            )}
+
+            {isOwner && ['OPEN', 'QUOTED'].includes(request.status) && (
+              <div className="card-base p-4">
+                <button
+                  onClick={handleCancelRequest}
+                  disabled={cancelling}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[var(--color-error)] text-[var(--color-error)] text-sm font-semibold hover:bg-red-50 transition-all disabled:opacity-50"
+                >
+                  {cancelling
+                    ? <Loader2 size={15} className="animate-spin" />
+                    : <XCircle size={15} />
+                  }
+                  إلغاء الطلب
+                </button>
               </div>
             )}
 

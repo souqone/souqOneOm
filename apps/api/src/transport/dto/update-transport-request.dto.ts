@@ -1,7 +1,31 @@
 import {
   IsString, IsEnum, IsOptional, IsNumber, IsBoolean,
   IsDateString, Min, MinLength,
+  registerDecorator, ValidationOptions, ValidationArguments,
 } from 'class-validator';
+
+function IsBudgetRangeValid(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'isBudgetRangeValid',
+      target: (object as any).constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: any, args: ValidationArguments) {
+          const obj = args.object as any;
+          if (obj.budgetMin != null && value != null) {
+            return Number(obj.budgetMin) <= Number(value);
+          }
+          return true;
+        },
+        defaultMessage() {
+          return 'الحد الأقصى للميزانية يجب أن يكون أكبر من أو يساوي الحد الأدنى';
+        },
+      },
+    });
+  };
+}
 import { Type } from 'class-transformer';
 import { TransportServiceType } from '@prisma/client';
 
@@ -85,13 +109,14 @@ export class UpdateTransportRequestDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(1, { message: 'الحد الأدنى للميزانية يجب أن يكون أكبر من 0' })
   @Type(() => Number)
   budgetMin?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(1, { message: 'الحد الأقصى للميزانية يجب أن يكون أكبر من 0' })
+  @IsBudgetRangeValid()
   @Type(() => Number)
   budgetMax?: number;
 }

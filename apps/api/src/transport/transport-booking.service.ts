@@ -168,7 +168,7 @@ export class TransportBookingService {
     return updated;
   }
 
-  async findOne(bookingId: string, userId: string) {
+  async getBooking(bookingId: string, userId: string) {
     const booking = await this.prisma.transportBooking.findUnique({
       where: { id: bookingId },
       include: {

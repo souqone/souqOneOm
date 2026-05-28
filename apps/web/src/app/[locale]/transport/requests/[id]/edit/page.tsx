@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { transportApi } from '@/features/transport/api';
 import type { TransportRequest } from '@/features/transport/types';
+import { useAuth } from '@/providers/auth-provider';
 import { AuthGuard } from '@/components/auth-guard';
 import CreateRequestWizard from '@/features/transport/components/CreateRequestWizard';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
@@ -12,6 +13,7 @@ import { TransportPageLoader, TransportPageError } from '@/features/transport/co
 export default function EditRequestPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [request, setRequest] = useState<TransportRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,6 +39,25 @@ export default function EditRequestPage() {
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (loading || !request) return;
+
+    if (!user) {
+      router.replace(`/transport/requests/${id}`);
+      return;
+    }
+
+    if (request.userId !== user.id) {
+      router.replace('/transport/my-requests');
+      return;
+    }
+
+    if (!['OPEN', 'QUOTED'].includes(request.status)) {
+      router.replace(`/transport/requests/${id}`);
+      return;
+    }
+  }, [loading, request, user, id, router]);
 
   if (loading) return <TransportPageLoader />;
   if (error) return <TransportPageError message={error} onRetry={() => router.push('/transport/my-requests')} />;

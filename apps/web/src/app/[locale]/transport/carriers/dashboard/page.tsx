@@ -288,14 +288,25 @@ function CarrierDashboardContent() {
       setLoading(true);
       setError('');
       try {
-        const [p, reqRes, quotesRes] = await Promise.all([
+        const [profileRes, reqRes, quotesRes] = await Promise.allSettled([
           transportApi.getMyCarrierProfile(),
           transportApi.getRequests({ limit: 4 }),
           transportApi.myQuotes(),
         ]);
-        setProfile(p);
-        setNearbyRequests(reqRes.items);
-        setRecentQuotes(quotesRes.items.slice(0, 5));
+        
+        if (profileRes.status === 'rejected') {
+          throw profileRes.reason;
+        } else {
+          setProfile(profileRes.value);
+        }
+
+        if (reqRes.status === 'fulfilled') {
+          setNearbyRequests(reqRes.value.items);
+        }
+
+        if (quotesRes.status === 'fulfilled') {
+          setRecentQuotes(quotesRes.value.items.slice(0, 5));
+        }
       } catch (err: any) {
         if (err?.status === 404) {
           // no carrier profile → redirect to registration

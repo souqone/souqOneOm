@@ -102,68 +102,55 @@ export class TransportQuoteService {
   }
 
   async acceptQuote(quoteId: string, userId: string) {
-    const quote = await this.prisma.transportQuote.findUnique({
-      where: { id: quoteId },
-      include: { request: true, carrier: true },
-    });
-    if (!quote) throw new NotFoundException('العرض غير موجود');
+    return this.prisma.$transaction(async (tx) => {
+      const quote = await tx.transportQuote.findUnique({
+        where: { id: quoteId },
+        include: { request: true, carrier: true },
+      });
+      if (!quote) throw new NotFoundException('العرض غير موجود');
 
-    // Only request owner can accept
-    if (quote.request.userId !== userId) {
-      throw new ForbiddenException('لا يمكنك قبول عرض على طلب غيرك');
-    }
+      if (quote.request.userId !== userId) {
+        throw new ForbiddenException('لا يمكنك قبول عرض على طلب غيرك');
+      }
 
-    // Quote must be pending
-    if (quote.status !== 'PENDING') {
-      throw new BadRequestException('لا يمكن قبول هذا العرض');
-    }
+      if (quote.status !== 'PENDING') {
+        throw new BadRequestException('لا يمكن قبول هذا العرض');
+      }
 
-    // Request must be OPEN or QUOTED
-    if (!['OPEN', 'QUOTED'].includes(quote.request.status)) {
-      throw new BadRequestException('لا يمكن قبول عروض على هذا الطلب');
-    }
+      if (!['OPEN', 'QUOTED'].includes(quote.request.status)) {
+        throw new BadRequestException('لا يمكن قبول عروض على هذا الطلب');
+      }
 
-    // Transaction: accept quote, reject others, update request, create booking
-    const booking = await this.prisma.$transaction(async (tx) => {
-      // Accept this quote
       await tx.transportQuote.update({
         where: { id: quoteId },
         data: { status: 'ACCEPTED' },
       });
 
-      // Find all pending quotes except the accepted one
       const pendingQuotes = await tx.transportQuote.findMany({
-        where: {
-          requestId: quote.requestId,
-          id: { not: quoteId },
-          status: 'PENDING',
-        },
-        include: { carrier: true },
+        where: { requestId: quote.requestId, status: 'PENDING', id: { not: quoteId } },
+        select: { id: true, carrier: { select: { userId: true } } },
       });
 
-      // Reject all other pending quotes
       if (pendingQuotes.length > 0) {
         await tx.transportQuote.updateMany({
-          where: { id: { in: pendingQuotes.map((q) => q.id) } },
+          where: { requestId: quote.requestId, status: 'PENDING', id: { not: quoteId } },
           data: { status: 'REJECTED' },
         });
       }
 
-      // Update request status
       await tx.transportRequest.update({
         where: { id: quote.requestId },
         data: { status: 'ACCEPTED' },
       });
 
-      // Create booking
       const booking = await tx.transportBooking.create({
         data: {
           requestId: quote.requestId,
           quoteId: quote.id,
+          status: 'ACCEPTED',
         },
       });
 
-      // Create conversation
       const conversation = await tx.conversation.create({
         data: {
           entityType: 'TRANSPORT_BOOKING',
@@ -177,7 +164,6 @@ export class TransportQuoteService {
         },
       });
 
-      // Update booking to link conversation
       const finalBooking = await tx.transportBooking.update({
         where: { id: booking.id },
         data: { conversationId: conversation.id },
@@ -188,67 +174,67 @@ export class TransportQuoteService {
       });
 
       return { booking: finalBooking, pendingQuotes };
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }).then(async ({ booking, pendingQuotes }) => {
+      this.sendAcceptanceNotifications(booking, pendingQuotes).catch(() => {});
+      return booking;
     });
+  }
 
-    // Notify accepted carrier
+  private async sendAcceptanceNotifications(booking: any, pendingQuotes: any[]) {
     await this.notifications.create({
       type: 'TRANSPORT_QUOTE_ACCEPTED',
       title: 'تم قبول عرضك',
-      body: 'تم قبول عرضك على طلب النقل',
-      userId: quote.carrier.userId,
-      data: { requestId: quote.requestId, bookingId: booking.booking.id },
+      body: `تم قبول عرضك على طلب النقل`,
+      userId: booking.quote.carrier.userId,
+      data: { requestId: booking.requestId, bookingId: booking.id },
     });
 
-    // Notify rejected carriers
-    if (booking.pendingQuotes.length > 0) {
-      const rejectedNotifications = booking.pendingQuotes.map((q) =>
-        this.notifications.create({
-          type: 'TRANSPORT_QUOTE_REJECTED',
-          title: 'تم رفض عرضك',
-          body: 'تم قبول عرض آخر لطلب النقل',
-          userId: q.carrier.userId,
-          data: { requestId: quote.requestId },
-        })
-      );
-      await Promise.allSettled(rejectedNotifications);
+    for (const q of pendingQuotes) {
+      await this.notifications.create({
+        type: 'TRANSPORT_QUOTE_REJECTED',
+        title: 'تم رفض عرضك',
+        body: 'تم اختيار ناقل آخر للطلب',
+        userId: q.carrier.userId,
+        data: { requestId: booking.requestId },
+      }).catch(() => {});
     }
-
-    return booking.booking;
   }
 
   async withdrawQuote(quoteId: string, userId: string) {
-    const quote = await this.prisma.transportQuote.findUnique({
-      where: { id: quoteId },
-      include: { carrier: true },
-    });
-    if (!quote) throw new NotFoundException('العرض غير موجود');
-
-    // Only the carrier who submitted can withdraw
-    if (quote.carrier.userId !== userId) {
-      throw new ForbiddenException('لا يمكنك سحب عرض غيرك');
-    }
-
-    if (quote.status !== 'PENDING') {
-      throw new BadRequestException('لا يمكن سحب هذا العرض');
-    }
-
-    await this.prisma.transportQuote.update({
-      where: { id: quoteId },
-      data: { status: 'WITHDRAWN' },
-    });
-
-    // Check if no more pending quotes → revert request to OPEN
-    const pendingCount = await this.prisma.transportQuote.count({
-      where: { requestId: quote.requestId, status: 'PENDING' },
-    });
-    if (pendingCount === 0) {
-      await this.prisma.transportRequest.update({
-        where: { id: quote.requestId },
-        data: { status: 'OPEN' },
+    return this.prisma.$transaction(async (tx) => {
+      const quote = await tx.transportQuote.findUnique({
+        where: { id: quoteId },
+        include: { carrier: true },
       });
-    }
+      if (!quote) throw new NotFoundException('العرض غير موجود');
 
-    return { message: 'تم سحب العرض بنجاح' };
+      if (quote.carrier.userId !== userId) {
+        throw new ForbiddenException('لا يمكنك سحب عرض غيرك');
+      }
+
+      if (quote.status !== 'PENDING') {
+        throw new BadRequestException('لا يمكن سحب هذا العرض');
+      }
+
+      await tx.transportQuote.update({
+        where: { id: quoteId },
+        data: { status: 'WITHDRAWN' },
+      });
+
+      const pendingCount = await tx.transportQuote.count({
+        where: { requestId: quote.requestId, status: 'PENDING' },
+      });
+      if (pendingCount === 0) {
+        await tx.transportRequest.update({
+          where: { id: quote.requestId },
+          data: { status: 'OPEN' },
+        });
+      }
+
+      return { message: 'تم سحب العرض بنجاح' };
+    });
   }
 
   async getMyQuotes(userId: string, page = 1, limit = DEFAULT_LIMIT, status?: string) {

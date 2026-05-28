@@ -15,8 +15,12 @@ const mockPrisma = {
     updateMany: jest.fn(),
     count: jest.fn(),
   },
-  transportBooking: { create: jest.fn() },
-  $transaction: jest.fn(),
+  transportBooking: { create: jest.fn(), update: jest.fn() },
+  conversation: { create: jest.fn() },
+  $transaction: jest.fn(async (cb) => {
+    if (typeof cb === 'function') return cb(mockPrisma);
+    return Promise.all(cb);
+  }),
 };
 
 const mockNotifications = { create: jest.fn() };
@@ -35,6 +39,10 @@ describe('TransportQuoteService', () => {
 
     service = module.get<TransportQuoteService>(TransportQuoteService);
     jest.clearAllMocks();
+    mockPrisma.$transaction.mockImplementation(async (cb) => {
+      if (typeof cb === 'function') return cb(mockPrisma);
+      return Promise.all(cb);
+    });
   });
 
   describe('submitQuote', () => {
@@ -98,14 +106,20 @@ describe('TransportQuoteService', () => {
         request: { userId: 'shipper', status: 'QUOTED' },
         carrier: { userId: 'carrier1', id: 'c1' },
       });
-      const booking = { id: 'b1', requestId: 'r1', quoteId: 'q1', conversationId: 'conv-1' };
-      mockPrisma.$transaction.mockResolvedValue({
-        booking,
-        pendingQuotes: [],
+      mockPrisma.transportQuote.findMany.mockResolvedValue([]);
+      mockPrisma.transportBooking.create.mockResolvedValue({ id: 'b1' });
+      mockPrisma.conversation.create.mockResolvedValue({ id: 'conv-1' });
+      mockPrisma.transportBooking.update.mockResolvedValue({
+        id: 'b1', requestId: 'r1', quoteId: 'q1', conversationId: 'conv-1',
+        quote: { carrier: { userId: 'carrier1' } }
       });
 
       const result = await service.acceptQuote('q1', 'shipper');
       expect(result.id).toBe('b1');
+      
+      // wait for microtasks (the fire-and-forget notification)
+      await new Promise((resolve) => process.nextTick(resolve));
+      
       expect(mockNotifications.create).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'TRANSPORT_QUOTE_ACCEPTED',
