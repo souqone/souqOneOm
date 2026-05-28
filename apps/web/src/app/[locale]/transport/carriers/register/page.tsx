@@ -114,7 +114,7 @@ export default function CarrierRegistrationPage() {
         whatsapp: whatsapp || undefined,
       });
       setSuccess(true);
-      setTimeout(() => router.push('/transport/carriers/dashboard'), 2000);
+      setTimeout(() => router.push('/transport/carriers/onboarding'), 2000);
     } catch (err) {
       // ── FIX 2: Distinguish 409 from generic errors ──────────────────────
       const status = (err as { status?: number })?.status;

@@ -5,6 +5,7 @@ import ServiceTypesGrid from '@/features/transport/components/ServiceTypesGrid'
 import LatestRequests from '@/features/transport/components/LatestRequests'
 import HowItWorks from '@/features/transport/components/HowItWorks'
 import CarrierCTA from '@/features/transport/components/CarrierCTA'
+import TransportFAQ from '@/features/transport/components/TransportFAQ'
 
 export default function TransportLandingPage() {
   return (
@@ -38,6 +39,9 @@ export default function TransportLandingPage() {
 
       {/* ── How It Works ── */}
       <HowItWorks />
+
+      {/* ── FAQ ── */}
+      <TransportFAQ />
 
       {/* ── Carrier CTA ── */}
       <CarrierCTA />

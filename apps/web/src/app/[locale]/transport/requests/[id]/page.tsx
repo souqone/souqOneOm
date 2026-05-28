@@ -654,6 +654,24 @@ export default function RequestDetailPage() {
               </div>
             )}
 
+            {/* CTA for authenticated non-carrier, non-owner users */}
+            {isAuthenticated && !isCarrier && !isOwner && (
+              <div className="card-base p-4 text-center flex flex-col gap-3">
+                <div className="w-10 h-10 rounded-full bg-[var(--color-brand-navy)]/10 flex items-center justify-center mx-auto">
+                  <Truck size={20} className="text-[var(--color-brand-navy)]" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">هل تريد تقديم عرض على هذا الطلب؟</p>
+                  <p className="text-xs text-[var(--color-on-surface-muted)] mt-1">
+                    سجّل كناقل مجاناً للتمكن من تقديم عروض الأسعار
+                  </p>
+                </div>
+                <Link href="/transport/carriers/register" className="btn-primary w-full justify-center">
+                  سجّل كناقل الآن
+                </Link>
+              </div>
+            )}
+
             {/* Carrier CTA */}
             {!isOwner && request.status === 'OPEN' && (
               <div className="card-base p-5 flex flex-col gap-3">

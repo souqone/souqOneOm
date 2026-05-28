@@ -9,6 +9,7 @@ import RequestsGrid from './RequestsGrid';
 import ActiveFilterChips from './ActiveFilterChips';
 import MobileFilterSheet from './MobileFilterSheet';
 import { useAuth } from '@/providers/auth-provider';
+import { useMyCarrierProfile } from '@/features/transport/api';
 import type { GetRequestsParams, TransportServiceType, TransportRequestStatus } from '../types';
 
 export interface BrowseFilters {
@@ -40,6 +41,8 @@ export default function BrowseContent() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { data: carrierProfile } = useMyCarrierProfile(isAuthenticated);
+  const isCarrier = !!carrierProfile;
 
   const [filters, setFilters] = useState<BrowseFilters>({
     serviceType: searchParams.get('serviceType') ?? undefined,
@@ -104,6 +107,26 @@ export default function BrowseContent() {
             <Link
               href="/transport/carriers/register"
               className="btn-primary text-sm px-4 py-2 flex-shrink-0"
+            >
+              سجّل كناقل
+            </Link>
+          </div>
+        )}
+
+        {/* Carrier CTA for authenticated non-carrier users */}
+        {isAuthenticated && !isCarrier && (
+          <div className="flex items-center justify-between gap-4 p-4 mb-4 rounded-2xl border border-[var(--color-brand-navy)]/20 bg-[var(--color-brand-navy)]/5">
+            <div>
+              <p className="font-semibold text-sm text-[var(--color-on-surface)]">
+                هل لديك مركبة وتريد تقديم خدمات نقل؟
+              </p>
+              <p className="text-xs text-[var(--color-on-surface-muted)] mt-0.5">
+                سجّل كناقل مجاناً وابدأ في استقبال الطلبات
+              </p>
+            </div>
+            <Link
+              href="/transport/carriers/register"
+              className="btn-primary text-sm whitespace-nowrap flex-shrink-0"
             >
               سجّل كناقل
             </Link>
