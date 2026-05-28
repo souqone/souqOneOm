@@ -411,7 +411,7 @@ export default function BookingDetailPage() {
             )}
 
             {/* Action Buttons */}
-            {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
+            {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (isCarrier || isShipper) && (
               <div className="card-base p-5 flex flex-col gap-3">
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
                   الإجراءات

@@ -218,8 +218,8 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Get('bookings/:id')
-  findOneBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.transportBookingService.findOne(id, user.sub);
+  getBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportBookingService.getBooking(id, user.sub);
   }
 
   // ─── Reviews ───
