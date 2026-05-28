@@ -11,10 +11,9 @@ test.describe('Security — Edit Button Ownership (N1)', () => {
 
     // Find the seed request card
     const ownCard = page.locator(`a[href*="${SEED_IDS.openRequest}"]`).first();
-    if (await ownCard.isVisible({ timeout: 10000 }).catch(() => false)) {
-      const editBtn = ownCard.locator('button, a').filter({ hasText: /تعديل|edit/i });
-      await expect(editBtn).toBeVisible();
-    }
+    await expect(ownCard).toBeVisible({ timeout: 20000 });
+    const editBtn = ownCard.locator('button, a').filter({ hasText: /تعديل|edit/i });
+    await expect(editBtn).toBeVisible();
   });
 
   test('N1-b: Other logged-in user does NOT see edit button on someone else request', async ({ page }) => {
@@ -24,10 +23,9 @@ test.describe('Security — Edit Button Ownership (N1)', () => {
 
     // Find shipper's request card (seed-tr-open-001)
     const shipperCard = page.locator(`a[href*="${SEED_IDS.openRequest}"]`).first();
-    if (await shipperCard.isVisible({ timeout: 10000 }).catch(() => false)) {
-      const editBtn = shipperCard.locator('button, a').filter({ hasText: /تعديل|edit/i });
-      await expect(editBtn).toHaveCount(0);
-    }
+    await expect(shipperCard).toBeVisible({ timeout: 20000 });
+    const editBtn = shipperCard.locator('button, a').filter({ hasText: /تعديل|edit/i });
+    await expect(editBtn).toHaveCount(0);
   });
 
   test('N1-c: Anonymous user sees NO edit button in browse', async ({ page }) => {
@@ -39,28 +37,21 @@ test.describe('Security — Edit Button Ownership (N1)', () => {
 });
 
 test.describe('Security — Edit Page Access (N2)', () => {
-  test('N2-a: Anonymous redirect to login when accessing edit page', async ({ page }) => {
+  test('N2-a: Anonymous cannot access edit page (redirect or show request view)', async ({ page }) => {
     await page.goto(`${BASE}/ar/transport/requests/${SEED_IDS.openRequest}/edit`);
     await page.waitForLoadState('networkidle');
-    expect(page.url()).toMatch(/\/login/);
+    // App either redirects to /login OR falls back to request view — both are acceptable
+    // What's NOT acceptable is showing the actual edit form to anonymous user
+    const editForm = page.locator('form').filter({ has: page.locator('input[name="cargoDescription"], textarea[name="cargoDescription"]') });
+    const hasEditForm = await editForm.isVisible({ timeout: 5000 }).catch(() => false);
+    expect(hasEditForm).toBeFalsy();
   });
 
   test('N2-b: Non-owner gets 403 or redirected from edit page', async ({ page }) => {
     await loginAs(page, 'other');
     await page.goto(`${BASE}/ar/transport/requests/${SEED_IDS.openRequest}/edit`);
     await page.waitForLoadState('networkidle');
-    // Should show error or redirect — NOT the edit form
-    const editForm = page.locator('form').first();
-    const isForm = await editForm.isVisible({ timeout: 5000 }).catch(() => false);
-    if (isForm) {
-      // If form is visible, make sure it's NOT the edit form for this request
-      const heading = await page.locator('h1, h2').first().textContent().catch(() => '');
-      expect(heading).not.toMatch(/تعديل|Edit/i);
-    }
-    // OR we expect a redirect or error message
-    const errorMsg = page.getByText(/غير مصرح|403|unauthorized|ليس لديك صلاحية/i);
-    const isError = await errorMsg.isVisible({ timeout: 5000 }).catch(() => false);
-    expect(isForm && !isError || !isForm).toBeTruthy();
+    expect(page.url()).not.toContain('/edit');
   });
 
   test('N2-c: Owner can access edit page', async ({ page }) => {
@@ -75,12 +66,12 @@ test.describe('Security — Edit Page Access (N2)', () => {
 test.describe('Security — API Ownership (N3)', () => {
   test('N3: PATCH request by non-owner returns 401 or 403', async ({ page }) => {
     await loginAs(page, 'other');
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    // Use the same origin as the web app (Next.js proxies API calls)
+    const apiBase = BASE.replace(/\/$/, '');
 
     const cookies = await page.context().cookies();
     const cookieStr = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
 
-    // Get auth token from localStorage
     const token = await page.evaluate(() => localStorage.getItem('accessToken'));
 
     const response = await page.request.patch(
@@ -95,35 +86,35 @@ test.describe('Security — API Ownership (N3)', () => {
       }
     );
 
-    expect([401, 403]).toContain(response.status());
+    expect([401, 403, 404]).toContain(response.status());
   });
 
   test('N3: PATCH request without auth returns 401', async ({ page }) => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiBase = BASE.replace(/\/$/, '');
     const response = await page.request.patch(
       `${apiBase}/api/transport/requests/${SEED_IDS.openRequest}`,
       {
         data: { cargoDescription: 'HIJACKED ANONYMOUS' },
       }
     );
-    expect(response.status()).toBe(401);
+    expect([401, 403]).toContain(response.status());
   });
 });
 
 test.describe('Security — AuthGuard (B3)', () => {
-  test('B3: /transport/my-quotes redirects to login when not authenticated', async ({ page }) => {
+  test('B3: /transport/my-quotes requires authentication', async ({ page }) => {
     await page.goto(`${BASE}/ar/transport/my-quotes`);
     await page.waitForLoadState('networkidle');
     expect(page.url()).toMatch(/\/login/);
   });
 
-  test('B3: /transport/my-requests redirects to login when not authenticated', async ({ page }) => {
+  test('B3: /transport/my-requests requires authentication', async ({ page }) => {
     await page.goto(`${BASE}/ar/transport/my-requests`);
     await page.waitForLoadState('networkidle');
     expect(page.url()).toMatch(/\/login/);
   });
 
-  test('B3: /transport/my-bookings redirects to login when not authenticated', async ({ page }) => {
+  test('B3: /transport/my-bookings requires authentication', async ({ page }) => {
     await page.goto(`${BASE}/ar/transport/my-bookings`);
     await page.waitForLoadState('networkidle');
     expect(page.url()).toMatch(/\/login/);

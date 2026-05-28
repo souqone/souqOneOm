@@ -47,11 +47,8 @@ test.describe('Request Flow — hasAlreadyQuoted (N5)', () => {
     const alreadyQuotedMsg = page.getByText(/قدّمت عرضاً|سبق تقديم|عرض موجود/i);
     const submitForm = page.locator('form').filter({ has: page.locator('input[name="price"]') });
 
-    const hasMsg = await alreadyQuotedMsg.isVisible({ timeout: 10000 }).catch(() => false);
-    const hasForm = await submitForm.isVisible({ timeout: 3000 }).catch(() => false);
-
-    // Either message is visible OR form is hidden — both are valid indicators of the fix
-    expect(hasMsg || !hasForm).toBeTruthy();
+    await expect(submitForm).not.toBeVisible({ timeout: 5000 });
+    await expect(alreadyQuotedMsg).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -77,22 +74,19 @@ test.describe('Request Flow — Cancel Request Button (N8)', () => {
 
 test.describe('Request Flow — Carrier No Profile (N16)', () => {
   test('N16: User with CARRIER role but no profile sees registration banner, not quote form', async ({ page }) => {
-    // Note: 'other' user has USER role, not CARRIER — this test requires a carrier-role user without profile
-    // Using 'carrier' user (who has profile) — verify they see the form (positive case)
-    await loginAs(page, 'carrier');
+    await loginAs(page, 'carrierNoProfile');
     await page.goto(`${BASE}/ar/transport/requests/${SEED_IDS.openRequest}`);
     await page.waitForLoadState('networkidle');
 
-    // Carrier WITH profile should see the quote form
-    const quoteSection = page.locator('form, [data-testid="quote-form"]').first();
+    // Carrier WITHOUT profile should see banner, NOT the quote form
+    const quoteSection = page.locator('form, [data-testid="quote-form"], input[name="price"]').first();
     const regBanner = page.getByText(/سجّل كناقل|إنشاء ملف ناقل/i);
 
-    const hasForm = await quoteSection.isVisible({ timeout: 10000 }).catch(() => false);
-    const hasBanner = await regBanner.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasForm = await quoteSection.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasBanner = await regBanner.isVisible({ timeout: 10000 }).catch(() => false);
 
-    // Should have form (carrier has profile) and NOT the registration banner
-    expect(hasForm).toBeTruthy();
-    expect(hasBanner).toBeFalsy();
+    expect(hasForm).toBeFalsy();
+    expect(hasBanner).toBeTruthy();
   });
 });
 
@@ -171,9 +165,9 @@ test.describe('Wizard Validation (A7 + C1)', () => {
       await nextBtn.click();
       await page.waitForTimeout(1000);
 
-      // Should NOT advance to step 2
-      const step1Indicator = page.getByText(/نوع الخدمة|اختر نوع/i).first();
-      await expect(step1Indicator).toBeVisible({ timeout: 5000 });
+      // Should NOT advance to step 2. A robust way to check is to verify
+      const step2Field = page.locator('input[name="fromGovernorate"], input[name="fromAddress"]').first();
+      await expect(step2Field).not.toBeVisible({ timeout: 3000 });
     }
   });
 });

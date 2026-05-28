@@ -24,23 +24,20 @@ test.describe('Browse — Locale Links (E1-E10)', () => {
     await page.goto(`${BASE}/ar/transport`);
     await page.waitForLoadState('networkidle');
     const viewAllLink = page.getByRole('link', { name: /عرض الكل/i });
-    if (await viewAllLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await expect(viewAllLink).toHaveAttribute('href', /^\/ar\//);
-    }
+    await expect(viewAllLink).toBeVisible({ timeout: 10000 });
+    await expect(viewAllLink).toHaveAttribute('href', /^\/ar\//);
   });
 
   test('E6: Back link in request detail includes locale', async ({ page }) => {
     await page.goto(`${BASE}/ar/transport/browse`);
     await page.waitForLoadState('networkidle');
     const firstCard = page.locator('a[href*="/transport/requests/"]').first();
-    if (await firstCard.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await firstCard.click();
-      await page.waitForLoadState('networkidle');
-      const backLink = page.getByRole('link', { name: /العودة|back/i });
-      if (await backLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await expect(backLink).toHaveAttribute('href', /^\/ar\//);
-      }
-    }
+    await expect(firstCard).toBeVisible({ timeout: 15000 });
+    await firstCard.click();
+    await page.waitForLoadState('networkidle');
+    const backLink = page.getByRole('link', { name: /العودة|back/i });
+    await expect(backLink).toBeVisible({ timeout: 10000 });
+    await expect(backLink).toHaveAttribute('href', /^\/ar\//);
   });
 });
 
@@ -50,18 +47,16 @@ test.describe('Browse — Filter URL Persistence (F1-F5)', () => {
     await page.waitForLoadState('networkidle');
 
     // Apply a filter
-    const filterBtn = page.locator('button, select').filter({ hasText: /نوع الخدمة|serviceType|بضائع/i }).first();
-    if (await filterBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await filterBtn.click();
-      const goodsOption = page.getByRole('option', { name: /بضائع|GOODS/i }).or(
-        page.getByRole('button', { name: /بضائع|GOODS/i })
-      ).first();
-      if (await goodsOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await goodsOption.click();
-        await page.waitForLoadState('networkidle');
-        expect(page.url()).toContain('serviceType');
-      }
-    }
+    const filterBtn = page.locator('button, select').filter({ hasText: /نوع الخدمة|بضائع/i }).first();
+    await expect(filterBtn).toBeVisible({ timeout: 10000 });
+    await filterBtn.click();
+    const goodsOption = page.getByRole('option', { name: /بضائع|GOODS/i }).or(
+      page.getByRole('button', { name: /بضائع|GOODS/i })
+    ).first();
+    await expect(goodsOption).toBeVisible({ timeout: 10000 });
+    await goodsOption.click();
+    await page.waitForLoadState('networkidle');
+    expect(page.url()).toContain('serviceType');
   });
 
   test('F1: Filter persists after page refresh', async ({ page }) => {
@@ -77,11 +72,10 @@ test.describe('Browse — Filter URL Persistence (F1-F5)', () => {
     await page.waitForLoadState('networkidle');
 
     const nextBtn = page.getByRole('button', { name: /التالي|next|2/i }).first();
-    if (await nextBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await nextBtn.click();
-      await page.waitForLoadState('networkidle');
-      expect(page.url()).toContain('serviceType=GOODS');
-    }
+    await expect(nextBtn).toBeVisible({ timeout: 10000 });
+    await nextBtn.click();
+    await page.waitForLoadState('networkidle');
+    expect(page.url()).toContain('serviceType=GOODS');
   });
 
   test('N1: Anonymous user does NOT see edit button on any card', async ({ page }) => {

@@ -13,32 +13,25 @@ test.describe('Bookings — isCarrier booking-specific (N6)', () => {
 
     // Try accepting the quote if not already accepted
     const acceptBtn = page.getByRole('button', { name: /قبول|Accept/i }).first();
-    if (await acceptBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await acceptBtn.click();
-      await page.waitForLoadState('networkidle');
-    }
-
+    await expect(acceptBtn).toBeVisible({ timeout: 20000 });
+    await acceptBtn.click();
+    
     // Should be on booking page now
-    const currentUrl = page.url();
-    if (currentUrl.includes('/bookings/')) {
-      const bookingId = currentUrl.split('/bookings/')[1].split('?')[0];
+    await page.waitForURL(/\/transport\/bookings\//, { timeout: 30000 });
+    const bookingId = page.url().split('/bookings/')[1].split('?')[0];
 
-      // Test: non-shipper carrier opening this booking sees correct buttons
-      await loginAs(page, 'carrier');
-      await page.goto(`${BASE}/ar/transport/bookings/${bookingId}`);
-      await page.waitForLoadState('networkidle');
+    // Test: non-shipper carrier opening this booking sees correct buttons
+    await loginAs(page, 'carrier');
+    await page.goto(`${BASE}/ar/transport/bookings/${bookingId}`);
+    await page.waitForLoadState('networkidle');
 
-      // Carrier should see "بدأت التحميل" not "استلمت"
-      const startBtn = page.getByRole('button', { name: /بدأت التحميل|بدء/i });
-      const completeBtn = page.getByRole('button', { name: /استلمت|اكتمل|Complete/i });
+    // Carrier should see "بدأت التحميل" not "استلمت"
+    const startBtn = page.getByRole('button', { name: /بدأت التحميل|بدء/i });
+    const completeBtn = page.getByRole('button', { name: /استلمت|اكتمل|Complete/i });
 
-      const hasStart = await startBtn.isVisible({ timeout: 10000 }).catch(() => false);
-      const hasComplete = await completeBtn.isVisible({ timeout: 5000 }).catch(() => false);
-
-      // Carrier should have start, shipper should have complete
-      expect(hasStart).toBeTruthy();
-      expect(hasComplete).toBeFalsy();
-    }
+    // Carrier should have start, shipper should have complete
+    await expect(startBtn).toBeVisible({ timeout: 15000 });
+    await expect(completeBtn).toHaveCount(0);
   });
 });
 
@@ -58,9 +51,9 @@ test.describe('Bookings — Carrier Navigation (B2 + B10)', () => {
     await page.waitForLoadState('networkidle');
 
     // Should not show error — should show either bookings or empty state
+    // Should not show error — should show either bookings or empty state
     const errorMsg = page.getByText(/خطأ|error|فشل/i);
-    const hasError = await errorMsg.isVisible({ timeout: 10000 }).catch(() => false);
-    expect(hasError).toBeFalsy();
+    await expect(errorMsg).toHaveCount(0);
 
     // Page should be accessible
     expect(page.url()).not.toMatch(/\/login/);

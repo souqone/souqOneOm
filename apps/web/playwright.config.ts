@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+import path from 'path';
+
+// Load .env.playwright so BASE_URL is always set without manual env vars
+config({ path: path.resolve(__dirname, '.env.playwright') });
+
 
 export default defineConfig({
   testDir: './e2e',

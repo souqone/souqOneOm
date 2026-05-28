@@ -7,7 +7,8 @@ test.describe('Validation — Budget Cross-field (N11)', () => {
   test('N11: API rejects budgetMin > budgetMax', async ({ page }) => {
     await loginAs(page, 'shipper');
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    // Use the same origin as the web app (Next.js proxies API calls)
+    const apiBase = BASE.replace(/\/$/, '');
     const token = await page.evaluate(() => localStorage.getItem('accessToken'));
 
     const response = await page.request.post(`${apiBase}/api/transport/requests`, {
@@ -41,58 +42,35 @@ test.describe('Validation — Retry Behavior (N15)', () => {
     await page.waitForLoadState('networkidle');
 
     // Simulate error state: block next API call
-    await page.route('**/transport/requests/my**', (route) => {
-      route.fulfill({ status: 500, body: JSON.stringify({ message: 'Server Error' }) });
-    });
-
-    // Trigger a tab change to cause a reload
+    await page.route('**/transport/requests/my**', route => route.fulfill({ status: 500 }));
     const quotedTab = page.getByRole('button', { name: /وصلت عروض|QUOTED/i });
-    if (await quotedTab.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await quotedTab.click();
-      await page.waitForLoadState('networkidle');
-
-      // Error state should show
-      const errorMsg = page.getByText(/تعذّر|خطأ|Error/i);
-      const hasError = await errorMsg.isVisible({ timeout: 10000 }).catch(() => false);
-
-      if (hasError) {
-        // Unblock API
-        await page.unrouteAll();
-
-        // Click retry
-        const retryBtn = page.getByRole('button', { name: /إعادة المحاولة|Retry/i });
-        if (await retryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-          // Monitor for navigation — window.location.reload() would cause full navigation
-          let didFullReload = false;
-          page.on('framenavigated', () => { didFullReload = true; });
-
-          await retryBtn.click();
-          await page.waitForTimeout(2000);
-
-          // Should NOT do full page reload
-          expect(didFullReload).toBeFalsy();
-        }
-      }
-    }
+    await expect(quotedTab).toBeVisible({ timeout: 10000 });
+    await quotedTab.click();
+    const errorMsg = page.getByText(/تعذّر|خطأ/i);
+    await expect(errorMsg).toBeVisible({ timeout: 10000 });
+    await page.unrouteAll();
+    const retryBtn = page.getByRole('button', { name: /إعادة المحاولة|Retry/i });
+    await expect(retryBtn).toBeVisible({ timeout: 5000 });
+    let didFullReload = false;
+    page.on('framenavigated', () => { didFullReload = true; });
+    await retryBtn.click();
+    await page.waitForTimeout(2000);
+    expect(didFullReload).toBeFalsy();
   });
 });
 
 test.describe('Browse — Pagination (N12)', () => {
   test('N12: my-requests shows proper pagination (not hardcoded 50)', async ({ page }) => {
     await loginAs(page, 'shipper');
+    const requests: string[] = [];
+    page.on('request', req => {
+      if (req.url().includes('/transport/requests/my')) requests.push(req.url());
+    });
+
     await page.goto(`${BASE}/ar/transport/my-requests`);
     await page.waitForLoadState('networkidle');
 
-    // Page should load without error
-    const errorMsg = page.getByText(/تعذّر|خطأ/i);
-    const hasError = await errorMsg.isVisible({ timeout: 5000 }).catch(() => false);
-    expect(hasError).toBeFalsy();
-
-    // Should show content or empty state
-    const content = page.locator('[class*="card"], [class*="grid"]').first();
-    const emptyState = page.getByText(/لا توجد طلبات|No requests/i);
-    const hasContent = await content.isVisible({ timeout: 15000 }).catch(() => false);
-    const hasEmpty = await emptyState.isVisible({ timeout: 5000 }).catch(() => false);
-    expect(hasContent || hasEmpty).toBeTruthy();
+    await expect(requests.some(url => url.includes('limit=12'))).toBeTruthy();
+    await expect(requests.some(url => url.includes('limit=50'))).toBeFalsy();
   });
 });
