@@ -13,6 +13,11 @@ const mockPrisma = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  transportQuote: {
+    findMany: jest.fn().mockResolvedValue([]),
+    update: jest.fn().mockResolvedValue({}),
+    updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+  },
   carrierProfile: {
     findMany: jest.fn(),
   },

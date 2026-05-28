@@ -100,7 +100,7 @@ describe('TransportQuoteService', () => {
       });
       const booking = { id: 'b1', requestId: 'r1', quoteId: 'q1' };
       mockPrisma.$transaction.mockImplementation(async () => {
-        return booking;
+        return { booking, pendingQuotes: [] };
       });
 
       const result = await service.acceptQuote('q1', 'shipper');
