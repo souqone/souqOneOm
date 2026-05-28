@@ -46,12 +46,23 @@ export const transportApi = {
     return apiRequest<PaginatedResponse<TransportRequest>>(`/transport/requests/my${q}`)
   },
 
+  updateRequest(id: string, dto: Partial<CreateTransportRequestDto>) {
+    return apiRequest<TransportRequest>(`/transport/requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    })
+  },
+
   cancelRequest(id: string) {
     return apiRequest<TransportRequest>(`/transport/requests/${id}/cancel`, { method: 'PATCH' })
   },
 
   renewRequest(id: string) {
     return apiRequest<TransportRequest>(`/transport/requests/${id}/renew`, { method: 'PATCH' })
+  },
+
+  repostRequest(id: string) {
+    return apiRequest<TransportRequest>(`/transport/requests/${id}/repost`, { method: 'POST' })
   },
 
   // ── Quotes ───────────────────────────────────────

@@ -13,6 +13,7 @@ import { TransportBookingService } from './transport-booking.service';
 import { CreateCarrierProfileDto } from './dto/create-carrier-profile.dto';
 import { UpdateCarrierProfileDto } from './dto/update-carrier-profile.dto';
 import { CreateTransportRequestDto } from './dto/create-transport-request.dto';
+import { UpdateTransportRequestDto } from './dto/update-transport-request.dto';
 import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
@@ -106,6 +107,22 @@ export class TransportController {
   @Patch('requests/:id/cancel')
   cancelRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportRequestService.cancel(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('requests/:id')
+  updateRequest(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateTransportRequestDto,
+  ) {
+    return this.transportRequestService.update(id, user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('requests/:id/repost')
+  repostRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportRequestService.repost(id, user.sub);
   }
 
   // ─── Quotes ───

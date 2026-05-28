@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTransportRequestDto } from './dto/create-transport-request.dto';
+import { UpdateTransportRequestDto } from './dto/update-transport-request.dto';
 import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { Prisma } from '@prisma/client';
 import { incrementViewCount } from '../common/utils/view-count.helper';
@@ -258,5 +259,73 @@ export class TransportRequestService {
       items,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async update(id: string, userId: string, dto: UpdateTransportRequestDto) {
+    const request = await this.prisma.transportRequest.findUnique({ where: { id } });
+    if (!request) throw new NotFoundException('طلب النقل غير موجود');
+    if (request.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل طلب غيرك');
+    
+    if (!['OPEN', 'QUOTED'].includes(request.status)) {
+      throw new BadRequestException('لا يمكن تعديل هذا الطلب في حالته الحالية');
+    }
+
+    const updated = await this.prisma.transportRequest.update({
+      where: { id },
+      data: {
+        ...(dto.serviceType && { serviceType: dto.serviceType }),
+        ...(dto.fromGovernorate && { fromGovernorate: dto.fromGovernorate }),
+        ...(dto.fromCity && { fromCity: dto.fromCity }),
+        ...(dto.fromAddress && { fromAddress: dto.fromAddress }),
+        ...(dto.fromLat !== undefined && { fromLat: dto.fromLat }),
+        ...(dto.fromLng !== undefined && { fromLng: dto.fromLng }),
+        ...(dto.toGovernorate && { toGovernorate: dto.toGovernorate }),
+        ...(dto.toCity && { toCity: dto.toCity }),
+        ...(dto.toAddress && { toAddress: dto.toAddress }),
+        ...(dto.toLat !== undefined && { toLat: dto.toLat }),
+        ...(dto.toLng !== undefined && { toLng: dto.toLng }),
+        ...(dto.cargoDescription && { cargoDescription: dto.cargoDescription }),
+        ...(dto.weightTons !== undefined && { weightTons: dto.weightTons }),
+        ...(dto.requiresHelper !== undefined && { requiresHelper: dto.requiresHelper }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.scheduledAt && { scheduledAt: new Date(dto.scheduledAt) }),
+        ...(dto.isFlexible !== undefined && { isFlexible: dto.isFlexible }),
+        ...(dto.budgetMin !== undefined && { budgetMin: new Prisma.Decimal(dto.budgetMin) }),
+        ...(dto.budgetMax !== undefined && { budgetMax: new Prisma.Decimal(dto.budgetMax) }),
+      },
+    });
+
+    await this.redis.delPattern('transport:list:*');
+    await this.redis.del(`transport:request:${id}`);
+    await this.redis.del(`transport:request:${id}:auth`);
+
+    return updated;
+  }
+
+  async repost(id: string, userId: string) {
+    const request = await this.prisma.transportRequest.findUnique({ where: { id } });
+    if (!request) throw new NotFoundException('طلب النقل غير موجود');
+    if (request.userId !== userId) throw new ForbiddenException('لا يمكنك إعادة نشر طلب غيرك');
+
+    if (request.status !== 'EXPIRED') {
+      throw new BadRequestException('يمكن إعادة نشر الطلبات المنتهية فقط');
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const updated = await this.prisma.transportRequest.update({
+      where: { id },
+      data: {
+        status: 'OPEN',
+        expiresAt,
+      },
+    });
+
+    await this.redis.delPattern('transport:list:*');
+    await this.redis.del(`transport:request:${id}`);
+    await this.redis.del(`transport:request:${id}:auth`);
+
+    return updated;
   }
 }
