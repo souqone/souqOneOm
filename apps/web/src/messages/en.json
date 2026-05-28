@@ -4009,5 +4009,28 @@
       "ctaSubtitle": "Join as a carrier and receive requests in your area for free",
       "ctaButton": "Register as Carrier — Free"
     }
+  },
+  "transport": {
+    "requestStatus": {
+      "OPEN": "Open",
+      "QUOTED": "Quoted",
+      "ACCEPTED": "Accepted",
+      "IN_PROGRESS": "In Progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "quoteStatus": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "bookingStatus": {
+      "ACCEPTED": "Accepted",
+      "IN_PROGRESS": "In Progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    }
   }
 }
