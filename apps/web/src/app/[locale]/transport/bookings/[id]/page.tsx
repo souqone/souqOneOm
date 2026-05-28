@@ -418,8 +418,8 @@ export default function BookingDetailPage() {
                 )}
                 {showCancelForm && (
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
-                      سبب الإلغاء (اختياري)
+                    <label className="text-xs font-semibold text-[var(--color-error)]">
+                      سبب الإلغاء <span className="text-[var(--color-error)]">*</span>
                     </label>
                     <textarea
                       value={cancelReason}
@@ -428,11 +428,16 @@ export default function BookingDetailPage() {
                       rows={2}
                       className="w-full rounded-xl border border-[var(--color-outline)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-error)]"
                     />
+                    {!cancelReason.trim() && (
+                      <p className="text-[11px] text-[var(--color-error)] font-semibold">
+                        سبب الإلغاء مطلوب
+                      </p>
+                    )}
                   </div>
                 )}
                 <button
                   onClick={handleCancel}
-                  disabled={actionLoading || cancelled}
+                  disabled={actionLoading || cancelled || (showCancelForm && !cancelReason.trim())}
                   className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[var(--color-error)] text-[var(--color-error)] text-sm font-semibold hover:bg-[var(--color-error-light)] transition-all disabled:opacity-50"
                 >
                   {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}

@@ -41,6 +41,7 @@ export default function MyRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
+  const [renewingId, setRenewingId] = useState<string | null>(null);
 
   const load = async (tab: TabStatus) => {
     setLoading(true);
@@ -59,6 +60,18 @@ export default function MyRequestsPage() {
   useEffect(() => { load(activeTab); }, [activeTab]);
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
+
+  const handleRenew = async (id: string) => {
+    setRenewingId(id);
+    try {
+      const updated = await transportApi.renewRequest(id);
+      setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    } catch {
+      setError('تعذّر تجديد الطلب');
+    } finally {
+      setRenewingId(null);
+    }
+  };
 
   return (
     <AuthGuard>
@@ -124,6 +137,8 @@ export default function MyRequestsPage() {
               <TransportRequestCard
                 key={req.id}
                 request={req}
+                onRenew={handleRenew}
+                renewing={renewingId === req.id}
               />
             ))}
           </div>
