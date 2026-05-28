@@ -3765,6 +3765,27 @@
     "emptyCancelledOwnerDesc": "الحجوزات الملغية على إعلاناتك ستظهر هنا"
   },
   "transport": {
+    "requestStatus": {
+      "OPEN": "مفتوح",
+      "QUOTED": "وصلت عروض",
+      "ACCEPTED": "مقبول",
+      "IN_PROGRESS": "جارٍ التنفيذ",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى",
+      "EXPIRED": "منتهي الصلاحية"
+    },
+    "quoteStatus": {
+      "PENDING": "بانتظار الرد",
+      "ACCEPTED": "مقبول",
+      "REJECTED": "مرفوض",
+      "WITHDRAWN": "مسحوب"
+    },
+    "bookingStatus": {
+      "ACCEPTED": "تم القبول",
+      "IN_PROGRESS": "جارٍ التنفيذ",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى"
+    },
     "title": "النقل والشحن",
     "subtitle": "اطلب خدمة نقل أو قدّم عرضاً",
     "currency": "ر.ع.",

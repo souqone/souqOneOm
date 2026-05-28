@@ -66,7 +66,7 @@ export default function CarrierRegistrationPage() {
     return (
       <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader2 size={28} className="animate-spin text-[var(--color-brand-navy)]" />
-        <p className="text-sm text-[var(--color-on-surface-variant)]">جارٍ التحقق من ملفك...</p>
+        <p className="text-sm text-[var(--color-on-surface-muted)] mt-2">جارٍ التحقق من ملفك...</p>
       </div>
     );
   }
@@ -102,7 +102,6 @@ export default function CarrierRegistrationPage() {
     setError('');
 
     // FIX 3 flag: keep button disabled on 409 (no retry allowed)
-    let isConflict = false;
 
     try {
       await transportApi.createCarrierProfile({
@@ -120,7 +119,6 @@ export default function CarrierRegistrationPage() {
       // ── FIX 2: Distinguish 409 from generic errors ──────────────────────
       const status = (err as { status?: number })?.status;
       if (status === 409) {
-        isConflict = true;
         setError('لديك ملف ناقل مسجّل بالفعل. جارٍ تحويلك للوحة التحكم...');
         setTimeout(() => router.replace('/transport/carriers/dashboard'), 2000);
       } else {
@@ -128,8 +126,7 @@ export default function CarrierRegistrationPage() {
       }
       // ────────────────────────────────────────────────────────────────────
     } finally {
-      // FIX 3: On 409, button stays disabled — user should follow the redirect
-      if (!isConflict) setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
