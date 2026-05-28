@@ -70,7 +70,7 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
       {meta.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
-            onClick={() => onPageChange(currentPage - 1)}
+            onClick={() => { onPageChange(currentPage - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             disabled={currentPage <= 1}
             className="px-4 py-2 text-sm font-bold rounded-xl border border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)] disabled:opacity-40 hover:bg-[var(--color-surface-container)] transition-colors"
           >
@@ -80,7 +80,7 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
             {currentPage} / {meta.totalPages}
           </span>
           <button
-            onClick={() => onPageChange(currentPage + 1)}
+            onClick={() => { onPageChange(currentPage + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             disabled={currentPage >= meta.totalPages}
             className="px-4 py-2 text-sm font-bold rounded-xl border border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)] disabled:opacity-40 hover:bg-[var(--color-surface-container)] transition-colors"
           >

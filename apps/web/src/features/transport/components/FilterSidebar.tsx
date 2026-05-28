@@ -94,27 +94,26 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
             </div>
           </div>
 
-          {/* From Governorate + Wilayat */}
-          <div>
-            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">من</p>
+          {/* From Governorate + City */}
+          <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">المحافظة</p>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">من محافظة</label>
                 <select
+                  className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                   value={filters.fromGovernorate ?? ''}
-                  onChange={(e) => onChange({ ...filters, fromGovernorate: e.target.value || undefined, fromWilayat: undefined })}
-                  className="input-base text-sm"
+                  onChange={(e) => onChange({ ...filters, fromGovernorate: e.target.value || undefined, fromCity: undefined })}
                 >
                   <option value="">الكل</option>
                   {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">الولاية</p>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
                 <select
-                  value={filters.fromWilayat ?? ''}
-                  onChange={(e) => onChange({ ...filters, fromWilayat: e.target.value || undefined })}
-                  className="input-base text-sm"
+                  className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
+                  value={filters.fromCity ?? ''}
+                  onChange={(e) => onChange({ ...filters, fromCity: e.target.value || undefined })}
                   disabled={!filters.fromGovernorate}
                 >
                   <option value="">الكل</option>
@@ -124,27 +123,26 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
             </div>
           </div>
 
-          {/* To Governorate + Wilayat */}
-          <div>
-            <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">إلى</p>
+          {/* To Governorate + City */}
+          <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">المحافظة</p>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">إلى محافظة</label>
                 <select
+                  className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                   value={filters.toGovernorate ?? ''}
-                  onChange={(e) => onChange({ ...filters, toGovernorate: e.target.value || undefined, toWilayat: undefined })}
-                  className="input-base text-sm"
+                  onChange={(e) => onChange({ ...filters, toGovernorate: e.target.value || undefined, toCity: undefined })}
                 >
                   <option value="">الكل</option>
                   {OMAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
               <div>
-                <p className="text-[10px] text-[var(--color-on-surface-muted)] mb-1">الولاية</p>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
                 <select
-                  value={filters.toWilayat ?? ''}
-                  onChange={(e) => onChange({ ...filters, toWilayat: e.target.value || undefined })}
-                  className="input-base text-sm"
+                  className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
+                  value={filters.toCity ?? ''}
+                  onChange={(e) => onChange({ ...filters, toCity: e.target.value || undefined })}
                   disabled={!filters.toGovernorate}
                 >
                   <option value="">الكل</option>

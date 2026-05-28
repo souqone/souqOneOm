@@ -88,15 +88,19 @@ export default function RouteMapView({
       // Resolve from coordinates
       let fromCoords: [number, number] | null =
         fromLat && fromLng ? [fromLat, fromLng] : null
+      let needsDelay = false
       if (!fromCoords) {
         setGeocoding(true)
+        needsDelay = true
         const q = [fromAddress, fromCity, fromGovernorate, 'عُمان'].filter(Boolean).join(', ')
         fromCoords = await nominatim(q)
         if (!fromCoords && fromGovernorate) fromCoords = GOV_COORDS[fromGovernorate] ?? null
       }
 
-      // 1.1s pause to respect Nominatim rate limit (1 req/sec)
-      await new Promise(r => setTimeout(r, 1100))
+      // Respect Nominatim rate limit (1 req/sec) only if geocoding was used
+      if (needsDelay) {
+        await new Promise(r => setTimeout(r, 1100))
+      }
       if (cancelled) return
 
       // Resolve to coordinates

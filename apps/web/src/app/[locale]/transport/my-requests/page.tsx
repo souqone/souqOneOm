@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Plus, Package } from 'lucide-react';
 import type { TransportRequest, RequestStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -41,6 +41,7 @@ export default function MyRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
+  const [renewingId, setRenewingId] = useState<string | null>(null);
 
   const load = async (tab: TabStatus) => {
     setLoading(true);
@@ -59,6 +60,18 @@ export default function MyRequestsPage() {
   useEffect(() => { load(activeTab); }, [activeTab]);
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
+
+  const handleRenew = async (id: string) => {
+    setRenewingId(id);
+    try {
+      const updated = await transportApi.renewRequest(id);
+      setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    } catch {
+      setError('تعذّر تجديد الطلب');
+    } finally {
+      setRenewingId(null);
+    }
+  };
 
   return (
     <AuthGuard>
@@ -102,7 +115,7 @@ export default function MyRequestsPage() {
         {loading ? (
           <TransportPageLoader />
         ) : error ? (
-          <TransportPageError message={error} onRetry={() => window.location.reload()} />
+          <TransportPageError message={error} onRetry={() => load(activeTab)} />
         ) : requests.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">
@@ -124,6 +137,8 @@ export default function MyRequestsPage() {
               <TransportRequestCard
                 key={req.id}
                 request={req}
+                onRenew={handleRenew}
+                renewing={renewingId === req.id}
               />
             ))}
           </div>

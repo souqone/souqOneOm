@@ -6,6 +6,7 @@ import { MapPin, ArrowDown, Navigation, LocateFixed } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import type { CreateRequestFormData } from './CreateRequestWizard'
 import { OMAN_GOVERNORATES } from '../constants'
+import { useTranslations } from 'next-intl'
 
 const RouteMap = dynamic(() => import('./RouteMap'), {
   ssr: false,
@@ -33,6 +34,9 @@ export default function Step2Route() {
   const [pinMode, setPinMode] = useState<'from' | 'to'>('from')
   const [showMap, setShowMap] = useState(false)
 
+  const t = useTranslations('transport.steps')
+  const tCommon = useTranslations('transport')
+
   const fromLatLng: [number, number] | null =
     fromLatField.value != null && fromLngField.value != null
       ? [fromLatField.value as number, fromLngField.value as number]
@@ -59,10 +63,10 @@ export default function Step2Route() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl text-[var(--color-on-surface)] mb-1" style={{ fontWeight: 700 }}>
-          مسار الرحلة
+          {t('route')}
         </h2>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
-          حدّد نقطة التحميل ونقطة التسليم
+          {t('routeDesc')}
         </p>
       </div>
 
@@ -80,7 +84,7 @@ export default function Step2Route() {
           </div>
           {fromGov && toGov && (
             <span className="text-xs font-bold text-[var(--color-brand-amber)] bg-[var(--color-brand-amber)]/10 px-2.5 py-1 rounded-full">
-              مسار محدد ✓
+              {t('routeSelected')}
             </span>
           )}
         </div>
@@ -93,7 +97,7 @@ export default function Step2Route() {
             <div className="w-7 h-7 rounded-full bg-green-50 border-2 border-green-500 flex items-center justify-center">
               <MapPin size={13} className="text-green-600" />
             </div>
-            <h3 className="font-bold text-sm text-[var(--color-on-surface)]">نقطة التحميل</h3>
+            <h3 className="font-bold text-sm text-[var(--color-on-surface)]">{tCommon('fields.from')}</h3>
             {fromLatLng && (
               <span className="mr-auto text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                 <LocateFixed size={10} className="inline ml-0.5" />
@@ -104,13 +108,13 @@ export default function Step2Route() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1.5">
-                المحافظة <span className="text-[var(--color-error)]">*</span>
+                {tCommon('fields.governorate')} <span className="text-[var(--color-error)]">*</span>
               </label>
               <select
                 {...register('fromGovernorate')}
                 className={`input-base text-sm ${errors.fromGovernorate ? 'border-[var(--color-error)]' : ''}`}
               >
-                <option value="">اختر المحافظة</option>
+                <option value="">{tCommon('fields.selectGovernorate')}</option>
                 {OMAN_GOVERNORATES.map((gov) => (
                   <option key={`from-gov-step2-${gov}`} value={gov}>{gov}</option>
                 ))}
@@ -121,23 +125,23 @@ export default function Step2Route() {
             </div>
             <div>
               <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1.5">
-                المدينة / الحي
-                <span className="text-[var(--color-on-surface-muted)] font-normal mr-1">(اختياري)</span>
+                {tCommon('fields.city')}
+                <span className="text-[var(--color-on-surface-muted)] font-normal mr-1">({tCommon('fields.optional')})</span>
               </label>
-              <input {...register('fromCity')} type="text" placeholder="مثال: السيب، الخوير" className="input-base text-sm" />
+              <input {...register('fromCity')} type="text" placeholder={t('fromCityExample')} className="input-base text-sm" />
             </div>
           </div>
           <div className="mt-4">
             <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1.5">
-              العنوان التفصيلي <span className="text-[var(--color-error)]">*</span>
+              {tCommon('fields.address')} <span className="text-[var(--color-error)]">*</span>
             </label>
             <p className="text-[11px] text-[var(--color-on-surface-muted)] mb-2">
-              أدخل العنوان الكامل لموقع التحميل لمساعدة المزودين في التخطيط
+              {t('fromAddressDesc')}
             </p>
             <textarea
               {...register('fromAddress')}
               rows={2}
-              placeholder="مثال: المنطقة الصناعية، السيب، بالقرب من دوار الميناء"
+              placeholder={t('fromAddressExample')}
               className={`input-base text-sm resize-none ${errors.fromAddress ? 'border-[var(--color-error)]' : ''}`}
             />
             {errors.fromAddress && (
@@ -159,7 +163,7 @@ export default function Step2Route() {
             <div className="w-7 h-7 rounded-full bg-amber-50 border-2 border-amber-500 flex items-center justify-center">
               <MapPin size={13} className="text-amber-600" />
             </div>
-            <h3 className="font-bold text-sm text-[var(--color-on-surface)]">نقطة التسليم</h3>
+            <h3 className="font-bold text-sm text-[var(--color-on-surface)]">{tCommon('fields.to')}</h3>
             {toLatLng && (
               <span className="mr-auto text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                 <LocateFixed size={10} className="inline ml-0.5" />
@@ -170,13 +174,13 @@ export default function Step2Route() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1.5">
-                المحافظة <span className="text-[var(--color-error)]">*</span>
+                {tCommon('fields.governorate')} <span className="text-[var(--color-error)]">*</span>
               </label>
               <select
                 {...register('toGovernorate')}
                 className={`input-base text-sm ${errors.toGovernorate ? 'border-[var(--color-error)]' : ''}`}
               >
-                <option value="">اختر المحافظة</option>
+                <option value="">{tCommon('fields.selectGovernorate')}</option>
                 {OMAN_GOVERNORATES.map((gov) => (
                   <option key={`to-gov-step2-${gov}`} value={gov}>{gov}</option>
                 ))}
@@ -187,23 +191,23 @@ export default function Step2Route() {
             </div>
             <div>
               <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1.5">
-                المدينة / الحي
-                <span className="text-[var(--color-on-surface-muted)] font-normal mr-1">(اختياري)</span>
+                {tCommon('fields.city')}
+                <span className="text-[var(--color-on-surface-muted)] font-normal mr-1">({tCommon('fields.optional')})</span>
               </label>
-              <input {...register('toCity')} type="text" placeholder="مثال: نزوى، صلالة" className="input-base text-sm" />
+              <input {...register('toCity')} type="text" placeholder={t('toCityExample')} className="input-base text-sm" />
             </div>
           </div>
           <div className="mt-4">
             <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1.5">
-              العنوان التفصيلي <span className="text-[var(--color-error)]">*</span>
+              {tCommon('fields.address')} <span className="text-[var(--color-error)]">*</span>
             </label>
             <p className="text-[11px] text-[var(--color-on-surface-muted)] mb-2">
-              أدخل العنوان الكامل لموقع التسليم
+              {t('toAddressDesc')}
             </p>
             <textarea
               {...register('toAddress')}
               rows={2}
-              placeholder="مثال: حي الحمراء، نزوى، بالقرب من مستشفى نزوى"
+              placeholder={t('toAddressExample')}
               className={`input-base text-sm resize-none ${errors.toAddress ? 'border-[var(--color-error)]' : ''}`}
             />
             {errors.toAddress && (
@@ -221,16 +225,16 @@ export default function Step2Route() {
           >
             <span className="flex items-center gap-2">
               <Navigation size={15} className="text-[var(--color-brand-navy)]" />
-              تحديد الموقع على الخريطة
-              <span className="text-xs font-normal text-[var(--color-on-surface-muted)]">(اختياري)</span>
+              {t('selectOnMap')}
+              <span className="text-xs font-normal text-[var(--color-on-surface-muted)]">({tCommon('fields.optional')})</span>
             </span>
-            <span className="text-[var(--color-on-surface-muted)] text-xs">{showMap ? '▲ إخفاء' : '▼ عرض'}</span>
+            <span className="text-[var(--color-on-surface-muted)] text-xs">{showMap ? `▲ ${t('hide')}` : `▼ ${t('show')}`}</span>
           </button>
 
           {showMap && (
             <div className="mt-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold flex-wrap">
-                <span className="text-[var(--color-on-surface-variant)]">اضغط على الخريطة لتحديد:</span>
+                <span className="text-[var(--color-on-surface-variant)]">{t('clickOnMapToSelect')}</span>
                 <button
                   type="button"
                   onClick={() => setPinMode('from')}
@@ -241,7 +245,7 @@ export default function Step2Route() {
                   }`}
                 >
                   <div className="w-2 h-2 rounded-full bg-current opacity-80" />
-                  نقطة التحميل {fromLatLng && '✓'}
+                  {tCommon('fields.from')} {fromLatLng && '✓'}
                 </button>
                 <button
                   type="button"
@@ -253,7 +257,7 @@ export default function Step2Route() {
                   }`}
                 >
                   <div className="w-2 h-2 rounded-full bg-current opacity-80" />
-                  نقطة التسليم {toLatLng && '✓'}
+                  {tCommon('fields.to')} {toLatLng && '✓'}
                 </button>
                 {(fromLatLng || toLatLng) && (
                   <button
@@ -264,7 +268,7 @@ export default function Step2Route() {
                     }}
                     className="mr-auto text-xs text-[var(--color-error)] hover:underline"
                   >
-                    مسح الدبابيس
+                    {t('clearPins')}
                   </button>
                 )}
               </div>
@@ -278,7 +282,7 @@ export default function Step2Route() {
               />
 
               <p className="text-[11px] text-[var(--color-on-surface-muted)]">
-                الإحداثيات اختيارية — تساعد الناقلين على تقدير المسافة بدقة أكبر.
+                {t('mapOptionalDesc')}
               </p>
             </div>
           )}

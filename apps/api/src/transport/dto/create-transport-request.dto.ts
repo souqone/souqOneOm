@@ -1,6 +1,6 @@
 import {
   IsString, IsEnum, IsOptional, IsNumber, IsBoolean,
-  IsDateString, Min, MinLength,
+  IsDateString, Min, MinLength, MinDate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TransportServiceType } from '@prisma/client';
@@ -75,6 +75,7 @@ export class CreateTransportRequestDto {
   // Timing
   @IsOptional()
   @IsDateString()
+  @MinDate(new Date(), { message: 'scheduledAt يجب أن تكون في المستقبل' })
   scheduledAt?: string;
 
   @IsOptional()

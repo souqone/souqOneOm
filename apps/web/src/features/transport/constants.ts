@@ -176,6 +176,20 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   CANCELLED: 'ملغى',
 }
 
+// ─── Status & Service Translation Helpers ───────────
+
+export const getRequestStatusLabel = (status: string, t: (key: string) => string) =>
+  t(`status.${status}`) || status
+
+export const getQuoteStatusLabel = (status: string, t: (key: string) => string) =>
+  t(`quoteStatus.${status}`) || status
+
+export const getBookingStatusLabel = (status: string, t: (key: string) => string) =>
+  t(`bookingStatus.${status}`) || status
+
+export const getServiceTypeLabel = (type: string, t: (key: string) => string) =>
+  t(`serviceTypes.${type}`) || type
+
 // ─── Currency ─────────────────────────────────────
 
 export const CURRENCY_LABEL = 'ر.ع.'

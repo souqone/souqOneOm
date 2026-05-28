@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useRef } from 'react';
+import { Link } from '@/i18n/navigation';
 import {
   MessageSquare,
   CheckCircle,
@@ -49,12 +49,17 @@ export default function MyQuotesPage() {
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
+  const pendingWithdrawals = useRef<Set<string>>(new Set());
+
   const load = async (tab: TabStatus) => {
     setLoading(true);
     setError('');
     try {
       const res = await transportApi.myQuotes(1, 50, tab === 'ALL' ? undefined : tab);
-      setQuotes(res.items);
+      const newQuotes = res.items.map((q) =>
+        pendingWithdrawals.current.has(q.id) ? { ...q, status: 'WITHDRAWN' as QuoteStatus } : q
+      );
+      setQuotes(newQuotes);
     } catch {
       setError('تعذّر تحميل عروضك');
     } finally {
@@ -62,10 +67,13 @@ export default function MyQuotesPage() {
     }
   };
 
+  useEffect(() => {
+    load(activeTab);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(activeTab); }, [activeTab]);
+  }, [activeTab]);
 
   const handleWithdraw = async (quoteId: string) => {
+    pendingWithdrawals.current.add(quoteId);
     setWithdrawing(quoteId);
     setWithdrawError(null);
     try {
@@ -76,6 +84,7 @@ export default function MyQuotesPage() {
     } catch {
       setWithdrawError('تعذّر سحب العرض، حاول مجدداً');
     } finally {
+      pendingWithdrawals.current.delete(quoteId);
       setWithdrawing(null);
     }
   };

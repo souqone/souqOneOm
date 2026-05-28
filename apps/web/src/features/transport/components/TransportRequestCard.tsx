@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import {
   Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
   MapPin, Weight, Calendar, MessageSquare, Clock, ChevronLeft,
-  Eye,
+  Eye, RefreshCw, Loader2,
 } from 'lucide-react';
 import type { TransportRequest, TransportServiceType } from '../types';
 import {
@@ -32,9 +32,11 @@ const SERVICE_ICONS: Record<TransportServiceType, React.ElementType> = {
 
 interface Props {
   request: TransportRequest;
+  onRenew?: (id: string) => void;
+  renewing?: boolean;
 }
 
-export default function TransportRequestCard({ request }: Props) {
+export default function TransportRequestCard({ request, onRenew, renewing }: Props) {
   const ServiceIcon = SERVICE_ICONS[request.serviceType] ?? Package;
   const iconColor = SERVICE_TYPE_COLORS[request.serviceType] ?? '#9ca3af';
   const iconBg = SERVICE_TYPE_BG_COLORS[request.serviceType] ?? '#f3f4f6';
@@ -101,7 +103,7 @@ export default function TransportRequestCard({ request }: Props) {
       {/* Cargo */}
       <div className="bg-[var(--color-surface-container)] rounded-xl px-3 py-2 mb-3">
         <p className="text-xs text-[var(--color-on-surface-variant)] line-clamp-2 leading-relaxed">
-          {request.cargoDescription}
+          {request.cargoDescription || 'لم يتم تحديد وصف للبضاعة'}
         </p>
       </div>
 
@@ -138,6 +140,28 @@ export default function TransportRequestCard({ request }: Props) {
           <ChevronLeft size={14} className="text-[var(--color-on-surface-muted)]" />
         </div>
       </div>
+
+      {/* Renew action for expired requests */}
+      {request.status === 'EXPIRED' && onRenew && (
+        <div className="mt-3 pt-3 border-t border-[var(--color-outline-variant)]">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRenew(request.id);
+            }}
+            disabled={renewing}
+            className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl border border-[var(--color-warning)] text-[var(--color-warning)] text-xs font-bold hover:bg-[var(--color-warning)]/10 transition-all disabled:opacity-50"
+          >
+            {renewing ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            تجديد الطلب
+          </button>
+        </div>
+      )}
     </Link>
   );
 }

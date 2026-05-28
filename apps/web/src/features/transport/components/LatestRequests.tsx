@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useRequests } from '../hooks/useRequests';
 import TransportRequestCard from './TransportRequestCard';
