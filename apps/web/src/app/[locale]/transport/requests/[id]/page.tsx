@@ -24,6 +24,7 @@ import {
   ExternalLink,
   RefreshCw,
   XCircle,
+  Edit2,
 } from 'lucide-react';
 import type {
   TransportRequest,
@@ -595,7 +596,14 @@ export default function RequestDetailPage() {
             )}
 
             {isOwner && ['OPEN', 'QUOTED'].includes(request.status) && (
-              <div className="card-base p-4">
+              <div className="card-base p-4 flex flex-col gap-3">
+                <Link
+                  href={`/transport/requests/${request.id}/edit`}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[var(--color-brand-navy)] text-[var(--color-brand-navy)] text-sm font-semibold hover:bg-[var(--color-brand-navy)] hover:text-white transition-all"
+                >
+                  <Edit2 size={15} />
+                  تعديل الطلب
+                </Link>
                 <button
                   onClick={handleCancelRequest}
                   disabled={cancelling}
