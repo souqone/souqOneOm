@@ -30,7 +30,7 @@ import {
 import { formatRelativeDate, formatScheduledDate } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
-import { ReviewForm } from '@/components/reviews/review-form';
+import TransportReviewForm from '@/features/transport/components/TransportReviewForm';
 
 const BOOKING_STEPS = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
@@ -460,11 +460,7 @@ export default function BookingDetailPage() {
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
                   قيّم الناقل
                 </h2>
-                <ReviewForm
-                  entityType="TRANSPORT_BOOKING"
-                  entityId={booking.id}
-                  revieweeId={booking.carrier.userId}
-                />
+                <TransportReviewForm bookingId={booking.id} />
               </div>
             )}
           </div>

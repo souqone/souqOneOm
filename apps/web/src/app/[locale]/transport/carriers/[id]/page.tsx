@@ -20,6 +20,7 @@ import type { CarrierProfile } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import { SERVICE_TYPE_LABELS, VEHICLE_TYPE_LABELS } from '@/features/transport/constants';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
+import CarrierReviews from '@/features/transport/components/CarrierReviews';
 
 export default function PublicCarrierProfilePage() {
   const params = useParams();
@@ -203,6 +204,17 @@ export default function PublicCarrierProfilePage() {
                 </p>
               </div>
             )}
+
+            {/* Reviews */}
+            <div className="card-base p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Star size={16} className="text-[var(--color-brand-amber)] fill-[var(--color-brand-amber)]" />
+                <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+                  التقييمات والآراء
+                </h2>
+              </div>
+              <CarrierReviews carrierId={carrier.id} />
+            </div>
           </div>
 
           {/* Contact Sidebar */}
