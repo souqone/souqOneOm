@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import {
   ArrowRight,
   CheckCircle,
@@ -186,8 +186,8 @@ export default function BookingDetailPage() {
     }
   };
 
-  const isCarrier = booking?.quote?.carrierId === user?.id; // carrier is the one who submitted the quote
-  const isShipper = !isCarrier;
+  const isCarrier = booking?.quote?.carrier?.userId === user?.id;
+  const isShipper = booking?.request?.userId === user?.id;
 
   if (loading) return <TransportPageLoader />;
 

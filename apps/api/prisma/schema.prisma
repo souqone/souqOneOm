@@ -1564,6 +1564,13 @@ model TransportQuote {
   @@map("transport_quotes")
 }
 
+enum BookingStatus {
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model TransportBooking {
   id              String        @id @default(cuid())
   requestId       String        @unique
@@ -1571,7 +1578,7 @@ model TransportBooking {
   quoteId         String        @unique
   quote           TransportQuote   @relation(fields: [quoteId], references: [id])
 
-  status          TransportRequestStatus @default(IN_PROGRESS)
+  status          BookingStatus @default(ACCEPTED)
   confirmedAt     DateTime      @default(now())
   completedAt     DateTime?
   cancelledAt     DateTime?

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { CalendarCheck, Package, MapPin, Banknote, Truck } from 'lucide-react';
 import type { TransportBooking, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -44,12 +44,13 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
+  const [role, setRole] = useState<'shipper' | 'carrier'>('shipper');
 
   const load = async (tab: TabStatus) => {
     setLoading(true);
     setError('');
     try {
-      const res = await transportApi.myBookings('shipper', 1, 50);
+      const res = await transportApi.myBookings(role, 1, 50);
       const items = tab === 'ALL' ? res.items : res.items.filter((b) => b.status === tab);
       setBookings(items);
     } catch {
@@ -60,7 +61,7 @@ export default function MyBookingsPage() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(activeTab); }, [activeTab]);
+  useEffect(() => { load(activeTab); }, [activeTab, role]);
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
 
@@ -80,6 +81,30 @@ export default function MyBookingsPage() {
             <Truck size={16} />
             تصفح الطلبات
           </Link>
+        </div>
+
+        {/* Role Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setRole('shipper')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              role === 'shipper'
+                ? 'bg-[var(--color-brand-navy)] text-white'
+                : 'bg-white text-[var(--color-on-surface-variant)] border border-[var(--color-outline-variant)] hover:bg-[var(--color-surface-container)]'
+            }`}
+          >
+            كشاحن
+          </button>
+          <button
+            onClick={() => setRole('carrier')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              role === 'carrier'
+                ? 'bg-[var(--color-brand-navy)] text-white'
+                : 'bg-white text-[var(--color-on-surface-variant)] border border-[var(--color-outline-variant)] hover:bg-[var(--color-surface-container)]'
+            }`}
+          >
+            كناقل
+          </button>
         </div>
 
         {/* Tabs */}

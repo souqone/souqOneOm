@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useAuth } from '@/providers/auth-provider'
 import { transportApi } from './api'
 import type { TransportRequest, TransportQuote } from './types'

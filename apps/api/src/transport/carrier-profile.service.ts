@@ -127,6 +127,7 @@ export class CarrierProfileService {
     return this.prisma.carrierProfile.update({
       where: { userId },
       data: { isAvailable },
+      include: { user: { select: USER_SELECT } },
     });
   }
 }

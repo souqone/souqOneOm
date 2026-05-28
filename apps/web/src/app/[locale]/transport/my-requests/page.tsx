@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Plus, Package } from 'lucide-react';
 import type { TransportRequest, RequestStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';

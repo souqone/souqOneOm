@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Truck } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import RequestsGrid from './RequestsGrid';

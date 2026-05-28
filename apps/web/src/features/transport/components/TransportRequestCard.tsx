@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import {
   Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
   MapPin, Weight, Calendar, MessageSquare, Clock, ChevronLeft,

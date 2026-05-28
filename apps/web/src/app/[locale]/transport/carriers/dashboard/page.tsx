@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import {
   ToggleLeft, ToggleRight, Star, CheckCircle, TrendingUp, MapPin, Package,
   MessageSquare, Loader2, Pencil, X, Phone, MessageCircle, AlertCircle,
@@ -566,9 +565,9 @@ function CarrierDashboardContent() {
                         >
                           {QUOTE_STATUS_LABELS[q.status]}
                         </span>
-                        {q.status === 'ACCEPTED' && (
+                        {q.status === 'ACCEPTED' && q.booking?.id && (
                           <Link
-                            href="/transport/my-quotes"
+                            href={`/transport/bookings/${q.booking.id}`}
                             className="text-xs text-[var(--color-brand-navy)] font-semibold hover:underline"
                           >
                             عرض الحجز
