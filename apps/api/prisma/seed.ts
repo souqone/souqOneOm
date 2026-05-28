@@ -397,7 +397,7 @@ async function main() {
       username: 'transport_carrier',
       displayName: 'ناقل تجريبي',
       passwordHash: await bcrypt.hash('Test1234', 10),
-      role: 'CARRIER',
+      role: 'USER',
       isVerified: true,
     },
   });
@@ -424,8 +424,7 @@ async function main() {
       userId: transportCarrierUser.id,
       companyName: 'شركة النقل التجريبية',
       governorate: 'مسقط',
-      phone: '+96891000001',
-      vehicleTypes: ['شاحنة', 'ونيت'],
+      vehicleTypes: ['TRUCK_SMALL', 'PICKUP'],
       serviceAreas: ['مسقط', 'صلالة'],
       isAvailable: true,
       isVerified: true,
@@ -453,7 +452,7 @@ async function main() {
       weightTons: 2.5,
       budgetMin: 50,
       budgetMax: 150,
-      timingType: 'ASAP',
+
       status: 'OPEN',
     },
   });
@@ -476,7 +475,7 @@ async function main() {
       weightTons: 1.0,
       budgetMin: 80,
       budgetMax: 200,
-      timingType: 'ASAP',
+
       status: 'OPEN',
     },
   });
@@ -499,7 +498,7 @@ async function main() {
       weightTons: 0.5,
       budgetMin: 30,
       budgetMax: 80,
-      timingType: 'ASAP',
+
       status: 'QUOTED',
     },
   });
