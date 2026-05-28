@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { transportApi } from '@/features/transport/api';
 import type { TransportRequest } from '@/features/transport/types';
-import { TransportServiceType } from '@/features/transport/types';
 import { useAuth } from '@/providers/auth-provider';
 import { AuthGuard } from '@/components/auth-guard';
 import CreateRequestWizard from '@/features/transport/components/CreateRequestWizard';
