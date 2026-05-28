@@ -98,14 +98,20 @@ describe('TransportQuoteService', () => {
         request: { userId: 'shipper', status: 'QUOTED' },
         carrier: { userId: 'carrier1', id: 'c1' },
       });
-      const booking = { id: 'b1', requestId: 'r1', quoteId: 'q1' };
-      mockPrisma.$transaction.mockImplementation(async () => {
-        return { booking, pendingQuotes: [] };
+      const booking = { id: 'b1', requestId: 'r1', quoteId: 'q1', conversationId: 'conv-1' };
+      mockPrisma.$transaction.mockResolvedValue({
+        booking,
+        pendingQuotes: [],
       });
 
       const result = await service.acceptQuote('q1', 'shipper');
       expect(result.id).toBe('b1');
-      expect(mockNotifications.create).toHaveBeenCalled();
+      expect(mockNotifications.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'TRANSPORT_QUOTE_ACCEPTED',
+          data: expect.objectContaining({ bookingId: 'b1' }),
+        })
+      );
     });
   });
 
