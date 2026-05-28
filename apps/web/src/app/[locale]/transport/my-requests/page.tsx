@@ -8,6 +8,7 @@ import type { TransportRequest, RequestStatus } from '@/features/transport/types
 import { transportApi } from '@/features/transport/api';
 import TransportRequestCard from '@/features/transport/components/TransportRequestCard';
 import { AuthGuard } from '@/components/auth-guard';
+import { useAuth } from '@/providers/auth-provider';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
 
 type TabStatus = 'ALL' | RequestStatus;
@@ -44,13 +45,19 @@ export default function MyRequestsPage() {
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const router = useRouter();
+  const { user } = useAuth();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
-  const load = async (tab: TabStatus) => {
+  const load = async (tab: TabStatus, page = 1) => {
     setLoading(true);
     setError('');
     try {
-      const res = await transportApi.myRequests(1, 50, tab === 'ALL' ? undefined : tab);
+      const res = await transportApi.myRequests(page, ITEMS_PER_PAGE, tab === 'ALL' ? undefined : tab);
       setRequests(res.items);
+      setTotalPages(res.meta.totalPages || 1);
+      setCurrentPage(page);
     } catch {
       setError('تعذّر تحميل طلباتك');
     } finally {
@@ -59,7 +66,7 @@ export default function MyRequestsPage() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(activeTab); }, [activeTab]);
+  useEffect(() => { load(activeTab, 1); }, [activeTab]);
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
 
@@ -159,17 +166,42 @@ export default function MyRequestsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {requests.map((req) => (
-              <TransportRequestCard
-                key={req.id}
-                request={req}
-                onRepost={() => handleRepost(req.id)}
-                onDuplicate={() => handleDuplicate(req)}
-                isRenewing={renewingId === req.id}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {requests.map((req) => (
+                <TransportRequestCard
+                  key={req.id}
+                  request={req}
+                  onRepost={() => handleRepost(req.id)}
+                  onDuplicate={() => handleDuplicate(req)}
+                  isRenewing={renewingId === req.id}
+                  currentUserId={user?.id}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <button
+                  onClick={() => load(activeTab, currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="btn-outline px-4 py-2"
+                >
+                  السابق
+                </button>
+                <span className="text-sm font-semibold text-[var(--color-on-surface)]">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => load(activeTab, currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="btn-outline px-4 py-2"
+                >
+                  التالي
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

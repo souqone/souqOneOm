@@ -36,10 +36,13 @@ interface Props {
   onRepost?: () => void;
   onDuplicate?: () => void;
   isRenewing?: boolean;
+  currentUserId?: string;
 }
 
-export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing }: Props) {
+export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId }: Props) {
   const t = useTranslations();
+  const isOwner = !!currentUserId && currentUserId === request.userId;
+  const canEdit = isOwner && (request.status === 'OPEN' || request.status === 'QUOTED');
   const ServiceIcon = SERVICE_ICONS[request.serviceType] ?? Package;
   const iconColor = SERVICE_TYPE_COLORS[request.serviceType] ?? '#9ca3af';
   const iconBg = SERVICE_TYPE_BG_COLORS[request.serviceType] ?? '#f3f4f6';
@@ -147,7 +150,7 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
       {/* Actions */}
       <div className="mt-3 pt-3 border-t border-[var(--color-outline-variant)] flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {(request.status === 'OPEN' || request.status === 'QUOTED') && (
+          {canEdit && (
             <Link
               href={`/transport/requests/${request.id}/edit`}
               onClick={(e) => e.stopPropagation()}
