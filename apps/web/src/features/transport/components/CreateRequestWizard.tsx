@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useRouter } from '@/i18n/navigation';
 import { toast, Toaster } from 'sonner';
@@ -47,14 +47,19 @@ const STEP_FIELDS: Record<number, (keyof CreateRequestFormData)[]> = {
   5: [],
 };
 
-export default function CreateRequestWizard() {
+export interface CreateRequestWizardProps {
+  requestId?: string;
+  initialData?: Partial<CreateRequestFormData>;
+}
+
+export default function CreateRequestWizard({ requestId, initialData }: CreateRequestWizardProps = {}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittedRef = useRef(false);
   const router = useRouter();
 
   const methods = useForm<CreateRequestFormData>({
-    defaultValues: {
+    defaultValues: initialData || {
       timingType: 'asap',
       isFlexible: false,
       requiresHelper: false,
@@ -65,6 +70,26 @@ export default function CreateRequestWizard() {
     },
     mode: 'onBlur',
   });
+
+  // Load draft from sessionStorage if no initialData is provided
+  useEffect(() => {
+    if (!initialData) {
+      const draftStr = sessionStorage.getItem('transport_draft');
+      if (draftStr) {
+        try {
+          const draft = JSON.parse(draftStr);
+          Object.keys(draft).forEach((key) => {
+            if (draft[key] !== undefined && draft[key] !== null) {
+              methods.setValue(key as keyof CreateRequestFormData, draft[key]);
+            }
+          });
+          sessionStorage.removeItem('transport_draft');
+        } catch (e) {
+          console.error('Failed to parse draft from sessionStorage', e);
+        }
+      }
+    }
+  }, [initialData, methods]);
 
   async function handleNext() {
     const fields = STEP_FIELDS[currentStep];
@@ -107,8 +132,13 @@ export default function CreateRequestWizard() {
         toLng: data.toLng ?? undefined,
       };
 
-      await transportApi.createRequest(dto);
-      toast.success('تم إرسال طلبك بنجاح! ستبدأ في استقبال العروض قريباً.');
+      if (requestId) {
+        await transportApi.updateRequest(requestId, dto);
+        toast.success('تم تحديث طلبك بنجاح!');
+      } else {
+        await transportApi.createRequest(dto);
+        toast.success('تم إرسال طلبك بنجاح! ستبدأ في استقبال العروض قريباً.');
+      }
       router.push('/transport/my-requests');
     } catch {
       submittedRef.current = false;
@@ -136,10 +166,10 @@ export default function CreateRequestWizard() {
           {/* Header */}
           <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-              إنشاء طلب نقل
+              {requestId ? 'تعديل طلب نقل' : 'إنشاء طلب نقل'}
             </h1>
             <p className="text-sm text-[var(--color-on-surface-variant)] mt-1">
-              أنشئ طلبك وابدأ في استقبال العروض من المزودين
+              {requestId ? 'قم بتحديث تفاصيل طلبك' : 'أنشئ طلبك وابدأ في استقبال العروض من المزودين'}
             </p>
           </div>
 
@@ -175,7 +205,7 @@ export default function CreateRequestWizard() {
                       disabled={isSubmitting}
                       className="btn-navy px-6 py-2.5 text-sm disabled:opacity-60"
                     >
-                      {isSubmitting ? 'جارٍ الإرسال...' : 'إرسال الطلب'}
+                      {isSubmitting ? 'جارٍ الإرسال...' : (requestId ? 'حفظ التعديلات' : 'إرسال الطلب')}
                     </button>
                   ) : (
                     <button

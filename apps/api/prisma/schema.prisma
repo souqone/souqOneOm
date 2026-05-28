@@ -230,6 +230,8 @@ model Conversation {
   listingId  String?
   listing    Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
+  transportBooking TransportBooking?
+
   participants ConversationParticipant[]
   messages     Message[]
 
@@ -761,9 +763,13 @@ enum NotificationType {
   LISTING_STATUS_CHANGED
   JOB_RECOMMENDATION
   TRANSPORT_QUOTE_RECEIVED
+  TRANSPORT_QUOTE_ACCEPTED
+  TRANSPORT_QUOTE_REJECTED
   TRANSPORT_BOOKING_CONFIRMED
   TRANSPORT_BOOKING_CANCELLED
   TRANSPORT_REQUEST_CLOSED
+  TRANSPORT_REQUEST_CANCELLED
+  TRANSPORT_REQUEST_EXPIRED
 }
 
 // ══════════════════════════════════════════════════
@@ -1583,6 +1589,11 @@ model TransportBooking {
   completedAt     DateTime?
   cancelledAt     DateTime?
   cancellationReason String?
+
+  conversationId  String?       @unique
+  conversation    Conversation? @relation(fields: [conversationId], references: [id])
+
+  deliveryNote    String?
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

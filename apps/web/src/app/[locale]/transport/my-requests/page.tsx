@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
 import { Plus, Package } from 'lucide-react';
+import { useRouter } from '@/i18n/navigation';
 import type { TransportRequest, RequestStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import TransportRequestCard from '@/features/transport/components/TransportRequestCard';
@@ -42,6 +43,7 @@ export default function MyRequestsPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [renewingId, setRenewingId] = useState<string | null>(null);
+  const router = useRouter();
 
   const load = async (tab: TabStatus) => {
     setLoading(true);
@@ -61,16 +63,41 @@ export default function MyRequestsPage() {
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
 
-  const handleRenew = async (id: string) => {
+  const handleRepost = async (id: string) => {
     setRenewingId(id);
     try {
-      const updated = await transportApi.renewRequest(id);
+      const updated = await transportApi.repostRequest(id);
       setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch {
       setError('تعذّر تجديد الطلب');
     } finally {
       setRenewingId(null);
     }
+  };
+
+  const handleDuplicate = (request: TransportRequest) => {
+    const draft = {
+      serviceType: request.serviceType,
+      fromGovernorate: request.fromGovernorate,
+      fromCity: request.fromCity,
+      fromAddress: request.fromAddress,
+      fromLat: request.fromLat,
+      fromLng: request.fromLng,
+      toGovernorate: request.toGovernorate,
+      toCity: request.toCity,
+      toAddress: request.toAddress,
+      toLat: request.toLat,
+      toLng: request.toLng,
+      cargoDescription: request.cargoDescription,
+      weightTons: request.weightTons,
+      requiresHelper: request.requiresHelper,
+      budgetMin: request.budgetMin,
+      budgetMax: request.budgetMax,
+      isFlexible: request.isFlexible,
+      notes: request.notes,
+    };
+    sessionStorage.setItem('transport_draft', JSON.stringify(draft));
+    router.push('/transport/new');
   };
 
   return (
@@ -137,8 +164,9 @@ export default function MyRequestsPage() {
               <TransportRequestCard
                 key={req.id}
                 request={req}
-                onRenew={handleRenew}
-                renewing={renewingId === req.id}
+                onRepost={() => handleRepost(req.id)}
+                onDuplicate={() => handleDuplicate(req)}
+                isRenewing={renewingId === req.id}
               />
             ))}
           </div>

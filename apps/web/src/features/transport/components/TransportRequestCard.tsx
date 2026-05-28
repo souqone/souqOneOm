@@ -5,7 +5,7 @@ import { Link } from '@/i18n/navigation';
 import {
   Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
   MapPin, Weight, Calendar, MessageSquare, Clock, ChevronLeft,
-  Eye, RefreshCw, Loader2,
+  Eye, RefreshCw, Loader2, Copy, Edit2,
 } from 'lucide-react';
 import type { TransportRequest, TransportServiceType } from '../types';
 import {
@@ -33,11 +33,12 @@ const SERVICE_ICONS: Record<TransportServiceType, React.ElementType> = {
 
 interface Props {
   request: TransportRequest;
-  onRenew?: (id: string) => void;
-  renewing?: boolean;
+  onRepost?: () => void;
+  onDuplicate?: () => void;
+  isRenewing?: boolean;
 }
 
-export default function TransportRequestCard({ request, onRenew, renewing }: Props) {
+export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing }: Props) {
   const t = useTranslations();
   const ServiceIcon = SERVICE_ICONS[request.serviceType] ?? Package;
   const iconColor = SERVICE_TYPE_COLORS[request.serviceType] ?? '#9ca3af';
@@ -143,27 +144,55 @@ export default function TransportRequestCard({ request, onRenew, renewing }: Pro
         </div>
       </div>
 
-      {/* Renew action for expired requests */}
-      {request.status === 'EXPIRED' && onRenew && (
-        <div className="mt-3 pt-3 border-t border-[var(--color-outline-variant)]">
+      {/* Actions */}
+      <div className="mt-3 pt-3 border-t border-[var(--color-outline-variant)] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {(request.status === 'OPEN' || request.status === 'QUOTED') && (
+            <Link
+              href={`/transport/requests/${request.id}/edit`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-brand-navy)] text-[var(--color-brand-navy)] text-xs font-bold hover:bg-[var(--color-brand-navy)] hover:text-white transition-all"
+            >
+              <Edit2 size={14} />
+              تعديل
+            </Link>
+          )}
+
+          {onDuplicate && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDuplicate();
+              }}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-outline)] text-[var(--color-on-surface-variant)] text-xs font-bold hover:bg-[var(--color-surface-container)] transition-all"
+            >
+              <Copy size={14} />
+              نسخ
+            </button>
+          )}
+        </div>
+
+        {/* Repost action for expired requests */}
+        {request.status === 'EXPIRED' && onRepost && (
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onRenew(request.id);
+              onRepost();
             }}
-            disabled={renewing}
-            className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl border border-[var(--color-warning)] text-[var(--color-warning)] text-xs font-bold hover:bg-[var(--color-warning)]/10 transition-all disabled:opacity-50"
+            disabled={isRenewing}
+            className="flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg border border-[var(--color-warning)] text-[var(--color-warning)] text-xs font-bold hover:bg-[var(--color-warning)]/10 transition-all disabled:opacity-50"
           >
-            {renewing ? (
+            {isRenewing ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <RefreshCw size={14} />
             )}
-            تجديد الطلب
+            إعادة نشر
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </Link>
   );
 }

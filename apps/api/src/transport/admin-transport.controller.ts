@@ -130,4 +130,24 @@ export class AdminTransportController {
     await this.prisma.transportRequest.delete({ where: { id } });
     return { message: 'تم حذف الطلب بنجاح' };
   }
+
+  @Patch('carriers/:id')
+  async updateCarrier(
+    @Param('id') id: string,
+    @Body() body: { isVerified?: boolean; isAvailable?: boolean }
+  ) {
+    return this.prisma.carrierProfile.update({
+      where: { id },
+      data: {
+        ...(body.isVerified !== undefined && { isVerified: body.isVerified }),
+        ...(body.isAvailable !== undefined && { isAvailable: body.isAvailable }),
+      },
+    });
+  }
+
+  @Delete('carriers/:id')
+  async deleteCarrier(@Param('id') id: string) {
+    await this.prisma.carrierProfile.delete({ where: { id } });
+    return { message: 'تم حذف الناقل بنجاح' };
+  }
 }

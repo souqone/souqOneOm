@@ -18,6 +18,7 @@ import {
   Banknote,
   XCircle,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import type { TransportBooking, TransportRequest, TransportQuote, CarrierProfile, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -30,7 +31,7 @@ import {
 import { formatRelativeDate, formatScheduledDate } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
-import { ReviewForm } from '@/components/reviews/review-form';
+import TransportReviewForm from '@/features/transport/components/TransportReviewForm';
 
 const BOOKING_STEPS = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
@@ -129,6 +130,8 @@ export default function BookingDetailPage() {
   const [cancelled, setCancelled] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelForm, setShowCancelForm] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [deliveryNote, setDeliveryNote] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -162,8 +165,9 @@ export default function BookingDetailPage() {
     if (!booking) return;
     setActionLoading(true);
     try {
-      const updated = await transportApi.completeBooking(booking.id);
-      setBooking((prev) => prev ? { ...prev, status: updated.status, completedAt: updated.completedAt } : prev);
+      const updated = await transportApi.completeBooking(booking.id, deliveryNote.trim() || undefined);
+      setBooking((prev) => prev ? { ...prev, status: updated.status, completedAt: updated.completedAt, deliveryNote: updated.deliveryNote } : prev);
+      setShowCompleteModal(false);
     } finally {
       setActionLoading(false);
     }
@@ -390,6 +394,22 @@ export default function BookingDetailPage() {
               </div>
             )}
 
+            {/* Chat Link */}
+            {booking.conversationId && (
+              <div className="card-base p-5 flex flex-col gap-3">
+                <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
+                  تواصل
+                </h2>
+                <Link
+                  href={`/messages/${booking.conversationId}`}
+                  className="btn-outline w-full justify-center text-sm font-semibold flex items-center gap-2"
+                >
+                  <MessageSquare size={16} />
+                  فتح المحادثة
+                </Link>
+              </div>
+            )}
+
             {/* Action Buttons */}
             {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
               <div className="card-base p-5 flex flex-col gap-3">
@@ -408,11 +428,11 @@ export default function BookingDetailPage() {
                 )}
                 {isShipper && booking.status === 'IN_PROGRESS' && (
                   <button
-                    onClick={handleComplete}
+                    onClick={() => setShowCompleteModal(true)}
                     disabled={actionLoading}
                     className="btn-primary w-full justify-center"
                   >
-                    {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                    <CheckCircle size={16} />
                     استلمت — اكتمل
                   </button>
                 )}
@@ -460,16 +480,47 @@ export default function BookingDetailPage() {
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
                   قيّم الناقل
                 </h2>
-                <ReviewForm
-                  entityType="TRANSPORT_BOOKING"
-                  entityId={booking.id}
-                  revieweeId={booking.carrier.userId}
-                />
+                <TransportReviewForm bookingId={booking.id} />
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Complete Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 shadow-xl">
+            <h3 className="font-bold text-lg text-[var(--color-on-surface)]">تأكيد استلام البضاعة</h3>
+            <p className="text-sm text-[var(--color-on-surface-muted)]">
+              بعد التأكيد ستُوسَّم الرحلة كمكتملة ولا يمكن التراجع
+            </p>
+            <textarea
+              value={deliveryNote}
+              onChange={(e) => setDeliveryNote(e.target.value)}
+              placeholder="ملاحظات التسليم (اختياري)..."
+              className="w-full px-3 py-2 rounded-xl border border-[var(--color-outline-variant)] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]"
+              rows={3}
+            />
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="btn-ghost flex-1 justify-center"
+                disabled={actionLoading}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleComplete}
+                disabled={actionLoading}
+                className="btn-primary flex-1 justify-center"
+              >
+                {actionLoading ? <Loader2 size={16} className="animate-spin" /> : 'تأكيد الاستلام'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </AuthGuard>
   );

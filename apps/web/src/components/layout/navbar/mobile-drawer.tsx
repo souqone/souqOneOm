@@ -15,7 +15,7 @@ interface MobileDrawerProps {
   flatNavLinks: { href: string; label: string }[];
   isActive: (href: string) => boolean;
   isAuthenticated: boolean;
-  user?: { username: string; displayName?: string | null; email: string; avatarUrl?: string | null } | null;
+  user?: { username: string; displayName?: string | null; email: string; avatarUrl?: string | null; role?: string } | null;
   onLogout: () => void;
 }
 
@@ -31,6 +31,12 @@ export function MobileDrawer({ open, close, navLinks, flatNavLinks: _flatNavLink
     { href: '/favorites', icon: 'favorite', label: t('favorites') },
     { href: '/profile?tab=settings', icon: 'settings', label: t('settings') },
   ];
+
+  if (user?.role === 'ADMIN') {
+    accountLinks.push({ href: '/admin/transport', icon: 'admin_panel_settings', label: 'لوحة الإدارة (النقل)' });
+    accountLinks.push({ href: '/admin/jobs', icon: 'admin_panel_settings', label: 'لوحة الإدارة (الوظائف)' });
+  }
+
   return (
     <>
       {/* Backdrop */}

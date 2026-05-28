@@ -27,8 +27,10 @@ import { useMyCarrierProfile } from '@/features/transport/api'
 
 // ── Transport links (dynamic, see useTransportLinks below) ─────
 
+interface NavLink { href: string; label: string; icon: React.ComponentType<{ size?: number }>; title?: string }
+
 // ── Equipment links ──────────────────────────────────────────────
-const EQUIPMENT_LINKS = [
+const EQUIPMENT_LINKS: NavLink[] = [
   { href: '/equipment',             label: 'الرئيسية',       icon: Hammer },
   { href: '/browse/equipment',      label: 'تصفح المعدات',  icon: Search },
   { href: '/equipment/requests',    label: 'الطلبات',       icon: ClipboardList },
@@ -37,7 +39,7 @@ const EQUIPMENT_LINKS = [
 ]
 
 // ── Cars links ──────────────────────────────────────────────────
-const CARS_LINKS = [
+const CARS_LINKS: NavLink[] = [
   { href: '/cars',                              label: 'الرئيسية',        icon: Car      },
   { href: '/cars/browse',                       label: 'سيارات للبيع',   icon: Search   },
   { href: '/cars/browse?listingType=RENTAL',    label: 'سيارات للإيجار', icon: Key      },
@@ -47,7 +49,7 @@ const CARS_LINKS = [
 ]
 
 // ── Buses links ─────────────────────────────────────────────────
-const BUS_LINKS = [
+const BUS_LINKS: NavLink[] = [
   { href: '/buses',                                          label: 'الرئيسية',        icon: Bus       },
   { href: '/browse/buses?busListingType=BUS_SALE',           label: 'حافلات للبيع',   icon: Search    },
   { href: '/browse/buses?busListingType=BUS_RENT',           label: 'حافلات للإيجار', icon: KeyRound  },
@@ -56,7 +58,7 @@ const BUS_LINKS = [
 ]
 
 // ── Jobs links ────────────────────────────────────────────────────
-const JOBS_LINKS = [
+const JOBS_LINKS: NavLink[] = [
   { href: '/jobs',           label: 'الوظائف',       icon: Briefcase },
   { href: '/jobs/browse',    label: 'تصفح الوظائف',  icon: Search },
   { href: '/jobs/drivers',   label: 'السائقون',       icon: Users },
@@ -73,29 +75,27 @@ function isLinkActive(href: string, pathname: string): boolean {
   return bare === href || bare.startsWith(href + '/')
 }
 
-interface NavLink { href: string; label: string; icon: React.ComponentType<{ size?: number }> }
-
 function useTransportLinks(): NavLink[] {
   const { isAuthenticated } = useAuth()
   const { data: carrier } = useMyCarrierProfile(isAuthenticated)
   const isCarrier = !!carrier
 
   const links: NavLink[] = [
-    { href: '/transport/browse', label: 'تصفح الطلبات', icon: Search },
+    { href: '/transport/browse', label: 'تصفح الطلبات', icon: Search, title: 'تصفح طلبات النقل المتاحة وقدّم عروضك' },
   ]
 
   if (isAuthenticated) {
     if (isCarrier) {
       links.push(
-        { href: '/transport/my-quotes', label: 'عروضي', icon: MessageSquare },
-        { href: '/transport/my-bookings', label: 'حجوزاتي', icon: CalendarCheck },
-        { href: '/transport/carriers/dashboard', label: 'لوحة الناقل', icon: LayoutDashboard },
+        { href: '/transport/my-quotes', label: 'عروضي', icon: MessageSquare, title: 'العروض التي قدّمتها على طلبات الشحن' },
+        { href: '/transport/my-bookings', label: 'حجوزاتي', icon: CalendarCheck, title: 'الرحلات المقبولة وقيد التنفيذ' },
+        { href: '/transport/carriers/dashboard', label: 'لوحة الناقل', icon: LayoutDashboard, title: 'إدارة ملفك وعرض إحصائياتك' },
       )
     } else {
       links.push(
-        { href: '/transport/my-requests', label: 'طلباتي', icon: FileText },
-        { href: '/transport/my-bookings', label: 'حجوزاتي', icon: CalendarCheck },
-        { href: '/transport/carriers/register', label: 'سجّل كناقل', icon: Truck },
+        { href: '/transport/my-requests', label: 'طلباتي', icon: FileText, title: 'طلبات النقل التي أنشأتها' },
+        { href: '/transport/my-bookings', label: 'حجوزاتي', icon: CalendarCheck, title: 'الحجوزات المكتملة وقيد التنفيذ' },
+        { href: '/transport/carriers/register', label: 'سجّل كناقل', icon: Truck, title: 'سجّل كناقل مجاناً وابدأ استقبال الطلبات' },
       )
     }
   }
@@ -128,12 +128,13 @@ export default function SubNavBar() {
         dir="rtl"
         className="bg-white/90 backdrop-blur-md shadow-lg rounded-full px-2 md:px-6 py-2 md:py-3 flex items-center border border-gray-200"
       >
-        {links.map(({ href, label }) => {
+        {links.map(({ href, label, title }) => {
           const isActive = isLinkActive(href, pathname)
           return (
             <Link
               key={href}
               href={href}
+              title={title}
               className={`
                 flex-1 text-center px-1.5 md:px-3 py-1 md:py-1.5 rounded-full
                 text-[10px] md:text-sm font-semibold whitespace-nowrap transition-all duration-150

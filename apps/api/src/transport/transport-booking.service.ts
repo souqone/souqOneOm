@@ -68,7 +68,7 @@ export class TransportBookingService {
     return updated;
   }
 
-  async complete(bookingId: string, shipperId: string) {
+  async complete(bookingId: string, shipperId: string, deliveryNote?: string) {
     const booking = await this.prisma.transportBooking.findUnique({
       where: { id: bookingId },
       include: {
@@ -90,7 +90,7 @@ export class TransportBookingService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const b = await tx.transportBooking.update({
         where: { id: bookingId },
-        data: { status: 'COMPLETED', completedAt: new Date() },
+        data: { status: 'COMPLETED', completedAt: new Date(), deliveryNote },
       });
       await tx.transportRequest.update({
         where: { id: booking.requestId },

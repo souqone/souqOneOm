@@ -141,6 +141,8 @@ export interface TransportBooking {
   completedAt?: string
   cancelledAt?: string
   cancellationReason?: string
+  conversationId?: string
+  deliveryNote?: string
   createdAt: string
   updatedAt: string
 }

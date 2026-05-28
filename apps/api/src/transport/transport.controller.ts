@@ -10,9 +10,11 @@ import { CarrierProfileService } from './carrier-profile.service';
 import { TransportRequestService } from './transport-request.service';
 import { TransportQuoteService } from './transport-quote.service';
 import { TransportBookingService } from './transport-booking.service';
+import { TransportReviewService } from './transport-review.service';
 import { CreateCarrierProfileDto } from './dto/create-carrier-profile.dto';
 import { UpdateCarrierProfileDto } from './dto/update-carrier-profile.dto';
 import { CreateTransportRequestDto } from './dto/create-transport-request.dto';
+import { UpdateTransportRequestDto } from './dto/update-transport-request.dto';
 import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
@@ -25,6 +27,7 @@ export class TransportController {
     private readonly transportRequestService: TransportRequestService,
     private readonly transportQuoteService: TransportQuoteService,
     private readonly transportBookingService: TransportBookingService,
+    private readonly transportReviewService: TransportReviewService,
   ) {}
 
   // ─── Carrier Profile ───
@@ -61,6 +64,15 @@ export class TransportController {
   @Get('carriers/:id')
   findOneCarrier(@Param('id') id: string) {
     return this.carrierProfileService.findOne(id);
+  }
+
+  @Get('carriers/:id/reviews')
+  getCarrierReviews(
+    @Param('id') id: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.transportReviewService.getCarrierReviews(id, page, limit);
   }
 
   @Get('stats')
@@ -106,6 +118,22 @@ export class TransportController {
   @Patch('requests/:id/cancel')
   cancelRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportRequestService.cancel(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('requests/:id')
+  updateRequest(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateTransportRequestDto,
+  ) {
+    return this.transportRequestService.update(id, user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('requests/:id/repost')
+  repostRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportRequestService.repost(id, user.sub);
   }
 
   // ─── Quotes ───
@@ -159,8 +187,12 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('bookings/:id/complete')
-  completeBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.transportBookingService.complete(id, user.sub);
+  completeBooking(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body('deliveryNote') deliveryNote?: string,
+  ) {
+    return this.transportBookingService.complete(id, user.sub, deliveryNote);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -188,5 +220,24 @@ export class TransportController {
   @Get('bookings/:id')
   findOneBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportBookingService.findOne(id, user.sub);
+  }
+
+  // ─── Reviews ───
+
+  @UseGuards(JwtAuthGuard)
+  @Post('bookings/:id/review')
+  createReview(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body('rating', ParseIntPipe) rating: number,
+    @Body('comment') comment?: string,
+  ) {
+    return this.transportReviewService.createReview(id, user.sub, rating, comment);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('bookings/:id/review')
+  getBookingReview(@Param('id') id: string) {
+    return this.transportReviewService.getBookingReview(id);
   }
 }

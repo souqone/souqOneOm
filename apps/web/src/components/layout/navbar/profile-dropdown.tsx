@@ -10,7 +10,7 @@ interface ProfileDropdownProps {
   open: boolean;
   toggle: () => void;
   close: () => void;
-  user: { username: string; displayName?: string | null; email: string; avatarUrl?: string | null };
+  user: { username: string; displayName?: string | null; email: string; avatarUrl?: string | null; role?: string };
   onLogout: () => void;
 }
 
@@ -26,6 +26,11 @@ export const ProfileDropdown = forwardRef<HTMLDivElement, ProfileDropdownProps>(
       { href: '/favorites', icon: 'favorite', label: t('favorites') },
       { href: '/profile?tab=settings', icon: 'settings', label: t('settings') },
     ];
+    
+    if (user.role === 'ADMIN') {
+      menuItems.push({ href: '/admin/transport', icon: 'admin_panel_settings', label: 'لوحة الإدارة (النقل)' });
+      menuItems.push({ href: '/admin/jobs', icon: 'admin_panel_settings', label: 'لوحة الإدارة (الوظائف)' });
+    }
     return (
       <div ref={ref} className="relative hidden lg:block">
         <button

@@ -46,12 +46,23 @@ export const transportApi = {
     return apiRequest<PaginatedResponse<TransportRequest>>(`/transport/requests/my${q}`)
   },
 
+  updateRequest(id: string, dto: Partial<CreateTransportRequestDto>) {
+    return apiRequest<TransportRequest>(`/transport/requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    })
+  },
+
   cancelRequest(id: string) {
     return apiRequest<TransportRequest>(`/transport/requests/${id}/cancel`, { method: 'PATCH' })
   },
 
   renewRequest(id: string) {
     return apiRequest<TransportRequest>(`/transport/requests/${id}/renew`, { method: 'PATCH' })
+  },
+
+  repostRequest(id: string) {
+    return apiRequest<TransportRequest>(`/transport/requests/${id}/repost`, { method: 'POST' })
   },
 
   // ── Quotes ───────────────────────────────────────
@@ -98,9 +109,10 @@ export const transportApi = {
     })
   },
 
-  completeBooking(bookingId: string) {
+  completeBooking(bookingId: string, deliveryNote?: string) {
     return apiRequest<TransportBooking>(`/transport/bookings/${bookingId}/complete`, {
       method: 'PATCH',
+      body: deliveryNote ? JSON.stringify({ deliveryNote }) : undefined,
     })
   },
 
@@ -160,6 +172,43 @@ export const transportApi = {
     return apiRequest<{ activeRequests: number; verifiedCarriers: number; completedTrips: number }>(
       '/transport/stats',
     )
+  },
+
+  // ── Reviews ────────────────────────────────────────
+
+  async submitReview(bookingId: string, rating: number, comment?: string) {
+    const res = await apiFetch(`/transport/bookings/${bookingId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating, comment }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      const err = Object.assign(
+        new Error(data?.message || data?.error || 'SERVER_ERROR'),
+        { status: res.status },
+      )
+      throw err
+    }
+    return data
+  },
+
+  async getBookingReview(bookingId: string) {
+    const res = await apiFetch(`/transport/bookings/${bookingId}/review`)
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error('Failed to fetch booking review');
+    }
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
+  },
+
+  async getCarrierReviews(carrierId: string, page = 1, limit = 10) {
+    const res = await apiFetch(`/transport/carriers/${carrierId}/reviews?${qs({ page, limit })}`)
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'Error fetching reviews')
+    return data as PaginatedResponse<any>
   },
 }
 
