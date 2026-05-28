@@ -225,6 +225,7 @@ export class TransportRequestService {
         include: {
           _count: { select: { quotes: true } },
           booking: true,
+          user: { select: USER_SELECT },
         },
       }),
       this.prisma.transportRequest.count({ where }),

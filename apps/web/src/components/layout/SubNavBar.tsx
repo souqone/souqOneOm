@@ -88,6 +88,7 @@ function useTransportLinks(): NavLink[] {
     if (isCarrier) {
       links.push(
         { href: '/transport/my-quotes', label: 'عروضي', icon: MessageSquare },
+        { href: '/transport/my-bookings', label: 'حجوزاتي', icon: CalendarCheck },
         { href: '/transport/carriers/dashboard', label: 'لوحة الناقل', icon: LayoutDashboard },
       )
     } else {

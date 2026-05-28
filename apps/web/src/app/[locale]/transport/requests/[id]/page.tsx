@@ -181,6 +181,7 @@ interface SubmitQuoteFormProps {
 
 function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
   const [price, setPrice] = useState('');
+  const [priceError, setPriceError] = useState('');
   const [estimatedHours, setEstimatedHours] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -188,8 +189,14 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPriceError('');
     if (!price || Number(price) <= 0) {
-      setError('يرجى إدخال سعر صحيح');
+      setPriceError('يرجى إدخال سعر صحيح');
+      return;
+    }
+    const hours = estimatedHours ? Number(estimatedHours) : undefined;
+    if (hours !== undefined && (isNaN(hours) || hours <= 0)) {
+      setError('عدد الساعات يجب أن يكون رقماً موجباً');
       return;
     }
     setSubmitting(true);
@@ -231,9 +238,12 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="e.g. 150"
-          className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]/30"
+          className={`w-full px-3 py-2.5 rounded-xl border bg-[var(--color-surface-container)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]/30 ${priceError ? 'border-[var(--color-error)]' : 'border-[var(--color-outline-variant)]'}`}
           required
         />
+        {priceError && (
+          <p className="text-xs text-[var(--color-error)] mt-1">{priceError}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
