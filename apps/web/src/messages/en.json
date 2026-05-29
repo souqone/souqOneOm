@@ -3780,11 +3780,17 @@
     "whatToTransport": "What do you want to transport?",
     "serviceTypes": {
       "GOODS": "General Goods",
+      "GOODSSub": "Electronics, food items, etc.",
       "FURNITURE": "Furniture",
+      "FURNITURESub": "Careful and professional moving",
       "CONSTRUCTION": "Construction Materials",
+      "CONSTRUCTIONSub": "Sand, cement, bricks, and steel",
       "HEAVY": "Heavy Equipment",
+      "HEAVYSub": "Large loads requiring special equipment",
       "BACKLOAD": "Backloads",
-      "EQUIPMENT": "Equipment Rental"
+      "BACKLOADSub": "Discounted rates for returning trucks",
+      "EQUIPMENT": "Equipment Rental",
+      "EQUIPMENTSub": "Excavators, cranes, and heavy machinery"
     },
     "status": {
       "OPEN": "Open",

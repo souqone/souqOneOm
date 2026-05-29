@@ -3810,11 +3810,17 @@
     "whatToTransport": "ماذا تريد أن تنقل؟",
     "serviceTypes": {
       "GOODS": "بضائع عامة",
+      "GOODSSub": "إلكترونيات، مواد غذائية، وغيرها",
       "FURNITURE": "أثاث",
+      "FURNITURESub": "نقل الأثاث بعناية واحترافية",
       "CONSTRUCTION": "مواد بناء",
+      "CONSTRUCTIONSub": "رمل، إسمنت، طوب، وحديد",
       "HEAVY": "معدات ثقيلة",
+      "HEAVYSub": "حمولات ضخمة تحتاج معدات خاصة",
       "BACKLOAD": "حمولات راجعة",
-      "EQUIPMENT": "تأجير معدات"
+      "BACKLOADSub": "أسعار مخفضة للشاحنات العائدة",
+      "EQUIPMENT": "تأجير معدات",
+      "EQUIPMENTSub": "حفارات، رافعات، ومعدات ثقيلة"
     },
     "status": {
       "OPEN": "مفتوح",

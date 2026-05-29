@@ -8,56 +8,42 @@ import { useTranslations } from 'next-intl';
 
 const SERVICE_CARDS: {
   type: TransportServiceType;
-  label: string;
-  sublabel: string;
   icon: React.ElementType;
   color: string;
   bg: string;
 }[] = [
   {
     type: 'GOODS',
-    label: 'بضائع عامة',
-    sublabel: 'إلكترونيات، مواد غذائية، وغيرها',
     icon: Package,
     color: '#2563eb',
     bg: 'rgba(37,99,235,0.08)',
   },
   {
     type: 'FURNITURE',
-    label: 'أثاث ومنزليات',
-    sublabel: 'نقل الأثاث بعناية واحترافية',
     icon: Sofa,
     color: '#7c3aed',
     bg: 'rgba(124,58,237,0.08)',
   },
   {
     type: 'CONSTRUCTION',
-    label: 'مواد البناء',
-    sublabel: 'رمل، إسمنت، طوب، وحديد',
     icon: HardHat,
     color: '#d97706',
     bg: 'rgba(217,119,6,0.08)',
   },
   {
     type: 'HEAVY',
-    label: 'شحن ثقيل',
-    sublabel: 'حمولات ضخمة تحتاج معدات خاصة',
     icon: Container,
     color: '#dc2626',
     bg: 'rgba(220,38,38,0.08)',
   },
   {
     type: 'BACKLOAD',
-    label: 'عودة فارغة',
-    sublabel: 'أسعار مخفضة للشاحنات العائدة',
     icon: ArrowLeftRight,
     color: '#16a34a',
     bg: 'rgba(22,163,74,0.08)',
   },
   {
     type: 'EQUIPMENT',
-    label: 'معدات وآليات',
-    sublabel: 'حفارات، رافعات، ومعدات ثقيلة',
     icon: Wrench,
     color: '#0891b2',
     bg: 'rgba(8,145,178,0.08)',
@@ -66,7 +52,7 @@ const SERVICE_CARDS: {
 
 export default function ServiceTypesGrid() {
   const t = useTranslations('transport.landing');
-  const tCommon = useTranslations('transport');
+  const tService = useTranslations('transport.serviceTypes');
 
   return (
     <section className="py-8 sm:py-12" dir="rtl">
@@ -97,10 +83,10 @@ export default function ServiceTypesGrid() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-                    {tCommon(`serviceTypes.${card.type}`)}
+                    {tService(card.type)}
                   </p>
                   <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5 leading-tight">
-                    {card.sublabel}
+                    {tService(`${card.type}Sub`)}
                   </p>
                 </div>
               </Link>
