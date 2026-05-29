@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useLocale } from 'next-intl';
 import { CalendarCheck, Package, MapPin, Banknote, Truck } from 'lucide-react';
 import type { TransportBooking, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -161,6 +162,7 @@ export default function MyBookingsPage() {
 }
 
 function BookingCard({ booking }: { booking: TransportBooking }) {
+  const locale = useLocale();
   const req = booking.request;
   const quote = booking.quote;
   const statusClass = STATUS_COLORS[booking.status] ?? 'bg-gray-100 text-gray-500';
@@ -176,7 +178,7 @@ function BookingCard({ booking }: { booking: TransportBooking }) {
           {BOOKING_STATUS_LABELS[booking.status]}
         </span>
         <span className="text-xs text-[var(--color-on-surface-muted)]">
-          {new Date(booking.confirmedAt).toLocaleDateString('ar-OM')}
+          {new Date(booking.confirmedAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')}
         </span>
       </div>
 

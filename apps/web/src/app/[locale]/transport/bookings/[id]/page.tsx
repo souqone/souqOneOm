@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
+import { useLocale } from 'next-intl';
 import {
   ArrowRight,
   CheckCircle,
@@ -37,6 +38,7 @@ const BOOKING_STEPS = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
 
 function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?: string }) {
+  const locale = useLocale();
   if (status === 'CANCELLED') {
     return (
       <div className="flex items-center gap-0" dir="rtl">
@@ -57,7 +59,7 @@ function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?
         ))}
         {cancelledAt && (
           <p className="text-xs text-[var(--color-error)] mr-4 font-semibold">
-            تم الإلغاء: {new Date(cancelledAt).toLocaleDateString('ar-OM')}
+            تم الإلغاء: {new Date(cancelledAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')}
           </p>
         )}
       </div>
