@@ -23,6 +23,7 @@ import {
 import { formatRelativeDate, formatBudgetRange } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { TransportPageLoader } from '@/features/transport/components/TransportPageState';
+import { useTranslations } from 'next-intl';
 
 const ALL_VEHICLE_TYPES: VehicleType[] = [
   'PICKUP', 'VAN', 'TRUCK_SMALL', 'TRUCK_LARGE', 'TRAILER', 'EXCAVATOR', 'TIPPER', 'CRANE', 'OTHER',
@@ -274,6 +275,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
 
 function CarrierDashboardContent() {
   const router = useRouter();
+  const t = useTranslations('transport');
   const [profile, setProfile] = useState<CarrierProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -307,12 +309,13 @@ function CarrierDashboardContent() {
         if (quotesRes.status === 'fulfilled') {
           setRecentQuotes(quotesRes.value.items.slice(0, 5));
         }
-      } catch (err: any) {
-        if (err?.status === 404) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : '';
+        if ((err as { status?: number })?.status === 404) {
           // no carrier profile → redirect to registration
           router.replace('/transport/carriers/register');
         } else {
-          setError('تعذّر تحميل البروفايل. حاول مرة أخرى.');
+          setError(errMsg || 'تعذّر تحميل البروفايل. حاول مرة أخرى.');
         }
       } finally {
         setLoading(false);
@@ -370,7 +373,7 @@ function CarrierDashboardContent() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">لوحة الناقل</h1>
+            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">{t('carrierDashboard')}</h1>
             <p className="text-sm text-[var(--color-on-surface-muted)]">
               {profile.companyName ?? profile.user?.displayName}
             </p>
@@ -387,7 +390,7 @@ function CarrierDashboardContent() {
               href={`/transport/carriers/${profile.id}`}
               className="text-sm text-[var(--color-brand-navy)] font-semibold hover:underline"
             >
-              عرض ملفي الشخصي
+              {t('viewMyProfile')}
             </Link>
           </div>
         </div>
@@ -402,14 +405,12 @@ function CarrierDashboardContent() {
           }}
         >
           <div>
-            <p className="text-white/70 text-xs font-semibold mb-1">حالة التوفر</p>
+            <p className="text-white/70 text-xs font-semibold mb-1">{t('availabilityStatus')}</p>
             <p className="text-white text-xl font-bold">
-              {profile.isAvailable ? 'متاح للعمل' : 'غير متاح حالياً'}
+              {t(profile.isAvailable ? 'availableForWork' : 'notAvailable')}
             </p>
             <p className="text-white/60 text-xs mt-1">
-              {profile.isAvailable
-                ? 'يمكن للشاحنين رؤية ملفك وإرسال طلبات'
-                : 'ملفك مخفي عن الشاحنين'}
+              {t(profile.isAvailable ? 'availableDesc' : 'notAvailableDesc')}
             </p>
           </div>
           <button
@@ -424,7 +425,7 @@ function CarrierDashboardContent() {
             ) : (
               <ToggleLeft size={22} />
             )}
-            {profile.isAvailable ? 'إيقاف' : 'تفعيل'}
+            {t(profile.isAvailable ? 'deactivate' : 'activate')}
           </button>
         </div>
 
@@ -432,28 +433,28 @@ function CarrierDashboardContent() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
             {
-              label: 'عروض مقدمة',
+              label: t('quotesSubmitted'),
               value: recentQuotes.length,
               icon: MessageSquare,
               color: 'var(--color-info)',
               bg: 'var(--color-info-light)',
             },
             {
-              label: 'عروض مقبولة',
+              label: t('quotesAccepted'),
               value: acceptedQuotes,
               icon: CheckCircle,
               color: 'var(--color-success)',
               bg: 'var(--color-success-light)',
             },
             {
-              label: 'رحلات مكتملة',
+              label: t('statsCompletedTrips'),
               value: profile.completedTrips,
               icon: TrendingUp,
               color: 'var(--color-brand-navy)',
               bg: 'rgba(11,36,71,0.1)',
             },
             {
-              label: 'التقييم',
+              label: t('rating'),
               value: profile.averageRating > 0 ? profile.averageRating.toFixed(1) : '—',
               icon: Star,
               color: 'var(--color-brand-amber)',
@@ -478,7 +479,7 @@ function CarrierDashboardContent() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-[var(--color-on-surface)]">
-                طلبات قريبة منك
+                {t('nearbyRequests')}
               </h2>
               <div className="flex items-center gap-1 text-xs text-[var(--color-on-surface-muted)]">
                 <MapPin size={12} />
@@ -489,10 +490,10 @@ function CarrierDashboardContent() {
               <div className="card-base p-8 flex flex-col items-center gap-3 text-center">
                 <Package size={32} className="text-[var(--color-on-surface-muted)]" />
                 <p className="text-sm text-[var(--color-on-surface-muted)]">
-                  لا توجد طلبات قريبة حالياً
+                  {t('emptyStates.noNearbyRequests')}
                 </p>
                 <Link href="/transport/browse" className="btn-primary text-sm">
-                  تصفح جميع الطلبات
+                  {t('browseAllRequests')}
                 </Link>
               </div>
             ) : (
@@ -528,7 +529,7 @@ function CarrierDashboardContent() {
                   href="/transport/browse"
                   className="text-center text-sm text-[var(--color-brand-navy)] font-semibold hover:underline py-2"
                 >
-                  عرض جميع الطلبات
+                  {t('browseAllRequests')}
                 </Link>
               </div>
             )}
@@ -538,7 +539,7 @@ function CarrierDashboardContent() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-[var(--color-on-surface)]">
-                عروضي الأخيرة
+                {t('recentQuotes')}
               </h2>
               <Link
                 href="/transport/my-quotes"
@@ -550,7 +551,7 @@ function CarrierDashboardContent() {
             {recentQuotes.length === 0 ? (
               <div className="card-base p-8 flex flex-col items-center gap-3 text-center">
                 <MessageSquare size={32} className="text-[var(--color-on-surface-muted)]" />
-                <p className="text-sm text-[var(--color-on-surface-muted)]">لم تقدم أي عروض بعد</p>
+                <p className="text-sm text-[var(--color-on-surface-muted)]">{t('emptyStates.noQuotesYet')}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
@@ -599,7 +600,7 @@ function CarrierDashboardContent() {
 
             {/* Profile Summary */}
             <div className="card-base p-4 flex flex-col gap-3 mt-2">
-              <h3 className="text-sm font-bold text-[var(--color-on-surface-variant)]">ملخص الملف</h3>
+              <h3 className="text-sm font-bold text-[var(--color-on-surface-variant)]">{t('profileSummary')}</h3>
               <div className="flex flex-wrap gap-1.5">
                 {profile.vehicleTypes.map((v) => (
                   <span

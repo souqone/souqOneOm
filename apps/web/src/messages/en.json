@@ -4114,9 +4114,27 @@
     "statsGovernorates": "Governorates Served",
     "statsCompletedTrips": "Completed Trips",
     "showingResults": "Showing {from}–{to} of {total} requests",
+    "carrierDashboard": "Carrier Dashboard",
+    "availabilityStatus": "Availability Status",
+    "availableForWork": "Available for Work",
+    "notAvailable": "Not Available",
+    "availableDesc": "Shippers can see your profile and send requests",
+    "notAvailableDesc": "Your profile is hidden from shippers",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "quotesSubmitted": "Quotes Submitted",
+    "quotesAccepted": "Quotes Accepted",
+    "rating": "Rating",
+    "nearbyRequests": "Nearby Requests",
+    "recentQuotes": "My Recent Quotes",
+    "profileSummary": "Profile Summary",
+    "viewMyProfile": "View My Profile",
+    "browseAllRequests": "Browse All Requests",
     "emptyStates": {
       "noRequests": "No requests found",
-      "tryFilters": "Try adjusting your search or filter criteria"
+      "tryFilters": "Try adjusting your search or filter criteria",
+      "noNearbyRequests": "No nearby requests at the moment",
+      "noQuotesYet": "You haven't submitted any quotes yet"
     }
   },
   "status": {

@@ -4144,9 +4144,27 @@
     "statsGovernorates": "محافظة مخدومة",
     "statsCompletedTrips": "رحلة مكتملة",
     "showingResults": "عرض {from}–{to} من {total} طلب",
+    "carrierDashboard": "لوحة الناقل",
+    "availabilityStatus": "حالة التوفر",
+    "availableForWork": "متاح للعمل",
+    "notAvailable": "غير متاح حالياً",
+    "availableDesc": "يمكن للشاحنين رؤية ملفك وإرسال طلبات",
+    "notAvailableDesc": "ملفك مخفي عن الشاحنين",
+    "deactivate": "إيقاف",
+    "activate": "تفعيل",
+    "quotesSubmitted": "عروض مقدمة",
+    "quotesAccepted": "عروض مقبولة",
+    "rating": "التقييم",
+    "nearbyRequests": "طلبات قريبة منك",
+    "recentQuotes": "عروضي الأخيرة",
+    "profileSummary": "ملخص الملف",
+    "viewMyProfile": "عرض ملفي الشخصي",
+    "browseAllRequests": "عرض جميع الطلبات",
     "emptyStates": {
       "noRequests": "لا توجد طلبات",
-      "tryFilters": "جرّب تعديل معايير البحث أو التصفية"
+      "tryFilters": "جرّب تعديل معايير البحث أو التصفية",
+      "noNearbyRequests": "لا توجد طلبات قريبة حالياً",
+      "noQuotesYet": "لم تقدم أي عروض بعد"
     }
   },
   "status": {
