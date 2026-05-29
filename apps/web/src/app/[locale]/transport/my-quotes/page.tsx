@@ -57,6 +57,12 @@ export default function MyQuotesPage() {
 
   const pendingWithdrawals = useRef<Set<string>>(new Set());
 
+  useEffect(() => {
+    if (!withdrawError) return;
+    const timer = setTimeout(() => setWithdrawError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [withdrawError]);
+
   const load = async (tab: TabStatus, page = 1) => {
     setLoading(true);
     setError('');
@@ -97,8 +103,8 @@ export default function MyQuotesPage() {
     }
   };
 
-  const pendingCount = activeTab === 'ALL' ? quotes.filter((q) => q.status === 'PENDING').length : 0;
-  const acceptedCount = activeTab === 'ALL' ? quotes.filter((q) => q.status === 'ACCEPTED').length : 0;
+  const pendingCount = quotes.filter((q) => q.status === 'PENDING').length;
+  const acceptedCount = quotes.filter((q) => q.status === 'ACCEPTED').length;
 
   return (
     <AuthGuard>
@@ -116,11 +122,17 @@ export default function MyQuotesPage() {
           <div className="mb-4 flex items-center gap-2 bg-[var(--color-error-light)] text-[var(--color-error)] text-sm px-4 py-3 rounded-xl">
             <AlertCircle size={15} />
             {withdrawError}
+            <button
+              onClick={() => setWithdrawError(null)}
+              className="mr-auto text-[var(--color-error)] hover:opacity-70"
+            >
+              <XCircle size={14} />
+            </button>
           </div>
         )}
 
         {/* Stats Summary */}
-        {!loading && !error && (
+        {!loading && !error && activeTab === 'ALL' && (
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="card-base p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[var(--color-warning-light)] flex items-center justify-center">
