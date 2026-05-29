@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench } from 'lucide-react';
 import type { CreateRequestFormData } from './CreateRequestWizard';
@@ -22,10 +23,15 @@ const SERVICE_OPTIONS: {
 
 export default function Step1ServiceType() {
   const {
+    register,
     setValue,
     watch,
     formState: { errors },
   } = useFormContext<CreateRequestFormData>();
+
+  useEffect(() => {
+    register('serviceType', { required: 'يرجى اختيار نوع الخدمة للمتابعة' });
+  }, [register]);
 
   const selected = watch('serviceType');
   const t = useTranslations('transport.steps');

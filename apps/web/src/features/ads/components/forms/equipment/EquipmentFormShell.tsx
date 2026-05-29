@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCreateEquipmentListing, useUpdateEquipmentListing, useRemoveEquipmentImage, useEquipmentListing } from '@/lib/api/equipment';
@@ -33,6 +33,7 @@ export function EquipmentFormShell({ mode, id }: EquipmentFormProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [form, setForm] = useState<EquipmentFormData>(DEFAULT_EQUIPMENT_FORM);
   const [selectedGov, setSelectedGov] = useState('');
+  const hydratedRef = useRef(false);
   const { images, setImages, uploadImages, hydrateImages } = useDomainImages('equipment');
 
   const { data: equip, isLoading: isFetching, isError } = useEquipmentListing(id ?? '');
@@ -42,7 +43,8 @@ export function EquipmentFormShell({ mode, id }: EquipmentFormProps) {
   }
 
   useEffect(() => {
-    if (!isEdit || !equip) return;
+    if (!isEdit || !equip || hydratedRef.current) return;
+    hydratedRef.current = true;
     setForm({
       ...DEFAULT_EQUIPMENT_FORM,
       listingType:       equip.listingType ?? '',

@@ -4227,7 +4227,13 @@
       "noRequests": "لا توجد طلبات",
       "tryFilters": "جرّب تعديل معايير البحث أو التصفية",
       "noNearbyRequests": "لا توجد طلبات قريبة حالياً",
-      "noQuotesYet": "لم تقدم أي عروض بعد"
+      "noQuotesYet": "لم تقدم أي عروض بعد",
+      "requestsAccepted": "لا توجد طلبات مقبولة",
+      "requestsInProgress": "لا توجد طلبات قيد التنفيذ",
+      "requestsCompleted": "لا توجد طلبات مكتملة",
+      "requestsCancelled": "لا توجد طلبات ملغاة",
+      "requestsExpired": "لا توجد طلبات منتهية الصلاحية",
+      "manageYourRequests": "يمكنك إدارة جميع طلبات النقل الخاصة بك من هنا"
     }
   },
   "status": {
