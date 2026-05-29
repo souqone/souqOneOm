@@ -184,6 +184,7 @@ interface SubmitQuoteFormProps {
 }
 
 function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
+  const t = useTranslations('transport.quotes');
   const [price, setPrice] = useState('');
   const [priceError, setPriceError] = useState('');
   const [estimatedHours, setEstimatedHours] = useState('');
@@ -195,12 +196,12 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
     e.preventDefault();
     setPriceError('');
     if (!price || Number(price) <= 0) {
-      setPriceError('يرجى إدخال سعر صحيح');
+      setPriceError(t('errors.invalidPrice'));
       return;
     }
     const hours = estimatedHours ? Number(estimatedHours) : undefined;
     if (hours !== undefined && (isNaN(hours) || hours <= 0)) {
-      setError('عدد الساعات يجب أن يكون رقماً موجباً');
+      setError(t('errors.invalidHours'));
       return;
     }
     setSubmitting(true);
@@ -214,7 +215,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
       const quote = await transportApi.submitQuote(requestId, dto);
       onSubmitted(quote);
     } catch {
-      setError('تعذّر إرسال العرض. يرجى المحاولة مرة أخرى.');
+      setError(t('errors.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -297,6 +298,7 @@ export default function RequestDetailPage() {
   const { user, isAuthenticated } = useAuth();
   const { open: openAuth } = useAuthModal();
   const id = params?.id as string;
+  const t = useTranslations('transport.quotes');
 
   const { data: carrierProfile, isLoading: checkingCarrier } = useMyCarrierProfile(
     isAuthenticated
@@ -316,7 +318,7 @@ export default function RequestDetailPage() {
       const req = await transportApi.getRequest(id);
       setRequest(req);
     } catch {
-      setError('تعذّر تحميل تفاصيل الطلب');
+      setError(t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -344,7 +346,7 @@ export default function RequestDetailPage() {
         router.push('/transport/my-requests');
       }
     } catch {
-      setError('تعذّر قبول العرض. حاول مرة أخرى.');
+      setError(t('errors.acceptFailed'));
     } finally {
       setAccepting(null);
     }
@@ -368,7 +370,7 @@ export default function RequestDetailPage() {
       const updated = await transportApi.renewRequest(request.id);
       setRequest(updated);
     } catch {
-      setError('تعذّر تجديد الطلب. حاول مرة أخرى.');
+      setError(t('errors.renewFailed'));
     } finally {
       setRenewing(false);
     }

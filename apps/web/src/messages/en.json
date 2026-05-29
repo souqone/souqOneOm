@@ -4026,6 +4026,16 @@
       "ctaTitle": "Have a truck? Register now!",
       "ctaSubtitle": "Join as a carrier and receive requests in your area for free",
       "ctaButton": "Register as Carrier — Free"
+    },
+    "quotes": {
+      "errors": {
+        "invalidPrice": "Please enter a valid price",
+        "invalidHours": "Number of hours must be a positive number",
+        "submitFailed": "Failed to submit quote. Please try again.",
+        "loadFailed": "Failed to load request details",
+        "acceptFailed": "Failed to accept quote. Please try again.",
+        "renewFailed": "Failed to renew request. Please try again."
+      }
     }
   },
   "status": {
