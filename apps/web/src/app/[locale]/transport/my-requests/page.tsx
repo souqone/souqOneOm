@@ -7,9 +7,10 @@ import { useRouter } from '@/i18n/navigation';
 import type { TransportRequest, RequestStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import TransportRequestCard from '@/features/transport/components/TransportRequestCard';
+import RequestCardSkeleton from '@/features/transport/components/RequestCardSkeleton';
 import { AuthGuard } from '@/components/auth-guard';
 import { useAuth } from '@/providers/auth-provider';
-import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
+import { TransportPageError } from '@/features/transport/components/TransportPageState';
 
 type TabStatus = 'ALL' | RequestStatus;
 
@@ -163,7 +164,11 @@ export default function MyRequestsPage() {
 
         {/* Content */}
         {loading ? (
-          <TransportPageLoader />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <RequestCardSkeleton key={i} />
+            ))}
+          </div>
         ) : error ? (
           <TransportPageError message={error} onRetry={() => load(activeTab)} />
         ) : requests.length === 0 ? (
