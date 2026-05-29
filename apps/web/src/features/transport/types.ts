@@ -133,9 +133,9 @@ export interface TransportQuote {
 export interface TransportBooking {
   id: string
   requestId: string
-  request?: TransportRequest
+  request: TransportRequest
   quoteId: string
-  quote?: TransportQuote
+  quote: TransportQuote
   status: BookingStatus
   confirmedAt: string
   completedAt?: string
