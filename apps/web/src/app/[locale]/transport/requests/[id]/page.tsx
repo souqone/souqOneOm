@@ -65,7 +65,7 @@ interface QuoteCardProps {
 }
 
 function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: QuoteCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const isAccepted = quote.status === 'ACCEPTED';
   const canAccept = isOwner && requestStatus === 'QUOTED' && quote.status === 'PENDING';
 
