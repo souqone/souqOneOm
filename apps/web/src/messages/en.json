@@ -3735,6 +3735,9 @@
     "emptyCancelledOwnerDesc": "Cancelled bookings on your listings will appear here"
   },
   "transport": {
+    "carrier": {
+      "unknown": "Carrier"
+    },
     "requestStatus": {
       "OPEN": "Open",
       "QUOTED": "Quoted",

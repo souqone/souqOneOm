@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import {
   ArrowRight,
   MapPin,
@@ -65,6 +66,7 @@ interface QuoteCardProps {
 }
 
 function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: QuoteCardProps) {
+  const t = useTranslations('transport');
   const [expanded, setExpanded] = useState(true);
   const isAccepted = quote.status === 'ACCEPTED';
   const canAccept = isOwner && requestStatus === 'QUOTED' && quote.status === 'PENDING';
@@ -87,7 +89,7 @@ function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: Quote
               href={`/transport/carriers/${quote.carrierId}`}
               className="text-sm font-bold text-[var(--color-on-surface)] hover:text-[var(--color-brand-navy)] transition-colors"
             >
-              {quote.carrier?.companyName ?? quote.carrier?.user?.displayName ?? 'ناقل'}
+              {quote.carrier?.companyName ?? quote.carrier?.user?.displayName ?? t('carrier.unknown')}
             </Link>
             <div className="flex items-center gap-1.5 mt-0.5">
               {(quote.carrier?.averageRating ?? 0) > 0 && (
