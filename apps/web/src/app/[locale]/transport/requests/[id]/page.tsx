@@ -297,7 +297,7 @@ export default function RequestDetailPage() {
   const id = params?.id as string;
 
   const { data: carrierProfile, isLoading: checkingCarrier } = useMyCarrierProfile(
-    isAuthenticated && user?.role === 'CARRIER'
+    isAuthenticated
   );
 
   const [request, setRequest] = useState<TransportRequest | null>(null);
@@ -415,7 +415,8 @@ export default function RequestDetailPage() {
   }
 
   const isOwner = user?.id === request.userId;
-  const isCarrier = user?.role === 'CARRIER';
+  // A user is considered a carrier if they have a loaded carrierProfile
+  const isCarrier = !!carrierProfile;
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
   const hasAlreadyQuoted = carrierProfile?.id
     ? quotes.some((q) => q.carrierId === carrierProfile.id)
@@ -698,7 +699,7 @@ export default function RequestDetailPage() {
             )}
 
             {/* CTA for authenticated non-carrier, non-owner users */}
-            {isAuthenticated && !isCarrier && !isOwner && (
+            {isAuthenticated && !checkingCarrier && !isCarrier && !isOwner && request.status === 'OPEN' && (
               <div className="card-base p-4 text-center flex flex-col gap-3">
                 <div className="w-10 h-10 rounded-full bg-[var(--color-brand-navy)]/10 flex items-center justify-center mx-auto">
                   <Truck size={20} className="text-[var(--color-brand-navy)]" />
@@ -748,23 +749,9 @@ export default function RequestDetailPage() {
                       تسجيل الدخول
                     </button>
                   </div>
-                ) : (
-                  <>
-                    {isCarrier && !checkingCarrier && !carrierProfile && (
-                      <div className="card-base p-4 text-center flex flex-col gap-3">
-                        <p className="text-sm text-[var(--color-on-surface-muted)]">
-                          يجب إنشاء ملف ناقل أولاً لتقديم عروض
-                        </p>
-                        <Link href="/transport/carriers/register" className="btn-primary w-full justify-center">
-                          سجّل كناقل الآن
-                        </Link>
-                      </div>
-                    )}
-                    {canSubmitQuote && (
-                      <SubmitQuoteForm requestId={id} onSubmitted={handleQuoteSubmitted} />
-                    )}
-                  </>
-                )}
+                ) : canSubmitQuote ? (
+                  <SubmitQuoteForm requestId={id} onSubmitted={handleQuoteSubmitted} />
+                ) : null}
               </div>
             )}
           </div>
