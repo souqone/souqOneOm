@@ -3765,9 +3765,6 @@
     "emptyCancelledOwnerDesc": "الحجوزات الملغية على إعلاناتك ستظهر هنا"
   },
   "transport": {
-    "carrier": {
-      "unknown": "ناقل"
-    },
     "requestStatus": {
       "OPEN": "مفتوح",
       "QUOTED": "وصلت عروض",
@@ -3776,18 +3773,6 @@
       "COMPLETED": "مكتمل",
       "CANCELLED": "ملغى",
       "EXPIRED": "منتهي الصلاحية"
-    },
-    "quoteStatus": {
-      "PENDING": "بانتظار الرد",
-      "ACCEPTED": "مقبول",
-      "REJECTED": "مرفوض",
-      "WITHDRAWN": "مسحوب"
-    },
-    "bookingStatus": {
-      "ACCEPTED": "تم القبول",
-      "IN_PROGRESS": "جارٍ التنفيذ",
-      "COMPLETED": "مكتمل",
-      "CANCELLED": "ملغى"
     },
     "title": "النقل والشحن",
     "subtitle": "اطلب خدمة نقل أو قدّم عرضاً",

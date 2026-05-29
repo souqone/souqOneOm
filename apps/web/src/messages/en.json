@@ -3747,18 +3747,6 @@
       "CANCELLED": "Cancelled",
       "EXPIRED": "Expired"
     },
-    "quoteStatus": {
-      "PENDING": "Pending",
-      "ACCEPTED": "Accepted",
-      "REJECTED": "Rejected",
-      "WITHDRAWN": "Withdrawn"
-    },
-    "bookingStatus": {
-      "ACCEPTED": "Accepted",
-      "IN_PROGRESS": "In Progress",
-      "COMPLETED": "Completed",
-      "CANCELLED": "Cancelled"
-    },
     "title": "Transport & Shipping",
     "subtitle": "Request transport or offer a quote",
     "currency": "OMR",
