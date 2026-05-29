@@ -20,6 +20,7 @@ import {
   XCircle,
   Loader2,
   MessageSquare,
+  AlertCircle,
 } from 'lucide-react';
 import type { TransportBooking, CarrierProfile, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -128,6 +129,13 @@ export default function BookingDetailPage() {
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [deliveryNote, setDeliveryNote] = useState('');
+  const [actionError, setActionError] = useState('');
+
+  useEffect(() => {
+    if (!actionError) return;
+    const t = setTimeout(() => setActionError(''), 5000);
+    return () => clearTimeout(t);
+  }, [actionError]);
 
   useEffect(() => {
     const load = async () => {
@@ -149,9 +157,12 @@ export default function BookingDetailPage() {
   const handleMarkInProgress = async () => {
     if (!booking) return;
     setActionLoading(true);
+    setActionError('');
     try {
       const updated = await transportApi.markInProgress(booking.id);
       setBooking((prev) => prev ? { ...prev, status: updated.status } : prev);
+    } catch {
+      setActionError('تعذّر تحديث حالة الحجز، حاول مجدداً');
     } finally {
       setActionLoading(false);
     }
@@ -160,9 +171,13 @@ export default function BookingDetailPage() {
   const handleComplete = async () => {
     if (!booking) return;
     setActionLoading(true);
+    setActionError('');
     try {
       const updated = await transportApi.completeBooking(booking.id, deliveryNote.trim() || undefined);
       setBooking((prev) => prev ? { ...prev, status: updated.status, completedAt: updated.completedAt, deliveryNote: updated.deliveryNote } : prev);
+      setShowCompleteModal(false);
+    } catch {
+      setActionError('تعذّر تأكيد الاستلام، حاول مجدداً');
       setShowCompleteModal(false);
     } finally {
       setActionLoading(false);
@@ -176,11 +191,14 @@ export default function BookingDetailPage() {
       return;
     }
     setActionLoading(true);
+    setActionError('');
     try {
       await transportApi.cancelBooking(booking.id, cancelReason.trim() || undefined);
       setCancelled(true);
       setShowCancelForm(false);
       setBooking((prev) => prev ? { ...prev, status: 'CANCELLED', cancelledAt: new Date().toISOString(), cancellationReason: cancelReason.trim() || undefined } : prev);
+    } catch {
+      setActionError('تعذّر إلغاء الحجز، حاول مجدداً');
     } finally {
       setActionLoading(false);
     }
@@ -252,6 +270,13 @@ export default function BookingDetailPage() {
         <div className="card-base p-5 mb-6 overflow-x-auto">
           <BookingTimeline status={booking.status} cancelledAt={booking.cancelledAt} />
         </div>
+
+        {actionError && (
+          <div className="mb-4 flex items-center gap-2 bg-[var(--color-error-light)] text-[var(--color-error)] text-sm px-4 py-3 rounded-xl">
+            <AlertCircle size={15} />
+            {actionError}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           {/* Main */}
@@ -476,7 +501,7 @@ export default function BookingDetailPage() {
             )}
 
             {/* Rating — after completion */}
-            {booking.status === 'COMPLETED' && booking.carrier && (
+            {booking.status === 'COMPLETED' && booking.carrier && isShipper && (
               <div className="card-base p-5 flex flex-col gap-3">
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
                   قيّم الناقل
