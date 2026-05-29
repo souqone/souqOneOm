@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, AlertCircle, XCircle } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import type { TransportRequest, RequestStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -46,6 +46,9 @@ export default function MyRequestsPage() {
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // NEW-M-3: separate state for action errors (repost / cancel) so they
+  // show as a dismissible banner instead of replacing the whole page.
+  const [actionError, setActionError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -56,33 +59,44 @@ export default function MyRequestsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
+  // NEW-H-1: generation counter — discards stale responses on fast tab switching
+  const loadGenRef = useRef(0);
+
   const load = async (tab: TabStatus, page = 1) => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setError('');
     try {
       const res = await transportApi.myRequests(page, ITEMS_PER_PAGE, tab === 'ALL' ? undefined : tab);
+      if (gen !== loadGenRef.current) return;
       setRequests(res.items);
       setTotalPages(res.meta.totalPages || 1);
       setCurrentPage(page);
     } catch {
+      if (gen !== loadGenRef.current) return;
       setError(t('errors.loadFailed'));
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) setLoading(false);
     }
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(activeTab, 1); }, [activeTab]);
 
-  const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
+  const handleTabChange = (tab: TabStatus) => {
+    setActiveTab(tab);
+    setConfirmCancelId(null); // QA-C-2: reset pending confirmation when switching tabs
+  };
 
   const handleRepost = async (id: string) => {
     setRenewingId(id);
+    setActionError('');
     try {
       const updated = await transportApi.repostRequest(id);
       setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch {
-      setError(t('errors.renewFailed'));
+      // NEW-M-3: action error stays inline; doesn't replace the whole list
+      setActionError(t('errors.renewFailed'));
     } finally {
       setRenewingId(null);
     }
@@ -120,13 +134,20 @@ export default function MyRequestsPage() {
     }
     setConfirmCancelId(null);
     setCancellingId(id);
+    setActionError('');
     try {
       await transportApi.cancelRequest(id);
-      setRequests((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: 'CANCELLED' as RequestStatus } : r)
-      );
+      setRequests((prev) => {
+        // On a filtered tab, remove the cancelled item so the list stays consistent.
+        // On ALL tab, update status in-place so the user sees the new badge.
+        if (activeTab !== 'ALL') {
+          return prev.filter((r) => r.id !== id);
+        }
+        return prev.map((r) => r.id === id ? { ...r, status: 'CANCELLED' as RequestStatus } : r);
+      });
     } catch {
-      setError(t('errors.cancelFailed'));
+      // NEW-M-3: action error stays inline; doesn't replace the whole list
+      setActionError(t('errors.cancelFailed'));
     } finally {
       setCancellingId(null);
     }
@@ -149,6 +170,17 @@ export default function MyRequestsPage() {
             {t('newRequest')}
           </Link>
         </div>
+
+        {/* NEW-M-3: action error banner (repost / cancel failures) */}
+        {actionError && (
+          <div className="mb-4 flex items-center gap-2 bg-[var(--color-error-light)] text-[var(--color-error)] text-sm px-4 py-3 rounded-xl">
+            <AlertCircle size={15} />
+            {actionError}
+            <button onClick={() => setActionError('')} className="mr-auto text-[var(--color-error)] hover:opacity-70">
+              <XCircle size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto pb-1 mb-6 scrollbar-hide">

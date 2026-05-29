@@ -38,7 +38,7 @@ export default function Step1ServiceType() {
           {t('serviceType')}
         </h2>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
-          اختر نوع البضاعة أو الخدمة التي تريد نقلها
+          {t('serviceTypeDesc')}
         </p>
       </div>
 

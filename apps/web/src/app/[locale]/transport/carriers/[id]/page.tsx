@@ -214,7 +214,7 @@ export default function PublicCarrierProfilePage() {
               <div className="flex items-center gap-2 mb-4">
                 <Star size={16} className="text-[var(--color-brand-amber)] fill-[var(--color-brand-amber)]" />
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
-                  التقييمات والآراء
+                  {t('reviewsTitle')}
                 </h2>
               </div>
               <CarrierReviews carrierId={carrier.id} />

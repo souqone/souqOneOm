@@ -4047,7 +4047,24 @@
     "errors": {
       "loadFailed": "Failed to load data, please try again",
       "renewFailed": "Failed to renew request, please try again",
-      "cancelFailed": "Failed to cancel, please try again"
+      "cancelFailed": "Failed to cancel, please try again",
+      "selectVehicleType": "Please select at least one vehicle type",
+      "selectServiceType": "Please select at least one service type",
+      "selectGovernorate": "Please select a governorate",
+      "invalidPhone": "Invalid phone number — must be a valid Omani number",
+      "invalidWhatsapp": "Invalid WhatsApp number — must be a valid Omani number"
+    },
+    "onboarding": {
+      "title": "Welcome to SouqOne!",
+      "subtitle": "You have been registered as a carrier. Here is how to get started:",
+      "step1Title": "Browse Requests",
+      "step1Desc": "Find requests that match your vehicle and area from the browse page",
+      "step2Title": "Submit a Quote",
+      "step2Desc": "Enter your price and any notes for the shipper — quoting is completely free",
+      "step3Title": "Start and Complete the Trip",
+      "step3Desc": "After your quote is accepted, press \"Started Loading\" when the trip begins — the shipper will confirm receipt upon delivery",
+      "browseCta": "Start Browsing Requests",
+      "dashboardCta": "Go to Dashboard"
     },
     "emptyStates": {
       "createFirstRequest": "Create your first request",

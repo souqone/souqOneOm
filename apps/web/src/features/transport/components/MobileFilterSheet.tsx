@@ -33,7 +33,15 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
     setOpen(false);
   }
 
-  const activeCount = Object.values(filters).filter(Boolean).length;
+  // B-7: use the same 5-field count as BrowseContent's activeFilterCount badge
+  // so both mobile and desktop show the same number
+  const activeCount = [
+    filters.serviceType,
+    filters.status,
+    filters.fromGovernorate,
+    filters.toGovernorate,
+    filters.sortBy,
+  ].filter(Boolean).length;
 
   return (
     <>

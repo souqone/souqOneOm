@@ -55,7 +55,14 @@ export default function MyQuotesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
+  // H-6: accurate total counts from meta — not limited by current page size
+  const [statsCounts, setStatsCounts] = useState<{ pending: number; accepted: number } | null>(null);
+
   const pendingWithdrawals = useRef<Set<string>>(new Set());
+  // NEW-H-2: generation counter — discards stale responses on fast tab switching
+  const loadGenRef = useRef(0);
+  // QA-M-2: single-flight guard — prevents double-withdraw from rapid double-click
+  const withdrawingRef = useRef(false);
 
   useEffect(() => {
     if (!withdrawError) return;
@@ -63,11 +70,26 @@ export default function MyQuotesPage() {
     return () => clearTimeout(timer);
   }, [withdrawError]);
 
+  // H-6: fetch accurate totals with limit:1 (only meta.total matters, not items)
+  useEffect(() => {
+    Promise.allSettled([
+      transportApi.myQuotes(1, 1, 'PENDING'),
+      transportApi.myQuotes(1, 1, 'ACCEPTED'),
+    ]).then(([pendingRes, acceptedRes]) => {
+      setStatsCounts({
+        pending:  pendingRes.status  === 'fulfilled' ? pendingRes.value.meta.total  : 0,
+        accepted: acceptedRes.status === 'fulfilled' ? acceptedRes.value.meta.total : 0,
+      });
+    }).catch(() => {});
+  }, []);
+
   const load = async (tab: TabStatus, page = 1) => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setError('');
     try {
       const res = await transportApi.myQuotes(page, ITEMS_PER_PAGE, tab === 'ALL' ? undefined : tab);
+      if (gen !== loadGenRef.current) return;
       const newQuotes = res.items.map((q) =>
         pendingWithdrawals.current.has(q.id) ? { ...q, status: 'WITHDRAWN' as QuoteStatus } : q
       );
@@ -75,9 +97,10 @@ export default function MyQuotesPage() {
       setTotalPages(res.meta?.totalPages || 1);
       setCurrentPage(page);
     } catch {
-      setError('تعذّر تحميل عروضك');
+      if (gen !== loadGenRef.current) return;
+      setError(t('errors.loadFailed'));
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) setLoading(false);
     }
   };
 
@@ -87,6 +110,9 @@ export default function MyQuotesPage() {
   }, [activeTab]);
 
   const handleWithdraw = async (quoteId: string) => {
+    // QA-M-2: single-flight guard prevents duplicate withdraw on rapid double-click
+    if (withdrawingRef.current) return;
+    withdrawingRef.current = true;
     pendingWithdrawals.current.add(quoteId);
     setWithdrawing(quoteId);
     setWithdrawError(null);
@@ -95,16 +121,22 @@ export default function MyQuotesPage() {
       setQuotes((prev) =>
         prev.map((q) => (q.id === quoteId ? { ...q, status: 'WITHDRAWN' as QuoteStatus } : q))
       );
+      // NEW-M-1: keep stats card in sync — one fewer pending quote
+      setStatsCounts((prev) =>
+        prev ? { ...prev, pending: Math.max(0, prev.pending - 1) } : prev
+      );
     } catch {
-      setWithdrawError('تعذّر سحب العرض، حاول مجدداً');
+      setWithdrawError(t('errors.withdrawFailed'));
     } finally {
       pendingWithdrawals.current.delete(quoteId);
       setWithdrawing(null);
+      withdrawingRef.current = false;
     }
   };
 
-  const pendingCount = quotes.filter((q) => q.status === 'PENDING').length;
-  const acceptedCount = quotes.filter((q) => q.status === 'ACCEPTED').length;
+  // Fallback to page-level counts while statsCounts is loading
+  const pendingCount  = statsCounts?.pending  ?? quotes.filter((q) => q.status === 'PENDING').length;
+  const acceptedCount = statsCounts?.accepted ?? quotes.filter((q) => q.status === 'ACCEPTED').length;
 
   return (
     <AuthGuard>
@@ -140,7 +172,7 @@ export default function MyQuotesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-[var(--color-on-surface)]">{pendingCount}</p>
-                <p className="text-xs text-[var(--color-on-surface-muted)]">بانتظار الرد</p>
+                <p className="text-xs text-[var(--color-on-surface-muted)]">{t('tabs.pending')}</p>
               </div>
             </div>
             <div className="card-base p-4 flex items-center gap-3">
@@ -149,7 +181,7 @@ export default function MyQuotesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-[var(--color-on-surface)]">{acceptedCount}</p>
-                <p className="text-xs text-[var(--color-on-surface-muted)]">عروض مقبولة</p>
+                <p className="text-xs text-[var(--color-on-surface-muted)]">{t('tabs.accepted')}</p>
               </div>
             </div>
           </div>
@@ -263,7 +295,7 @@ export default function MyQuotesPage() {
                           ) : (
                             <Trash2 size={12} />
                           )}
-                          سحب العرض
+                          {t('quotes.withdraw')}
                         </button>
                       )}
                       {quote.status === 'ACCEPTED' && quote.booking?.id && (
@@ -272,7 +304,7 @@ export default function MyQuotesPage() {
                           className="flex items-center gap-1.5 text-xs text-[var(--color-success)] font-bold bg-[var(--color-success-light)] px-3 py-1.5 rounded-xl hover:opacity-80 transition-all"
                         >
                           <ExternalLink size={12} />
-                          عرض الحجز
+                          {t('quotes.viewBooking')}
                         </Link>
                       )}
                     </div>

@@ -22,6 +22,14 @@ export default function Step4Timing() {
   const t = useTranslations('transport.steps');
   const tCommon = useTranslations('transport');
 
+  // M-1: build min datetime string in LOCAL time (not UTC) so the picker
+  // shows the correct minimum for the user's timezone (e.g. Oman = UTC+4).
+  const localMinDateTime = (() => {
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
+
   return (
     <div dir="rtl">
       <div className="mb-6">
@@ -84,7 +92,7 @@ export default function Step4Timing() {
                     return true;
                   },
                 })}
-                min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                min={localMinDateTime}
                 type="datetime-local"
                 className={`input-base text-sm ${
                   errors.scheduledAt ? 'border-[var(--color-error)] ring-1 ring-[var(--color-error)]' : ''

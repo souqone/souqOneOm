@@ -49,7 +49,13 @@ export default function ActiveFilterChips({ filters, onChange }: ActiveFilterChi
         >
           {chip.label}
           <button
-            onClick={() => onChange({ ...filters, [chip.key]: undefined })}
+            onClick={() => {
+              const next: BrowseFilters = { ...filters, [chip.key]: undefined };
+              // B-2: removing a parent filter must also clear its child filters
+              if (chip.key === 'fromGovernorate') { next.fromCity = undefined; next.fromWilayat = undefined; }
+              if (chip.key === 'toGovernorate')   { next.toCity   = undefined; next.toWilayat   = undefined; }
+              onChange(next);
+            }}
             className="hover:text-[var(--color-error)] transition-colors"
             aria-label="إزالة الفلتر"
           >

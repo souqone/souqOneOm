@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
@@ -60,6 +60,29 @@ export default function BrowseContent() {
   });
   const [currentPage, setCurrentPage] = useState(1);
 
+  // B-1: re-sync React state when the browser navigates back/forward
+  // (filters are pushed via window.history.replaceState, not Next.js router,
+  // so we need a popstate listener to pull the URL back into state)
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = new URLSearchParams(window.location.search);
+      setFilters({
+        serviceType:     p.get('serviceType')     ?? undefined,
+        status:          p.get('status')          ?? undefined,
+        fromGovernorate: p.get('fromGovernorate') ?? undefined,
+        fromWilayat:     p.get('fromWilayat')     ?? undefined,
+        fromCity:        p.get('fromCity')         ?? undefined,
+        toGovernorate:   p.get('toGovernorate')   ?? undefined,
+        toWilayat:       p.get('toWilayat')       ?? undefined,
+        toCity:          p.get('toCity')           ?? undefined,
+        sortBy:          p.get('sortBy')           ?? undefined,
+      });
+      setCurrentPage(1);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleFilterChange = useCallback((newFilters: BrowseFilters) => {
     setFilters(newFilters);
     setCurrentPage(1);
@@ -108,10 +131,10 @@ export default function BrowseContent() {
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-            تصفّح طلبات النقل
+            {t('browseTitle')}
           </h1>
           <p className="text-sm text-[var(--color-on-surface-variant)] mt-1">
-            ابحث عن طلبات النقل المناسبة وقدّم عروضك
+            {t('browseSubtitle')}
           </p>
         </div>
 
@@ -123,15 +146,15 @@ export default function BrowseContent() {
                 <Truck size={20} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[var(--color-on-surface)]">ناقل؟ سجّل وابدأ تقديم عروض على الطلبات</p>
-                <p className="text-xs text-[var(--color-on-surface-variant)]">انضم لشبكة ناقلي SouqOne وحقق دخلاً إضافياً</p>
+                <p className="text-sm font-bold text-[var(--color-on-surface)]">{t('carrierCtaTitle')}</p>
+                <p className="text-xs text-[var(--color-on-surface-variant)]">{t('carrierCtaSubtitle')}</p>
               </div>
             </div>
             <Link
               href="/transport/carriers/register"
               className="btn-primary text-sm px-4 py-2 flex-shrink-0"
             >
-              سجّل كناقل
+              {t('registerAsCarrier')}
             </Link>
           </div>
         )}
@@ -141,17 +164,17 @@ export default function BrowseContent() {
           <div className="flex items-center justify-between gap-4 p-4 mb-4 rounded-2xl border border-[var(--color-brand-navy)]/20 bg-[var(--color-brand-navy)]/5">
             <div>
               <p className="font-semibold text-sm text-[var(--color-on-surface)]">
-                هل لديك مركبة وتريد تقديم خدمات نقل؟
+                {t('carrierCtaAuthTitle')}
               </p>
               <p className="text-xs text-[var(--color-on-surface-muted)] mt-0.5">
-                سجّل كناقل مجاناً وابدأ في استقبال الطلبات
+                {t('carrierCtaAuthSubtitle')}
               </p>
             </div>
             <Link
               href="/transport/carriers/register"
               className="btn-primary text-sm whitespace-nowrap flex-shrink-0"
             >
-              سجّل كناقل
+              {t('registerAsCarrier')}
             </Link>
           </div>
         )}

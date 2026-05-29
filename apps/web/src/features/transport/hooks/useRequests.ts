@@ -21,9 +21,3 @@ export function useRequest(id: string) {
   });
 }
 
-export function useMyRequests(page = 1) {
-  return useQuery({
-    queryKey: ['transport-my-requests', page],
-    queryFn: () => transportApi.myRequests(page),
-  });
-}

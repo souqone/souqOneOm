@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -306,6 +306,9 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [accepting, setAccepting] = useState<string | null>(null);
+  // QA-C-1: ref guard prevents a second API call if the button is clicked twice
+  // before the first response arrives (disabled attr is set async after re-render)
+  const acceptingRef = useRef(false);
   const [actionError, setActionError] = useState('');
   const [quoteSent, setQuoteSent] = useState(false);
   const [quotes, setQuotes] = useState<TransportQuote[]>([]);
@@ -336,7 +339,10 @@ export default function RequestDetailPage() {
 
   useEffect(() => {
     if (!carrierProfile?.id || !id || !isAuthenticated) return;
-    transportApi.myQuotes(1, 50)
+    // Fetch with a high limit so carriers with many quotes still get a
+    // correct hasAlreadyQuoted check. meta.total lets us detect if even
+    // this is insufficient (edge-case warning only, not blocking).
+    transportApi.myQuotes(1, 200)
       .then((res) => {
         const match = res.items.find((q) => q.requestId === id);
         if (match) setMyQuoteForRequest(match);
@@ -345,27 +351,35 @@ export default function RequestDetailPage() {
   }, [carrierProfile?.id, id, isAuthenticated]);
 
   const handleAcceptQuote = async (quoteId: string) => {
+    // QA-C-1: bail out immediately if a prior call is still in-flight
+    if (acceptingRef.current) return;
+    acceptingRef.current = true;
     setAccepting(quoteId);
     setActionError('');
     try {
       const accepted = await transportApi.acceptQuote(quoteId);
+      // Always navigate using the booking ID returned directly from the
+      // accepted quote — never query myBookings as a fallback because
+      // it returns the *latest* booking and could belong to a different request.
       if (accepted.booking?.id) {
         router.push(`/transport/bookings/${accepted.booking.id}`);
       } else {
-        const bookings = await transportApi.myBookings('shipper', 1, 1);
-        const booking = bookings.items?.[0];
-        router.push(booking ? `/transport/bookings/${booking.id}` : '/transport/my-requests');
+        router.push('/transport/my-bookings');
       }
     } catch {
       setActionError(t('errors.acceptFailed'));
     } finally {
       setAccepting(null);
+      acceptingRef.current = false;
     }
   };
 
   const handleQuoteSubmitted = (quote: TransportQuote) => {
     setQuoteSent(true);
-    setQuotes((prev) => [...prev, quote]);
+    // M-4: track the carrier's own submitted quote (for the "already quoted" UI).
+    // Do NOT push into `quotes` — that array is the request owner's quote list
+    // and should only be populated via getQuotes() called for the owner.
+    setMyQuoteForRequest(quote);
     setRequest((prev) => {
       if (!prev) return prev;
       return { ...prev, status: 'QUOTED' };
@@ -401,6 +415,9 @@ export default function RequestDetailPage() {
     try {
       await transportApi.cancelRequest(request.id);
       setRequest((prev) => prev ? { ...prev, status: 'CANCELLED' } : prev);
+      // NEW-M-4: backend rejects all pending quotes on cancel — clear the
+      // local list so the owner doesn't see stale PENDING statuses.
+      setQuotes([]);
     } catch {
       setActionError(t('errors.cancelFailed'));
     } finally {
@@ -425,7 +442,14 @@ export default function RequestDetailPage() {
         <div className="flex flex-col items-center gap-4 text-center px-4">
           <AlertCircle size={40} className="text-[var(--color-error)]" />
           <p className="text-base font-semibold">{error || 'الطلب غير موجود'}</p>
-          <Link href="/transport/browse" className="btn-primary">
+          {/* QA-M-3: retry button so the user can reload without navigating away */}
+          {error && (
+            <button onClick={() => load()} className="btn-primary">
+              <RefreshCw size={16} />
+              إعادة المحاولة
+            </button>
+          )}
+          <Link href="/transport/browse" className={error ? 'btn-outline' : 'btn-primary'}>
             <ArrowRight size={16} />
             العودة للتصفح
           </Link>
@@ -758,7 +782,13 @@ export default function RequestDetailPage() {
             {/* Carrier CTA */}
             {!isOwner && ['OPEN', 'QUOTED'].includes(request.status) && (
               <div className="card-base p-5 flex flex-col gap-3">
-                {quoteSent ? (
+                {/* QA-M-4: show spinner while we're checking if the authenticated user
+                    is a carrier — avoids the blank card that appeared before the check finished */}
+                {isAuthenticated && checkingCarrier ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 size={20} className="animate-spin text-[var(--color-brand-navy)]" />
+                  </div>
+                ) : quoteSent ? (
                   <div className="flex flex-col items-center gap-2 text-center py-2">
                     <CheckCircle size={28} className="text-[var(--color-success)]" />
                     <p className="text-sm font-bold text-[var(--color-success)]">
@@ -778,6 +808,16 @@ export default function RequestDetailPage() {
                       <p className="text-xs text-[var(--color-on-surface-muted)]">
                         سعرك: {myQuoteForRequest.price} {CURRENCY_LABEL}
                       </p>
+                    )}
+                    {/* QA-M-1: once the quote is accepted, surface a direct link to the booking */}
+                    {myQuoteForRequest?.status === 'ACCEPTED' && myQuoteForRequest?.booking?.id && (
+                      <Link
+                        href={`/transport/bookings/${myQuoteForRequest.booking.id}`}
+                        className="flex items-center gap-1.5 text-xs text-[var(--color-success)] font-bold bg-[var(--color-success-light)] px-3 py-1.5 rounded-xl hover:opacity-80 transition-all mt-1"
+                      >
+                        <ExternalLink size={12} />
+                        عرض الحجز
+                      </Link>
                     )}
                   </div>
                 ) : !user ? (

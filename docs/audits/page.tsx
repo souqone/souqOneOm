@@ -14,6 +14,7 @@ import {
   FileText,
   Package,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { VehicleType, TransportServiceType } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import { AuthGuard } from '@/components/auth-guard';
@@ -25,6 +26,9 @@ import {
   OMAN_GOVERNORATES,
 } from '@/features/transport/constants';
 
+// Oman phone numbers: +968XXXXXXXX or 9XXXXXXX (8 digits starting with 7, 8, or 9)
+const OMAN_PHONE_REGEX = /^(\+968)?[789]\d{7}$/;
+
 const VEHICLE_TYPES: VehicleType[] = [
   'PICKUP', 'VAN', 'TRUCK_SMALL', 'TRUCK_LARGE', 'TRAILER', 'EXCAVATOR', 'TIPPER', 'CRANE', 'OTHER',
 ];
@@ -35,6 +39,7 @@ const SERVICE_TYPES: TransportServiceType[] = [
 
 export default function CarrierRegistrationPage() {
   const router = useRouter();
+  const t = useTranslations('transport');
   const [companyName, setCompanyName] = useState('');
   const [bio, setBio] = useState('');
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
@@ -87,15 +92,23 @@ export default function CarrierRegistrationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (vehicleTypes.length === 0) {
-      setError('يرجى اختيار نوع مركبة واحد على الأقل');
+      setError(t('errors.selectVehicleType'));
       return;
     }
     if (serviceTypes.length === 0) {
-      setError('يرجى اختيار نوع خدمة واحد على الأقل');
+      setError(t('errors.selectServiceType'));
       return;
     }
     if (!governorate) {
-      setError('يرجى اختيار المحافظة');
+      setError(t('errors.selectGovernorate'));
+      return;
+    }
+    if (phone && !OMAN_PHONE_REGEX.test(phone.replace(/\s+/g, ''))) {
+      setError(t('errors.invalidPhone'));
+      return;
+    }
+    if (whatsapp && !OMAN_PHONE_REGEX.test(whatsapp.replace(/\s+/g, ''))) {
+      setError(t('errors.invalidWhatsapp'));
       return;
     }
     setSubmitting(true);
@@ -139,7 +152,7 @@ export default function CarrierRegistrationPage() {
             <CheckCircle size={40} className="text-[var(--color-success)]" />
           </div>
           <h2 className="text-xl font-bold text-[var(--color-on-surface)]">تم التسجيل بنجاح!</h2>
-          <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ تحويلك إلى لوحة التحكم...</p>
+          <p className="text-sm text-[var(--color-on-surface-muted)]">جارٍ تحويلك إلى صفحة البدء...</p>
           <Loader2 size={20} className="animate-spin text-[var(--color-brand-navy)]" />
         </div>
       </div>
