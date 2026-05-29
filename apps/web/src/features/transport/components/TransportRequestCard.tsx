@@ -39,9 +39,10 @@ interface Props {
   currentUserId?: string;
   onCancel?: () => void;
   isCancelling?: boolean;
+  isConfirmingCancel?: boolean;
 }
 
-export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId, onCancel, isCancelling }: Props) {
+export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId, onCancel, isCancelling, isConfirmingCancel }: Props) {
   const t = useTranslations();
   const isOwner = !!currentUserId && currentUserId === request.userId;
   const canEdit = isOwner && (request.status === 'OPEN' || request.status === 'QUOTED');
@@ -171,14 +172,18 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
                 onCancel();
               }}
               disabled={isCancelling}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-error)] text-[var(--color-error)] text-xs font-bold hover:bg-red-50 transition-all disabled:opacity-50"
+              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-50 ${
+                isConfirmingCancel
+                  ? 'border-[var(--color-error)] bg-red-50 text-[var(--color-error)]'
+                  : 'border-[var(--color-error)] text-[var(--color-error)] hover:bg-red-50'
+              }`}
             >
               {isCancelling ? (
                 <Loader2 size={14} className="animate-spin" />
               ) : (
                 <XCircle size={14} />
               )}
-              إلغاء
+              {isConfirmingCancel ? 'تأكيد الإلغاء؟' : 'إلغاء'}
             </button>
           )}
 

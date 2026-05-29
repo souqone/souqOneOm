@@ -388,16 +388,21 @@ export default function RequestDetailPage() {
   };
 
   const [cancelling, setCancelling] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const handleCancelRequest = async () => {
     if (!request) return;
-    if (!confirm('هل تريد إلغاء هذا الطلب؟')) return;
+    if (!confirmingCancel) {
+      setConfirmingCancel(true);
+      return;
+    }
+    setConfirmingCancel(false);
     setCancelling(true);
     try {
       await transportApi.cancelRequest(request.id);
       setRequest((prev) => prev ? { ...prev, status: 'CANCELLED' } : prev);
     } catch {
-      setActionError('تعذّر إلغاء الطلب، حاول مجدداً');
+      setActionError(t('errors.cancelFailed'));
     } finally {
       setCancelling(false);
     }
@@ -628,17 +633,28 @@ export default function RequestDetailPage() {
                   <Edit2 size={15} />
                   تعديل الطلب
                 </Link>
-                <button
-                  onClick={handleCancelRequest}
-                  disabled={cancelling}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[var(--color-error)] text-[var(--color-error)] text-sm font-semibold hover:bg-red-50 transition-all disabled:opacity-50"
-                >
-                  {cancelling
-                    ? <Loader2 size={15} className="animate-spin" />
-                    : <XCircle size={15} />
-                  }
-                  إلغاء الطلب
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={cancelling}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[var(--color-error)] text-[var(--color-error)] text-sm font-semibold hover:bg-red-50 transition-all disabled:opacity-50"
+                  >
+                    {cancelling
+                      ? <Loader2 size={15} className="animate-spin" />
+                      : <XCircle size={15} />
+                    }
+                    {confirmingCancel ? 'تأكيد الإلغاء؟' : 'إلغاء الطلب'}
+                  </button>
+                  {confirmingCancel && (
+                    <button
+                      onClick={() => setConfirmingCancel(false)}
+                      disabled={cancelling}
+                      className="text-xs text-[var(--color-on-surface-muted)] hover:text-[var(--color-on-surface)] font-semibold"
+                    >
+                      تراجع
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

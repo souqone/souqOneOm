@@ -4074,7 +4074,13 @@
       "accepted": "مقبول",
       "rejected": "مرفوض"
     },
+    "errors": {
+      "loadFailed": "تعذّر تحميل البيانات، حاول مجدداً",
+      "renewFailed": "تعذّر تجديد الطلب، حاول مجدداً",
+      "cancelFailed": "تعذّر إلغاء الطلب، حاول مجدداً"
+    },
     "emptyStates": {
+      "createFirstRequest": "أنشئ طلبك الأول",
       "requestsAll": "لا توجد طلبات بعد. أنشئ طلبك الأول!",
       "requestsOpen": "لا توجد طلبات مفتوحة حالياً",
       "requestsQuoted": "لا توجد طلبات وصلت لها عروض",

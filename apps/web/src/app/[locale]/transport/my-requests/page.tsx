@@ -49,6 +49,7 @@ export default function MyRequestsPage() {
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +65,7 @@ export default function MyRequestsPage() {
       setTotalPages(res.meta.totalPages || 1);
       setCurrentPage(page);
     } catch {
-      setError('تعذّر تحميل طلباتك');
+      setError(t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export default function MyRequestsPage() {
       const updated = await transportApi.repostRequest(id);
       setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch {
-      setError('تعذّر تجديد الطلب');
+      setError(t('errors.renewFailed'));
     } finally {
       setRenewingId(null);
     }
@@ -113,7 +114,11 @@ export default function MyRequestsPage() {
   };
 
   const handleCancel = async (id: string) => {
-    if (!confirm('هل تريد إلغاء هذا الطلب؟')) return;
+    if (confirmCancelId !== id) {
+      setConfirmCancelId(id);
+      return;
+    }
+    setConfirmCancelId(null);
     setCancellingId(id);
     try {
       await transportApi.cancelRequest(id);
@@ -121,7 +126,7 @@ export default function MyRequestsPage() {
         prev.map((r) => r.id === id ? { ...r, status: 'CANCELLED' as RequestStatus } : r)
       );
     } catch {
-      setError('تعذّر إلغاء الطلب');
+      setError(t('errors.cancelFailed'));
     } finally {
       setCancellingId(null);
     }
@@ -185,7 +190,7 @@ export default function MyRequestsPage() {
             {activeTab === 'ALL' && (
               <Link href="/transport/new" className="btn-primary">
                 <Plus size={16} />
-                أنشئ طلبك الأول
+                {t('emptyStates.createFirstRequest')}
               </Link>
             )}
           </div>
@@ -202,6 +207,7 @@ export default function MyRequestsPage() {
                   currentUserId={user?.id}
                   onCancel={['OPEN', 'QUOTED'].includes(req.status) ? () => handleCancel(req.id) : undefined}
                   isCancelling={cancellingId === req.id}
+                  isConfirmingCancel={confirmCancelId === req.id}
                 />
               ))}
             </div>

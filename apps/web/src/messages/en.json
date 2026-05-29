@@ -4044,7 +4044,13 @@
       "accepted": "Accepted",
       "rejected": "Rejected"
     },
+    "errors": {
+      "loadFailed": "Failed to load data, please try again",
+      "renewFailed": "Failed to renew request, please try again",
+      "cancelFailed": "Failed to cancel, please try again"
+    },
     "emptyStates": {
+      "createFirstRequest": "Create your first request",
       "requestsAll": "No requests yet. Create your first request!",
       "requestsOpen": "No open requests currently",
       "requestsQuoted": "No requests with quotes",
