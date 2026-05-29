@@ -51,18 +51,23 @@ export default function MyQuotesPage() {
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
   const pendingWithdrawals = useRef<Set<string>>(new Set());
 
-  const load = async (tab: TabStatus) => {
+  const load = async (tab: TabStatus, page = 1) => {
     setLoading(true);
     setError('');
     try {
-      const res = await transportApi.myQuotes(1, 50, tab === 'ALL' ? undefined : tab);
+      const res = await transportApi.myQuotes(page, ITEMS_PER_PAGE, tab === 'ALL' ? undefined : tab);
       const newQuotes = res.items.map((q) =>
         pendingWithdrawals.current.has(q.id) ? { ...q, status: 'WITHDRAWN' as QuoteStatus } : q
       );
       setQuotes(newQuotes);
+      setTotalPages(res.meta?.totalPages || 1);
+      setCurrentPage(page);
     } catch {
       setError('تعذّر تحميل عروضك');
     } finally {
@@ -263,6 +268,29 @@ export default function MyQuotesPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => load(activeTab, currentPage - 1)}
+              disabled={currentPage === 1}
+              className="btn-outline px-4 py-2"
+            >
+              {t('previous')}
+            </button>
+            <span className="text-sm font-semibold text-[var(--color-on-surface)]">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => load(activeTab, currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="btn-outline px-4 py-2"
+            >
+              {t('next')}
+            </button>
           </div>
         )}
       </div>
