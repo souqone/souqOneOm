@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransportBookingService } from '../transport-booking.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
@@ -9,6 +10,11 @@ const mockPrisma = {
   transportRequest: { update: jest.fn() },
   carrierProfile: { update: jest.fn() },
   $transaction: jest.fn(),
+};
+
+const mockRedis = {
+  del: jest.fn().mockResolvedValue(undefined),
+  delPattern: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockNotifications = { create: jest.fn() };
@@ -21,6 +27,7 @@ describe('TransportBookingService', () => {
       providers: [
         TransportBookingService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: RedisService, useValue: mockRedis },
         { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
