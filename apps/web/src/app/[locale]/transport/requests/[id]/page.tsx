@@ -309,6 +309,7 @@ export default function RequestDetailPage() {
   const [actionError, setActionError] = useState('');
   const [quoteSent, setQuoteSent] = useState(false);
   const [quotes, setQuotes] = useState<TransportQuote[]>([]);
+  const [myQuoteForRequest, setMyQuoteForRequest] = useState<TransportQuote | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -332,6 +333,16 @@ export default function RequestDetailPage() {
     if (!request || !user || user.id !== request.userId) return;
     transportApi.getQuotes(id).then(setQuotes).catch(() => {});
   }, [request?.userId, user?.id, id]);
+
+  useEffect(() => {
+    if (!carrierProfile?.id || !id || !isAuthenticated) return;
+    transportApi.myQuotes(1, 50)
+      .then((res) => {
+        const match = res.items.find((q) => q.requestId === id);
+        if (match) setMyQuoteForRequest(match);
+      })
+      .catch(() => {});
+  }, [carrierProfile?.id, id, isAuthenticated]);
 
   const handleAcceptQuote = async (quoteId: string) => {
     setAccepting(quoteId);
@@ -422,9 +433,7 @@ export default function RequestDetailPage() {
   // A user is considered a carrier if they have a loaded carrierProfile
   const isCarrier = !!carrierProfile;
   const acceptedQuote = quotes.find((q) => q.status === 'ACCEPTED');
-  const hasAlreadyQuoted = carrierProfile?.id
-    ? quotes.some((q) => q.carrierId === carrierProfile.id)
-    : false;
+  const hasAlreadyQuoted = !!myQuoteForRequest || quoteSent;
   const canSubmitQuote =
     !isOwner &&
     isCarrier &&
@@ -731,7 +740,7 @@ export default function RequestDetailPage() {
             )}
 
             {/* Carrier CTA */}
-            {!isOwner && request.status === 'OPEN' && (
+            {!isOwner && ['OPEN', 'QUOTED'].includes(request.status) && (
               <div className="card-base p-5 flex flex-col gap-3">
                 {quoteSent ? (
                   <div className="flex flex-col items-center gap-2 text-center py-2">
@@ -749,6 +758,11 @@ export default function RequestDetailPage() {
                     <p className="text-sm font-semibold text-[var(--color-on-surface)]">
                       لقد قدمت عرضاً مسبقاً
                     </p>
+                    {myQuoteForRequest && (
+                      <p className="text-xs text-[var(--color-on-surface-muted)]">
+                        سعرك: {myQuoteForRequest.price} {CURRENCY_LABEL}
+                      </p>
+                    )}
                   </div>
                 ) : !user ? (
                   <div className="flex flex-col gap-3 text-center">
