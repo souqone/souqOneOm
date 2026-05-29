@@ -72,9 +72,9 @@ export default function HeroSection() {
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               {[
                 { icon: Shield, text: t('why2Title') },
-                { icon: Star, text: 'تقييمات حقيقية' },
-                { icon: Truck, text: 'تغطية 18 محافظة' },
-              ]?.map(({ icon: Icon, text }) => (
+                { icon: Star, text: tCommon('realRatings') },
+                { icon: Truck, text: tCommon('coverage18') },
+              ].map(({ icon: Icon, text }) => (
                 <div
                   key={`hero-trust-${text}`}
                   className="flex items-center gap-1.5 text-white/70"

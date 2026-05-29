@@ -4109,7 +4109,9 @@
       "budgetMax_desc": "الميزانية الأعلى",
       "budgetMax_asc": "الميزانية الأدنى",
       "scheduledAt_asc": "أقرب موعد"
-    }
+    },
+    "realRatings": "تقييمات حقيقية",
+    "coverage18": "تغطية 18 محافظة"
   },
   "status": {
     "OPEN": "مفتوح",

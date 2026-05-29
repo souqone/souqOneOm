@@ -4079,7 +4079,9 @@
       "budgetMax_desc": "Highest Budget",
       "budgetMax_asc": "Lowest Budget",
       "scheduledAt_asc": "Soonest Date"
-    }
+    },
+    "realRatings": "Real Ratings",
+    "coverage18": "Coverage: 18 Governorates"
   },
   "status": {
     "OPEN": "Open",
