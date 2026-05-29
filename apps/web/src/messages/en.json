@@ -4063,6 +4063,22 @@
       "bookingsCompleted": "No completed bookings",
       "bookingsCancelled": "No cancelled bookings",
       "loadFailed": "Failed to load data, please try again"
+    },
+    "serviceTypeLabel": "Service Type",
+    "statusLabel": "Status",
+    "sortLabel": "Sort By",
+    "fromGovernorate": "From Governorate",
+    "toGovernorate": "To Governorate",
+    "cityLabel": "City",
+    "clearAll": "Clear All",
+    "filterResults": "Filter Results",
+    "applyFilters": "Apply Filters",
+    "sortOptions": {
+      "createdAt_desc": "Newest First",
+      "createdAt_asc": "Oldest First",
+      "budgetMax_desc": "Highest Budget",
+      "budgetMax_asc": "Lowest Budget",
+      "scheduledAt_asc": "Soonest Date"
     }
   },
   "status": {

@@ -4093,6 +4093,22 @@
       "bookingsCompleted": "لا توجد حجوزات مكتملة",
       "bookingsCancelled": "لا توجد حجوزات ملغاة",
       "loadFailed": "تعذّر تحميل البيانات، حاول مرة أخرى"
+    },
+    "serviceTypeLabel": "نوع الخدمة",
+    "statusLabel": "الحالة",
+    "sortLabel": "الترتيب",
+    "fromGovernorate": "من محافظة",
+    "toGovernorate": "إلى محافظة",
+    "cityLabel": "المدينة",
+    "clearAll": "مسح الكل",
+    "filterResults": "تصفية النتائج",
+    "applyFilters": "تطبيق الفلاتر",
+    "sortOptions": {
+      "createdAt_desc": "الأحدث أولاً",
+      "createdAt_asc": "الأقدم أولاً",
+      "budgetMax_desc": "الميزانية الأعلى",
+      "budgetMax_asc": "الميزانية الأدنى",
+      "scheduledAt_asc": "أقرب موعد"
     }
   },
   "status": {

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal, Check } from 'lucide-react';
 import {
   OMAN_GOVERNORATES,
   OMAN_WILAYAT_BY_GOVERNORATE,
   SERVICE_TYPE_LABELS,
   SERVICE_TYPES,
-  REQUEST_STATUS_LABELS,
   BROWSE_SORT_OPTIONS,
 } from '../constants';
 import type { BrowseFilters } from './BrowseContent';
@@ -18,6 +18,7 @@ interface MobileFilterSheetProps {
 }
 
 export default function MobileFilterSheet({ filters, onApply }: MobileFilterSheetProps) {
+  const t = useTranslations('transport');
   const [open, setOpen] = useState(false);
   const [local, setLocal] = useState<BrowseFilters>(filters);
 
@@ -77,7 +78,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <span className="text-base font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-              تصفية النتائج
+              {t('filterResults')}
             </span>
             <button onClick={() => setOpen(false)}>
               <X size={20} className="text-[var(--color-on-surface-muted)]" />
@@ -88,7 +89,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
             {/* Service Type */}
             <div>
               <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-3">
-                نوع الخدمة
+                {t('serviceTypeLabel')}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {SERVICE_TYPES.map((type) => (
@@ -111,7 +112,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
             {/* Status */}
             <div>
               <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-3">
-                الحالة
+                {t('statusLabel')}
               </p>
               <div className="flex flex-wrap gap-2">
                 {(['OPEN', 'QUOTED', 'IN_PROGRESS'] as const).map((status) => (
@@ -124,7 +125,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
                         : 'border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)]'
                     }`}
                   >
-                    {REQUEST_STATUS_LABELS[status]}
+                    {t(`status.${status}`)}
                   </button>
                 ))}
               </div>
@@ -134,7 +135,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">من محافظة</label>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('fromGovernorate')}</label>
                   <select
                     className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                     value={local.fromGovernorate ?? ''}
@@ -145,7 +146,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('cityLabel')}</label>
                   <select
                     className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                     value={local.fromCity ?? ''}
@@ -159,7 +160,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">إلى محافظة</label>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('toGovernorate')}</label>
                   <select
                     className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                     value={local.toGovernorate ?? ''}
@@ -170,7 +171,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
+                  <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('cityLabel')}</label>
                   <select
                     className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                     value={local.toCity ?? ''}
@@ -187,7 +188,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
             {/* Sort */}
             <div>
               <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2">
-                الترتيب
+                {t('sortLabel')}
               </p>
               <select
                 value={local.sortBy ?? ''}
@@ -196,7 +197,7 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
               >
                 <option value="">افتراضي</option>
                 {BROWSE_SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>{t(`sortOptions.${opt.value}`)}</option>
                 ))}
               </select>
             </div>
@@ -208,13 +209,13 @@ export default function MobileFilterSheet({ filters, onApply }: MobileFilterShee
               onClick={handleClear}
               className="flex-1 py-3 rounded-2xl border-2 border-[var(--color-outline-variant)] text-sm font-bold text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)] transition-colors"
             >
-              مسح الكل
+              {t('clearAll')}
             </button>
             <button
               onClick={handleApply}
               className="flex-1 py-3 rounded-2xl btn-navy text-sm justify-center"
             >
-              تطبيق الفلاتر
+              {t('applyFilters')}
             </button>
           </div>
         </div>
