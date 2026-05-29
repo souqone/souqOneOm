@@ -99,11 +99,11 @@ export const SORT_OPTIONS = [
 // ─── Browse Sort Options (for new browse UI) ──────
 
 export const BROWSE_SORT_OPTIONS = [
-  { value: 'createdAt_desc', label: 'الأحدث أولاً' },
-  { value: 'createdAt_asc', label: 'الأقدم أولاً' },
-  { value: 'budgetMax_desc', label: 'الميزانية الأعلى' },
-  { value: 'budgetMax_asc', label: 'الميزانية الأدنى' },
-  { value: 'scheduledAt_asc', label: 'أقرب موعد' },
+  { value: 'createdAt_desc' },
+  { value: 'createdAt_asc' },
+  { value: 'budgetMax_desc' },
+  { value: 'budgetMax_asc' },
+  { value: 'scheduledAt_asc' },
 ] as const
 
 // ─── Service Type Labels ──────────────────────────

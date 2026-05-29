@@ -112,7 +112,7 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
       {/* Cargo */}
       <div className="bg-[var(--color-surface-container)] rounded-xl px-3 py-2 mb-3">
         <p className="text-xs text-[var(--color-on-surface-variant)] line-clamp-2 leading-relaxed">
-          {request.cargoDescription || 'لم يتم تحديد وصف للبضاعة'}
+          {request.cargoDescription || t('noCargoDesc')}
         </p>
       </div>
 

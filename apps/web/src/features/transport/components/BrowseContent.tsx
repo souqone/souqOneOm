@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
-import { Truck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { SlidersHorizontal, Truck, XCircle } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import RequestsGrid from './RequestsGrid';
 import ActiveFilterChips from './ActiveFilterChips';
@@ -46,6 +47,7 @@ export default function BrowseContent() {
   const { data: carrierProfile } = useMyCarrierProfile(isAuthenticated);
   const isCarrier = !!carrierProfile;
 
+  const t = useTranslations('transport');
   const [filters, setFilters] = useState<BrowseFilters>({
     serviceType: searchParams.get('serviceType') ?? undefined,
     status: searchParams.get('status') ?? undefined,
@@ -86,6 +88,15 @@ export default function BrowseContent() {
     ...(filters.toCity && { toCity: filters.toCity }),
     ...parseSortBy(filters.sortBy),
   };
+
+  // Count active filters for the mobile badge
+  const activeFilterCount = [
+    filters.serviceType,
+    filters.status,
+    filters.fromGovernorate,
+    filters.toGovernorate,
+    filters.sortBy,
+  ].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]" dir="rtl">
@@ -144,6 +155,21 @@ export default function BrowseContent() {
         {/* Mobile filter trigger */}
         <div className="flex items-center gap-3 mb-4 lg:hidden">
           <MobileFilterSheet filters={filters} onApply={handleFilterChange} />
+          {activeFilterCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-brand-navy)] text-white text-xs font-bold">
+              <SlidersHorizontal size={12} />
+              {activeFilterCount} {t('activeFilters')}
+            </span>
+          )}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => handleFilterChange({})}
+              className="flex items-center gap-1 text-xs text-[var(--color-error)] font-semibold hover:opacity-80 transition-opacity"
+            >
+              <XCircle size={13} />
+              {t('clearFilters')}
+            </button>
+          )}
         </div>
 
         {/* Active filter chips */}

@@ -4110,6 +4110,9 @@
     "clearAll": "مسح الكل",
     "filterResults": "تصفية النتائج",
     "applyFilters": "تطبيق الفلاتر",
+    "activeFilters": "فلتر نشط",
+    "clearFilters": "مسح الفلاتر",
+    "noCargoDesc": "لم يتم تحديد وصف للبضاعة",
     "sortOptions": {
       "createdAt_desc": "الأحدث أولاً",
       "createdAt_asc": "الأقدم أولاً",

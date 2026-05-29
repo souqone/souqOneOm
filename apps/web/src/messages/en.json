@@ -4080,6 +4080,9 @@
     "clearAll": "Clear All",
     "filterResults": "Filter Results",
     "applyFilters": "Apply Filters",
+    "activeFilters": "active filters",
+    "clearFilters": "Clear Filters",
+    "noCargoDesc": "No cargo description provided",
     "sortOptions": {
       "createdAt_desc": "Newest First",
       "createdAt_asc": "Oldest First",
