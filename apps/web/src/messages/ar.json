@@ -4229,6 +4229,7 @@
       "noNearbyRequests": "لا توجد طلبات قريبة حالياً",
       "noQuotesYet": "لم تقدم أي عروض بعد",
       "requestsAccepted": "لا توجد طلبات مقبولة",
+      "requestsQuoted": "لا توجد طلبات بانتظار الموافقة على عروضها",
       "requestsInProgress": "لا توجد طلبات قيد التنفيذ",
       "requestsCompleted": "لا توجد طلبات مكتملة",
       "requestsCancelled": "لا توجد طلبات ملغاة",
