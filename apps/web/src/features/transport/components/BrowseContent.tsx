@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Link, useRouter, usePathname } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { SlidersHorizontal, Truck, XCircle } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
@@ -42,7 +42,6 @@ function parseSortBy(sortBy?: string): Pick<GetRequestsParams, 'sortBy' | 'sortO
 export default function BrowseContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { data: carrierProfile } = useMyCarrierProfile(isAuthenticated);
   const isCarrier = !!carrierProfile;
@@ -53,8 +52,10 @@ export default function BrowseContent() {
     status: searchParams.get('status') ?? undefined,
     fromGovernorate: searchParams.get('fromGovernorate') ?? undefined,
     fromWilayat: searchParams.get('fromWilayat') ?? undefined,
+    fromCity: searchParams.get('fromCity') ?? undefined,
     toGovernorate: searchParams.get('toGovernorate') ?? undefined,
     toWilayat: searchParams.get('toWilayat') ?? undefined,
+    toCity: searchParams.get('toCity') ?? undefined,
     sortBy: searchParams.get('sortBy') ?? undefined,
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,18 +63,21 @@ export default function BrowseContent() {
   const handleFilterChange = useCallback((newFilters: BrowseFilters) => {
     setFilters(newFilters);
     setCurrentPage(1);
-    // Sync to URL
+    // Sync to URL via history API (avoids Next.js router re-render)
     const params = new URLSearchParams();
     if (newFilters.serviceType) params.set('serviceType', newFilters.serviceType);
     if (newFilters.status) params.set('status', newFilters.status);
     if (newFilters.fromGovernorate) params.set('fromGovernorate', newFilters.fromGovernorate);
     if (newFilters.fromWilayat) params.set('fromWilayat', newFilters.fromWilayat);
+    if (newFilters.fromCity) params.set('fromCity', newFilters.fromCity);
     if (newFilters.toGovernorate) params.set('toGovernorate', newFilters.toGovernorate);
     if (newFilters.toWilayat) params.set('toWilayat', newFilters.toWilayat);
+    if (newFilters.toCity) params.set('toCity', newFilters.toCity);
     if (newFilters.sortBy) params.set('sortBy', newFilters.sortBy);
     const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ''}` as any, { scroll: false });
-  }, [pathname, router]);
+    const newUrl = `${pathname}${qs ? '?' + qs : ''}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [pathname]);
 
   const requestParams: GetRequestsParams = {
     page: currentPage,
