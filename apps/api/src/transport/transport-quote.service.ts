@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { Prisma } from '@prisma/client';
@@ -24,8 +25,21 @@ const MAX_LIMIT = 50;
 export class TransportQuoteService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
     private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Issue 1 fix: invalidate every cached view of a request after any mutation.
+   * Called by submitQuote, acceptQuote, and withdrawQuote.
+   */
+  private async invalidateRequestCache(requestId: string): Promise<void> {
+    await Promise.allSettled([
+      this.redis.delPattern('transport:list:*'),
+      this.redis.del(`transport:request:${requestId}`),
+      this.redis.del(`transport:request:${requestId}:auth`),
+    ]);
+  }
 
   async submitQuote(requestId: string, userId: string, dto: CreateQuoteDto) {
     // Find carrier profile
@@ -52,6 +66,19 @@ export class TransportQuoteService {
     });
     if (existing) throw new BadRequestException('لديك عرض مقدم بالفعل على هذا الطلب');
 
+    // Issue 6 fix: daily quote rate limit per carrier — checked AFTER all validations
+    // so that invalid/duplicate submissions do not consume the carrier's daily quota.
+    // Unverified: 20 quotes/day | Verified: 50 quotes/day. Fails open when Redis is down.
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const limitKey = `qlimit:${carrier.id}:${today}`;
+    const dailyMax = carrier.isVerified ? 50 : 20;
+    const dailyCount = await this.redis.incr(limitKey, 86400); // auto-expires after 24 h
+    if (dailyCount > dailyMax) {
+      throw new BadRequestException(
+        `تجاوزت الحد اليومي للعروض (${dailyMax} عرض/يوم). حاول مرة أخرى غداً.`,
+      );
+    }
+
     // Create quote
     const quote = await this.prisma.transportQuote.create({
       data: {
@@ -73,6 +100,9 @@ export class TransportQuoteService {
         data: { status: 'QUOTED' },
       });
     }
+
+    // Issue 1 fix: flush stale list + detail caches so subsequent reads see QUOTED status
+    await this.invalidateRequestCache(requestId);
 
     // Notify shipper
     await this.notifications.create({
@@ -177,6 +207,8 @@ export class TransportQuoteService {
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     }).then(async ({ booking, pendingQuotes }) => {
+      // Issue 1 fix: flush caches after acceptance (status becomes ACCEPTED)
+      await this.invalidateRequestCache(booking.requestId);
       this.sendAcceptanceNotifications(booking, pendingQuotes).catch(() => {});
       return booking;
     });
@@ -233,7 +265,28 @@ export class TransportQuoteService {
         });
       }
 
-      return { message: 'تم سحب العرض بنجاح' };
+      return { message: 'تم سحب العرض بنجاح', requestId: quote.requestId };
+    }).then(async ({ message, requestId }) => {
+      // Issue 1 fix: flush caches after withdrawal (status may revert to OPEN)
+      await this.invalidateRequestCache(requestId);
+      return { message };
+    });
+  }
+
+  /**
+   * Returns the calling carrier's own quote for a specific request, or null if
+   * they have not submitted one yet. Used by the request detail page so the
+   * frontend never has to fetch 200 quotes just to find one match.
+   */
+  async getMyQuoteForRequest(requestId: string, userId: string) {
+    const carrier = await this.prisma.carrierProfile.findUnique({ where: { userId } });
+    if (!carrier) return null;
+
+    return this.prisma.transportQuote.findUnique({
+      where: { requestId_carrierId: { requestId, carrierId: carrier.id } },
+      include: {
+        carrier: { include: { user: { select: USER_SELECT } } },
+      },
     });
   }
 

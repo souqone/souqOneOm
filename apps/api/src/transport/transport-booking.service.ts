@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 const USER_SELECT = {
@@ -22,8 +23,20 @@ const MAX_LIMIT = 50;
 export class TransportBookingService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
     private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Issue 1 fix: flush every cached view of a request after any booking mutation.
+   */
+  private async invalidateRequestCache(requestId: string): Promise<void> {
+    await Promise.allSettled([
+      this.redis.delPattern('transport:list:*'),
+      this.redis.del(`transport:request:${requestId}`),
+      this.redis.del(`transport:request:${requestId}:auth`),
+    ]);
+  }
 
   async markInProgress(bookingId: string, carrierId: string) {
     const booking = await this.prisma.transportBooking.findUnique({
@@ -55,6 +68,9 @@ export class TransportBookingService {
       });
       return b;
     });
+
+    // Issue 1 fix: flush stale caches (request status changed to IN_PROGRESS)
+    await this.invalidateRequestCache(booking.requestId);
 
     // Notify shipper
     await this.notifications.create({
@@ -104,6 +120,9 @@ export class TransportBookingService {
       return b;
     });
 
+    // Issue 1 fix: flush stale caches (request status changed to COMPLETED)
+    await this.invalidateRequestCache(booking.requestId);
+
     // Notify carrier
     await this.notifications.create({
       type: 'TRANSPORT_REQUEST_CLOSED',
@@ -146,14 +165,20 @@ export class TransportBookingService {
           cancellationReason: reason,
         },
       });
+      // Issue 4 fix: revert the request to OPEN instead of permanently CANCELLED.
+      // A cancelled booking means the deal fell through — the shipper's job still
+      // exists and should be available for new quotes rather than being destroyed.
       await tx.transportRequest.update({
         where: { id: booking.requestId },
-        data: { status: 'CANCELLED' },
+        data: { status: 'OPEN' },
       });
       return b;
     });
 
-    // Notify the other party
+    // Issue 1 fix: flush stale caches (request status reverted to OPEN)
+    await this.invalidateRequestCache(booking.requestId);
+
+    // Notify the cancelling party's counterpart
     const otherUserId = isShipper
       ? booking.quote.carrier.userId
       : booking.request.userId;
@@ -164,6 +189,17 @@ export class TransportBookingService {
       userId: otherUserId,
       data: { bookingId },
     });
+
+    // If the carrier cancelled, notify the shipper their request is open again
+    if (isCarrier) {
+      this.notifications.create({
+        type: 'SYSTEM',
+        title: 'طلبك متاح مجدداً',
+        body: 'ألغى الناقل الحجز — طلبك الآن مفتوح لاستقبال عروض جديدة',
+        userId: booking.request.userId,
+        data: { requestId: booking.requestId },
+      }).catch(() => {});
+    }
 
     return updated;
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus, Package, AlertCircle, XCircle } from 'lucide-react';
@@ -62,6 +62,13 @@ export default function MyRequestsPage() {
   // NEW-H-1: generation counter — discards stale responses on fast tab switching
   const loadGenRef = useRef(0);
 
+  // Issue 5 fix: refs keep the latest changing state values so that
+  // useCallback handlers can have empty / stable dependency arrays,
+  // allowing React.memo on TransportRequestCard to skip sibling re-renders.
+  const activeTabRef = useRef<TabStatus>(activeTab);
+  const confirmCancelIdRef = useRef<string | null>(null);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
   const load = async (tab: TabStatus, page = 1) => {
     const gen = ++loadGenRef.current;
     setLoading(true);
@@ -86,23 +93,25 @@ export default function MyRequestsPage() {
   const handleTabChange = (tab: TabStatus) => {
     setActiveTab(tab);
     setConfirmCancelId(null); // QA-C-2: reset pending confirmation when switching tabs
+    confirmCancelIdRef.current = null; // keep ref in sync so next cancel always shows confirmation
   };
 
-  const handleRepost = async (id: string) => {
+  // Issue 5 fix: stable callbacks — reads changing values from refs so
+  // React.memo on TransportRequestCard can skip unaffected siblings.
+  const handleRepost = useCallback(async (id: string) => {
     setRenewingId(id);
     setActionError('');
     try {
       const updated = await transportApi.repostRequest(id);
       setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch {
-      // NEW-M-3: action error stays inline; doesn't replace the whole list
       setActionError(t('errors.renewFailed'));
     } finally {
       setRenewingId(null);
     }
-  };
+  }, [t]);
 
-  const handleDuplicate = (request: TransportRequest) => {
+  const handleDuplicate = useCallback((request: TransportRequest) => {
     const draft = {
       serviceType: request.serviceType,
       fromGovernorate: request.fromGovernorate,
@@ -125,33 +134,32 @@ export default function MyRequestsPage() {
     };
     sessionStorage.setItem('transport_draft', JSON.stringify(draft));
     router.push('/transport/new');
-  };
+  }, [router]);
 
-  const handleCancel = async (id: string) => {
-    if (confirmCancelId !== id) {
+  const handleCancel = useCallback(async (id: string) => {
+    if (confirmCancelIdRef.current !== id) {
+      confirmCancelIdRef.current = id;
       setConfirmCancelId(id);
       return;
     }
+    confirmCancelIdRef.current = null;
     setConfirmCancelId(null);
     setCancellingId(id);
     setActionError('');
     try {
       await transportApi.cancelRequest(id);
       setRequests((prev) => {
-        // On a filtered tab, remove the cancelled item so the list stays consistent.
-        // On ALL tab, update status in-place so the user sees the new badge.
-        if (activeTab !== 'ALL') {
+        if (activeTabRef.current !== 'ALL') {
           return prev.filter((r) => r.id !== id);
         }
         return prev.map((r) => r.id === id ? { ...r, status: 'CANCELLED' as RequestStatus } : r);
       });
     } catch {
-      // NEW-M-3: action error stays inline; doesn't replace the whole list
       setActionError(t('errors.cancelFailed'));
     } finally {
       setCancellingId(null);
     }
-  };
+  }, [t]); // reads activeTab and confirmCancelId via refs — no need in deps
 
   return (
     <AuthGuard>
@@ -233,11 +241,11 @@ export default function MyRequestsPage() {
                 <TransportRequestCard
                   key={req.id}
                   request={req}
-                  onRepost={() => handleRepost(req.id)}
-                  onDuplicate={() => handleDuplicate(req)}
+                  onRepost={handleRepost}
+                  onDuplicate={handleDuplicate}
                   isRenewing={renewingId === req.id}
                   currentUserId={user?.id}
-                  onCancel={['OPEN', 'QUOTED'].includes(req.status) ? () => handleCancel(req.id) : undefined}
+                  onCancel={['OPEN', 'QUOTED'].includes(req.status) ? handleCancel : undefined}
                   isCancelling={cancellingId === req.id}
                   isConfirmingCancel={confirmCancelId === req.id}
                 />
