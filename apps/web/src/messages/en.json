@@ -4108,6 +4108,15 @@
       "a5": "The request expires automatically after 30 days and you'll be notified. You can repost it with one click.",
       "q6": "Can the shipper contact the carrier before acceptance?",
       "a6": "The carrier can send a message with their quote. After acceptance, a direct chat opens between both parties."
+    },
+    "statsActiveRequests": "Active Requests",
+    "statsVerifiedCarriers": "Verified Carriers",
+    "statsGovernorates": "Governorates Served",
+    "statsCompletedTrips": "Completed Trips",
+    "showingResults": "Showing {from}–{to} of {total} requests",
+    "emptyStates": {
+      "noRequests": "No requests found",
+      "tryFilters": "Try adjusting your search or filter criteria"
     }
   },
   "status": {

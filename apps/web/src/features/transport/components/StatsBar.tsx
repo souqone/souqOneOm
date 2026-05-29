@@ -4,19 +4,21 @@ import { useState, useEffect } from 'react';
 import { FileText, ShieldCheck, MapPin, CheckCircle } from 'lucide-react';
 import { transportApi } from '../api';
 import { OMAN_GOVERNORATES } from '../constants';
+import { useTranslations } from 'next-intl';
 
 const GOVERNORATES_COUNT = OMAN_GOVERNORATES.length;
 
 const STAT_CONFIG = [
-  { key: 'activeRequests',    label: 'طلب نشط',         icon: FileText,    color: '#2563eb', bg: 'rgba(37,99,235,0.08)'   },
-  { key: 'verifiedCarriers',  label: 'مزود موثّق',       icon: ShieldCheck, color: '#16a34a', bg: 'rgba(22,163,74,0.08)'   },
-  { key: 'governoratesServed',label: 'محافظة مخدومة',    icon: MapPin,      color: '#d97706', bg: 'rgba(217,119,6,0.08)'   },
-  { key: 'completedTrips',    label: 'رحلة مكتملة',      icon: CheckCircle, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)'  },
+  { key: 'activeRequests',    labelKey: 'statsActiveRequests',    icon: FileText,    color: '#2563eb', bg: 'rgba(37,99,235,0.08)'  },
+  { key: 'verifiedCarriers',  labelKey: 'statsVerifiedCarriers',  icon: ShieldCheck, color: '#16a34a', bg: 'rgba(22,163,74,0.08)'  },
+  { key: 'governoratesServed',labelKey: 'statsGovernorates',      icon: MapPin,      color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
+  { key: 'completedTrips',    labelKey: 'statsCompletedTrips',    icon: CheckCircle, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
 ] as const;
 
 type StatsKey = (typeof STAT_CONFIG)[number]['key'];
 
 export default function StatsBar() {
+  const t = useTranslations('transport');
   const [values, setValues] = useState<Record<StatsKey, number>>({
     activeRequests: 0,
     verifiedCarriers: 0,
@@ -58,7 +60,7 @@ export default function StatsBar() {
                   <p className="text-base sm:text-lg font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
                     {values[item.key].toLocaleString('en-US')}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] text-[var(--color-on-surface-variant)]">{item.label}</p>
+                  <p className="text-[10px] sm:text-[11px] text-[var(--color-on-surface-variant)]">{t(item.labelKey)}</p>
                 </div>
               </div>
             );

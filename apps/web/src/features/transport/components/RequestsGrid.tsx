@@ -5,6 +5,7 @@ import { useRequests } from '../hooks/useRequests';
 import TransportRequestCard from './TransportRequestCard';
 import RequestCardSkeleton from './RequestCardSkeleton';
 import type { GetRequestsParams } from '../types';
+import { useTranslations } from 'next-intl';
 
 interface RequestsGridProps {
   params: GetRequestsParams;
@@ -12,6 +13,7 @@ interface RequestsGridProps {
 }
 
 export default function RequestsGrid({ params, onPageChange }: RequestsGridProps) {
+  const t = useTranslations('transport');
   const { data, isLoading, isError } = useRequests(params);
   const currentPage = params.page ?? 1;
 
@@ -30,7 +32,7 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
       <div className="flex items-center gap-3 p-5 bg-[var(--color-error-light)] border border-red-200 rounded-2xl">
         <AlertCircle size={20} className="text-[var(--color-error)] flex-shrink-0" />
         <p className="text-sm text-[var(--color-error)]">
-          تعذّر تحميل الطلبات. يرجى المحاولة مرة أخرى.
+          {t('emptyStates.loadFailed')}
         </p>
       </div>
     );
@@ -42,9 +44,9 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
         <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">
           <PackageOpen size={28} className="text-[var(--color-on-surface-muted)]" />
         </div>
-        <p className="text-base font-bold text-[var(--color-on-surface)]">لا توجد طلبات</p>
+        <p className="text-base font-bold text-[var(--color-on-surface)]">{t('emptyStates.noRequests')}</p>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
-          جرّب تعديل معايير البحث أو التصفية
+          {t('emptyStates.tryFilters')}
         </p>
       </div>
     );
@@ -56,7 +58,11 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
     <div dir="rtl">
       {/* Results count */}
       <p className="text-xs text-[var(--color-on-surface-muted)] mb-4">
-        عرض {(currentPage - 1) * (params.limit ?? 12) + 1}–{Math.min(currentPage * (params.limit ?? 12), meta.total)} من {meta.total.toLocaleString('en-US')} طلب
+        {t('showingResults', {
+          from: (currentPage - 1) * (params.limit ?? 12) + 1,
+          to: Math.min(currentPage * (params.limit ?? 12), meta.total),
+          total: meta.total.toLocaleString('en-US')
+        })}
       </p>
 
       {/* Grid */}
@@ -74,7 +80,7 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
             disabled={currentPage <= 1}
             className="px-4 py-2 text-sm font-bold rounded-xl border border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)] disabled:opacity-40 hover:bg-[var(--color-surface-container)] transition-colors"
           >
-            السابق
+            {t('previous')}
           </button>
           <span className="text-sm text-[var(--color-on-surface-variant)]">
             {currentPage} / {meta.totalPages}
@@ -84,7 +90,7 @@ export default function RequestsGrid({ params, onPageChange }: RequestsGridProps
             disabled={currentPage >= meta.totalPages}
             className="px-4 py-2 text-sm font-bold rounded-xl border border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)] disabled:opacity-40 hover:bg-[var(--color-surface-container)] transition-colors"
           >
-            التالي
+            {t('next')}
           </button>
         </div>
       )}
