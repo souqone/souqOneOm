@@ -139,6 +139,12 @@ export class TransportController {
   // ─── Quotes ───
 
   @UseGuards(JwtAuthGuard)
+  @Get('requests/:id/my-quote')
+  getMyQuoteForRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.transportQuoteService.getMyQuoteForRequest(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('requests/:id/quotes')
   submitQuote(
     @Param('id') id: string,

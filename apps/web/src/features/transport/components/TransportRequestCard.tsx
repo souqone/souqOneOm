@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import {
@@ -33,16 +34,18 @@ const SERVICE_ICONS: Record<TransportServiceType, React.ElementType> = {
 
 interface Props {
   request: TransportRequest;
-  onRepost?: () => void;
-  onDuplicate?: () => void;
+  // Issue 5 fix: accept IDs/objects so the parent can pass stable useCallback
+  // references instead of inline arrows — enables React.memo to skip re-renders.
+  onRepost?: (id: string) => void;
+  onDuplicate?: (request: TransportRequest) => void;
   isRenewing?: boolean;
   currentUserId?: string;
-  onCancel?: () => void;
+  onCancel?: (id: string) => void;
   isCancelling?: boolean;
   isConfirmingCancel?: boolean;
 }
 
-export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId, onCancel, isCancelling, isConfirmingCancel }: Props) {
+function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId, onCancel, isCancelling, isConfirmingCancel }: Props) {
   const t = useTranslations();
   const isOwner = !!currentUserId && currentUserId === request.userId;
   const canEdit = isOwner && (request.status === 'OPEN' || request.status === 'QUOTED');
@@ -169,7 +172,7 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onCancel();
+                onCancel(request.id);
               }}
               disabled={isCancelling}
               className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-50 ${
@@ -192,7 +195,7 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onDuplicate();
+                onDuplicate(request);
               }}
               className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-outline)] text-[var(--color-on-surface-variant)] text-xs font-bold hover:bg-[var(--color-surface-container)] transition-all"
             >
@@ -208,7 +211,7 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onRepost();
+              onRepost(request.id);
             }}
             disabled={isRenewing}
             className="flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg border border-[var(--color-warning)] text-[var(--color-warning)] text-xs font-bold hover:bg-[var(--color-warning)]/10 transition-all disabled:opacity-50"
@@ -225,3 +228,7 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
     </Link>
   );
 }
+
+// Issue 5 fix: memoize so that only the card whose props actually changed
+// re-renders — sibling cards are skipped when renewingId / cancellingId changes.
+export default memo(TransportRequestCard);

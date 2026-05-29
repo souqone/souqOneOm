@@ -68,6 +68,10 @@ export const transportApi = {
 
   // ── Quotes ───────────────────────────────────────
 
+  getMyQuoteForRequest(requestId: string) {
+    return apiRequest<TransportQuote | null>(`/transport/requests/${requestId}/my-quote`)
+  },
+
   submitQuote(requestId: string, dto: CreateQuoteDto) {
     return apiRequest<TransportQuote>(`/transport/requests/${requestId}/quotes`, {
       method: 'POST',

@@ -134,7 +134,14 @@ function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: Quote
             </span>
           )}
         </div>
-        <span className="text-xs text-[var(--color-on-surface-muted)]">
+        {/* Issue 8 fix: hover tooltip shows exact timestamp for price-sensitive context */}
+        <span
+          className="text-xs text-[var(--color-on-surface-muted)] cursor-default"
+          title={new Date(quote.createdAt).toLocaleString('ar-OM-u-nu-latn', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          })}
+        >
           {formatRelativeDate(quote.createdAt)}
         </span>
       </div>
@@ -339,13 +346,11 @@ export default function RequestDetailPage() {
 
   useEffect(() => {
     if (!carrierProfile?.id || !id || !isAuthenticated) return;
-    // Fetch with a high limit so carriers with many quotes still get a
-    // correct hasAlreadyQuoted check. meta.total lets us detect if even
-    // this is insufficient (edge-case warning only, not blocking).
-    transportApi.myQuotes(1, 200)
-      .then((res) => {
-        const match = res.items.find((q) => q.requestId === id);
-        if (match) setMyQuoteForRequest(match);
+    // Use dedicated endpoint — O(1) lookup on the unique (requestId, carrierId)
+    // index instead of fetching up to 200 quotes and scanning client-side.
+    transportApi.getMyQuoteForRequest(id)
+      .then((quote) => {
+        if (quote) setMyQuoteForRequest(quote);
       })
       .catch(() => {});
   }, [carrierProfile?.id, id, isAuthenticated]);
@@ -366,8 +371,14 @@ export default function RequestDetailPage() {
       } else {
         router.push('/transport/my-bookings');
       }
-    } catch {
-      setActionError(t('errors.acceptFailed'));
+    } catch (err: unknown) {
+      // Issue 7 fix: map specific backend error codes to actionable messages
+      const status = (err as { status?: number })?.status;
+      if (status === 409 || status === 400) {
+        setActionError('تم قبول هذا الطلب مسبقاً من طرف آخر — حاول تحديث الصفحة');
+      } else {
+        setActionError(t('errors.acceptFailed'));
+      }
     } finally {
       setAccepting(null);
       acceptingRef.current = false;

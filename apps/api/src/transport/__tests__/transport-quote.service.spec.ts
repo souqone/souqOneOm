@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransportQuoteService } from '../transport-quote.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
@@ -23,6 +24,16 @@ const mockPrisma: any = {
   }),
 };
 
+const mockRedis = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn().mockResolvedValue(undefined),
+  delPattern: jest.fn().mockResolvedValue(undefined),
+  setNX: jest.fn().mockResolvedValue(true),
+  incr: jest.fn().mockResolvedValue(1), // well under daily max — rate limit always passes
+  isReady: jest.fn().mockReturnValue(true),
+};
+
 const mockNotifications = { create: jest.fn() };
 
 describe('TransportQuoteService', () => {
@@ -33,6 +44,7 @@ describe('TransportQuoteService', () => {
       providers: [
         TransportQuoteService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: RedisService, useValue: mockRedis },
         { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();

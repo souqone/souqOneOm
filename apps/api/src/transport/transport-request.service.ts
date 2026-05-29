@@ -113,50 +113,68 @@ export class TransportRequestService {
     const cached = await this.redis.get<any>(cacheKey);
     if (cached) return cached;
 
-    const page = Math.max(1, parseInt(query.page || '1', 10));
-    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(query.limit || String(DEFAULT_LIMIT), 10)));
-    const skip = (page - 1) * limit;
+    // Issue 3 fix: stampede protection.
+    // Acquire a short-lived lock so only one concurrent request hits the DB
+    // for the same cache key. Others wait briefly, then retry the cache.
+    const lockKey = `lock:${cacheKey}`;
+    const isLeader = await this.redis.setNX(lockKey, '1', 15);
+    // Issue 3 fix: only wait when Redis is healthy — if it is down the lock is
+    // meaningless and the 200 ms delay would be wasted on every cache miss.
+    if (!isLeader && this.redis.isReady()) {
+      await new Promise((r) => setTimeout(r, 200));
+      const retried = await this.redis.get<any>(cacheKey);
+      if (retried) return retried;
+      // Still cold after wait — fall through so this request also computes it
+    }
 
-    const where: Prisma.TransportRequestWhereInput = {};
+    try {
+      const page = Math.max(1, parseInt(query.page || '1', 10));
+      const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(query.limit || String(DEFAULT_LIMIT), 10)));
+      const skip = (page - 1) * limit;
 
-    where.status = (query.status as any) || 'OPEN';
-    if (query.serviceType) where.serviceType = query.serviceType as any;
-    if (query.fromGovernorate) where.fromGovernorate = query.fromGovernorate;
-    if (query.fromCity) where.fromCity = query.fromCity;
-    if (query.fromWilayat) where.fromCity = query.fromWilayat;
-    if (query.toGovernorate) where.toGovernorate = query.toGovernorate;
-    if (query.toCity) where.toCity = query.toCity;
-    if (query.toWilayat) where.toCity = query.toWilayat;
-    if (query.userId) where.userId = query.userId;
+      const where: Prisma.TransportRequestWhereInput = {};
 
-    const orderBy: Prisma.TransportRequestOrderByWithRelationInput = {};
-    const sortField = query.sortBy || 'createdAt';
-    const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
-    if (sortField === 'budgetMax') orderBy.budgetMax = sortOrder;
-    else if (sortField === 'scheduledAt') orderBy.scheduledAt = sortOrder;
-    else orderBy.createdAt = sortOrder;
+      where.status = (query.status as any) || 'OPEN';
+      if (query.serviceType) where.serviceType = query.serviceType as any;
+      if (query.fromGovernorate) where.fromGovernorate = query.fromGovernorate;
+      if (query.fromCity) where.fromCity = query.fromCity;
+      if (query.fromWilayat) where.fromCity = query.fromWilayat;
+      if (query.toGovernorate) where.toGovernorate = query.toGovernorate;
+      if (query.toCity) where.toCity = query.toCity;
+      if (query.toWilayat) where.toCity = query.toWilayat;
+      if (query.userId) where.userId = query.userId;
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.transportRequest.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-        include: {
-          user: { select: USER_SELECT },
-          _count: { select: { quotes: true } },
-        },
-      }),
-      this.prisma.transportRequest.count({ where }),
-    ]);
+      const orderBy: Prisma.TransportRequestOrderByWithRelationInput = {};
+      const sortField = query.sortBy || 'createdAt';
+      const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
+      if (sortField === 'budgetMax') orderBy.budgetMax = sortOrder;
+      else if (sortField === 'scheduledAt') orderBy.scheduledAt = sortOrder;
+      else orderBy.createdAt = sortOrder;
 
-    const result = {
-      items,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-    };
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.transportRequest.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+          include: {
+            user: { select: USER_SELECT },
+            _count: { select: { quotes: true } },
+          },
+        }),
+        this.prisma.transportRequest.count({ where }),
+      ]);
 
-    await this.redis.set(cacheKey, result, LIST_CACHE_TTL);
-    return result;
+      const result = {
+        items,
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+
+      await this.redis.set(cacheKey, result, LIST_CACHE_TTL);
+      return result;
+    } finally {
+      if (isLeader) await this.redis.del(lockKey);
+    }
   }
 
   async findOne(id: string, ip?: string, userId?: string) {
@@ -164,26 +182,44 @@ export class TransportRequestService {
     const cacheKey = userId ? `transport:request:${id}:auth` : `transport:request:${id}`;
     const cached = await this.redis.get<any>(cacheKey);
 
-    const request = cached ?? await this.prisma.transportRequest.findUnique({
-      where: { id },
-      include: {
-        user: { select: USER_SELECT },
-        _count: { select: { quotes: true } },
-        ...(userId ? { booking: true } : {}),
-      },
-    });
+    let request = cached;
+    if (!request) {
+      // Issue 3 fix: stampede protection on detail cache miss
+      const lockKey = `lock:${cacheKey}`;
+      const isLeader = await this.redis.setNX(lockKey, '1', 10);
+      if (!isLeader && this.redis.isReady()) {
+        await new Promise((r) => setTimeout(r, 150));
+        const retried = await this.redis.get<any>(cacheKey);
+        if (retried) {
+          request = retried;
+        }
+      }
+
+      if (!request) {
+        request = await this.prisma.transportRequest.findUnique({
+          where: { id },
+          include: {
+            user: { select: USER_SELECT },
+            _count: { select: { quotes: true } },
+            ...(userId ? { booking: true } : {}),
+          },
+        });
+        if (request) await this.redis.set(cacheKey, request, DETAIL_CACHE_TTL);
+      }
+
+      if (isLeader) await this.redis.del(lockKey);
+    }
 
     if (!request) throw new NotFoundException('طلب النقل غير موجود');
 
-    if (!cached) await this.redis.set(cacheKey, request, DETAIL_CACHE_TTL);
-
-    // Rate-limited view count
+    // Issue 2 fix: fire-and-forget — view count is analytical, must not block
+    // the user-facing response. Rate-limiting (1/IP/hour) is handled by the helper.
     const shouldCount = await incrementViewCount(this.redis, 'TRANSPORT_REQUEST', id, ip);
     if (shouldCount) {
-      await this.prisma.transportRequest.update({
+      this.prisma.transportRequest.update({
         where: { id },
         data: { viewCount: { increment: 1 } },
-      });
+      }).catch((err) => this.logger.warn(`viewCount update failed for ${id}: ${err.message}`));
     }
 
     return request;

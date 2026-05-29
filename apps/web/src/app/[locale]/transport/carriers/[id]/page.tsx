@@ -182,7 +182,7 @@ export default function PublicCarrierProfilePage() {
               <div className="flex items-center gap-2 mb-3">
                 <Package size={16} className="text-[var(--color-brand-navy)]" />
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
-                  {t('serviceTypes')}
+                  {t('fields.serviceTypesLabel')}
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">

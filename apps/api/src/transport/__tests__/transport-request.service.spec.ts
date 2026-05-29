@@ -29,7 +29,8 @@ const mockRedis = {
   set: jest.fn(),
   del: jest.fn(),
   delPattern: jest.fn(),
-  setNX: jest.fn(),
+  setNX: jest.fn().mockResolvedValue(true), // always win the lock — avoids the follower wait path
+  isReady: jest.fn().mockReturnValue(true), // Redis is always "up" in tests
 };
 
 const mockNotifications = {
