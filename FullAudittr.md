@@ -1,266 +1,333 @@
-You are acting as a senior-level:
+أنت Staff Software Architect وخبير Reverse Engineering للأنظمة.
 
-* Software Architect
-* Staff Frontend Engineer
-* Backend Systems Reviewer
-* Product Manager
-* Security Auditor
-* UX Reviewer
-* Marketplace Workflow Analyst
-* QA Engineer
+مهمتك هي قراءة نظام النقل بالكامل (Frontend + Backend + Database + APIs + Types + Validation + Business Logic) ثم إنشاء ملف توثيق شامل باسم:
 
-Your task is to deeply audit the entire Transport module of this application.
+TRANSPORT_SYSTEM_ARCHITECTURE.md
 
-I do NOT want a shallow code review.
-I want a professional production-grade audit covering:
-
-# 1. Product & Workflow Review
-
-Analyze the entire transport business flow end-to-end:
-
-* Request creation
-* Quote submission
-* Quote acceptance/rejection
-* Booking creation
-* Booking lifecycle
-* Cancellation flows
-* Reposting flows
-* Carrier dashboard
-* User dashboards
-* Reviews & ratings
-* Notifications
-* Ownership permissions
-
-For every workflow:
-
-* Explain the intended business logic
-* Detect broken flows
-* Detect missing states
-* Detect contradictory states
-* Detect UX inconsistencies
-* Detect missing edge cases
-* Detect invalid transitions
-* Detect marketplace abuse scenarios
-* Detect race conditions
-* Detect stale state issues
-
-Think like a Product Manager + System Designer.
+لا تكتفِ بوصف الملفات أو المجلدات.
+المطلوب فهم النظام فعلياً كما يعمل في الإنتاج.
 
 ---
 
-# 2. Role & Permission Audit
+# المطلوب بالتفصيل
 
-Audit ALL roles and permissions.
+## 1. Executive Summary
 
-Verify:
+اشرح:
 
-* Request owner permissions
-* Carrier permissions
-* Guest access
-* AuthGuard correctness
-* Unauthorized access paths
-* Ownership validation
-* Hidden privilege escalation risks
-* Client-side-only protections
-* Backend trust assumptions
-
-Flag any:
-
-* security weakness
-* permission leak
-* auth inconsistency
-* business-rule bypass
+* ما هو نظام النقل؟
+* ما هي المشكلة التي يحلها؟
+* ما هي أنواع المستخدمين؟
+* كيف تتفاعل الأطراف مع بعضها؟
 
 ---
 
-# 3. Frontend Architecture Audit
+## 2. Actors / Roles
 
-Review the frontend architecture quality:
+استخرج كل الأدوار الموجودة.
 
-* state management
-* async handling
-* generation counters
-* stale response protection
-* optimistic updates
-* loading states
-* error boundaries
-* page-level error handling
-* derived state correctness
-* pagination correctness
-* query invalidation
-* component responsibilities
-* re-render risks
-* hook correctness
+لكل Role اشرح:
 
-Identify:
+* الاسم
+* الوصف
+* الصلاحيات
+* ما الذي يمكنه رؤيته
+* ما الذي يمكنه تعديله
+* ما الذي لا يمكنه الوصول إليه
 
-* anti-patterns
-* duplicated logic
-* unstable UI behavior
-* scalability problems
-* maintainability issues
+مثال:
 
----
+### Shipper
 
-# 4. UX & UI Review
+...
 
-Review every transport page as a UX expert.
+### Carrier
 
-Analyze:
+...
 
-* loading UX
-* empty states
-* error states
-* destructive actions
-* confirmation flows
-* mobile usability
-* dashboard clarity
-* stats correctness
-* user confusion risks
-* navigation consistency
-* feedback systems
+### Admin
 
-Detect:
-
-* confusing flows
-* inconsistent statuses
-* misleading UI
-* broken feedback loops
-* inaccessible actions
+...
 
 ---
 
-# 5. Backend/API Contract Validation
+## 3. Domain Model
 
-Review whether frontend assumptions match backend behavior.
+استخرج جميع الكيانات الأساسية.
 
-Detect:
+مثال:
 
-* stale local state
-* missing refreshes
-* invalid optimistic assumptions
-* missing invalidation
-* pagination mismatch
-* inconsistent totals
-* derived count bugs
-* unsupported edge states
+* Transport Request
+* Quote
+* Booking
+* Carrier Profile
+* Review
+* Vehicle Type
+* Service Type
 
----
+لكل كيان:
 
-# 6. Performance & Scalability Review
-
-Detect:
-
-* unnecessary requests
-* N+1 patterns
-* overfetching
-* large rerenders
-* dashboard inefficiencies
-* poor pagination logic
-* expensive calculations
-* missing memoization
-* excessive client-side filtering
+* الغرض منه
+* الحقول المهمة
+* العلاقات مع الكيانات الأخرى
 
 ---
 
-# 7. Reliability Review
+## 4. Complete User Journeys
 
-Specifically look for:
+أنشئ Flow تفصيلي لكل رحلة مستخدم.
 
-* race conditions
-* stale closures
-* state desynchronization
-* async overwrite bugs
-* concurrent action bugs
-* double-submit issues
-* timeout leaks
-* stale effects
-* inconsistent optimistic updates
+### Shipper Journey
 
----
+من:
 
-# 8. Code Quality Audit
+* التسجيل
 
-Review:
+حتى:
 
-* naming quality
-* separation of concerns
-* readability
-* abstraction quality
-* duplication
-* file structure
-* maintainability
-* typing quality
-* defensive coding
+* إنشاء طلب
 
-Flag:
+ثم:
 
-* dangerous patterns
-* fragile logic
-* misleading naming
-* shadowed variables
-* hidden coupling
+* استقبال عروض
+
+ثم:
+
+* قبول عرض
+
+ثم:
+
+* إنشاء الحجز
+
+ثم:
+
+* اكتمال الرحلة
+
+ثم:
+
+* التقييم
+
+اشرح كل خطوة.
 
 ---
 
-# 9. Required Output Format
+### Carrier Journey
 
-For every issue found provide:
+من:
 
-* Severity:
+* التسجيل
 
-  * Critical
-  * High
-  * Medium
-  * Low
+حتى:
 
-* Category:
+* onboarding
 
-  * Security
-  * Product Logic
-  * UX
-  * State Management
-  * Performance
-  * Reliability
-  * Architecture
-  * API Contract
-  * Maintainability
+ثم:
 
-* File
+* تصفح الطلبات
 
-* Exact root cause
+ثم:
 
-* Real-world user impact
+* تقديم عرض
 
-* Technical impact
+ثم:
 
-* Reproduction scenario
+* متابعة الحجز
 
-* Recommended fix
+ثم:
 
-* Long-term architectural recommendation
+* بدء النقل
+
+ثم:
+
+* انتهاء الرحلة
 
 ---
 
-# 10. Final Summary
+## 5. State Machines
 
-Provide:
+استخرج جميع الـstatuses.
 
-* Overall architecture score /10
-* Product workflow score /10
-* UX maturity score /10
-* Security confidence score /10
-* Reliability score /10
-* Scalability score /10
-* Maintainability score /10
+### Request Status Lifecycle
 
-Then provide:
+مثال:
 
-* Top 10 highest-risk problems
-* Top 10 architectural improvements
-* Top 10 UX improvements
-* Top 10 reliability fixes
+DRAFT
+→ OPEN
+→ QUOTED
+→ BOOKED
+→ COMPLETED
 
-Be brutally honest and production-oriented.
+أو أي Statuses حقيقية موجودة بالكود.
 
-Think like this system is about to launch to 1 million users.
+اشرح:
+
+* من يغير الحالة
+* متى تتغير
+* ما هي الشروط
+
+---
+
+### Booking Status Lifecycle
+
+اشرح نفس الشيء.
+
+---
+
+### Quote Status Lifecycle
+
+اشرح نفس الشيء.
+
+---
+
+## 6. Page Inventory
+
+راجع جميع الصفحات.
+
+لكل صفحة اكتب:
+
+### Route
+
+مثال:
+`/transport/requests/[id]`
+
+### Purpose
+
+### Allowed Roles
+
+### APIs Called
+
+### Actions Available
+
+### Navigation Paths
+
+### Dependencies
+
+---
+
+## 7. API Inventory
+
+استخرج جميع API endpoints المستخدمة.
+
+لكل Endpoint:
+
+* Method
+* URL
+* Caller Pages
+* Required Permissions
+* Request Payload
+* Response Shape
+* Side Effects
+
+---
+
+## 8. Business Rules
+
+استخرج جميع القواعد المخفية داخل الكود.
+
+أمثلة:
+
+* لا يمكن قبول أكثر من عرض.
+* لا يمكن تعديل الطلب بعد إنشاء Booking.
+* الشاحن فقط يستطيع إكمال الرحلة.
+* الناقل لا يستطيع تقييم نفسه.
+
+اكتب كل قاعدة مكتشفة.
+
+---
+
+## 9. Permissions Matrix
+
+أنشئ جدولاً:
+
+| Action | Shipper | Carrier | Admin |
+| ------ | ------- | ------- | ----- |
+
+مثل:
+
+Create Request
+Edit Request
+Cancel Request
+Submit Quote
+Accept Quote
+Start Booking
+Complete Booking
+Review Carrier
+
+---
+
+## 10. Data Flow Diagrams
+
+اشرح تدفق البيانات:
+
+Frontend
+→ API
+→ Service
+→ Database
+
+لكل عملية أساسية.
+
+---
+
+## 11. Sequence Diagrams
+
+أنشئ Sequence Flow نصي لكل عملية رئيسية:
+
+### Accept Quote
+
+### Create Booking
+
+### Cancel Request
+
+### Complete Booking
+
+---
+
+## 12. Hidden Assumptions
+
+استخرج الافتراضات غير الموثقة داخل الكود.
+
+مثل:
+
+* يفترض وجود Carrier Profile.
+* يفترض وجود رقم واتساب صحيح.
+* يفترض وجود Quote واحد مقبول فقط.
+
+---
+
+## 13. Dead Code & Unused Flows
+
+حدد:
+
+* الملفات غير المستخدمة
+* hooks غير المستخدمة
+* APIs غير المستخدمة
+* routes المهجورة
+
+---
+
+## 14. Gaps & Risks
+
+استخرج:
+
+* Authorization Risks
+* Data Integrity Risks
+* UX Risks
+* Scalability Risks
+
+---
+
+# قواعد مهمة
+
+* لا تعتمد على أسماء الملفات فقط.
+* تتبع الاستدعاءات الفعلية.
+* تتبع الـimports والـroutes.
+* تتبع الـAPI usage.
+* تتبع الـstatus transitions.
+* تتبع الـbusiness rules.
+
+إذا وجدت تضارباً بين الواجهة والباك إند فاذكره.
+
+إذا وجدت سلوكاً غير موثق فاذكره.
+
+الهدف النهائي:
+أن يتمكن مطور جديد من فهم نظام النقل بالكامل من هذا الملف فقط دون الحاجة لقراءة الكود.
