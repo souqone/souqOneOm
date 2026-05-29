@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import {
   ArrowRight,
   MapPin,
@@ -39,6 +40,7 @@ import {
   REQUEST_STATUS_LABELS,
   CURRENCY_LABEL,
   QUOTE_STATUS_STYLES,
+  QUOTE_STATUS_LABELS,
 } from '@/features/transport/constants';
 
 import {
@@ -65,7 +67,8 @@ interface QuoteCardProps {
 }
 
 function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: QuoteCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const t = useTranslations('transport');
+  const [expanded, setExpanded] = useState(true);
   const isAccepted = quote.status === 'ACCEPTED';
   const canAccept = isOwner && requestStatus === 'QUOTED' && quote.status === 'PENDING';
 
@@ -87,7 +90,7 @@ function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: Quote
               href={`/transport/carriers/${quote.carrierId}`}
               className="text-sm font-bold text-[var(--color-on-surface)] hover:text-[var(--color-brand-navy)] transition-colors"
             >
-              {quote.carrier?.companyName ?? quote.carrier?.user?.displayName ?? 'ناقل'}
+              {quote.carrier?.companyName ?? quote.carrier?.user?.displayName ?? t('carrier.unknown')}
             </Link>
             <div className="flex items-center gap-1.5 mt-0.5">
               {(quote.carrier?.averageRating ?? 0) > 0 && (
@@ -114,10 +117,7 @@ function QuoteCard({ quote, isOwner, requestStatus, onAccept, accepting }: Quote
           className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
           style={{ backgroundColor: sc.bg, color: sc.text }}
         >
-          {quote.status === 'PENDING' ? 'بانتظار الرد'
-            : quote.status === 'ACCEPTED' ? 'مقبول'
-            : quote.status === 'REJECTED' ? 'مرفوض'
-            : 'مسحوب'}
+          {QUOTE_STATUS_LABELS[quote.status]}
         </span>
       </div>
 
@@ -182,6 +182,7 @@ interface SubmitQuoteFormProps {
 }
 
 function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
+  const t = useTranslations('transport.quotes');
   const [price, setPrice] = useState('');
   const [priceError, setPriceError] = useState('');
   const [estimatedHours, setEstimatedHours] = useState('');
@@ -193,12 +194,12 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
     e.preventDefault();
     setPriceError('');
     if (!price || Number(price) <= 0) {
-      setPriceError('يرجى إدخال سعر صحيح');
+      setPriceError(t('errors.invalidPrice'));
       return;
     }
     const hours = estimatedHours ? Number(estimatedHours) : undefined;
     if (hours !== undefined && (isNaN(hours) || hours <= 0)) {
-      setError('عدد الساعات يجب أن يكون رقماً موجباً');
+      setError(t('errors.invalidHours'));
       return;
     }
     setSubmitting(true);
@@ -212,7 +213,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
       const quote = await transportApi.submitQuote(requestId, dto);
       onSubmitted(quote);
     } catch {
-      setError('تعذّر إرسال العرض. يرجى المحاولة مرة أخرى.');
+      setError(t('errors.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -220,7 +221,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="card-base p-5 flex flex-col gap-4" dir="rtl">
-      <h3 className="text-base font-bold text-[var(--color-on-surface)]">قدّم عرضك</h3>
+      <h3 className="text-base font-bold text-[var(--color-on-surface)]">{t('formTitle')}</h3>
 
       {error && (
         <div className="flex items-center gap-2 text-sm text-[var(--color-error)] bg-[var(--color-error-light)] rounded-xl px-3 py-2">
@@ -231,7 +232,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
-          السعر المقترح ({CURRENCY_LABEL}) *
+          {t('priceLabel')} ({CURRENCY_LABEL}) *
         </label>
         <input
           type="number"
@@ -239,7 +240,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
           step="0.1"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder="e.g. 150"
+          placeholder={t('pricePlaceholder')}
           className={`w-full px-3 py-2.5 rounded-xl border bg-[var(--color-surface-container)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-navy)]/30 ${priceError ? 'border-[var(--color-error)]' : 'border-[var(--color-outline-variant)]'}`}
           required
         />
@@ -250,7 +251,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
-          الوقت المتوقع (ساعات)
+          {t('hoursLabel')}
         </label>
         <input
           type="number"
@@ -264,7 +265,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-[var(--color-on-surface-variant)]">
-          رسالة للعميل
+          {t('messageLabel')}
         </label>
         <textarea
           value={message}
@@ -281,7 +282,7 @@ function SubmitQuoteForm({ requestId, onSubmitted }: SubmitQuoteFormProps) {
         className="btn-primary justify-center disabled:opacity-60"
       >
         {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-        {submitting ? 'جارٍ الإرسال...' : 'إرسال العرض'}
+        {submitting ? t('submittingBtn') : t('submitBtn')}
       </button>
     </form>
   );
@@ -295,6 +296,7 @@ export default function RequestDetailPage() {
   const { user, isAuthenticated } = useAuth();
   const { open: openAuth } = useAuthModal();
   const id = params?.id as string;
+  const t = useTranslations('transport.quotes');
 
   const { data: carrierProfile, isLoading: checkingCarrier } = useMyCarrierProfile(
     isAuthenticated
@@ -304,6 +306,7 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
   const [quoteSent, setQuoteSent] = useState(false);
   const [quotes, setQuotes] = useState<TransportQuote[]>([]);
 
@@ -314,7 +317,7 @@ export default function RequestDetailPage() {
       const req = await transportApi.getRequest(id);
       setRequest(req);
     } catch {
-      setError('تعذّر تحميل تفاصيل الطلب');
+      setError(t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -332,17 +335,18 @@ export default function RequestDetailPage() {
 
   const handleAcceptQuote = async (quoteId: string) => {
     setAccepting(quoteId);
+    setActionError('');
     try {
-      await transportApi.acceptQuote(quoteId);
-      const bookings = await transportApi.myBookings('shipper', 1, 1);
-      const booking = bookings.items?.[0];
-      if (booking) {
-        router.push(`/transport/bookings/${booking.id}`);
+      const accepted = await transportApi.acceptQuote(quoteId);
+      if (accepted.booking?.id) {
+        router.push(`/transport/bookings/${accepted.booking.id}`);
       } else {
-        router.push('/transport/my-requests');
+        const bookings = await transportApi.myBookings('shipper', 1, 1);
+        const booking = bookings.items?.[0];
+        router.push(booking ? `/transport/bookings/${booking.id}` : '/transport/my-requests');
       }
     } catch {
-      setError('تعذّر قبول العرض. حاول مرة أخرى.');
+      setActionError(t('errors.acceptFailed'));
     } finally {
       setAccepting(null);
     }
@@ -366,7 +370,7 @@ export default function RequestDetailPage() {
       const updated = await transportApi.renewRequest(request.id);
       setRequest(updated);
     } catch {
-      setError('تعذّر تجديد الطلب. حاول مرة أخرى.');
+      setActionError(t('errors.renewFailed'));
     } finally {
       setRenewing(false);
     }
@@ -382,7 +386,7 @@ export default function RequestDetailPage() {
       await transportApi.cancelRequest(request.id);
       setRequest((prev) => prev ? { ...prev, status: 'CANCELLED' } : prev);
     } catch {
-      // Error is handled inside apiRequest usually
+      setActionError('تعذّر إلغاء الطلب، حاول مجدداً');
     } finally {
       setCancelling(false);
     }
@@ -446,6 +450,16 @@ export default function RequestDetailPage() {
             العودة للتصفح
           </Link>
         </div>
+
+        {actionError && (
+          <div className="mb-4 flex items-center gap-2 bg-[var(--color-error-light)] text-[var(--color-error)] text-sm px-4 py-3 rounded-xl">
+            <AlertCircle size={15} />
+            {actionError}
+            <button onClick={() => setActionError('')} className="mr-auto text-[var(--color-error)] hover:opacity-70">
+              <XCircle size={14} />
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
           {/* Left: Request Details */}

@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
-const mockPrisma = {
+const mockPrisma: any = {
   carrierProfile: { findUnique: jest.fn() },
   transportRequest: { findUnique: jest.fn(), update: jest.fn() },
   transportQuote: {
@@ -17,7 +17,7 @@ const mockPrisma = {
   },
   transportBooking: { create: jest.fn(), update: jest.fn() },
   conversation: { create: jest.fn() },
-  $transaction: jest.fn(async (cb) => {
+  $transaction: jest.fn(async (cb: any) => {
     if (typeof cb === 'function') return cb(mockPrisma);
     return Promise.all(cb);
   }),
@@ -39,7 +39,7 @@ describe('TransportQuoteService', () => {
 
     service = module.get<TransportQuoteService>(TransportQuoteService);
     jest.clearAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (cb) => {
+    mockPrisma.$transaction.mockImplementation(async (cb: any) => {
       if (typeof cb === 'function') return cb(mockPrisma);
       return Promise.all(cb);
     });

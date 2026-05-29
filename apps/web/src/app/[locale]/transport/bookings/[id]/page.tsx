@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
+import { useLocale } from 'next-intl';
 import {
   ArrowRight,
   CheckCircle,
@@ -20,7 +21,7 @@ import {
   Loader2,
   MessageSquare,
 } from 'lucide-react';
-import type { TransportBooking, TransportRequest, TransportQuote, CarrierProfile, BookingStatus } from '@/features/transport/types';
+import type { TransportBooking, CarrierProfile, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
 import { useAuth } from '@/providers/auth-provider';
 import {
@@ -37,6 +38,7 @@ const BOOKING_STEPS = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
 
 function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?: string }) {
+  const locale = useLocale();
   if (status === 'CANCELLED') {
     return (
       <div className="flex items-center gap-0" dir="rtl">
@@ -57,7 +59,7 @@ function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?
         ))}
         {cancelledAt && (
           <p className="text-xs text-[var(--color-error)] mr-4 font-semibold">
-            تم الإلغاء: {new Date(cancelledAt).toLocaleDateString('ar-OM')}
+            تم الإلغاء: {new Date(cancelledAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-US')}
           </p>
         )}
       </div>
@@ -112,18 +114,12 @@ function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?
   );
 }
 
-interface BookingWithDetails extends TransportBooking {
-  request?: TransportRequest;
-  quote?: TransportQuote;
-  carrier?: CarrierProfile;
-}
-
 export default function BookingDetailPage() {
   const params = useParams();
   const { user } = useAuth();
   const id = params?.id as string;
 
-  const [booking, setBooking] = useState<BookingWithDetails | null>(null);
+  const [booking, setBooking] = useState<(TransportBooking & { carrier?: CarrierProfile }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -139,7 +135,7 @@ export default function BookingDetailPage() {
       setError('');
       try {
         const data = await transportApi.getBooking(id);
-        setBooking({ ...data, carrier: data.quote?.carrier });
+        setBooking({ ...data, carrier: data.quote.carrier });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '';
         setError(msg || 'تعذّر تحميل تفاصيل الحجز');
@@ -190,8 +186,8 @@ export default function BookingDetailPage() {
     }
   };
 
-  const isCarrier = booking?.quote?.carrier?.userId === user?.id;
-  const isShipper = booking?.request?.userId === user?.id;
+  const isCarrier = booking?.quote.carrier?.userId === user?.id;
+  const isShipper = booking?.request.userId === user?.id;
 
   if (loading) return <TransportPageLoader />;
 
@@ -261,7 +257,6 @@ export default function BookingDetailPage() {
           {/* Main */}
           <div className="flex flex-col gap-5">
             {/* Trip Details */}
-            {booking.request && (
               <div className="card-base p-5">
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] mb-4 uppercase tracking-wide">
                   تفاصيل الرحلة
@@ -303,7 +298,7 @@ export default function BookingDetailPage() {
                         {formatScheduledDate(booking.request.scheduledAt)}
                       </div>
                     )}
-                    {booking.quote?.estimatedHours && (
+                    {booking.quote.estimatedHours && (
                       <div className="flex items-center gap-1.5 text-xs text-[var(--color-on-surface-variant)]">
                         <Clock size={13} />
                         {booking.quote.estimatedHours} ساعة متوقعة
@@ -312,10 +307,8 @@ export default function BookingDetailPage() {
                   </div>
                 </div>
               </div>
-            )}
 
             {/* Price */}
-            {booking.quote && (
               <div className="card-base p-5">
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] mb-3 uppercase tracking-wide">
                   السعر المتفق عليه
@@ -334,7 +327,6 @@ export default function BookingDetailPage() {
                   </p>
                 )}
               </div>
-            )}
           </div>
 
           {/* Sidebar */}
@@ -347,9 +339,18 @@ export default function BookingDetailPage() {
                 </h2>
                 <div className="flex items-center gap-3">
                   <img
-                    src={booking.carrier.user?.avatarUrl}
-                    alt={`صورة ${booking.carrier.user?.displayName}`}
-                    className="w-12 h-12 rounded-full"
+                    src={
+                      booking.carrier.user?.avatarUrl ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        booking.carrier.companyName ?? booking.carrier.user?.displayName ?? 'N'
+                      )}&background=0B2447&color=fff&size=80`
+                    }
+                    alt={`صورة ${booking.carrier.user?.displayName ?? 'الناقل'}`}
+                    className="w-12 h-12 rounded-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        `https://ui-avatars.com/api/?name=N&background=0B2447&color=fff&size=80`;
+                    }}
                   />
                   <div>
                     <p className="text-base font-bold text-[var(--color-on-surface)] truncate">

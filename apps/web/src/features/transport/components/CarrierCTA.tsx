@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { Truck, Search, ShieldCheck, Star, TrendingUp } from 'lucide-react';
 import { transportApi } from '../api';
 
 export default function CarrierCTA() {
+  const t = useTranslations('transport');
   const [verifiedCarriers, setVerifiedCarriers] = useState(0);
   const [completedTrips, setCompletedTrips] = useState(0);
 
@@ -17,9 +19,9 @@ export default function CarrierCTA() {
   }, []);
 
   const CARRIER_STATS = [
-    { icon: ShieldCheck, label: 'مزود موثّق', value: verifiedCarriers.toLocaleString('en-US'), color: '#16a34a' },
-    { icon: Star, label: 'متوسط التقييم', value: '4.8', color: '#d97706' },
-    { icon: TrendingUp, label: 'رحلة مكتملة', value: completedTrips.toLocaleString('en-US'), color: '#7c3aed' },
+    { icon: ShieldCheck, label: t('verifiedCarrier'), value: verifiedCarriers.toLocaleString('en-US'), color: '#16a34a' },
+    { icon: Star, label: t('averageRating'), value: '4.8', color: '#d97706' },
+    { icon: TrendingUp, label: t('completedTrip'), value: completedTrips.toLocaleString('en-US'), color: '#7c3aed' },
   ];
   return (
     <section className="py-10 sm:py-16" dir="rtl">
@@ -36,17 +38,16 @@ export default function CarrierCTA() {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-brand-amber)]">
-                  للمزودين
+                  {t('forCarriers')}
                 </p>
                 <h2 className="text-xl font-bold" style={{ fontWeight: 700 }}>
-                  وسّع نطاق عملك مع سوق وان
+                  {t('expandBusiness')}
                 </h2>
               </div>
             </div>
 
             <p className="text-sm text-white/75 leading-relaxed mb-6 max-w-lg">
-              انضم إلى شبكة مزودي النقل المعتمدين وابدأ في استقبال طلبات جديدة من عملاء موثوقين في
-              جميع محافظات سلطنة عُمان.
+              {t('carrierCtaDesc')}
             </p>
 
             {/* Stats */}
@@ -73,11 +74,11 @@ export default function CarrierCTA() {
                 style={{ background: 'var(--color-brand-amber)', color: '#fff' }}
               >
                 <Truck size={16} />
-                سجّل كمزود مجاناً
+                {t('registerCarrierFree')}
               </Link>
               <Link href="/transport/browse" className="btn-outline-white w-full sm:w-auto justify-center sm:justify-start">
                 <Search size={16} />
-                تصفّح الطلبات أولاً
+                {t('browseRequestsFirst')}
               </Link>
             </div>
           </div>

@@ -28,7 +28,15 @@ export class QueryTransportRequestsDto {
 
   @IsOptional()
   @IsString()
+  fromWilayat?: string;
+
+  @IsOptional()
+  @IsString()
   toGovernorate?: string;
+
+  @IsOptional()
+  @IsString()
+  toWilayat?: string;
 
   @IsOptional()
   @IsString()

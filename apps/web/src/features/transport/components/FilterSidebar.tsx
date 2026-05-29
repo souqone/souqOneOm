@@ -1,12 +1,12 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal } from 'lucide-react';
 import {
   OMAN_GOVERNORATES,
   OMAN_WILAYAT_BY_GOVERNORATE,
   SERVICE_TYPE_LABELS,
   SERVICE_TYPES,
-  REQUEST_STATUS_LABELS,
   BROWSE_SORT_OPTIONS,
 } from '../constants';
 import type { BrowseFilters } from './BrowseContent';
@@ -17,6 +17,7 @@ interface FilterSidebarProps {
 }
 
 export default function FilterSidebar({ filters, onChange }: FilterSidebarProps) {
+  const t = useTranslations('transport');
   const hasActiveFilters =
     !!filters.serviceType ||
     !!filters.status ||
@@ -44,7 +45,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
               className="text-xs text-[var(--color-brand-amber)] font-bold hover:text-[var(--color-brand-amber-dark)] transition-colors flex items-center gap-1"
             >
               <X size={12} />
-              مسح الكل
+              {t('clearAll')}
             </button>
           )}
         </div>
@@ -53,7 +54,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
           {/* Service Type */}
           <div>
             <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
-              نوع الخدمة
+              {t('serviceTypeLabel')}
             </p>
             <div className="space-y-1.5">
               {SERVICE_TYPES.map((type) => (
@@ -75,7 +76,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
           {/* Status */}
           <div>
             <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
-              الحالة
+              {t('statusLabel')}
             </p>
             <div className="space-y-1.5">
               {(['OPEN', 'QUOTED', 'IN_PROGRESS'] as const).map((status) => (
@@ -88,7 +89,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
                       : 'text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)]'
                   }`}
                 >
-                  {REQUEST_STATUS_LABELS[status]}
+                  {t(`status.${status}`)}
                 </button>
               ))}
             </div>
@@ -98,7 +99,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">من محافظة</label>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('fromGovernorate')}</label>
                 <select
                   className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                   value={filters.fromGovernorate ?? ''}
@@ -109,7 +110,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('cityLabel')}</label>
                 <select
                   className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                   value={filters.fromCity ?? ''}
@@ -127,7 +128,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">إلى محافظة</label>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('toGovernorate')}</label>
                 <select
                   className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                   value={filters.toGovernorate ?? ''}
@@ -138,7 +139,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">المدينة</label>
+                <label className="block text-xs font-bold text-[var(--color-on-surface-variant)] mb-1">{t('cityLabel')}</label>
                 <select
                   className="input-base text-sm py-2 px-3 bg-[var(--color-surface-container)] border-none"
                   value={filters.toCity ?? ''}
@@ -155,7 +156,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
           {/* Sort */}
           <div>
             <p className="text-xs font-bold text-[var(--color-on-surface-muted)] uppercase tracking-wider mb-2.5">
-              الترتيب
+              {t('sortLabel')}
             </p>
             <select
               value={filters.sortBy ?? ''}
@@ -164,7 +165,7 @@ export default function FilterSidebar({ filters, onChange }: FilterSidebarProps)
             >
               <option value="">افتراضي</option>
               {BROWSE_SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>{t(`sortOptions.${opt.value}`)}</option>
               ))}
             </select>
           </div>

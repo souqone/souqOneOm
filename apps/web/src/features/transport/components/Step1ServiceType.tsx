@@ -8,18 +8,16 @@ import { useTranslations } from 'next-intl';
 
 const SERVICE_OPTIONS: {
   type: TransportServiceType;
-  label: string;
-  sublabel: string;
   icon: React.ElementType;
   color: string;
   bg: string;
 }[] = [
-  { type: 'GOODS', label: 'بضائع عامة', sublabel: 'إلكترونيات، مواد غذائية', icon: Package, color: '#2563eb', bg: 'rgba(37,99,235,0.08)' },
-  { type: 'FURNITURE', label: 'أثاث ومنزليات', sublabel: 'نقل الأثاث بعناية', icon: Sofa, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
-  { type: 'CONSTRUCTION', label: 'مواد البناء', sublabel: 'رمل، إسمنت، طوب', icon: HardHat, color: '#d97706', bg: 'rgba(217,119,6,0.08)' },
-  { type: 'HEAVY', label: 'شحن ثقيل', sublabel: 'حمولات ضخمة', icon: Container, color: '#dc2626', bg: 'rgba(220,38,38,0.08)' },
-  { type: 'BACKLOAD', label: 'عودة فارغة', sublabel: 'أسعار مخفضة', icon: ArrowLeftRight, color: '#16a34a', bg: 'rgba(22,163,74,0.08)' },
-  { type: 'EQUIPMENT', label: 'معدات وآليات', sublabel: 'حفارات، رافعات', icon: Wrench, color: '#0891b2', bg: 'rgba(8,145,178,0.08)' },
+  { type: 'GOODS', icon: Package, color: '#2563eb', bg: 'rgba(37,99,235,0.08)' },
+  { type: 'FURNITURE', icon: Sofa, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
+  { type: 'CONSTRUCTION', icon: HardHat, color: '#d97706', bg: 'rgba(217,119,6,0.08)' },
+  { type: 'HEAVY', icon: Container, color: '#dc2626', bg: 'rgba(220,38,38,0.08)' },
+  { type: 'BACKLOAD', icon: ArrowLeftRight, color: '#16a34a', bg: 'rgba(22,163,74,0.08)' },
+  { type: 'EQUIPMENT', icon: Wrench, color: '#0891b2', bg: 'rgba(8,145,178,0.08)' },
 ];
 
 export default function Step1ServiceType() {
@@ -31,7 +29,7 @@ export default function Step1ServiceType() {
 
   const selected = watch('serviceType');
   const t = useTranslations('transport.steps');
-  const tCommon = useTranslations('transport');
+  const tService = useTranslations('transport.serviceTypes');
 
   return (
     <div dir="rtl">
@@ -69,9 +67,9 @@ export default function Step1ServiceType() {
                 className={`text-sm font-bold mb-0.5 ${isSelected ? 'text-[var(--color-brand-navy)]' : 'text-[var(--color-on-surface)]'}`}
                 style={{ fontWeight: 700 }}
               >
-                {tCommon(`serviceTypes.${opt.type}`)}
+                {tService(opt.type)}
               </p>
-              <p className="text-[11px] text-[var(--color-on-surface-muted)]">{opt.sublabel}</p>
+              <p className="text-[11px] text-[var(--color-on-surface-muted)]">{tService(`${opt.type}Sub`)}</p>
             </button>
           );
         })}

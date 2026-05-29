@@ -133,9 +133,9 @@ export interface TransportQuote {
 export interface TransportBooking {
   id: string
   requestId: string
-  request?: TransportRequest
+  request: TransportRequest
   quoteId: string
-  quote?: TransportQuote
+  quote: TransportQuote
   status: BookingStatus
   confirmedAt: string
   completedAt?: string
@@ -209,9 +209,22 @@ export interface GetRequestsParams {
   serviceType?: TransportServiceType
   status?: TransportRequestStatus
   fromGovernorate?: string
+  fromWilayat?: string
   fromCity?: string
   toGovernorate?: string
+  toWilayat?: string
   toCity?: string
   sortBy?: 'createdAt' | 'budgetMax' | 'scheduledAt'
   sortOrder?: 'asc' | 'desc'
+}
+
+export interface CarrierReview {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  reviewer?: {
+    displayName?: string;
+    avatarUrl?: string;
+  };
 }

@@ -16,8 +16,10 @@ export interface BrowseFilters {
   serviceType?: string;
   status?: string;
   fromGovernorate?: string;
+  fromWilayat?: string;
   fromCity?: string;
   toGovernorate?: string;
+  toWilayat?: string;
   toCity?: string;
   sortBy?: string;
 }
@@ -48,7 +50,9 @@ export default function BrowseContent() {
     serviceType: searchParams.get('serviceType') ?? undefined,
     status: searchParams.get('status') ?? undefined,
     fromGovernorate: searchParams.get('fromGovernorate') ?? undefined,
+    fromWilayat: searchParams.get('fromWilayat') ?? undefined,
     toGovernorate: searchParams.get('toGovernorate') ?? undefined,
+    toWilayat: searchParams.get('toWilayat') ?? undefined,
     sortBy: searchParams.get('sortBy') ?? undefined,
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +65,9 @@ export default function BrowseContent() {
     if (newFilters.serviceType) params.set('serviceType', newFilters.serviceType);
     if (newFilters.status) params.set('status', newFilters.status);
     if (newFilters.fromGovernorate) params.set('fromGovernorate', newFilters.fromGovernorate);
+    if (newFilters.fromWilayat) params.set('fromWilayat', newFilters.fromWilayat);
     if (newFilters.toGovernorate) params.set('toGovernorate', newFilters.toGovernorate);
+    if (newFilters.toWilayat) params.set('toWilayat', newFilters.toWilayat);
     if (newFilters.sortBy) params.set('sortBy', newFilters.sortBy);
     const qs = params.toString();
     router.replace(`${pathname}${qs ? `?${qs}` : ''}` as any, { scroll: false });
@@ -73,8 +79,10 @@ export default function BrowseContent() {
     ...(filters.serviceType && { serviceType: filters.serviceType as TransportServiceType }),
     ...(filters.status && { status: filters.status as TransportRequestStatus }),
     ...(filters.fromGovernorate && { fromGovernorate: filters.fromGovernorate }),
+    ...(filters.fromWilayat && { fromWilayat: filters.fromWilayat }),
     ...(filters.fromCity && { fromCity: filters.fromCity }),
     ...(filters.toGovernorate && { toGovernorate: filters.toGovernorate }),
+    ...(filters.toWilayat && { toWilayat: filters.toWilayat }),
     ...(filters.toCity && { toCity: filters.toCity }),
     ...parseSortBy(filters.sortBy),
   };

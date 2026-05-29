@@ -123,8 +123,10 @@ export class TransportRequestService {
     if (query.serviceType) where.serviceType = query.serviceType as any;
     if (query.fromGovernorate) where.fromGovernorate = query.fromGovernorate;
     if (query.fromCity) where.fromCity = query.fromCity;
+    if (query.fromWilayat) where.fromCity = query.fromWilayat;
     if (query.toGovernorate) where.toGovernorate = query.toGovernorate;
     if (query.toCity) where.toCity = query.toCity;
+    if (query.toWilayat) where.toCity = query.toWilayat;
     if (query.userId) where.userId = query.userId;
 
     const orderBy: Prisma.TransportRequestOrderByWithRelationInput = {};
