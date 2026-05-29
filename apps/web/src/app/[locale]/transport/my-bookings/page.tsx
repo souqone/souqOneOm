@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { CalendarCheck, Package, MapPin, Banknote, Truck } from 'lucide-react';
 import type { TransportBooking, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -17,22 +17,6 @@ interface TabDef {
   label: string;
 }
 
-const TABS: TabDef[] = [
-  { key: 'ALL', label: 'الكل' },
-  { key: 'ACCEPTED', label: 'تم القبول' },
-  { key: 'IN_PROGRESS', label: 'جارٍ التنفيذ' },
-  { key: 'COMPLETED', label: 'مكتمل' },
-  { key: 'CANCELLED', label: 'ملغى' },
-];
-
-const EMPTY_MESSAGES: Record<TabStatus, string> = {
-  ALL: 'لا توجد حجوزات بعد. تصفح الطلبات واقبل عرض!',
-  ACCEPTED: 'لا توجد حجوزات مقبولة',
-  IN_PROGRESS: 'لا توجد حجوزات جارٍ تنفيذها',
-  COMPLETED: 'لا توجد حجوزات مكتملة',
-  CANCELLED: 'لا توجد حجوزات ملغاة',
-};
-
 const STATUS_COLORS: Record<BookingStatus, string> = {
   ACCEPTED: 'bg-blue-100 text-blue-700',
   IN_PROGRESS: 'bg-purple-100 text-purple-700',
@@ -41,28 +25,54 @@ const STATUS_COLORS: Record<BookingStatus, string> = {
 };
 
 export default function MyBookingsPage() {
+  const t = useTranslations('transport');
+
+  const TABS: TabDef[] = [
+    { key: 'ALL',         label: t('tabs.all') },
+    { key: 'ACCEPTED',    label: t('bookingStatus.ACCEPTED') },
+    { key: 'IN_PROGRESS', label: t('bookingStatus.IN_PROGRESS') },
+    { key: 'COMPLETED',   label: t('tabs.completed') },
+    { key: 'CANCELLED',   label: t('tabs.cancelled') },
+  ];
+
+  const EMPTY_MESSAGES: Record<TabStatus, string> = {
+    ALL:         t('emptyStates.bookingsAll'),
+    ACCEPTED:    t('emptyStates.bookingsAccepted'),
+    IN_PROGRESS: t('emptyStates.bookingsInProgress'),
+    COMPLETED:   t('emptyStates.bookingsCompleted'),
+    CANCELLED:   t('emptyStates.bookingsCancelled'),
+  };
+
   const [bookings, setBookings] = useState<TransportBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [role, setRole] = useState<'shipper' | 'carrier'>('shipper');
 
-  const load = async (tab: TabStatus) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 12;
+
+  const load = async (tab: TabStatus, page = 1) => {
     setLoading(true);
     setError('');
     try {
-      const res = await transportApi.myBookings(role, 1, 50);
-      const items = tab === 'ALL' ? res.items : res.items.filter((b) => b.status === tab);
-      setBookings(items);
+      const res = await transportApi.myBookings(
+        role,
+        page,
+        ITEMS_PER_PAGE,
+        tab !== 'ALL' ? tab : undefined
+      );
+      setBookings(res.items);
+      setTotalPages(res.meta?.totalPages || 1);
+      setCurrentPage(page);
     } catch {
-      setError('تعذّر تحميل حجوزاتك');
+      setError(t('emptyStates.loadFailed'));
     } finally {
       setLoading(false);
     }
   };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(activeTab); }, [activeTab, role]);
+  useEffect(() => { load(activeTab, 1); }, [activeTab, role]);
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
 
@@ -73,9 +83,9 @@ export default function MyBookingsPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">حجوزاتي</h1>
+            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">{t('myBookings')}</h1>
             <p className="text-sm text-[var(--color-on-surface-muted)]">
-              إدارة حجوزات النقل الخاصة بك
+              {t('emptyStates.manageYourBookings')}
             </p>
           </div>
           <Link href="/transport/browse" className="btn-primary">
@@ -94,7 +104,7 @@ export default function MyBookingsPage() {
                 : 'bg-white text-[var(--color-on-surface-variant)] border border-[var(--color-outline-variant)] hover:bg-[var(--color-surface-container)]'
             }`}
           >
-            كشاحن
+            {t('asShipper')}
           </button>
           <button
             onClick={() => setRole('carrier')}
@@ -104,7 +114,7 @@ export default function MyBookingsPage() {
                 : 'bg-white text-[var(--color-on-surface-variant)] border border-[var(--color-outline-variant)] hover:bg-[var(--color-surface-container)]'
             }`}
           >
-            كناقل
+            {t('asCarrier')}
           </button>
         </div>
 
@@ -132,7 +142,7 @@ export default function MyBookingsPage() {
         {loading ? (
           <TransportPageLoader />
         ) : error ? (
-          <TransportPageError message={error} onRetry={() => window.location.reload()} />
+          <TransportPageError message={error} onRetry={() => load(activeTab)} />
         ) : bookings.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-container)] flex items-center justify-center">
@@ -153,6 +163,29 @@ export default function MyBookingsPage() {
             {bookings.map((booking) => (
               <BookingCard key={booking.id} booking={booking} />
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => load(activeTab, currentPage - 1)}
+              disabled={currentPage === 1}
+              className="btn-outline px-4 py-2"
+            >
+              {t('previous')}
+            </button>
+            <span className="text-sm font-semibold text-[var(--color-on-surface)]">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => load(activeTab, currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="btn-outline px-4 py-2"
+            >
+              {t('next')}
+            </button>
           </div>
         )}
       </div>

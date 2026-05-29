@@ -97,9 +97,10 @@ export const transportApi = {
     return apiRequest<TransportBooking>(`/transport/bookings/${id}`)
   },
 
-  myBookings(role: 'shipper' | 'carrier' = 'shipper', page = 1, limit = 12) {
+  myBookings(role: 'shipper' | 'carrier' = 'shipper', page = 1, limit = 12, status?: string) {
+    const q = qs({ role, page, limit, ...(status ? { status } : {}) })
     return apiRequest<PaginatedResponse<TransportBooking>>(
-      `/transport/bookings/my?role=${role}&page=${page}&limit=${limit}`,
+      `/transport/bookings/my${q}`,
     )
   },
 

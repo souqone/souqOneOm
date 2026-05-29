@@ -3735,9 +3735,6 @@
     "emptyCancelledOwnerDesc": "Cancelled bookings on your listings will appear here"
   },
   "transport": {
-    "carrier": {
-      "unknown": "Carrier"
-    },
     "requestStatus": {
       "OPEN": "Open",
       "QUOTED": "Quoted",
@@ -3748,6 +3745,9 @@
       "EXPIRED": "Expired"
     },
     "title": "Transport & Shipping",
+    "myBookings": "My Bookings",
+    "asShipper": "As Shipper",
+    "asCarrier": "As Carrier",
     "subtitle": "Request transport or offer a quote",
     "currency": "OMR",
     "newRequest": "Create Transport Request",
@@ -4048,7 +4048,14 @@
       "manageYourRequests": "Manage your transport requests",
       "quotesAll": "You haven't submitted any quotes yet",
       "quotesStatus": "No quotes with status \"{status}\"",
-      "manageYourQuotes": "Track the quotes you've submitted"
+      "manageYourQuotes": "Track the quotes you've submitted",
+      "manageYourBookings": "Manage your transport bookings",
+      "bookingsAll": "No bookings yet. Browse requests and get started!",
+      "bookingsAccepted": "No accepted bookings",
+      "bookingsInProgress": "No bookings in progress",
+      "bookingsCompleted": "No completed bookings",
+      "bookingsCancelled": "No cancelled bookings",
+      "loadFailed": "Failed to load data, please try again"
     }
   },
   "status": {

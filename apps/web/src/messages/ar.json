@@ -3775,6 +3775,9 @@
       "EXPIRED": "منتهي الصلاحية"
     },
     "title": "النقل والشحن",
+    "myBookings": "حجوزاتي",
+    "asShipper": "كشاحن",
+    "asCarrier": "كناقل",
     "subtitle": "اطلب خدمة نقل أو قدّم عرضاً",
     "currency": "ر.ع.",
     "newRequest": "أنشئ طلب نقل",
@@ -4075,7 +4078,14 @@
       "manageYourRequests": "إدارة طلبات النقل الخاصة بك",
       "quotesAll": "لم تقدم أي عروض بعد",
       "quotesStatus": "لا توجد عروض بحالة \"{status}\"",
-      "manageYourQuotes": "تتبع العروض التي قدمتها على طلبات النقل"
+      "manageYourQuotes": "تتبع العروض التي قدمتها على طلبات النقل",
+      "manageYourBookings": "إدارة حجوزات النقل الخاصة بك",
+      "bookingsAll": "لا توجد حجوزات بعد. تصفح الطلبات وابدأ!",
+      "bookingsAccepted": "لا توجد حجوزات مقبولة",
+      "bookingsInProgress": "لا توجد حجوزات جارٍ تنفيذها",
+      "bookingsCompleted": "لا توجد حجوزات مكتملة",
+      "bookingsCancelled": "لا توجد حجوزات ملغاة",
+      "loadFailed": "تعذّر تحميل البيانات، حاول مرة أخرى"
     }
   },
   "status": {
