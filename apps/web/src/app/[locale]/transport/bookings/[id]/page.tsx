@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   ArrowRight,
   CheckCircle,
@@ -117,6 +117,7 @@ function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?
 
 export default function BookingDetailPage() {
   const params = useParams();
+  const t = useTranslations('transport');
   const { user } = useAuth();
   const id = params?.id as string;
 
@@ -230,7 +231,7 @@ export default function BookingDetailPage() {
           className="inline-flex items-center gap-2 text-sm text-[var(--color-on-surface-variant)] hover:text-[var(--color-brand-navy)] font-semibold mb-6 transition-colors"
         >
           <ArrowRight size={16} />
-          {isCarrier ? 'عروضي' : 'حجوزاتي'}
+          {isCarrier ? t('myQuotes') : t('myBookings')}
         </Link>
 
         {/* Status Header */}
