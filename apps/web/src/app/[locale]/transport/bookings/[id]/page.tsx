@@ -339,9 +339,18 @@ export default function BookingDetailPage() {
                 </h2>
                 <div className="flex items-center gap-3">
                   <img
-                    src={booking.carrier.user?.avatarUrl}
-                    alt={`صورة ${booking.carrier.user?.displayName}`}
-                    className="w-12 h-12 rounded-full"
+                    src={
+                      booking.carrier.user?.avatarUrl ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        booking.carrier.companyName ?? booking.carrier.user?.displayName ?? 'N'
+                      )}&background=0B2447&color=fff&size=80`
+                    }
+                    alt={`صورة ${booking.carrier.user?.displayName ?? 'الناقل'}`}
+                    className="w-12 h-12 rounded-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        `https://ui-avatars.com/api/?name=N&background=0B2447&color=fff&size=80`;
+                    }}
                   />
                   <div>
                     <p className="text-base font-bold text-[var(--color-on-surface)] truncate">
