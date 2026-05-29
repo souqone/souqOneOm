@@ -3853,6 +3853,7 @@
       "requestQuote": "Request Quote"
     },
     "steps": {
+      "dateMustBeFuture": "Date must be in the future",
       "serviceType": "Service Type",
       "route": "Route",
       "routeDesc": "Select pickup and delivery locations",

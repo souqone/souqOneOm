@@ -107,6 +107,17 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
 
   async function onSubmit(data: CreateRequestFormData) {
     if (submittedRef.current) return;
+
+    const budgetMinNum = data.budgetMin ? Number(data.budgetMin) : undefined;
+    const budgetMaxNum = data.budgetMax ? Number(data.budgetMax) : undefined;
+    if (budgetMinNum !== undefined && budgetMaxNum !== undefined &&
+        budgetMinNum > budgetMaxNum) {
+      toast.error('الحد الأدنى للميزانية يجب أن يكون أقل من الحد الأعلى');
+      submittedRef.current = false;
+      setIsSubmitting(false);
+      return;
+    }
+
     submittedRef.current = true;
     setIsSubmitting(true);
     try {

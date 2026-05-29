@@ -3883,6 +3883,7 @@
       "requestQuote": "طلب تسعيرة"
     },
     "steps": {
+      "dateMustBeFuture": "يجب أن يكون الموعد في المستقبل",
       "serviceType": "نوع الخدمة",
       "route": "المسار",
       "routeDesc": "حدّد نقطة التحميل ونقطة التسليم",
