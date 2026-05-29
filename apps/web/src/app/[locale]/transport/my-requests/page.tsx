@@ -44,6 +44,7 @@ export default function MyRequestsPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
   const [renewingId, setRenewingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
@@ -105,6 +106,21 @@ export default function MyRequestsPage() {
     };
     sessionStorage.setItem('transport_draft', JSON.stringify(draft));
     router.push('/transport/new');
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!confirm('هل تريد إلغاء هذا الطلب؟')) return;
+    setCancellingId(id);
+    try {
+      await transportApi.cancelRequest(id);
+      setRequests((prev) =>
+        prev.map((r) => r.id === id ? { ...r, status: 'CANCELLED' as RequestStatus } : r)
+      );
+    } catch {
+      setError('تعذّر إلغاء الطلب');
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   return (
@@ -176,6 +192,8 @@ export default function MyRequestsPage() {
                   onDuplicate={() => handleDuplicate(req)}
                   isRenewing={renewingId === req.id}
                   currentUserId={user?.id}
+                  onCancel={['OPEN', 'QUOTED'].includes(req.status) ? () => handleCancel(req.id) : undefined}
+                  isCancelling={cancellingId === req.id}
                 />
               ))}
             </div>

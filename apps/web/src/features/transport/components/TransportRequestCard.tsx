@@ -5,7 +5,7 @@ import { Link } from '@/i18n/navigation';
 import {
   Package, Sofa, HardHat, Container, ArrowLeftRight, Wrench,
   MapPin, Weight, Calendar, MessageSquare, Clock, ChevronLeft,
-  Eye, RefreshCw, Loader2, Copy, Edit2,
+  Eye, RefreshCw, Loader2, Copy, Edit2, XCircle
 } from 'lucide-react';
 import type { TransportRequest, TransportServiceType } from '../types';
 import {
@@ -37,9 +37,11 @@ interface Props {
   onDuplicate?: () => void;
   isRenewing?: boolean;
   currentUserId?: string;
+  onCancel?: () => void;
+  isCancelling?: boolean;
 }
 
-export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId }: Props) {
+export default function TransportRequestCard({ request, onRepost, onDuplicate, isRenewing, currentUserId, onCancel, isCancelling }: Props) {
   const t = useTranslations();
   const isOwner = !!currentUserId && currentUserId === request.userId;
   const canEdit = isOwner && (request.status === 'OPEN' || request.status === 'QUOTED');
@@ -159,6 +161,25 @@ export default function TransportRequestCard({ request, onRepost, onDuplicate, i
               <Edit2 size={14} />
               تعديل
             </Link>
+          )}
+
+          {canEdit && onCancel && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCancel();
+              }}
+              disabled={isCancelling}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-error)] text-[var(--color-error)] text-xs font-bold hover:bg-red-50 transition-all disabled:opacity-50"
+            >
+              {isCancelling ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <XCircle size={14} />
+              )}
+              إلغاء
+            </button>
           )}
 
           {onDuplicate && (

@@ -209,8 +209,10 @@ export interface GetRequestsParams {
   serviceType?: TransportServiceType
   status?: TransportRequestStatus
   fromGovernorate?: string
+  fromWilayat?: string
   fromCity?: string
   toGovernorate?: string
+  toWilayat?: string
   toCity?: string
   sortBy?: 'createdAt' | 'budgetMax' | 'scheduledAt'
   sortOrder?: 'asc' | 'desc'
