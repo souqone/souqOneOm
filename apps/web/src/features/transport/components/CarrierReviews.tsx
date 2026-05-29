@@ -5,13 +5,14 @@ import { transportApi } from '../api';
 import StarRating from '@/components/ui/StarRating';
 import { Loader2, User } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/utils';
+import type { CarrierReview } from '../types';
 
 interface Props {
   carrierId: string;
 }
 
 export default function CarrierReviews({ carrierId }: Props) {
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<CarrierReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);

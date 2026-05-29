@@ -9,6 +9,7 @@ import type {
   CreateTransportRequestDto,
   CreateQuoteDto,
   CreateCarrierProfileDto,
+  CarrierReview,
 } from './types'
 
 // ─── Helper ───────────────────────────────────────
@@ -210,7 +211,7 @@ export const transportApi = {
     const res = await apiFetch(`/transport/carriers/${carrierId}/reviews?${qs({ page, limit })}`)
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'Error fetching reviews')
-    return data as PaginatedResponse<any>
+    return data as PaginatedResponse<CarrierReview>
   },
 }
 

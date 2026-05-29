@@ -217,3 +217,14 @@ export interface GetRequestsParams {
   sortBy?: 'createdAt' | 'budgetMax' | 'scheduledAt'
   sortOrder?: 'asc' | 'desc'
 }
+
+export interface CarrierReview {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  reviewer?: {
+    displayName?: string;
+    avatarUrl?: string;
+  };
+}
