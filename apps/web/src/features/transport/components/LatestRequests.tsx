@@ -1,12 +1,14 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useRequests } from '../hooks/useRequests';
 import TransportRequestCard from './TransportRequestCard';
 import RequestCardSkeleton from './RequestCardSkeleton';
 
 export default function LatestRequests() {
+  const t = useTranslations('transport');
   const { data, isLoading, isError } = useRequests({ limit: 6, sortBy: 'createdAt', sortOrder: 'desc' });
 
   return (
@@ -15,17 +17,17 @@ export default function LatestRequests() {
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-              أحدث طلبات النقل
+              {t('latestRequests')}
             </h2>
             <p className="text-sm text-[var(--color-on-surface-variant)] mt-0.5">
-              طلبات نشطة تنتظر عروض المزودين
+              {t('latestRequestsSubtitle')}
             </p>
           </div>
           <Link
             href="/transport/browse"
             className="inline-flex items-center gap-1.5 text-sm font-bold text-[var(--color-brand-navy)] hover:text-[var(--color-brand-amber)] transition-colors"
           >
-            عرض الكل
+            {t('viewAll')}
             <ArrowLeft size={16} />
           </Link>
         </div>
