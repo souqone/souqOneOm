@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { Plus, Package } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import type { TransportRequest, RequestStatus } from '@/features/transport/types';
@@ -19,27 +20,29 @@ interface TabDef {
   label: string;
 }
 
-const TABS: TabDef[] = [
-  { key: 'ALL', label: 'الكل' },
-  { key: 'OPEN', label: 'مفتوح' },
-  { key: 'QUOTED', label: 'وصلت عروض' },
-  { key: 'EXPIRED', label: 'منتهي' },
-  { key: 'COMPLETED', label: 'مكتمل' },
-  { key: 'CANCELLED', label: 'ملغى' },
-];
-
-const EMPTY_MESSAGES: Record<TabStatus, string> = {
-  ALL: 'لا توجد طلبات بعد. أنشئ طلبك الأول!',
-  OPEN: 'لا توجد طلبات مفتوحة حالياً',
-  QUOTED: 'لا توجد طلبات وصلت لها عروض',
-  ACCEPTED: 'لا توجد طلبات مقبولة',
-  IN_PROGRESS: 'لا توجد طلبات جارٍ تنفيذها',
-  COMPLETED: 'لا توجد طلبات مكتملة بعد',
-  CANCELLED: 'لا توجد طلبات ملغاة',
-  EXPIRED: 'لا توجد طلبات منتهية الصلاحية',
-};
-
 export default function MyRequestsPage() {
+  const t = useTranslations('transport');
+  
+  const TABS: TabDef[] = [
+    { key: 'ALL', label: t('tabs.all') },
+    { key: 'OPEN', label: t('tabs.open') },
+    { key: 'QUOTED', label: t('tabs.quoted') },
+    { key: 'EXPIRED', label: t('tabs.expired') },
+    { key: 'COMPLETED', label: t('tabs.completed') },
+    { key: 'CANCELLED', label: t('tabs.cancelled') },
+  ];
+
+  const EMPTY_MESSAGES: Record<TabStatus, string> = {
+    ALL: t('emptyStates.requestsAll'),
+    OPEN: t('emptyStates.requestsOpen'),
+    QUOTED: t('emptyStates.requestsQuoted'),
+    ACCEPTED: t('emptyStates.requestsAccepted'),
+    IN_PROGRESS: t('emptyStates.requestsInProgress'),
+    COMPLETED: t('emptyStates.requestsCompleted'),
+    CANCELLED: t('emptyStates.requestsCancelled'),
+    EXPIRED: t('emptyStates.requestsExpired'),
+  };
+
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -131,14 +134,14 @@ export default function MyRequestsPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">طلباتي</h1>
+            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">{t('myRequests')}</h1>
             <p className="text-sm text-[var(--color-on-surface-muted)]">
-              إدارة طلبات النقل الخاصة بك
+              {t('emptyStates.manageYourRequests')}
             </p>
           </div>
           <Link href="/transport/new" className="btn-primary">
             <Plus size={16} />
-            أنشئ طلب جديد
+            {t('newRequest')}
           </Link>
         </div>
 

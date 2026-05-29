@@ -4066,6 +4066,31 @@
         "acceptFailed": "تعذّر قبول العرض. حاول مرة أخرى.",
         "renewFailed": "تعذّر تجديد الطلب. حاول مرة أخرى."
       }
+    },
+    "tabs": {
+      "all": "الكل",
+      "open": "مفتوح",
+      "quoted": "وصلت عروض",
+      "expired": "منتهي",
+      "completed": "مكتمل",
+      "cancelled": "ملغى",
+      "pending": "بانتظار الرد",
+      "accepted": "مقبول",
+      "rejected": "مرفوض"
+    },
+    "emptyStates": {
+      "requestsAll": "لا توجد طلبات بعد. أنشئ طلبك الأول!",
+      "requestsOpen": "لا توجد طلبات مفتوحة حالياً",
+      "requestsQuoted": "لا توجد طلبات وصلت لها عروض",
+      "requestsAccepted": "لا توجد طلبات مقبولة",
+      "requestsInProgress": "لا توجد طلبات جارٍ تنفيذها",
+      "requestsCompleted": "لا توجد طلبات مكتملة بعد",
+      "requestsCancelled": "لا توجد طلبات ملغاة",
+      "requestsExpired": "لا توجد طلبات منتهية الصلاحية",
+      "manageYourRequests": "إدارة طلبات النقل الخاصة بك",
+      "quotesAll": "لم تقدم أي عروض بعد",
+      "quotesStatus": "لا توجد عروض بحالة \"{status}\"",
+      "manageYourQuotes": "تتبع العروض التي قدمتها على طلبات النقل"
     }
   },
   "status": {

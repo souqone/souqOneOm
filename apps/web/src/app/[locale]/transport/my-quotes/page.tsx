@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import {
   MessageSquare,
   CheckCircle,
@@ -27,13 +28,6 @@ interface TabDef {
   label: string;
 }
 
-const TABS: TabDef[] = [
-  { key: 'ALL', label: 'الكل' },
-  { key: 'PENDING', label: 'بانتظار الرد' },
-  { key: 'ACCEPTED', label: 'مقبول' },
-  { key: 'REJECTED', label: 'مرفوض' },
-];
-
 const QUOTE_STATUS_ICON: Record<QuoteStatus, React.ElementType> = {
   PENDING: Clock,
   ACCEPTED: CheckCircle,
@@ -42,6 +36,15 @@ const QUOTE_STATUS_ICON: Record<QuoteStatus, React.ElementType> = {
 };
 
 export default function MyQuotesPage() {
+  const t = useTranslations('transport');
+
+  const TABS: TabDef[] = [
+    { key: 'ALL', label: t('tabs.all') },
+    { key: 'PENDING', label: t('tabs.pending') },
+    { key: 'ACCEPTED', label: t('tabs.accepted') },
+    { key: 'REJECTED', label: t('tabs.rejected') },
+  ];
+
   const [quotes, setQuotes] = useState<TransportQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -98,9 +101,9 @@ export default function MyQuotesPage() {
       <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">عروضي</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">{t('myQuotes')}</h1>
           <p className="text-sm text-[var(--color-on-surface-muted)]">
-            تتبع العروض التي قدمتها على طلبات النقل
+            {t('emptyStates.manageYourQuotes')}
           </p>
         </div>
 
@@ -166,8 +169,8 @@ export default function MyQuotesPage() {
               <MessageSquare size={28} className="text-[var(--color-on-surface-muted)]" />
             </div>
             <p className="text-base font-semibold text-[var(--color-on-surface)]">
-              {activeTab === 'ALL' ?'لم تقدم أي عروض بعد'
-                : `لا توجد عروض بحالة "${QUOTE_STATUS_LABELS[activeTab as QuoteStatus]}"`}
+              {activeTab === 'ALL' ? t('emptyStates.quotesAll')
+                : t('emptyStates.quotesStatus', { status: t(`quoteStatus.${activeTab}`) })}
             </p>
             {activeTab === 'ALL' && (
               <Link href="/transport/browse" className="btn-primary">

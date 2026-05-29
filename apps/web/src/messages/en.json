@@ -4036,6 +4036,31 @@
         "acceptFailed": "Failed to accept quote. Please try again.",
         "renewFailed": "Failed to renew request. Please try again."
       }
+    },
+    "tabs": {
+      "all": "All",
+      "open": "Open",
+      "quoted": "Quoted",
+      "expired": "Expired",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "emptyStates": {
+      "requestsAll": "No requests yet. Create your first request!",
+      "requestsOpen": "No open requests currently",
+      "requestsQuoted": "No requests with quotes",
+      "requestsAccepted": "No accepted requests",
+      "requestsInProgress": "No requests in progress",
+      "requestsCompleted": "No completed requests yet",
+      "requestsCancelled": "No cancelled requests",
+      "requestsExpired": "No expired requests",
+      "manageYourRequests": "Manage your transport requests",
+      "quotesAll": "You haven't submitted any quotes yet",
+      "quotesStatus": "No quotes with status \"{status}\"",
+      "manageYourQuotes": "Track the quotes you've submitted"
     }
   },
   "status": {
