@@ -4086,7 +4086,11 @@
       "bookingsInProgress": "No bookings in progress",
       "bookingsCompleted": "No completed bookings",
       "bookingsCancelled": "No cancelled bookings",
-      "loadFailed": "Failed to load data, please try again"
+      "loadFailed": "Failed to load data, please try again",
+      "noRequests": "No requests found",
+      "tryFilters": "Try adjusting your search or filter criteria",
+      "noNearbyRequests": "No nearby requests at the moment",
+      "noQuotesYet": "You haven't submitted any quotes yet"
     },
     "serviceTypeLabel": "Service Type",
     "statusLabel": "Status",
@@ -4178,13 +4182,7 @@
     "recentQuotes": "My Recent Quotes",
     "profileSummary": "Profile Summary",
     "viewMyProfile": "View My Profile",
-    "browseAllRequests": "Browse All Requests",
-    "emptyStates": {
-      "noRequests": "No requests found",
-      "tryFilters": "Try adjusting your search or filter criteria",
-      "noNearbyRequests": "No nearby requests at the moment",
-      "noQuotesYet": "You haven't submitted any quotes yet"
-    }
+    "browseAllRequests": "Browse All Requests"
   },
   "status": {
     "OPEN": "Open",
