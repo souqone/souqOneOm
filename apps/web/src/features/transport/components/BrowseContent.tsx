@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Link, useRouter, usePathname } from '@/i18n/navigation';
-import { Truck } from 'lucide-react';
+import { Link, usePathname } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
+import { SlidersHorizontal, Truck, XCircle } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import RequestsGrid from './RequestsGrid';
 import ActiveFilterChips from './ActiveFilterChips';
@@ -41,37 +42,65 @@ function parseSortBy(sortBy?: string): Pick<GetRequestsParams, 'sortBy' | 'sortO
 export default function BrowseContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { data: carrierProfile } = useMyCarrierProfile(isAuthenticated);
   const isCarrier = !!carrierProfile;
 
+  const t = useTranslations('transport');
   const [filters, setFilters] = useState<BrowseFilters>({
     serviceType: searchParams.get('serviceType') ?? undefined,
     status: searchParams.get('status') ?? undefined,
     fromGovernorate: searchParams.get('fromGovernorate') ?? undefined,
     fromWilayat: searchParams.get('fromWilayat') ?? undefined,
+    fromCity: searchParams.get('fromCity') ?? undefined,
     toGovernorate: searchParams.get('toGovernorate') ?? undefined,
     toWilayat: searchParams.get('toWilayat') ?? undefined,
+    toCity: searchParams.get('toCity') ?? undefined,
     sortBy: searchParams.get('sortBy') ?? undefined,
   });
   const [currentPage, setCurrentPage] = useState(1);
 
+  // B-1: re-sync React state when the browser navigates back/forward
+  // (filters are pushed via window.history.replaceState, not Next.js router,
+  // so we need a popstate listener to pull the URL back into state)
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = new URLSearchParams(window.location.search);
+      setFilters({
+        serviceType:     p.get('serviceType')     ?? undefined,
+        status:          p.get('status')          ?? undefined,
+        fromGovernorate: p.get('fromGovernorate') ?? undefined,
+        fromWilayat:     p.get('fromWilayat')     ?? undefined,
+        fromCity:        p.get('fromCity')         ?? undefined,
+        toGovernorate:   p.get('toGovernorate')   ?? undefined,
+        toWilayat:       p.get('toWilayat')       ?? undefined,
+        toCity:          p.get('toCity')           ?? undefined,
+        sortBy:          p.get('sortBy')           ?? undefined,
+      });
+      setCurrentPage(1);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleFilterChange = useCallback((newFilters: BrowseFilters) => {
     setFilters(newFilters);
     setCurrentPage(1);
-    // Sync to URL
+    // Sync to URL via history API (avoids Next.js router re-render)
     const params = new URLSearchParams();
     if (newFilters.serviceType) params.set('serviceType', newFilters.serviceType);
     if (newFilters.status) params.set('status', newFilters.status);
     if (newFilters.fromGovernorate) params.set('fromGovernorate', newFilters.fromGovernorate);
     if (newFilters.fromWilayat) params.set('fromWilayat', newFilters.fromWilayat);
+    if (newFilters.fromCity) params.set('fromCity', newFilters.fromCity);
     if (newFilters.toGovernorate) params.set('toGovernorate', newFilters.toGovernorate);
     if (newFilters.toWilayat) params.set('toWilayat', newFilters.toWilayat);
+    if (newFilters.toCity) params.set('toCity', newFilters.toCity);
     if (newFilters.sortBy) params.set('sortBy', newFilters.sortBy);
     const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ''}` as any, { scroll: false });
-  }, [pathname, router]);
+    const newUrl = `${pathname}${qs ? '?' + qs : ''}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [pathname]);
 
   const requestParams: GetRequestsParams = {
     page: currentPage,
@@ -87,16 +116,25 @@ export default function BrowseContent() {
     ...parseSortBy(filters.sortBy),
   };
 
+  // Count active filters for the mobile badge
+  const activeFilterCount = [
+    filters.serviceType,
+    filters.status,
+    filters.fromGovernorate,
+    filters.toGovernorate,
+    filters.sortBy,
+  ].filter(Boolean).length;
+
   return (
     <div className="min-h-screen bg-[var(--color-background)]" dir="rtl">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[var(--color-on-surface)]" style={{ fontWeight: 700 }}>
-            تصفّح طلبات النقل
+            {t('browseTitle')}
           </h1>
           <p className="text-sm text-[var(--color-on-surface-variant)] mt-1">
-            ابحث عن طلبات النقل المناسبة وقدّم عروضك
+            {t('browseSubtitle')}
           </p>
         </div>
 
@@ -108,15 +146,15 @@ export default function BrowseContent() {
                 <Truck size={20} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[var(--color-on-surface)]">ناقل؟ سجّل وابدأ تقديم عروض على الطلبات</p>
-                <p className="text-xs text-[var(--color-on-surface-variant)]">انضم لشبكة ناقلي SouqOne وحقق دخلاً إضافياً</p>
+                <p className="text-sm font-bold text-[var(--color-on-surface)]">{t('carrierCtaTitle')}</p>
+                <p className="text-xs text-[var(--color-on-surface-variant)]">{t('carrierCtaSubtitle')}</p>
               </div>
             </div>
             <Link
               href="/transport/carriers/register"
               className="btn-primary text-sm px-4 py-2 flex-shrink-0"
             >
-              سجّل كناقل
+              {t('registerAsCarrier')}
             </Link>
           </div>
         )}
@@ -126,17 +164,17 @@ export default function BrowseContent() {
           <div className="flex items-center justify-between gap-4 p-4 mb-4 rounded-2xl border border-[var(--color-brand-navy)]/20 bg-[var(--color-brand-navy)]/5">
             <div>
               <p className="font-semibold text-sm text-[var(--color-on-surface)]">
-                هل لديك مركبة وتريد تقديم خدمات نقل؟
+                {t('carrierCtaAuthTitle')}
               </p>
               <p className="text-xs text-[var(--color-on-surface-muted)] mt-0.5">
-                سجّل كناقل مجاناً وابدأ في استقبال الطلبات
+                {t('carrierCtaAuthSubtitle')}
               </p>
             </div>
             <Link
               href="/transport/carriers/register"
               className="btn-primary text-sm whitespace-nowrap flex-shrink-0"
             >
-              سجّل كناقل
+              {t('registerAsCarrier')}
             </Link>
           </div>
         )}
@@ -144,6 +182,21 @@ export default function BrowseContent() {
         {/* Mobile filter trigger */}
         <div className="flex items-center gap-3 mb-4 lg:hidden">
           <MobileFilterSheet filters={filters} onApply={handleFilterChange} />
+          {activeFilterCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-brand-navy)] text-white text-xs font-bold">
+              <SlidersHorizontal size={12} />
+              {activeFilterCount} {t('activeFilters')}
+            </span>
+          )}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => handleFilterChange({})}
+              className="flex items-center gap-1 text-xs text-[var(--color-error)] font-semibold hover:opacity-80 transition-opacity"
+            >
+              <XCircle size={13} />
+              {t('clearFilters')}
+            </button>
+          )}
         </div>
 
         {/* Active filter chips */}

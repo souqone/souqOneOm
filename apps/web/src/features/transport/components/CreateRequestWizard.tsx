@@ -71,10 +71,14 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
     mode: 'onBlur',
   });
 
-  // Load draft from sessionStorage if no initialData is provided
+  // Load draft from sessionStorage if no initialData is provided.
+  // Checks transport_draft first (set by handleDuplicate) then falls back to
+  // transport_wizard_autosave (saved on step advance / unmount for auth interruptions).
   useEffect(() => {
-    if (!initialData) {
-      const draftStr = sessionStorage.getItem('transport_draft');
+    if (!initialData && !requestId) {
+      const draftStr =
+        sessionStorage.getItem('transport_draft') ||
+        sessionStorage.getItem('transport_wizard_autosave');
       if (draftStr) {
         try {
           const draft = JSON.parse(draftStr);
@@ -83,18 +87,39 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
               methods.setValue(key as keyof CreateRequestFormData, draft[key]);
             }
           });
+          // transport_draft is one-shot; transport_wizard_autosave is kept until submit
           sessionStorage.removeItem('transport_draft');
         } catch (e) {
           console.error('Failed to parse draft from sessionStorage', e);
         }
       }
     }
-  }, [initialData, methods]);
+  }, [initialData, requestId, methods]);
+
+  // QA-H-3: persist form values on unmount so an auth interruption (e.g. token
+  // expiry causes AuthGuard to unmount the wizard) doesn't lose the user's work.
+  useEffect(() => {
+    if (requestId) return; // edits are already persisted server-side
+    return () => {
+      try {
+        sessionStorage.setItem(
+          'transport_wizard_autosave',
+          JSON.stringify(methods.getValues())
+        );
+      } catch {}
+    };
+  }, [methods, requestId]);
 
   async function handleNext() {
     const fields = STEP_FIELDS[currentStep];
     const valid = await methods.trigger(fields);
     if (valid) {
+      // QA-H-3: save progress on each forward step so data survives auth interruption
+      if (!requestId) {
+        try {
+          sessionStorage.setItem('transport_wizard_autosave', JSON.stringify(methods.getValues()));
+        } catch {}
+      }
       setCurrentStep((s) => Math.min(s + 1, TOTAL_STEPS));
     } else {
       toast.error('يرجى إكمال الحقول المطلوبة قبل المتابعة');
@@ -107,6 +132,17 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
 
   async function onSubmit(data: CreateRequestFormData) {
     if (submittedRef.current) return;
+
+    const budgetMinNum = data.budgetMin ? Number(data.budgetMin) : undefined;
+    const budgetMaxNum = data.budgetMax ? Number(data.budgetMax) : undefined;
+    if (budgetMinNum !== undefined && budgetMaxNum !== undefined &&
+        budgetMinNum > budgetMaxNum) {
+      toast.error('الحد الأدنى للميزانية يجب أن يكون أقل من الحد الأعلى');
+      submittedRef.current = false;
+      setIsSubmitting(false);
+      return;
+    }
+
     submittedRef.current = true;
     setIsSubmitting(true);
     try {
@@ -122,7 +158,13 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
         weightTons: data.weightTons ? Number(data.weightTons) : undefined,
         requiresHelper: data.requiresHelper,
         notes: data.notes,
-        scheduledAt: data.timingType === 'scheduled' ? data.scheduledAt : undefined,
+        // M-1: convert the datetime-local string (browser local time) to a
+        // proper UTC ISO string before sending to the API, so the server
+        // receives the correct point in time regardless of timezone.
+        scheduledAt:
+          data.timingType === 'scheduled' && data.scheduledAt
+            ? new Date(data.scheduledAt).toISOString()
+            : undefined,
         isFlexible: data.isFlexible,
         budgetMin: data.budgetMin ? Number(data.budgetMin) : undefined,
         budgetMax: data.budgetMax ? Number(data.budgetMax) : undefined,
@@ -138,11 +180,22 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
       } else {
         await transportApi.createRequest(dto);
         toast.success('تم إرسال طلبك بنجاح! ستبدأ في استقبال العروض قريباً.');
+        // QA-H-3: clear autosave after successful create — data is now on the server
+        try { sessionStorage.removeItem('transport_wizard_autosave'); } catch {}
       }
       router.push('/transport/my-requests');
-    } catch {
+    } catch (err: unknown) {
       submittedRef.current = false;
-      toast.error('حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.');
+      const status = (err as { status?: number })?.status;
+      if (status === 403) {
+        toast.error('لا تملك صلاحية تنفيذ هذه العملية.');
+      } else if (status === 409) {
+        toast.error('تعارض في البيانات — قد يكون الطلب موجوداً بالفعل.');
+      } else if (!status) {
+        toast.error('تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.');
+      } else {
+        toast.error('حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.');
+      }
     } finally {
       setIsSubmitting(false);
     }

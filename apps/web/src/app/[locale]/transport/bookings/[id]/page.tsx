@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   ArrowRight,
   CheckCircle,
@@ -20,6 +20,7 @@ import {
   XCircle,
   Loader2,
   MessageSquare,
+  AlertCircle,
 } from 'lucide-react';
 import type { TransportBooking, CarrierProfile, BookingStatus } from '@/features/transport/types';
 import { transportApi } from '@/features/transport/api';
@@ -114,8 +115,11 @@ function BookingTimeline({ status, cancelledAt }: { status: string; cancelledAt?
   );
 }
 
-export default function BookingDetailPage() {
+// NEW-C-1: inner component so AuthGuard wraps ALL render paths (loading,
+// error, ownership guard) — not just the happy-path return at the bottom.
+function BookingDetailContent() {
   const params = useParams();
+  const t = useTranslations('transport');
   const { user } = useAuth();
   const id = params?.id as string;
 
@@ -128,6 +132,16 @@ export default function BookingDetailPage() {
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [deliveryNote, setDeliveryNote] = useState('');
+  const [actionError, setActionError] = useState('');
+  // QA-H-2: ref guard prevents double-fire on handleMarkInProgress / handleComplete
+  const actionRef = useRef(false);
+
+  useEffect(() => {
+    if (!actionError) return;
+    // NEW-M-2: renamed from `t` to avoid shadowing the `t` useTranslations alias
+    const timer = setTimeout(() => setActionError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
 
   useEffect(() => {
     const load = async () => {
@@ -147,24 +161,38 @@ export default function BookingDetailPage() {
   }, [id]);
 
   const handleMarkInProgress = async () => {
-    if (!booking) return;
+    // QA-H-2: single-flight guard prevents double-tap race condition
+    if (!booking || actionRef.current) return;
+    actionRef.current = true;
     setActionLoading(true);
+    setActionError('');
     try {
       const updated = await transportApi.markInProgress(booking.id);
       setBooking((prev) => prev ? { ...prev, status: updated.status } : prev);
+    } catch {
+      setActionError('تعذّر تحديث حالة الحجز، حاول مجدداً');
     } finally {
+      actionRef.current = false;
       setActionLoading(false);
     }
   };
 
   const handleComplete = async () => {
-    if (!booking) return;
+    // QA-H-2: single-flight guard prevents double-tap race condition
+    if (!booking || actionRef.current) return;
+    actionRef.current = true;
     setActionLoading(true);
+    setActionError('');
     try {
       const updated = await transportApi.completeBooking(booking.id, deliveryNote.trim() || undefined);
       setBooking((prev) => prev ? { ...prev, status: updated.status, completedAt: updated.completedAt, deliveryNote: updated.deliveryNote } : prev);
       setShowCompleteModal(false);
+    } catch {
+      // QA-H-1: keep modal open on error so the user can retry without
+      // losing the delivery note they typed — only close on success above.
+      setActionError('تعذّر تأكيد الاستلام، حاول مجدداً');
     } finally {
+      actionRef.current = false;
       setActionLoading(false);
     }
   };
@@ -176,11 +204,14 @@ export default function BookingDetailPage() {
       return;
     }
     setActionLoading(true);
+    setActionError('');
     try {
       await transportApi.cancelBooking(booking.id, cancelReason.trim() || undefined);
       setCancelled(true);
       setShowCancelForm(false);
       setBooking((prev) => prev ? { ...prev, status: 'CANCELLED', cancelledAt: new Date().toISOString(), cancellationReason: cancelReason.trim() || undefined } : prev);
+    } catch {
+      setActionError('تعذّر إلغاء الحجز، حاول مجدداً');
     } finally {
       setActionLoading(false);
     }
@@ -193,6 +224,25 @@ export default function BookingDetailPage() {
 
   if (error || !booking) return <TransportPageError message={error || 'الحجز غير موجود'} />;
 
+  // ── Ownership guard: only the shipper or the carrier may view this page ──
+  if (!isShipper && !isCarrier) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" dir="rtl">
+        <div className="flex flex-col items-center gap-4 text-center px-4">
+          <XCircle size={40} className="text-[var(--color-error)]" />
+          <p className="text-base font-semibold text-[var(--color-on-surface)]">
+            ليس لديك صلاحية لعرض هذا الحجز
+          </p>
+          <Link href="/transport/my-bookings" className="btn-primary">
+            <ArrowRight size={16} />
+            {t('myBookings')}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const statusColorMap: Record<string, string> = {
     ACCEPTED: 'var(--color-status-accepted)',
     IN_PROGRESS: 'var(--color-status-in-progress)',
@@ -203,7 +253,6 @@ export default function BookingDetailPage() {
   const statusColor = statusColorMap[booking.status] ?? 'var(--color-on-surface-muted)';
 
   return (
-    <AuthGuard>
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
       <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
         {/* Back */}
@@ -212,7 +261,7 @@ export default function BookingDetailPage() {
           className="inline-flex items-center gap-2 text-sm text-[var(--color-on-surface-variant)] hover:text-[var(--color-brand-navy)] font-semibold mb-6 transition-colors"
         >
           <ArrowRight size={16} />
-          {isCarrier ? 'عروضي' : 'حجوزاتي'}
+          {isCarrier ? t('myQuotes') : t('myBookings')}
         </Link>
 
         {/* Status Header */}
@@ -252,6 +301,13 @@ export default function BookingDetailPage() {
         <div className="card-base p-5 mb-6 overflow-x-auto">
           <BookingTimeline status={booking.status} cancelledAt={booking.cancelledAt} />
         </div>
+
+        {actionError && (
+          <div className="mb-4 flex items-center gap-2 bg-[var(--color-error-light)] text-[var(--color-error)] text-sm px-4 py-3 rounded-xl">
+            <AlertCircle size={15} />
+            {actionError}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           {/* Main */}
@@ -476,7 +532,7 @@ export default function BookingDetailPage() {
             )}
 
             {/* Rating — after completion */}
-            {booking.status === 'COMPLETED' && booking.carrier && (
+            {booking.status === 'COMPLETED' && booking.carrier && isShipper && (
               <div className="card-base p-5 flex flex-col gap-3">
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
                   قيّم الناقل
@@ -523,6 +579,13 @@ export default function BookingDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BookingDetailPage() {
+  return (
+    <AuthGuard>
+      <BookingDetailContent />
     </AuthGuard>
   );
 }

@@ -3883,7 +3883,9 @@
       "requestQuote": "طلب تسعيرة"
     },
     "steps": {
+      "dateMustBeFuture": "يجب أن يكون الموعد في المستقبل",
       "serviceType": "نوع الخدمة",
+      "serviceTypeDesc": "اختر نوع البضاعة أو الخدمة التي تريد نقلها",
       "route": "المسار",
       "routeDesc": "حدّد نقطة التحميل ونقطة التسليم",
       "routeSelected": "مسار محدد ✓",
@@ -3906,6 +3908,7 @@
       "weightLabel": "وزن الحمولة المتوقع",
       "weightDesc": "يساعد الناقل في اختيار الشاحنة المناسبة",
       "weightPlaceholder": "حدد الوزن (طن)",
+      "weightTooHigh": "الوزن لا يمكن أن يتجاوز 9999 طن",
       "helpersDesc": "هل تحتاج عمال لمساعدتك في التحميل والتنزيل؟",
       "yesHelpers": "نعم، أحتاج مساعدة",
       "noHelpers": "لا، سأتدبر الأمر",
@@ -3987,6 +3990,18 @@
       "title": "سجّل كمزود نقل",
       "subtitle": "أنشئ بروفايل مزود واستقبل طلبات النقل"
     },
+    "onboarding": {
+      "title": "مرحباً بك في سوق وان!",
+      "subtitle": "تم تسجيلك كناقل بنجاح. إليك كيف تبدأ:",
+      "step1Title": "تصفّح الطلبات",
+      "step1Desc": "ابحث عن طلبات تناسب مركبتك ومنطقتك من صفحة التصفح",
+      "step2Title": "قدّم عرض سعر",
+      "step2Desc": "أدخل سعرك وأي ملاحظات للشاحن — العرض مجاني تماماً",
+      "step3Title": "ابدأ الرحلة وأتمّها",
+      "step3Desc": "بعد قبول عرضك، اضغط \"بدأت التحميل\" لبدء الرحلة — الشاحن هو من يؤكد الاستلام عند الوصول",
+      "browseCta": "ابدأ تصفح الطلبات",
+      "dashboardCta": "الذهاب للوحة التحكم"
+    },
     "myRequests": "طلباتي",
     "myQuotes": "عروضي",
     "all": "الكل",
@@ -4060,7 +4075,9 @@
       "messageLabel": "رسالة للعميل",
       "pricePlaceholder": "مثال: 150",
       "submitBtn": "إرسال العرض",
-      "submittingBtn": "جارٍ الإرسال..."
+      "submittingBtn": "جارٍ الإرسال...",
+      "withdraw": "سحب العرض",
+      "viewBooking": "عرض الحجز"
     },
     "tabs": {
       "all": "الكل",
@@ -4073,7 +4090,20 @@
       "accepted": "مقبول",
       "rejected": "مرفوض"
     },
+    "errors": {
+      "loadFailed": "تعذّر تحميل البيانات، حاول مجدداً",
+      "renewFailed": "تعذّر تجديد الطلب، حاول مجدداً",
+      "cancelFailed": "تعذّر إلغاء الطلب، حاول مجدداً",
+      "selectVehicleType": "يرجى اختيار نوع مركبة واحد على الأقل",
+      "selectServiceType": "يرجى اختيار نوع خدمة واحد على الأقل",
+      "selectGovernorate": "يرجى اختيار المحافظة",
+      "invalidPhone": "رقم الهاتف غير صحيح — يجب أن يكون رقماً عُمانياً صحيحاً",
+      "invalidWhatsapp": "رقم واتساب غير صحيح — يجب أن يكون رقماً عُمانياً صحيحاً",
+      "withdrawFailed": "تعذّر سحب العرض، حاول مجدداً",
+      "sameGovernorate": "محافظة الانطلاق والوصول لا يمكن أن تكونا نفس المحافظة"
+    },
     "emptyStates": {
+      "createFirstRequest": "أنشئ طلبك الأول",
       "requestsAll": "لا توجد طلبات بعد. أنشئ طلبك الأول!",
       "requestsOpen": "لا توجد طلبات مفتوحة حالياً",
       "requestsQuoted": "لا توجد طلبات وصلت لها عروض",
@@ -4103,6 +4133,9 @@
     "clearAll": "مسح الكل",
     "filterResults": "تصفية النتائج",
     "applyFilters": "تطبيق الفلاتر",
+    "activeFilters": "فلتر نشط",
+    "clearFilters": "مسح الفلاتر",
+    "noCargoDesc": "لم يتم تحديد وصف للبضاعة",
     "sortOptions": {
       "createdAt_desc": "الأحدث أولاً",
       "createdAt_asc": "الأقدم أولاً",
@@ -4155,11 +4188,28 @@
     "quotesSubmitted": "عروض مقدمة",
     "quotesAccepted": "عروض مقبولة",
     "rating": "التقييم",
+    "reviewCount": "التقييمات",
+    "reviewsTitle": "التقييمات والآراء",
+    "memberSince": "عضو منذ",
+    "vehicleTypes": "أنواع المركبات",
+    "serviceTypes": "أنواع الخدمات",
+    "bio": "نبذة تعريفية",
+    "contactSection": "التواصل",
+    "whatsappContact": "تواصل عبر واتساب",
+    "requestQuote": "طلب عرض سعر",
+    "back": "العودة",
     "nearbyRequests": "طلبات قريبة منك",
     "recentQuotes": "عروضي الأخيرة",
     "profileSummary": "ملخص الملف",
     "viewMyProfile": "عرض ملفي الشخصي",
     "browseAllRequests": "عرض جميع الطلبات",
+    "browseTitle": "تصفّح طلبات النقل",
+    "browseSubtitle": "ابحث عن طلبات النقل المناسبة وقدّم عروضك",
+    "carrierCtaTitle": "ناقل؟ سجّل وابدأ تقديم عروض على الطلبات",
+    "carrierCtaSubtitle": "انضم لشبكة ناقلي SouqOne وحقق دخلاً إضافياً",
+    "carrierCtaAuthTitle": "هل لديك مركبة وتريد تقديم خدمات نقل؟",
+    "carrierCtaAuthSubtitle": "سجّل كناقل مجاناً وابدأ في استقبال الطلبات",
+    "registerAsCarrier": "سجّل كناقل",
     "emptyStates": {
       "noRequests": "لا توجد طلبات",
       "tryFilters": "جرّب تعديل معايير البحث أو التصفية",

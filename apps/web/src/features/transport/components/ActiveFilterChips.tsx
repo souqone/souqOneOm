@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { SERVICE_TYPE_LABELS, REQUEST_STATUS_LABELS, BROWSE_SORT_OPTIONS } from '../constants';
 import type { TransportServiceType, TransportRequestStatus } from '../types';
 import type { BrowseFilters } from './BrowseContent';
@@ -11,6 +12,7 @@ interface ActiveFilterChipsProps {
 }
 
 export default function ActiveFilterChips({ filters, onChange }: ActiveFilterChipsProps) {
+  const t = useTranslations('transport');
   const chips: { label: string; key: keyof BrowseFilters }[] = [];
 
   if (filters.serviceType) {
@@ -32,8 +34,8 @@ export default function ActiveFilterChips({ filters, onChange }: ActiveFilterChi
     chips.push({ label: `إلى: ${filters.toGovernorate}`, key: 'toGovernorate' });
   }
   if (filters.sortBy) {
-    const sortLabel = BROWSE_SORT_OPTIONS.find((o) => o.value === filters.sortBy)?.label;
-    if (sortLabel) chips.push({ label: sortLabel, key: 'sortBy' });
+    const match = BROWSE_SORT_OPTIONS.find((o) => o.value === filters.sortBy);
+    if (match) chips.push({ label: t(`sortOptions.${match.value}`), key: 'sortBy' });
   }
 
   if (chips.length === 0) return null;
@@ -47,7 +49,13 @@ export default function ActiveFilterChips({ filters, onChange }: ActiveFilterChi
         >
           {chip.label}
           <button
-            onClick={() => onChange({ ...filters, [chip.key]: undefined })}
+            onClick={() => {
+              const next: BrowseFilters = { ...filters, [chip.key]: undefined };
+              // B-2: removing a parent filter must also clear its child filters
+              if (chip.key === 'fromGovernorate') { next.fromCity = undefined; next.fromWilayat = undefined; }
+              if (chip.key === 'toGovernorate')   { next.toCity   = undefined; next.toWilayat   = undefined; }
+              onChange(next);
+            }}
             className="hover:text-[var(--color-error)] transition-colors"
             aria-label="إزالة الفلتر"
           >
@@ -59,7 +67,7 @@ export default function ActiveFilterChips({ filters, onChange }: ActiveFilterChi
         onClick={() => onChange({})}
         className="text-xs text-[var(--color-on-surface-muted)] hover:text-[var(--color-error)] transition-colors font-semibold"
       >
-        مسح الكل
+        {t('clearAll')}
       </button>
     </div>
   );

@@ -177,7 +177,13 @@ export default function Step2Route() {
                 {tCommon('fields.governorate')} <span className="text-[var(--color-error)]">*</span>
               </label>
               <select
-                {...register('toGovernorate')}
+                {...register('toGovernorate', {
+                  // S-3: destination must differ from origin governorate
+                  validate: (v) =>
+                    !fromGov || !v || v !== fromGov
+                      ? true
+                      : tCommon('errors.sameGovernorate'),
+                })}
                 className={`input-base text-sm ${errors.toGovernorate ? 'border-[var(--color-error)]' : ''}`}
               >
                 <option value="">{tCommon('fields.selectGovernorate')}</option>

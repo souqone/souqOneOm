@@ -44,7 +44,7 @@ export default function LatestRequests() {
           <div className="flex items-center gap-3 p-4 bg-[var(--color-error-light)] border border-red-200 rounded-2xl">
             <AlertCircle size={18} className="text-[var(--color-error)] flex-shrink-0" />
             <p className="text-sm text-[var(--color-error)]">
-              تعذّر تحميل الطلبات. يرجى المحاولة مرة أخرى.
+              {t('errors.loadFailed')}
             </p>
           </div>
         )}
@@ -58,7 +58,7 @@ export default function LatestRequests() {
             </div>
             {data.items.length === 0 && (
               <p className="text-center text-sm text-[var(--color-on-surface-muted)] py-8">
-                لا توجد طلبات حالياً
+                {t('empty.requests')}
               </p>
             )}
           </>

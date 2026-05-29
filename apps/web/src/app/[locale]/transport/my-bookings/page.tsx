@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { CalendarCheck, Package, MapPin, Banknote, Truck } from 'lucide-react';
@@ -53,28 +53,41 @@ export default function MyBookingsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
-  const load = async (tab: TabStatus, page = 1) => {
+  // Generation counter — ignores responses from stale concurrent requests
+  const loadGenRef = useRef(0);
+
+  const load = async (tab: TabStatus, page = 1, overrideRole?: 'shipper' | 'carrier') => {
+    const gen = ++loadGenRef.current;
+    const activeRole = overrideRole ?? role;
     setLoading(true);
     setError('');
     try {
       const res = await transportApi.myBookings(
-        role,
+        activeRole,
         page,
         ITEMS_PER_PAGE,
         tab !== 'ALL' ? tab : undefined
       );
+      if (gen !== loadGenRef.current) return; // stale response — discard
       setBookings(res.items);
       setTotalPages(res.meta?.totalPages || 1);
       setCurrentPage(page);
     } catch {
+      if (gen !== loadGenRef.current) return;
       setError(t('emptyStates.loadFailed'));
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) setLoading(false);
     }
   };
-  useEffect(() => { load(activeTab, 1); }, [activeTab, role]);
+  useEffect(() => { load(activeTab, 1); }, [activeTab, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTabChange = (tab: TabStatus) => { setActiveTab(tab); };
+
+  // Reset tab to ALL when switching roles so stale tab filters don't carry over
+  const handleRoleChange = (newRole: 'shipper' | 'carrier') => {
+    setRole(newRole);
+    setActiveTab('ALL');
+  };
 
   return (
     <AuthGuard>
@@ -97,7 +110,7 @@ export default function MyBookingsPage() {
         {/* Role Toggle */}
         <div className="flex gap-2 mb-4">
           <button
-            onClick={() => setRole('shipper')}
+            onClick={() => handleRoleChange('shipper')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               role === 'shipper'
                 ? 'bg-[var(--color-brand-navy)] text-white'
@@ -107,7 +120,7 @@ export default function MyBookingsPage() {
             {t('asShipper')}
           </button>
           <button
-            onClick={() => setRole('carrier')}
+            onClick={() => handleRoleChange('carrier')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               role === 'carrier'
                 ? 'bg-[var(--color-brand-navy)] text-white'

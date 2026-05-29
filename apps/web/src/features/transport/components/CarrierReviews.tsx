@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { transportApi } from '../api';
 import StarRating from '@/components/ui/StarRating';
 import { Loader2, User } from 'lucide-react';
@@ -16,15 +16,20 @@ export default function CarrierReviews({ carrierId }: Props) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  // NEW-S-1: generation counter — prevents stale carrier reviews from a
+  // previous profile being appended when the user navigates quickly.
+  const loadGenRef = useRef(0);
 
   useEffect(() => {
     loadReviews(1);
-  }, [carrierId]);
+  }, [carrierId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReviews = async (p: number) => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     try {
       const data = await transportApi.getCarrierReviews(carrierId, p, 5);
+      if (gen !== loadGenRef.current) return;
       if (p === 1) {
         setReviews(data.items);
       } else {
@@ -33,9 +38,10 @@ export default function CarrierReviews({ carrierId }: Props) {
       setHasMore(data.meta.page < data.meta.totalPages);
       setPage(p);
     } catch (err) {
+      if (gen !== loadGenRef.current) return;
       console.error(err);
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) setLoading(false);
     }
   };
 

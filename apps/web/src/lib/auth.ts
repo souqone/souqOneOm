@@ -122,6 +122,11 @@ export async function apiFetch(
     const newToken = await tryRefreshToken();
     if (newToken) {
       response = await fetch(url, { ...init, headers: buildHeaders(newToken) });
+    } else {
+      // S-1: refresh failed — stale access token is useless.
+      // Remove it so subsequent requests don't retry with an expired token
+      // and loop indefinitely until the user manually logs out.
+      clearAuthToken();
     }
   }
 

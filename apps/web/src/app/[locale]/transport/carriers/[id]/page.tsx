@@ -21,10 +21,14 @@ import { transportApi } from '@/features/transport/api';
 import { SERVICE_TYPE_LABELS, VEHICLE_TYPE_LABELS } from '@/features/transport/constants';
 import { TransportPageLoader, TransportPageError } from '@/features/transport/components/TransportPageState';
 import CarrierReviews from '@/features/transport/components/CarrierReviews';
+import { useTranslations } from 'next-intl';
+import { useAuth } from '@/providers/auth-provider';
 
 export default function PublicCarrierProfilePage() {
   const params = useParams();
   const id = params?.id as string;
+  const t = useTranslations('transport');
+  const { user } = useAuth();
 
   const [carrier, setCarrier] = useState<CarrierProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +70,7 @@ export default function PublicCarrierProfilePage() {
             className="inline-flex items-center gap-1.5 text-xs text-white/80 hover:text-white font-semibold transition-colors bg-white/10 hover:bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full"
           >
             <ArrowRight size={13} className="scale-x-[-1]" />
-            العودة
+            {t('back')}
           </Link>
         </div>
 
@@ -105,7 +109,7 @@ export default function PublicCarrierProfilePage() {
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${carrier.isAvailable ? 'bg-green-400' : 'bg-white/40'}`} />
-                  {carrier.isAvailable ? 'متاح' : 'غير متاح'}
+                  {carrier.isAvailable ? t('availableForWork') : t('notAvailable')}
                 </span>
               </div>
             </div>
@@ -121,25 +125,25 @@ export default function PublicCarrierProfilePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 {
-                  label: 'رحلات مكتملة',
+                  label: t('statsCompletedTrips'),
                   value: carrier.completedTrips,
                   icon: TrendingUp,
                   color: 'var(--color-brand-navy)',
                 },
                 {
-                  label: 'التقييم',
+                  label: t('rating'),
                   value: carrier.averageRating > 0 ? carrier.averageRating.toFixed(1) : '—',
                   icon: Star,
                   color: 'var(--color-brand-amber)',
                 },
                 {
-                  label: 'التقييمات',
+                  label: t('reviewCount'),
                   value: carrier.reviewCount,
                   icon: CheckCircle,
                   color: 'var(--color-success)',
                 },
                 {
-                  label: 'عضو منذ',
+                  label: t('memberSince'),
                   value: new Date(carrier.createdAt).getFullYear().toString(),
                   icon: Calendar,
                   color: 'var(--color-on-surface-variant)',
@@ -158,7 +162,7 @@ export default function PublicCarrierProfilePage() {
               <div className="flex items-center gap-2 mb-3">
                 <Truck size={16} className="text-[var(--color-brand-navy)]" />
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
-                  أنواع المركبات
+                  {t('vehicleTypes')}
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -178,7 +182,7 @@ export default function PublicCarrierProfilePage() {
               <div className="flex items-center gap-2 mb-3">
                 <Package size={16} className="text-[var(--color-brand-navy)]" />
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
-                  أنواع الخدمات
+                  {t('serviceTypes')}
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -197,7 +201,7 @@ export default function PublicCarrierProfilePage() {
             {carrier.bio && (
               <div className="card-base p-5">
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide mb-3">
-                  نبذة تعريفية
+                  {t('bio')}
                 </h2>
                 <p className="text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   {carrier.bio}
@@ -210,7 +214,7 @@ export default function PublicCarrierProfilePage() {
               <div className="flex items-center gap-2 mb-4">
                 <Star size={16} className="text-[var(--color-brand-amber)] fill-[var(--color-brand-amber)]" />
                 <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
-                  التقييمات والآراء
+                  {t('reviewsTitle')}
                 </h2>
               </div>
               <CarrierReviews carrierId={carrier.id} />
@@ -221,7 +225,7 @@ export default function PublicCarrierProfilePage() {
           <div className="flex flex-col gap-4">
             <div className="card-base p-5 flex flex-col gap-4">
               <h2 className="text-sm font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wide">
-                التواصل
+                {t('contactSection')}
               </h2>
               <div className="flex items-center gap-2 text-sm text-[var(--color-on-surface-variant)]">
                 <MapPin size={14} className="text-[var(--color-brand-navy)]" />
@@ -236,7 +240,7 @@ export default function PublicCarrierProfilePage() {
                   className="btn-primary w-full justify-center"
                 >
                   <MessageCircle size={16} />
-                  تواصل عبر واتساب
+                  {t('whatsappContact')}
                 </a>
               )}
               {carrier.contactPhone && (
@@ -248,13 +252,15 @@ export default function PublicCarrierProfilePage() {
                   {carrier.contactPhone}
                 </a>
               )}
-              <Link
-                href="/transport/new"
-                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-[var(--color-brand-amber)] text-white text-sm font-bold hover:bg-[var(--color-brand-amber-dark)] transition-all"
-              >
-                <Package size={15} />
-                طلب عرض سعر
-              </Link>
+              {user?.id !== carrier.userId && (
+                <Link
+                  href="/transport/new"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-[var(--color-brand-amber)] text-white text-sm font-bold hover:bg-[var(--color-brand-amber-dark)] transition-all"
+                >
+                  <Package size={15} />
+                  {t('requestQuote')}
+                </Link>
+              )}
             </div>
           </div>
         </div>

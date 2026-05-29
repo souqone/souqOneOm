@@ -22,6 +22,14 @@ export default function Step4Timing() {
   const t = useTranslations('transport.steps');
   const tCommon = useTranslations('transport');
 
+  // M-1: build min datetime string in LOCAL time (not UTC) so the picker
+  // shows the correct minimum for the user's timezone (e.g. Oman = UTC+4).
+  const localMinDateTime = (() => {
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
+
   return (
     <div dir="rtl">
       <div className="mb-6">
@@ -77,9 +85,14 @@ export default function Step4Timing() {
               </label>
               <input
                 {...register('scheduledAt', {
-                  validate: (v) =>
-                    timingType !== 'scheduled' || (!!v && v.length > 0) || t('pleaseSelectDate'),
+                  validate: (v) => {
+                    if (timingType !== 'scheduled') return true;
+                    if (!v || v.length === 0) return t('pleaseSelectDate');
+                    if (new Date(v) <= new Date()) return t('dateMustBeFuture');
+                    return true;
+                  },
                 })}
+                min={localMinDateTime}
                 type="datetime-local"
                 className={`input-base text-sm ${
                   errors.scheduledAt ? 'border-[var(--color-error)] ring-1 ring-[var(--color-error)]' : ''
@@ -163,6 +176,12 @@ export default function Step4Timing() {
               </div>
             </div>
           </div>
+
+          {budgetMin && budgetMax && Number(budgetMin) > Number(budgetMax) && (
+            <p className="text-xs text-[var(--color-error)] mt-2 font-semibold">
+              الحد الأدنى يجب أن يكون أقل من الحد الأعلى
+            </p>
+          )}
 
           {(budgetMin || budgetMax) && (
             <div className="mt-3 bg-[var(--color-brand-amber)]/8 border border-[var(--color-brand-amber)]/20 rounded-xl px-4 py-2.5">

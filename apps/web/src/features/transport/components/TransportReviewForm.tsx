@@ -63,8 +63,8 @@ export default function TransportReviewForm({ bookingId }: Props) {
       await transportApi.submitReview(bookingId, rating, comment.trim() || undefined);
       toast.success('تم إرسال تقييمك بنجاح');
       setExistingReview({ rating, comment });
-    } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ أثناء إرسال التقييم');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'حدث خطأ أثناء إرسال التقييم');
     } finally {
       setIsSubmitting(false);
     }

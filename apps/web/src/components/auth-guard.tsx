@@ -44,7 +44,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <AuthSpinner />;
   }
 
-  if (!isAuthenticated) return null;
+  // S-2: return spinner instead of null while the auth modal is opening
+  // to prevent a brief flash of blank/unstyled page content.
+  if (!isAuthenticated) return <AuthSpinner />;
 
   return <>{children}</>;
 }

@@ -33,6 +33,8 @@ const ALL_SERVICE_TYPES: TransportServiceType[] = [
   'GOODS', 'FURNITURE', 'CONSTRUCTION', 'HEAVY', 'BACKLOAD', 'EQUIPMENT',
 ];
 
+const OMAN_PHONE_REGEX = /^(\+968)?[789]\d{7}$/;
+
 // ── Edit Profile Modal ────────────────────────────────────────────────────────
 
 interface EditProfileModalProps {
@@ -42,6 +44,7 @@ interface EditProfileModalProps {
 }
 
 function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) {
+  const t = useTranslations('transport');
   const [companyName, setCompanyName] = useState(profile.companyName ?? '');
   const [bio, setBio] = useState(profile.bio ?? '');
   const [contactPhone, setContactPhone] = useState(profile.contactPhone ?? '');
@@ -61,9 +64,15 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (vehicleTypes.length === 0) { setError('يرجى اختيار نوع مركبة واحد على الأقل'); return; }
-    if (serviceTypes.length === 0) { setError('يرجى اختيار نوع خدمة واحد على الأقل'); return; }
-    if (!governorate) { setError('يرجى اختيار المحافظة'); return; }
+    if (vehicleTypes.length === 0) { setError(t('errors.selectVehicleType')); return; }
+    if (serviceTypes.length === 0) { setError(t('errors.selectServiceType')); return; }
+    if (!governorate) { setError(t('errors.selectGovernorate')); return; }
+    if (contactPhone && !OMAN_PHONE_REGEX.test(contactPhone.replace(/\s+/g, ''))) {
+      setError(t('errors.invalidPhone')); return;
+    }
+    if (whatsapp && !OMAN_PHONE_REGEX.test(whatsapp.replace(/\s+/g, ''))) {
+      setError(t('errors.invalidWhatsapp')); return;
+    }
 
     setSaving(true);
     setError('');
@@ -283,6 +292,9 @@ function CarrierDashboardContent() {
   const [toggleError, setToggleError] = useState('');
   const [nearbyRequests, setNearbyRequests] = useState<TransportRequest[]>([]);
   const [recentQuotes, setRecentQuotes] = useState<TransportQuote[]>([]);
+  // H-3: store true totals from meta, not capped display slice
+  const [totalQuotesSubmitted, setTotalQuotesSubmitted] = useState(0);
+  const [totalQuotesAccepted, setTotalQuotesAccepted] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
@@ -290,24 +302,35 @@ function CarrierDashboardContent() {
       setLoading(true);
       setError('');
       try {
-        const [profileRes, reqRes, quotesRes] = await Promise.allSettled([
-          transportApi.getMyCarrierProfile(),
-          transportApi.getRequests({ limit: 4 }),
-          transportApi.myQuotes(),
+        // H-4: fetch profile first so we can filter nearby requests by governorate
+        const profileData = await transportApi.getMyCarrierProfile();
+        setProfile(profileData);
+
+        const [reqRes, quotesRes, acceptedCountRes] = await Promise.allSettled([
+          // H-4: filter by carrier's governorate + only OPEN requests
+          transportApi.getRequests({
+            limit: 4,
+            fromGovernorate: profileData.governorate,
+            status: 'OPEN',
+          }),
+          transportApi.myQuotes(1, 5),
+          // NEW-H-3: fetch meta.total for ACCEPTED quotes — not just the first page
+          transportApi.myQuotes(1, 1, 'ACCEPTED'),
         ]);
-        
-        if (profileRes.status === 'rejected') {
-          throw profileRes.reason;
-        } else {
-          setProfile(profileRes.value);
-        }
 
         if (reqRes.status === 'fulfilled') {
           setNearbyRequests(reqRes.value.items);
         }
 
         if (quotesRes.status === 'fulfilled') {
-          setRecentQuotes(quotesRes.value.items.slice(0, 5));
+          const { items, meta } = quotesRes.value;
+          setTotalQuotesSubmitted(meta.total);
+          setRecentQuotes(items);
+        }
+
+        // NEW-H-3: use meta.total so carriers with many accepted quotes see the correct number
+        if (acceptedCountRes.status === 'fulfilled') {
+          setTotalQuotesAccepted(acceptedCountRes.value.meta.total);
         }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : '';
@@ -364,8 +387,6 @@ function CarrierDashboardContent() {
   }
 
   if (!profile) return <TransportPageLoader />;
-
-  const acceptedQuotes = recentQuotes.filter((q) => q.status === 'ACCEPTED').length;
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]" dir="rtl">
@@ -434,14 +455,14 @@ function CarrierDashboardContent() {
           {[
             {
               label: t('quotesSubmitted'),
-              value: recentQuotes.length,
+              value: totalQuotesSubmitted,
               icon: MessageSquare,
               color: 'var(--color-info)',
               bg: 'var(--color-info-light)',
             },
             {
               label: t('quotesAccepted'),
-              value: acceptedQuotes,
+              value: totalQuotesAccepted,
               icon: CheckCircle,
               color: 'var(--color-success)',
               bg: 'var(--color-success-light)',

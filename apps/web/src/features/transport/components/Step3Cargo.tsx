@@ -62,10 +62,19 @@ export default function Step3Cargo() {
           </label>
           <div className="relative">
             <input
-              {...register('weightTons')}
+              {...register('weightTons', {
+                // S-4: guard against unrealistic weights
+                validate: (v) => {
+                  if (!v) return true;
+                  const n = Number(v);
+                  if (n > 9999) return t('weightTooHigh');
+                  return true;
+                },
+              })}
               type="number"
               step="0.1"
               min="0.1"
+              max="9999"
               placeholder={t('weightPlaceholder')}
               className={`input-base text-sm pe-16 ${errors.weightTons ? 'border-[var(--color-error)]' : ''}`}
             />
