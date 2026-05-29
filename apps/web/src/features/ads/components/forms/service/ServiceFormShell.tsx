@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCreateCarService, useUpdateCarService, useRemoveServiceImage, useCarService } from '@/lib/api/services';
@@ -31,6 +31,7 @@ export function ServiceFormShell({ mode, id }: ServiceFormProps) {
   const isEdit = mode === 'edit';
   const [errors, setErrors] = useState<string[]>([]);
   const [form, setForm] = useState<ServiceFormData>(DEFAULT_SERVICE_FORM);
+  const hydratedRef = useRef(false);
   const { images, setImages, uploadImages, hydrateImages } = useDomainImages('services');
 
   const { data: svcData, isLoading: isFetching, isError } = useCarService(id ?? '');
@@ -40,7 +41,8 @@ export function ServiceFormShell({ mode, id }: ServiceFormProps) {
   }
 
   useEffect(() => {
-    if (!isEdit || !svcData) return;
+    if (!isEdit || !svcData || hydratedRef.current) return;
+    hydratedRef.current = true;
     setForm({
       ...DEFAULT_SERVICE_FORM,
       title:            svcData.title ?? '',
@@ -72,9 +74,9 @@ export function ServiceFormShell({ mode, id }: ServiceFormProps) {
   const cityOptions = getCities('OM', form.governorate, locale);
 
   const steps = [
-    { label: 'نوع الخدمة' },
-    { label: 'تفاصيل الخدمة' },
-    { label: 'الموقع والتواصل' },
+    { label: tp('svcStepBasic') },
+    { label: tp('svcStepDetails') },
+    { label: tp('svcStepLocation') },
   ];
   const { step, next, back } = useFormSteps(steps.length);
 

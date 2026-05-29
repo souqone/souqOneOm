@@ -1,11 +1,11 @@
 'use client';
 
-import { Suspense } from 'react';
-import { notFound, redirect, useParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { notFound, useParams } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
-import { AddCarForm } from '@/features/ads/components/forms/add-car-form';
 import { AddBusForm } from '@/features/ads/components/forms/add-bus-form';
 import { AddEquipmentForm } from '@/features/ads/components/forms/add-equipment-form';
 import { AddPartForm } from '@/features/ads/components/forms/add-part-form';
@@ -13,7 +13,6 @@ import { AddServiceForm } from '@/features/ads/components/forms/add-service-form
 import { AddOperatorForm } from '@/features/ads/components/forms/add-operator-form';
 
 const FORM_MAP: Record<string, React.ComponentType> = {
-  car: AddCarForm,
   bus: AddBusForm,
   equipment: AddEquipmentForm,
   parts: AddPartForm,
@@ -23,8 +22,14 @@ const FORM_MAP: Record<string, React.ComponentType> = {
 
 export default function AddListingByTypePage() {
   const { type } = useParams<{ type: string }>();
+  const router = useRouter();
 
-  if (type === 'car') redirect('/cars/new');
+  useEffect(() => {
+    if (type === 'car') router.replace('/cars/new');
+  }, [type, router]);
+
+  if (type === 'car') return null;
+
   const FormComponent = FORM_MAP[type];
   if (!FormComponent) return notFound();
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCreateOperatorListing, useUpdateOperatorListing, useOperatorListing } from '@/lib/api/equipment';
@@ -29,6 +29,7 @@ export function OperatorFormShell({ mode, id }: OperatorFormProps) {
   const isEdit = mode === 'edit';
   const [errors, setErrors] = useState<string[]>([]);
   const [form, setForm] = useState<OperatorFormData>(DEFAULT_OPERATOR_FORM);
+  const hydratedRef = useRef(false);
 
   const { data: opData, isLoading: isFetching, isError } = useOperatorListing(id ?? '');
 
@@ -37,7 +38,8 @@ export function OperatorFormShell({ mode, id }: OperatorFormProps) {
   }
 
   useEffect(() => {
-    if (!isEdit || !opData) return;
+    if (!isEdit || !opData || hydratedRef.current) return;
+    hydratedRef.current = true;
     setForm({
       ...DEFAULT_OPERATOR_FORM,
       operatorType:    opData.operatorType ?? '',
@@ -64,9 +66,9 @@ export function OperatorFormShell({ mode, id }: OperatorFormProps) {
   const cityOptions = getCities('OM', form.governorate, locale);
 
   const steps = [
-    { label: 'نوع المشغّل' },
-    { label: 'الخبرة والمؤهلات' },
-    { label: 'الأجر والموقع' },
+    { label: tp('opStepType') },
+    { label: tp('opStepInfo') },
+    { label: tp('opStepPrice') },
   ];
   const { step, next, back } = useFormSteps(steps.length);
 

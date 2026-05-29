@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCreatePart, useUpdatePart, useRemovePartImage, usePart } from '@/lib/api/parts';
@@ -34,6 +34,7 @@ export function PartFormShell({ mode, id }: PartFormProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [form, setForm] = useState<PartFormData>(DEFAULT_PART_FORM);
   const [selectedGov, setSelectedGov] = useState('');
+  const hydratedRef = useRef(false);
   const { images, setImages, uploadImages, hydrateImages } = useDomainImages('parts');
 
   const { data: partData, isLoading: isFetching, isError } = usePart(id ?? '');
@@ -43,7 +44,8 @@ export function PartFormShell({ mode, id }: PartFormProps) {
   }
 
   useEffect(() => {
-    if (!isEdit || !partData) return;
+    if (!isEdit || !partData || hydratedRef.current) return;
+    hydratedRef.current = true;
     setForm({
       ...DEFAULT_PART_FORM,
       title:            partData.title ?? '',
@@ -111,7 +113,7 @@ export function PartFormShell({ mode, id }: PartFormProps) {
       if (form.compatibleModels.length) payload.compatibleModels = form.compatibleModels;
       if (form.yearFrom)                payload.yearFrom = parseInt(form.yearFrom);
       if (form.yearTo)                  payload.yearTo = parseInt(form.yearTo);
-      if (form.isOriginal)              payload.isOriginal = true;
+      payload.isOriginal = form.isOriginal;
       if (form.governorate)             payload.governorate = form.governorate;
       if (form.city)                    payload.city = form.city;
       if (form.latitude)                payload.latitude = form.latitude;

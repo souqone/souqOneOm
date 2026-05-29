@@ -255,6 +255,7 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
                   {isFinalStep ? (
                     <button
                       type="submit"
+                      data-testid="submit-wizard"
                       disabled={isSubmitting}
                       className="btn-navy px-6 py-2.5 text-sm disabled:opacity-60"
                     >

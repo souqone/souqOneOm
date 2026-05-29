@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCreateBusListing, useUpdateBusListing, useRemoveBusImage, useBusListing } from '@/lib/api/buses';
@@ -33,6 +33,7 @@ export function BusFormShell({ mode, id }: BusFormProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [form, setForm] = useState<BusFormData>(DEFAULT_BUS_FORM);
   const [selectedGov, setSelectedGov] = useState('');
+  const hydratedRef = useRef(false);
   const { images, setImages, uploadImages, hydrateImages } = useDomainImages('buses');
 
   const { data: busData, isLoading: isFetching, isError } = useBusListing(id ?? '');
@@ -42,7 +43,8 @@ export function BusFormShell({ mode, id }: BusFormProps) {
   }
 
   useEffect(() => {
-    if (!isEdit || !busData) return;
+    if (!isEdit || !busData || hydratedRef.current) return;
+    hydratedRef.current = true;
     setForm({
       ...DEFAULT_BUS_FORM,
       busListingType:    busData.busListingType ?? '',

@@ -80,18 +80,26 @@ export class TransportQuoteService {
     }
 
     // Create quote
-    const quote = await this.prisma.transportQuote.create({
-      data: {
-        requestId,
-        carrierId: carrier.id,
-        price: new Prisma.Decimal(dto.price),
-        estimatedHours: dto.estimatedHours,
-        message: dto.message,
-      },
-      include: {
-        carrier: { include: { user: { select: USER_SELECT } } },
-      },
-    });
+    let quote;
+    try {
+      quote = await this.prisma.transportQuote.create({
+        data: {
+          requestId,
+          carrierId: carrier.id,
+          price: new Prisma.Decimal(dto.price),
+          estimatedHours: dto.estimatedHours,
+          message: dto.message,
+        },
+        include: {
+          carrier: { include: { user: { select: USER_SELECT } } },
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new BadRequestException('لديك عرض مقدم بالفعل على هذا الطلب');
+      }
+      throw err;
+    }
 
     // Update request status to QUOTED if still OPEN
     if (request.status === 'OPEN') {
