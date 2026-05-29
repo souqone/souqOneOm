@@ -4023,7 +4023,14 @@
         "loadFailed": "Failed to load request details",
         "acceptFailed": "Failed to accept quote. Please try again.",
         "renewFailed": "Failed to renew request. Please try again."
-      }
+      },
+      "formTitle": "Submit Your Quote",
+      "priceLabel": "Proposed Price",
+      "hoursLabel": "Estimated Hours",
+      "messageLabel": "Message to Client",
+      "pricePlaceholder": "e.g. 150",
+      "submitBtn": "Submit Quote",
+      "submittingBtn": "Submitting..."
     },
     "tabs": {
       "all": "All",

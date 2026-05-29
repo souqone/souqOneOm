@@ -4053,7 +4053,14 @@
         "loadFailed": "تعذّر تحميل تفاصيل الطلب",
         "acceptFailed": "تعذّر قبول العرض. حاول مرة أخرى.",
         "renewFailed": "تعذّر تجديد الطلب. حاول مرة أخرى."
-      }
+      },
+      "formTitle": "قدّم عرضك",
+      "priceLabel": "السعر المقترح",
+      "hoursLabel": "الوقت المتوقع (ساعات)",
+      "messageLabel": "رسالة للعميل",
+      "pricePlaceholder": "مثال: 150",
+      "submitBtn": "إرسال العرض",
+      "submittingBtn": "جارٍ الإرسال..."
     },
     "tabs": {
       "all": "الكل",
