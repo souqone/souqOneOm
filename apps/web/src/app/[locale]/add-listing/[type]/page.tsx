@@ -6,7 +6,6 @@ import { useRouter } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
-import { AddCarForm } from '@/features/ads/components/forms/add-car-form';
 import { AddBusForm } from '@/features/ads/components/forms/add-bus-form';
 import { AddEquipmentForm } from '@/features/ads/components/forms/add-equipment-form';
 import { AddPartForm } from '@/features/ads/components/forms/add-part-form';
