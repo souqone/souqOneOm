@@ -1149,7 +1149,6 @@
     "fuelTypeLabel": "Fuel Type",
     "maxPrice": "Max Price (OMR)",
     "priceExample": "e.g.: 15000",
-
     "listingsTitle": "Choose Your Car from SouqOne",
     "listingsSubtitle": "New and used cars for sale and rent in Oman",
     "listingsSearch": "Search make, model, year...",
@@ -1207,7 +1206,6 @@
     "sortYearNewest": "Year: Newest",
     "sortSalaryHigh": "Salary: High",
     "sortSalaryLow": "Salary: Low",
-
     "partsTitle": "Spare Parts",
     "partsCount": "listing",
     "partsSearch": "Search for a spare part...",
@@ -1226,7 +1224,6 @@
     "partsCatBatteries": "Batteries",
     "partsCatOils": "Oils",
     "partsCatAccessories": "Accessories",
-
     "servicesTitle": "Car Services",
     "servicesCount": "service",
     "servicesSearch": "Search for a service...",
@@ -1255,11 +1252,9 @@
     "servicesProviderMobile": "Mobile Service",
     "servicesProviderCompany": "Company",
     "servicesMobile": "Mobile",
-
     "transportTitle": "Transport Services",
     "transportSubtitle": "Freight · Passenger transport · Logistics",
     "transportNoListings": "No transport services available",
-
     "busesTitle": "Bus Market",
     "busesSubtitle": "Buy · Sell · Rent · Transport Contracts",
     "busesTabSale": "For Sale",
@@ -1282,7 +1277,6 @@
     "busesContract": "Contract {price} OMR/month",
     "busesPerDay": "OMR/day",
     "busesNotSpecified": "Not specified",
-
     "equipTitle": "Equipment & Services Market",
     "equipSubtitle": "Buy · Rent · Requests · Operators",
     "equipAddEquipment": "Add Equipment",
@@ -1328,7 +1322,6 @@
     "equipStatusInProgress": "In Progress",
     "equipStatusClosed": "Closed",
     "equipStatusCancelled": "Cancelled",
-
     "jobsTitle": "Driver Jobs",
     "jobsSubtitle": "Find a professional driver or offer your services in Oman",
     "jobsSearch": "Search by title or description...",
@@ -1352,7 +1345,6 @@
     "jobsLicenseTransport": "Transport",
     "jobsLicenseBus": "Bus",
     "jobsLicenseMotorcycle": "Motorcycle",
-
     "rentalsTitle": "Cars for Rent",
     "rentalsSubtitle": "Rent your favorite car at the best prices in Oman",
     "rentalsAdd": "Add Car for Rent",
@@ -1364,9 +1356,7 @@
     "rentalsNoResults": "No cars for rent",
     "rentalsNoResultsSub": "No results found. Try changing your search criteria.",
     "rentalsAvailable": "{count} cars available for rent",
-
     "redirecting": "Redirecting...",
-
     "sellerNoListings": "This seller has no listings currently",
     "sellerErrorConversation": "Error starting conversation",
     "sellerLoginToContact": "Login to contact seller",
@@ -1377,7 +1367,6 @@
     "sellerEmptyTitle": "No listings",
     "sellerEmptyDesc": "This seller has no active listings at the moment.",
     "sellerListingsCount": "listings",
-
     "opDetailNotFound": "Listing not found",
     "opDetailBack": "Back",
     "opDetailHome": "Home",
@@ -1401,7 +1390,6 @@
     "opDetailRateDaily": "{rate} {currency}/day",
     "opDetailRateHourly": "{rate} {currency}/hour",
     "opDetailRateContact": "Contact for price",
-
     "eqReqDetailNotFound": "Request not found",
     "eqReqDetailBack": "Back",
     "eqReqDetailHome": "Home",
@@ -1450,12 +1438,10 @@
     "eqReqDetailBidRejectedMsg": "Bid rejected",
     "eqReqDetailRequester": "Requester",
     "eqReqDetailViews": "views",
-
     "loadingText": "Loading...",
     "notFoundMessage": "The page you are looking for does not exist",
     "notFoundHome": "Home",
     "notFoundBrowse": "Browse Marketplace",
-
     "msgChatTitle": "SouqOne Chat",
     "msgChatSubtitle": "Select a conversation or start a new one from any listing page",
     "msgChatSelect": "Select a conversation",
@@ -1466,7 +1452,6 @@
     "msgChatReconnecting": "Reconnecting...",
     "msgChatSearchPlaceholder": "Search messages...",
     "msgChatStartConversation": "Start the conversation by sending a message",
-
     "notifTitle": "Notifications",
     "notifMarkAllRead": "Mark all as read",
     "notifMarkingRead": "Loading...",
@@ -1516,73 +1501,59 @@
     "notifSelectPrompt": "Select a notification to view details",
     "notifRead": "Read",
     "notifEndOfList": "You've reached the end",
-
     "tabOverview": "Overview",
     "tabMyApps": "My Applications",
     "tabInvites": "Invitations",
     "tabPayments": "Payments",
     "tabRecs": "Recommendations",
-
     "licenseLight": "Light",
     "licenseHeavy": "Heavy",
     "licenseTransport": "Transport",
     "licenseBus": "Bus",
     "licenseMotorcycle": "Motorcycle",
-
     "appStatusPending": "Pending",
     "appStatusAccepted": "Accepted",
     "appStatusRejected": "Rejected",
     "appStatusWithdrawn": "Withdrawn",
-
     "escrowHeld": "Held",
     "escrowReleased": "Released",
     "escrowRefunded": "Refunded",
     "escrowDisputed": "Disputed",
     "escrowHeldLabel": "Amount held",
-
     "salaryDaily": "Daily",
     "salaryMonthly": "Monthly",
     "salaryYearly": "Yearly",
     "salaryNegotiable": "Negotiable",
     "currencyOMR": "OMR",
-
     "notVerifiedTitle": "Account not verified",
     "notVerifiedDesc": "Verify your account to increase your chances of getting jobs",
     "verifyNow": "Verify Now",
-
     "noProfileTitle": "No driver profile yet",
     "noProfileDesc": "Create your driver profile to start applying for jobs and receiving invitations",
     "createDriverProfile": "Create Driver Profile",
-
     "availability": "Availability",
     "availableNow": "Available now",
     "notAvailable": "Not available",
     "toggleAvailability": "Toggle availability",
-
     "withdrawApp": "Withdraw",
     "openDispute": "Open Dispute",
     "acceptInvite": "Accept",
     "declineInvite": "Decline",
-
     "inviteStatusACCEPTED": "Accepted",
     "inviteStatusDECLINED": "Declined",
-
     "pendingInvitesTitle": "You have {count} pending invitations",
     "pendingInvitesDesc": "Review and respond to your invitations",
     "review": "Review",
     "match": "Match",
-
     "statTotalApps": "Total Applications",
     "statPendingApps": "Pending",
     "statAcceptedApps": "Accepted",
     "statPendingInvites": "New Invitations",
-
     "recentApps": "Recent Applications",
     "recommendedJobs": "Recommended Jobs",
     "viewAll": "View All",
     "filterAll": "All",
     "browseJobs": "Browse Jobs",
-
     "noAppsTitle": "No applications",
     "noAppsDesc": "You haven't applied to any jobs yet. Browse available jobs and apply now",
     "noInvitesTitle": "No invitations",
@@ -1591,47 +1562,37 @@
     "noEscrowDesc": "Held payments will appear here when your applications are accepted",
     "noRecsTitle": "No recommendations",
     "noRecsDesc": "Jobs matching your profile will be suggested here",
-
     "tabMyJobs": "My Jobs",
     "tabApps": "Applicants",
     "tabInvite": "Invite Driver",
-
     "jobStatusActive": "Active",
     "jobStatusClosed": "Closed",
     "jobStatusDraft": "Draft",
     "jobStatusExpired": "Expired",
-
     "statTotalJobs": "Total Jobs",
     "statActiveJobs": "Active Jobs",
-
     "activeJobs": "Active Jobs",
     "recentApplicants": "Recent Applicants",
-
     "noEmployerProfileTitle": "No employer profile yet",
     "noEmployerProfileDesc": "Create your employer profile to start posting jobs and managing applicants",
     "createEmployerProfile": "Create Employer Profile",
-
     "pendingAppsTitle": "You have {count} pending applications",
     "pendingAppsDesc": "Review and respond to applications",
-
     "postNewJob": "Post New Job",
     "editJob": "Edit Job",
     "closeJob": "Close Job",
     "viewApps": "View Applicants",
     "inviteDriver": "Invite Driver",
-
     "accept": "Accept",
     "reject": "Reject",
     "payEscrow": "Pay Escrow",
     "releaseEscrow": "Release Escrow",
-
     "payEscrowTitle": "Pay Escrow for Applicant",
     "payEscrowDesc": "You are about to place escrow for {name}",
     "amountOMR": "Amount (OMR)",
     "escrowExplainer": "The amount will be held until work completion is confirmed",
     "escrowSafetyNote": "Escrow is protected and can only be released after both parties agree or arbitration",
     "confirmPayment": "Confirm Payment",
-
     "searchDrivers": "Search Drivers",
     "governorate": "Governorate",
     "selectGovernorate": "Select Governorate",
@@ -1646,17 +1607,13 @@
     "viewProfile": "View Profile",
     "driverUnavailable": "Unavailable",
     "verified": "Verified",
-
     "noJobsTitle": "No jobs posted",
     "noJobsDesc": "You haven't posted any jobs yet",
     "createFirstJob": "Post First Job",
-
     "jobApplicants": "Applicants",
     "jobViews": "Views",
     "jobInvites": "Invites",
-
     "escrowHistory": "Payment History",
-
     "comingSoonAvailable": "Coming Soon",
     "comingSoonDesc": "We are currently preparing this section for the best experience. Stay tuned for updates!",
     "comingSoonBack": "Back to Home",
@@ -1664,7 +1621,6 @@
     "comingSoonServices": "Car Services",
     "comingSoonBuses": "Bus Market",
     "comingSoonEquipment": "Equipment Market",
-
     "favTitle": "Favorites",
     "favCountSaved": "{count} items saved",
     "favSubtitle": "Items you saved to come back to later",
@@ -1678,7 +1634,6 @@
     "favEmptyTitle": "No favorites",
     "favEmptyDesc": "Save items you like by tapping the heart to come back to them later",
     "favBrowse": "Browse Listings",
-
     "editListingTitle": "Edit Listing",
     "editListingDesc": "Edit your listing details and republish.",
     "editListingSaved": "Changes saved successfully!",
@@ -1688,7 +1643,6 @@
     "editListingBasicInfo": "Basic Information",
     "editListingImages": "Images",
     "editListingSelectGovernorate": "Select Governorate",
-
     "mapLocateMe": "Detect my location",
     "mapLocating": "Locating...",
     "mapClickHint": "Or click on the map to set location",
@@ -1699,7 +1653,6 @@
     "mapPositionUnavailable": "Location unavailable",
     "mapTimeout": "Location request timed out",
     "mapError": "Error detecting location",
-
     "mapViewListingLocation": "Listing location",
     "mapViewDirections": "Directions",
     "mapViewWhatsapp": "WhatsApp",
@@ -1708,7 +1661,6 @@
     "mapViewShareWhatsapp": "WhatsApp",
     "mapViewShareTelegram": "Telegram",
     "mapViewCopyLink": "Copy Link",
-
     "nearbyTitle": "Listings Near You",
     "nearbyPermissionDesc": "Allow us to know your location to show you the nearest listings",
     "nearbyLocating": "Locating...",
@@ -1718,7 +1670,6 @@
     "nearbyMeters": "{distance} m",
     "nearbyKm": "{distance} km",
     "nearbyRental": "Rental",
-
     "chatFilterAll": "All",
     "chatFilterBuying": "Buying",
     "chatFilterSelling": "Selling",
@@ -1742,13 +1693,11 @@
     "chatPlaceholder": "Type a message...",
     "chatEmojiCommon": "Common",
     "chatEmojiGestures": "Gestures",
-
     "rentalTitle": "Cars for Rent",
     "rentalSubtitle": "Rent your favorite car at the best prices in Oman",
     "rentalViewAll": "View All →",
     "rentalEmpty": "No rental cars available right now",
     "rentalAddCar": "Add a rental car",
-
     "imgUploadDrag": "Drag images here or click to choose",
     "imgUploadHint": "JPEG, PNG, WebP — Max 10MB per image — {current}/{max}",
     "imgUploadAlt": "Image {index}",
@@ -1756,7 +1705,6 @@
     "imgUploadDelete": "Delete image",
     "imgUploadPrimary": "Primary",
     "imgUploadReorder": "Drag images to reorder. The first image is shown as the primary.",
-
     "sidebarTitle": "Chats",
     "sidebarSearchPlaceholder": "Search conversations...",
     "sidebarLoading": "Loading...",
@@ -1782,7 +1730,6 @@
     "entityEquipmentListing": "Equipment",
     "entityEquipmentRequest": "Equipment Request",
     "entityOperatorListing": "Operator",
-
     "negoTitle": "Negotiation Center",
     "negoCounterOffer": "Counter Offer",
     "negoOffer": "Offer",
@@ -1798,7 +1745,6 @@
     "negoTimeline": "Negotiation History",
     "negoSafeTransaction": "Safe Transaction",
     "negoSafeDesc": "The amount is held in an escrow account until the car is received and inspected by both parties.",
-
     "lfTitleRental": "Rent Your Car",
     "lfTitleWanted": "Wanted Car",
     "lfTitleSale": "Sell Your Car",
@@ -1906,7 +1852,6 @@
     "lfFeatureAdaptiveCruise": "Adaptive Cruise Control",
     "lfContactPhone": "Phone Number",
     "lfWhatsapp": "WhatsApp",
-
     "busTitle": "Add Bus Listing",
     "busSubmit": "Publish Listing",
     "busEditTitle": "Edit Bus Listing",
@@ -2031,7 +1976,6 @@
     "busLabelAvailableTo": "Available To",
     "busLabelCancellation": "Cancellation Policy",
     "busPlaceholderCancellation": "e.g. Free cancellation 48 hours before",
-
     "eqTitle": "Add Equipment Listing",
     "eqSubmit": "Publish Listing",
     "eqEditTitle": "Edit Equipment Listing",
@@ -2110,7 +2054,6 @@
     "eqLabelInsurance": "Insurance Included",
     "eqLabelCancellation": "Cancellation Policy",
     "eqPlaceholderCancellation": "e.g. Free cancellation 48 hours before",
-
     "svcTitle": "Add Car Service",
     "svcSubmit": "Publish Listing",
     "svcEditTitle": "Edit Service Listing",
@@ -2163,7 +2106,6 @@
     "svcLabelPhone": "Phone Number",
     "svcLabelWhatsapp": "WhatsApp",
     "svcLabelWebsite": "Website",
-
     "tripDaySat": "Saturday",
     "tripDaySun": "Sunday",
     "tripDayMon": "Monday",
@@ -2171,7 +2113,6 @@
     "tripDayWed": "Wednesday",
     "tripDayThu": "Thursday",
     "tripDayFri": "Friday",
-
     "partTitle": "Add Spare Part",
     "partSubmit": "Publish Listing",
     "partEditTitle": "Edit Spare Part Listing",
@@ -2279,29 +2220,24 @@
     "opDumpTruck": "Dump Truck",
     "opWaterTanker": "Water Tanker",
     "opLightEquip": "Light Equipment",
-
     "listingsMapNoListings": "No listings with specified locations",
     "listingsMapYourLocation": "Your location",
     "listingsMapView": "View",
     "listingsMapSale": "Sale",
     "listingsMapRental": "Rental",
     "listingsMapYou": "You",
-
     "authGuardChecking": "Verifying...",
     "verifiedBadge": "Verified",
     "searchBarPlaceholder": "Search...",
     "searchBarSubmit": "Search Now",
     "customSelectSearch": "Search...",
     "customSelectNoResults": "No results",
-
     "errorStateTitle": "Connection Error",
     "errorStateMessage": "Error loading data",
     "errorStateRetry": "Retry",
-
     "favBtnLogin": "Sign in to add favorites",
     "favBtnRemove": "Remove from favorites",
     "favBtnAdd": "Add to favorites",
-
     "sellerCardTitle": "Seller Information",
     "sellerCardVerified": "Verified",
     "sellerCardMemberSince": "Member since {date}",
@@ -2310,22 +2246,18 @@
     "sellerCardShare": "Share",
     "sellerCardCall": "Call",
     "sellerCardWhatsapp": "WhatsApp",
-
     "formErrorTitle": "Please fix the following",
     "formErrorDesc": "To publish the listing, please review the fields below",
     "formErrorClose": "Got it, I'll fix it",
-
     "multiStepSubmit": "Publish Listing",
     "multiStepPrev": "Previous",
     "multiStepNext": "Next",
     "multiStepOf": "Step {current} of {total}",
     "multiStepSaving": "Saving...",
-
     "addCarSuccess": "Listing published successfully!",
     "addCarError": "Error creating listing",
     "addCarUploading": "Uploading images...",
     "addCarSubmit": "Publish Listing",
-
     "addListingBadge": "Completely free — no fees",
     "addListingTitle": "Post your ad in seconds",
     "addListingSubtitle": "Choose the right category and start posting. Your ad reaches thousands of users in Oman.",
@@ -2335,7 +2267,6 @@
     "addListingHelpTitle": "Need help?",
     "addListingHelpDesc": "If you're not sure which category fits your ad or have any questions, contact us and we'll help.",
     "addListingHelpContact": "Contact Us",
-
     "layoutTitle": "SouqOne | Car Marketplace in Oman",
     "layoutTitleTemplate": "%s | SouqOne",
     "layoutDescription": "SouqOne — The first digital marketplace for buying and selling cars in Oman. Discover luxury and used cars at the best prices.",
@@ -2343,7 +2274,6 @@
     "layoutOgDescription": "The first digital marketplace for buying and selling cars in Oman",
     "layoutSiteName": "SouqOne",
     "layoutKeywords": "SouqOne, cars, Oman, buy cars, sell cars, used cars, car marketplace, Sultanate of Oman",
-
     "profileMemberSince": "Member since {date}",
     "profileEdit": "Edit",
     "profileAddListing": "Add Listing",
@@ -2414,11 +2344,9 @@
     "profilePasswordChanged": "Password changed successfully",
     "profileChangingPassword": "Changing...",
     "profileChangePasswordBtn": "Change Password",
-
     "carLayoutNotFound": "Listing not found | SouqOne",
     "carLayoutCurrency": "OMR",
     "carLayoutKm": "km",
-
     "bookingsPageTitle": "Bookings",
     "bookingsPageSubtitle": "{count} bookings",
     "bookingsTabMy": "My Bookings",
@@ -2483,7 +2411,6 @@
     "bookingCardLoginRequired": "Login to book",
     "bookingCardSuccess": "Booking created successfully",
     "bookingCardError": "Failed to create booking",
-
     "myListingsTitle": "My Listings",
     "myListingsCount": "{count} listings",
     "myListingsAdd": "Add New Listing",
@@ -2518,7 +2445,6 @@
     "myListingsAddFirst": "Add Your First Listing",
     "myListingsAddNew": "Add New Listing",
     "myListingsAddListing": "Add Listing",
-
     "sectionCars": "Cars",
     "sectionBuses": "Buses",
     "sectionEquipment": "Equipment",
@@ -2528,7 +2454,6 @@
     "sectionJobs": "Jobs",
     "sectionEquipmentRequests": "My Requests",
     "sectionTransport": "Transport",
-
     "myJobsTitle": "My Listings",
     "myJobsSubtitle": "Manage your job listings",
     "myJobsNewListing": "New Listing",
@@ -2562,7 +2487,6 @@
     "myJobsIncomingApps": "Incoming Applications ({count})",
     "myJobsAccept": "Accept",
     "myJobsReject": "Reject",
-
     "jobDetailNotFound": "Job not found",
     "jobDetailBackToJobs": "Back to Jobs",
     "jobDetailHome": "Home",
@@ -2660,7 +2584,6 @@
     "jobDetailVtLimo": "Limousine",
     "jobDetailVtVan": "Van",
     "jobDetailVtPickup": "Pickup",
-
     "bookingDetailNotFound": "Booking not found",
     "bookingDetailNotFoundDesc": "This booking may have been deleted or you don't have access",
     "bookingDetailBackToBookings": "Back to Bookings",
@@ -2705,7 +2628,6 @@
     "bookingDetailStatusCompletedDesc": "Booking completed successfully",
     "bookingDetailStatusCancelledDesc": "This booking was cancelled",
     "bookingDetailStatusRejectedDesc": "This booking was rejected",
-
     "partDetailNotFound": "Spare part not found",
     "partDetailErrorConversation": "Error starting conversation",
     "partDetailLoginToMessage": "Login to send a message",
@@ -2740,7 +2662,6 @@
     "partDetailCatOils": "Oils",
     "partDetailCatAccessories": "Accessories",
     "partDetailCatOther": "Other",
-
     "svcDetailNotFound": "Service not found",
     "svcDetailErrorConversation": "Error starting conversation",
     "svcDetailLoginToMessage": "Login to send a message",
@@ -2776,8 +2697,6 @@
     "svcDetailDayWed": "Wednesday",
     "svcDetailDayThu": "Thursday",
     "svcDetailDayFri": "Friday",
-
-
     "equipDetailNotFound": "Listing not found",
     "equipDetailBack": "Back",
     "equipDetailHome": "Home",
@@ -2836,7 +2755,6 @@
     "equipDetailCondUsed": "Used",
     "equipDetailCondFair": "Fair",
     "equipDetailCondPoor": "Poor",
-
     "busDetailNotFound": "Bus listing not found",
     "busDetailBackToMarket": "Back to Bus Market",
     "busDetailHome": "Home",
@@ -2904,7 +2822,6 @@
     "busDetailUserPhone": "Seller Phone",
     "equipDetailFeatures": "Features",
     "equipDetailUserPhone": "Seller Phone",
-
     "carBreadcrumbMarket": "Market",
     "carSpecs": "Specifications",
     "carSpecMileage": "Mileage",
@@ -2975,7 +2892,6 @@
     "carSelectDates": "Please select start and end dates",
     "carBookingSuccess": "Booking request sent successfully!",
     "carErrorBooking": "Error during booking",
-
     "jnTitle": "New Job Listing",
     "jnSubtitle": "Post a driver job or offer your services",
     "jnTypeLabel": "Listing Type *",
@@ -3043,7 +2959,6 @@
     "jnErrRequired": "Please fill in all required fields",
     "jnSuccess": "Job listing published successfully!",
     "jnError": "Failed to create listing",
-
     "eqrTypeExcavator": "Excavator",
     "eqrTypeCrane": "Crane",
     "eqrTypeLoader": "Loader",
@@ -3318,7 +3233,6 @@
     "configEquipment": "Equipment",
     "configPart": "Spare Part",
     "configService": "Service",
-
     "specYear": "Year",
     "specMileage": "Mileage",
     "specEngine": "Engine",
@@ -3352,10 +3266,8 @@
     "specProviderType": "Provider Type",
     "specHomeService": "Home Service",
     "specWorkingHours": "Working Hours",
-
     "unitKm": "km",
     "unitPassenger": "passenger",
-
     "highlightCondition": "{condition} Condition",
     "highlightCarNew": "Brand new, never used",
     "highlightCarUsed": "Used in excellent condition",
@@ -3395,7 +3307,6 @@
     "highlightServiceFixed": "Fixed Price",
     "highlightServiceNegotiableSub": "Discuss price with provider",
     "highlightServiceFixedSub": "Price is final",
-
     "breadcrumbHome": "Market",
     "share": "Share",
     "saved": "Saved",
@@ -3457,13 +3368,11 @@
     "viewAll": "View All",
     "contactForPrice": "Contact for price",
     "contractMonthlyLabel": "monthly (contract)",
-
     "infoType": "Type",
     "infoCondition": "Condition",
     "infoGovernorate": "Governorate",
     "infoViews": "Views",
     "infoPublishDate": "Published",
-
     "boolYes": "Yes",
     "boolNo": "No",
     "specIsOriginalShort": "Original",
@@ -3492,7 +3401,6 @@
     "highlightProfitMargin": "{margin}% Profit Margin",
     "highlightNegotiableProfit": "Profit Margin Negotiable",
     "highlightProfitDetails": "Annual Profit Details",
-
     "contractDetailsTitle": "Contract Details",
     "contractDetailsSubtitle": "Contract terms and conditions",
     "contractMonthlyValue": "Monthly Value",
@@ -3778,8 +3686,13 @@
     "noRating": "New",
     "tripsCompleted": "Trips",
     "status": {
-      "AVAILABLE": "Available",
-      "UNAVAILABLE": "Unavailable"
+      "OPEN": "Open",
+      "QUOTED": "Quoted",
+      "ACCEPTED": "Accepted",
+      "IN_PROGRESS": "In Progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
     },
     "verifiedCarrier": "Verified Carrier",
     "averageRating": "Average Rating",
@@ -3793,26 +3706,17 @@
     "whatToTransport": "What do you want to transport?",
     "serviceTypes": {
       "GOODS": "General Goods",
-      "GOODSSub": "Electronics, food items, etc.",
-      "FURNITURE": "Furniture",
-      "FURNITURESub": "Careful and professional moving",
+      "GOODSSub": "Trade, clothing, electronics & more",
+      "FURNITURE": "Furniture & Home",
+      "FURNITURESub": "Household moving, assembly & disassembly",
       "CONSTRUCTION": "Construction Materials",
-      "CONSTRUCTIONSub": "Sand, cement, bricks, and steel",
-      "HEAVY": "Heavy Equipment",
-      "HEAVYSub": "Large loads requiring special equipment",
-      "BACKLOAD": "Backloads",
-      "BACKLOADSub": "Discounted rates for returning trucks",
-      "EQUIPMENT": "Equipment Rental",
-      "EQUIPMENTSub": "Excavators, cranes, and heavy machinery"
-    },
-    "status": {
-      "OPEN": "Open",
-      "QUOTED": "Quoted",
-      "ACCEPTED": "Accepted",
-      "IN_PROGRESS": "In Progress",
-      "COMPLETED": "Completed",
-      "CANCELLED": "Cancelled",
-      "EXPIRED": "Expired"
+      "CONSTRUCTIONSub": "Sand, steel, cement, blocks...",
+      "HEAVY": "Heavy Freight",
+      "HEAVYSub": "Large projects & industrial shipments",
+      "BACKLOAD": "Backload",
+      "BACKLOADSub": "Return trips at discounted rates",
+      "EQUIPMENT": "Equipment & Machinery",
+      "EQUIPMENTSub": "Heavy equipment & industrial machines"
     },
     "quoteStatus": {
       "PENDING": "Pending",
@@ -4127,7 +4031,6 @@
     "filterResults": "Filter Results",
     "applyFilters": "Apply Filters",
     "activeFilters": "active filters",
-    "clearFilters": "Clear Filters",
     "noCargoDesc": "No cargo description provided",
     "sortOptions": {
       "createdAt_desc": "Newest First",
@@ -4180,24 +4083,8 @@
     "activate": "Activate",
     "quotesSubmitted": "Quotes Submitted",
     "quotesAccepted": "Quotes Accepted",
-    "rating": "Rating",
     "reviewCount": "Reviews",
-    "memberSince": "Member since",
     "vehicleTypes": "Vehicle Types",
-    "serviceTypes": {
-      "GOODS": "General Goods",
-      "GOODSSub": "Trade, clothing, electronics & more",
-      "FURNITURE": "Furniture & Home",
-      "FURNITURESub": "Household moving, assembly & disassembly",
-      "CONSTRUCTION": "Construction Materials",
-      "CONSTRUCTIONSub": "Sand, steel, cement, blocks...",
-      "HEAVY": "Heavy Freight",
-      "HEAVYSub": "Large projects & industrial shipments",
-      "BACKLOAD": "Backload",
-      "BACKLOADSub": "Return trips at discounted rates",
-      "EQUIPMENT": "Equipment & Machinery",
-      "EQUIPMENTSub": "Heavy equipment & industrial machines"
-    },
     "bio": "About",
     "contactSection": "Contact",
     "whatsappContact": "Contact via WhatsApp",
@@ -4207,7 +4094,11 @@
     "recentQuotes": "My Recent Quotes",
     "profileSummary": "Profile Summary",
     "viewMyProfile": "View My Profile",
-    "browseAllRequests": "Browse All Requests"
+    "browseAllRequests": "Browse All Requests",
+    "carrierStatus": {
+      "AVAILABLE": "Available",
+      "UNAVAILABLE": "Unavailable"
+    }
   },
   "status": {
     "OPEN": "Open",

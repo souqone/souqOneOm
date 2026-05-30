@@ -134,10 +134,18 @@ export function useApplyToJob() {
   });
 }
 
-export function useJobApplications(jobId: string) {
-  return useQuery<JobApplicationItem[]>({
-    queryKey: ['job-applications', jobId],
-    queryFn: () => apiRequest<JobApplicationItem[]>(`/jobs/${jobId}/applications`),
+export interface JobApplicationsResponse {
+  items: JobApplicationItem[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export function useJobApplications(jobId: string, page = 1, limit = 20) {
+  return useQuery<JobApplicationsResponse>({
+    queryKey: ['job-applications', jobId, page],
+    queryFn: () =>
+      apiRequest<JobApplicationsResponse>(
+        `/jobs/${jobId}/applications?page=${page}&limit=${limit}`,
+      ),
     enabled: !!jobId,
   });
 }
@@ -180,9 +188,11 @@ export function useCloseJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (jobId: string) =>
-      apiRequest(`/jobs/${jobId}/close`, { method: 'PATCH' }),
-    onSuccess: () => {
+      apiRequest(`/jobs/${jobId}`, { method: 'PATCH', body: JSON.stringify({ status: 'CLOSED' }) }),
+    // H-10: also invalidate the detail query so the job page doesn't show stale ACTIVE status
+    onSuccess: (_, jobId) => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
+      qc.invalidateQueries({ queryKey: ['job', jobId] });
       qc.invalidateQueries({ queryKey: ['employer-applications'] });
     },
   });
@@ -207,6 +217,7 @@ export interface MyApplicationItem {
     governorate: string;
     status: string;
     userId: string;
+    jobType: 'HIRING' | 'OFFERING';
     user: JobUser;
   };
 }
@@ -390,11 +401,19 @@ export function useSubmitVerification() {
   });
 }
 
-export function useAdminVerifications(status?: string) {
-  const params = status ? `?status=${status}` : '';
-  return useQuery<VerificationItem[]>({
-    queryKey: ['admin', 'verifications', status],
-    queryFn: () => apiRequest<VerificationItem[]>(`/jobs/admin/verifications${params}`),
+export interface VerificationsResponse {
+  items: VerificationItem[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export function useAdminVerifications(status?: string, page = 1) {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (page > 1) params.set('page', String(page));
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return useQuery<VerificationsResponse>({
+    queryKey: ['admin', 'verifications', status, page],
+    queryFn: () => apiRequest<VerificationsResponse>(`/jobs/admin/verifications${qs}`),
   });
 }
 

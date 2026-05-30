@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Plus, AlertCircle, ShieldCheck, Briefcase, Truck } from 'lucide-react';
 import { AuthGuard } from '@/components/auth-guard';
@@ -37,9 +37,16 @@ function DashboardContent() {
   const withdrawApp = useWithdrawApplication()
 
   const [statusFilter, setStatusFilter] = useState('all')
-  const [activeRole, setActiveRole] = useState<'employer' | 'driver'>(
-    employer ? 'employer' : 'driver'
-  )
+  const [activeRole, setActiveRole] = useState<'employer' | 'driver'>('driver')
+  const roleInitialized = useRef(false)
+
+  // Set initial role once profiles finish loading (useState initial value can't use async data)
+  useEffect(() => {
+    if (!empLoading && !drvLoading && !roleInitialized.current) {
+      roleInitialized.current = true
+      if (employer) setActiveRole('employer')
+    }
+  }, [empLoading, drvLoading, employer])
 
   const isEmployer = !!employer
   const isDriver = !!driver
@@ -111,7 +118,7 @@ function DashboardContent() {
         title: a.job.title,
         slug: '',
         description: '',
-        jobType: 'HIRING' as const,
+        jobType: a.job.jobType,
         employmentType: 'FULL_TIME' as const,
         salary: a.job.salary ? Number(a.job.salary) : undefined,
         salaryPeriod: (a.job.salaryPeriod ?? undefined) as any,

@@ -8,7 +8,7 @@ import { mockJob } from './mocks'
 vi.mock('@/lib/api/jobs', () => ({
   useDeleteJob: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCloseJob: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useJobApplications: () => ({ data: [], isLoading: false }),
+  useJobApplications: () => ({ data: { items: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } }, isLoading: false }),
   useAcceptApplication: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRejectApplication: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateApplicationStatus: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -17,7 +17,7 @@ vi.mock('@/lib/api/jobs', () => ({
 vi.mock('@/lib/api', () => ({
   useDeleteJob: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCloseJob: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useJobApplications: () => ({ data: [], isLoading: false }),
+  useJobApplications: () => ({ data: { items: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } }, isLoading: false }),
   useAcceptApplication: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRejectApplication: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateApplicationStatus: () => ({ mutateAsync: vi.fn(), isPending: false }),

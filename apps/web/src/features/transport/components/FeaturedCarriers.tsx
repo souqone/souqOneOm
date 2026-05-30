@@ -16,7 +16,7 @@ export default function FeaturedCarriers() {
 
   return (
     <section className="py-8 sm:py-12 bg-[var(--color-surface-container-low)]" dir="rtl">
-      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[var(--color-brand-amber)]/10 flex items-center justify-center flex-shrink-0">
@@ -41,7 +41,7 @@ export default function FeaturedCarriers() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={`skel-carrier-${i}`} className="card-base rounded-2xl p-4 animate-pulse">
                 <div className="flex items-start gap-3 mb-3">
@@ -61,7 +61,7 @@ export default function FeaturedCarriers() {
             <p className="font-medium text-sm">{t('empty.carriers')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {data?.items.map(carrier => (
               <CarrierCard key={`featured-carrier-${carrier.id}`} carrier={carrier} />
             ))}

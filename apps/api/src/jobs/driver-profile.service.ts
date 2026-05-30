@@ -9,14 +9,20 @@ import { CreateDriverProfileDto } from './dto/create-driver-profile.dto';
 import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
 import { QueryDriversDto } from './dto/query-drivers.dto';
 
-const USER_SELECT = {
+/** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
+const PUBLIC_USER_SELECT = {
   id: true,
   username: true,
   displayName: true,
   avatarUrl: true,
-  phone: true,
   governorate: true,
   createdAt: true,
+};
+
+/** Private profile — returned only to the profile owner */
+const PRIVATE_USER_SELECT = {
+  ...PUBLIC_USER_SELECT,
+  phone: true,
 };
 
 @Injectable()
@@ -43,15 +49,15 @@ export class DriverProfileService {
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PRIVATE_USER_SELECT } },
     });
   }
 
-  /* ───── GET MY PROFILE ───── */
+  /* ───── GET MY PROFILE (owner — includes phone) ───── */
   async getMyProfile(userId: string) {
     const profile = await this.prisma.driverProfile.findUnique({
       where: { userId },
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PRIVATE_USER_SELECT } },
     });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل سائق');
     return profile;
@@ -70,21 +76,21 @@ export class DriverProfileService {
     return this.prisma.driverProfile.update({
       where: { userId },
       data,
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PRIVATE_USER_SELECT } },
     });
   }
 
-  /* ───── FIND ONE BY ID ───── */
+  /* ───── FIND ONE BY ID (public — no phone) ───── */
   async findOne(id: string) {
     const profile = await this.prisma.driverProfile.findUnique({
       where: { id },
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PUBLIC_USER_SELECT } },
     });
     if (!profile) throw new NotFoundException('بروفايل السائق غير موجود');
     return profile;
   }
 
-  /* ───── LIST DRIVERS ───── */
+  /* ───── LIST DRIVERS (public — no phone) ───── */
   async findAll(query: QueryDriversDto) {
     const page = Math.max(1, parseInt(query.page || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt(query.limit || '12', 10)));
@@ -111,7 +117,7 @@ export class DriverProfileService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { user: { select: USER_SELECT } },
+        include: { user: { select: PUBLIC_USER_SELECT } },
       }),
       this.prisma.driverProfile.count({ where }),
     ]);

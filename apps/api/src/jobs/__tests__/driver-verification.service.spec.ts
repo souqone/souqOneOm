@@ -12,6 +12,7 @@ const mockPrisma = {
     create: jest.fn(),
     update: jest.fn(),
     findMany: jest.fn(),
+    count: jest.fn().mockResolvedValue(0),
   },
 };
 
@@ -127,14 +128,17 @@ describe('DriverVerificationService', () => {
   });
 
   describe('adminList', () => {
-    it('should list all verifications', async () => {
+    it('should return paginated verifications', async () => {
       mockPrisma.driverVerification.findMany.mockResolvedValue([{ id: 'v1' }]);
+      mockPrisma.driverVerification.count.mockResolvedValue(1);
       const result = await service.adminList();
-      expect(result).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.meta.total).toBe(1);
     });
 
     it('should filter by status', async () => {
       mockPrisma.driverVerification.findMany.mockResolvedValue([]);
+      mockPrisma.driverVerification.count.mockResolvedValue(0);
       await service.adminList('PENDING');
       expect(mockPrisma.driverVerification.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { status: 'PENDING' } }),

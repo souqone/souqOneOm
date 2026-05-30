@@ -3,11 +3,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
+import { SearchService, INDEXES } from '../search/search.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminJobsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+    private readonly searchService: SearchService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /* ───── LIST JOBS ───── */
   async listJobs(query: { page?: string; limit?: string; status?: string; governorate?: string; search?: string }) {
@@ -47,10 +55,34 @@ export class AdminJobsService {
     const job = await this.prisma.driverJob.findUnique({ where: { id: jobId } });
     if (!job) throw new NotFoundException('الوظيفة غير موجودة');
 
-    return this.prisma.driverJob.update({
+    // ADMIN-2: explicit whitelist — no `as any` that would allow arbitrary field writes
+    const safeData: { status?: any; title?: string } = {};
+    if (data.status !== undefined) safeData.status = data.status;
+    if (data.title !== undefined) safeData.title = data.title;
+
+    const updated = await this.prisma.driverJob.update({
       where: { id: jobId },
-      data: data as any,
+      data: safeData,
     });
+
+    // NOTIF-3: notify job owner of admin status change
+    if (data.status !== undefined && data.status !== job.status) {
+      const statusLabel = data.status === 'ACTIVE' ? 'تم تفعيل وظيفتك' : 'تم تعطيل وظيفتك';
+      await this.notifications.create({
+        userId: job.userId,
+        type: 'SYSTEM' as any,
+        title: statusLabel,
+        body: `قام فريق الإدارة بتغيير حالة وظيفة "${job.title}"`,
+        data: { jobId },
+      }).catch(() => {});
+    }
+
+    // Invalidate caches
+    await this.redis.del(`jobs:detail:${jobId}`);
+    if (job.slug) await this.redis.del(`jobs:detail:${job.slug}`);
+    await this.redis.delPattern('jobs:list:*');
+
+    return updated;
   }
 
   /* ───── DELETE JOB ───── */
@@ -58,7 +90,51 @@ export class AdminJobsService {
     const job = await this.prisma.driverJob.findUnique({ where: { id: jobId } });
     if (!job) throw new NotFoundException('الوظيفة غير موجودة');
 
-    return this.prisma.driverJob.delete({ where: { id: jobId } });
+    // C-2 + NOTIF-2 + NOTIF-3: notify ACCEPTED and PENDING applicants, and the job owner
+    const affectedApps = await this.prisma.jobApplication.findMany({
+      where: { jobId, status: { in: ['PENDING', 'ACCEPTED'] } },
+      select: { applicantId: true, status: true },
+    });
+
+    const notifResults = await Promise.allSettled([
+      // Notify owner
+      this.notifications.create({
+        userId: job.userId,
+        type: 'SYSTEM' as any,
+        title: 'تم حذف وظيفتك',
+        body: `قام فريق الإدارة بحذف وظيفة "${job.title}"`,
+        data: { jobId },
+      }),
+      // Notify all affected applicants
+      ...affectedApps.map((app) =>
+        this.notifications.create({
+          userId: app.applicantId,
+          type: 'SYSTEM' as any,
+          title: app.status === 'ACCEPTED' ? 'تم حذف الوظيفة التي قُبلت فيها' : 'تم حذف الوظيفة',
+          body: `الوظيفة "${job.title}" التي تقدمت عليها لم تعد متاحة`,
+          data: { jobId },
+        }),
+      ),
+    ]);
+    notifResults.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        const who = i === 0 ? 'owner' : `applicant ${affectedApps[i - 1]?.applicantId}`;
+        console.warn(`Admin delete notification failed for ${who} of job ${jobId}`, r.reason);
+      }
+    });
+
+    await this.prisma.driverJob.delete({ where: { id: jobId } });
+
+    // ADMIN-1: full cleanup — orphans, search index, caches
+    await this.prisma.cleanupPolymorphicOrphans('JOB', jobId);
+
+    this.searchService.removeDocument(INDEXES.JOBS, jobId).catch(() => {});
+
+    await this.redis.del(`jobs:detail:${jobId}`);
+    if (job.slug) await this.redis.del(`jobs:detail:${job.slug}`);
+    await this.redis.delPattern('jobs:list:*');
+
+    return { message: 'تم حذف الوظيفة' };
   }
 
   /* ───── STATS ───── */

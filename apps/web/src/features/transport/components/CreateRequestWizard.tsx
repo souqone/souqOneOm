@@ -222,7 +222,7 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
           {/* Card */}
           <div className="card-base p-6">
             <FormProvider {...methods}>
-              <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
+              <form onSubmit={methods.handleSubmit(onSubmit, (errors) => console.log('VALIDATION ERRORS:', errors))} noValidate>
                 {STEP_COMPONENTS[currentStep]}
 
                 {/* Navigation */}

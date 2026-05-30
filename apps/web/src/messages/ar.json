@@ -1154,7 +1154,6 @@
     "fuelTypeLabel": "نوع الوقود",
     "maxPrice": "السعر الأقصى (ر.ع)",
     "priceExample": "مثال: 15000",
-
     "listingsTitle": "اختر سيارتك من سوق وان",
     "listingsSubtitle": "سيارات جديدة ومستعملة للبيع والإيجار في سلطنة عمان",
     "listingsSearch": "ابحث عن ماركة، موديل، سنة...",
@@ -1212,7 +1211,6 @@
     "sortYearNewest": "السنة: الأحدث",
     "sortSalaryHigh": "الراتب: الأعلى",
     "sortSalaryLow": "الراتب: الأقل",
-
     "partsTitle": "قطع غيار",
     "partsCount": "إعلان",
     "partsSearch": "ابحث عن قطعة غيار...",
@@ -1231,7 +1229,6 @@
     "partsCatBatteries": "بطاريات",
     "partsCatOils": "زيوت",
     "partsCatAccessories": "إكسسوارات",
-
     "servicesTitle": "خدمات سيارات",
     "servicesCount": "خدمة",
     "servicesSearch": "ابحث عن خدمة...",
@@ -1260,11 +1257,9 @@
     "servicesProviderMobile": "خدمة متنقلة",
     "servicesProviderCompany": "شركة",
     "servicesMobile": "متنقلة",
-
     "transportTitle": "خدمات النقل",
     "transportSubtitle": "نقل بضائع · نقل ركاب · خدمات لوجستية",
     "transportNoListings": "لا توجد خدمات نقل حالياً",
-
     "busesTitle": "سوق الحافلات",
     "busesSubtitle": "بيع · شراء · تأجير · عقود نقل",
     "busesTabSale": "للبيع",
@@ -1287,7 +1282,6 @@
     "busesContract": "عقد {price} ر.ع./شهر",
     "busesPerDay": "ر.ع./يوم",
     "busesNotSpecified": "غير محدد",
-
     "equipTitle": "سوق المعدات والخدمات",
     "equipSubtitle": "بيع · تأجير · طلبات · مشغلين",
     "equipAddEquipment": "أضف معدة",
@@ -1333,7 +1327,6 @@
     "equipStatusInProgress": "جاري التنفيذ",
     "equipStatusClosed": "مغلق",
     "equipStatusCancelled": "ملغي",
-
     "jobsTitle": "وظائف السائقين",
     "jobsSubtitle": "ابحث عن سائق محترف أو اعرض خدماتك في سلطنة عمان",
     "jobsSearch": "ابحث بالعنوان أو الوصف...",
@@ -1357,7 +1350,6 @@
     "jobsLicenseTransport": "نقل",
     "jobsLicenseBus": "حافلات",
     "jobsLicenseMotorcycle": "دراجة",
-
     "rentalsTitle": "سيارات للإيجار",
     "rentalsSubtitle": "استأجر سيارتك المفضلة بأفضل الأسعار في سلطنة عمان",
     "rentalsAdd": "أضف سيارة للإيجار",
@@ -1369,9 +1361,7 @@
     "rentalsNoResults": "لا توجد سيارات للإيجار",
     "rentalsNoResultsSub": "لم نجد نتائج. جرب تغيير معايير البحث.",
     "rentalsAvailable": "{count} سيارة متاحة للإيجار",
-
     "redirecting": "جارٍ التحويل...",
-
     "sellerNoListings": "لا توجد إعلانات لهذا البائع حالياً",
     "sellerErrorConversation": "حدث خطأ أثناء إنشاء المحادثة",
     "sellerLoginToContact": "سجّل الدخول للتواصل مع البائع",
@@ -1382,7 +1372,6 @@
     "sellerEmptyTitle": "لا توجد إعلانات",
     "sellerEmptyDesc": "هذا البائع ليس لديه إعلانات نشطة حالياً.",
     "sellerListingsCount": "إعلان",
-
     "opDetailNotFound": "الإعلان غير موجود",
     "opDetailBack": "العودة",
     "opDetailHome": "الرئيسية",
@@ -1406,7 +1395,6 @@
     "opDetailRateDaily": "{rate} {currency}/يوم",
     "opDetailRateHourly": "{rate} {currency}/ساعة",
     "opDetailRateContact": "اتصل للسعر",
-
     "eqReqDetailNotFound": "الطلب غير موجود",
     "eqReqDetailBack": "العودة",
     "eqReqDetailHome": "الرئيسية",
@@ -1455,12 +1443,10 @@
     "eqReqDetailBidRejectedMsg": "تم رفض العرض",
     "eqReqDetailRequester": "صاحب الطلب",
     "eqReqDetailViews": "مشاهدة",
-
     "loadingText": "جاري التحميل...",
     "notFoundMessage": "الصفحة التي تبحث عنها غير موجودة",
     "notFoundHome": "الصفحة الرئيسية",
     "notFoundBrowse": "تصفح السوق",
-
     "msgChatTitle": "سوق وان للدردشات",
     "msgChatSubtitle": "اختر محادثة من القائمة أو ابدأ محادثة جديدة من صفحة أي إعلان",
     "msgChatSelect": "اختر محادثة",
@@ -1471,7 +1457,6 @@
     "msgChatReconnecting": "جاري إعادة الاتصال...",
     "msgChatSearchPlaceholder": "بحث في الرسائل...",
     "msgChatStartConversation": "ابدأ المحادثة بإرسال رسالة",
-
     "notifTitle": "الإشعارات",
     "notifMarkAllRead": "تعليم الكل كمقروء",
     "notifMarkingRead": "جاري...",
@@ -1521,73 +1506,59 @@
     "notifSelectPrompt": "اختر إشعاراً لعرض تفاصيله",
     "notifRead": "مقروء",
     "notifEndOfList": "وصلت لنهاية الإشعارات",
-
     "tabOverview": "نظرة عامة",
     "tabMyApps": "طلباتي",
     "tabInvites": "الدعوات",
     "tabPayments": "المدفوعات",
     "tabRecs": "مقترحات",
-
     "licenseLight": "خفيفة",
     "licenseHeavy": "ثقيلة",
     "licenseTransport": "نقل",
     "licenseBus": "حافلة",
     "licenseMotorcycle": "دراجة",
-
     "appStatusPending": "قيد الانتظار",
     "appStatusAccepted": "مقبول",
     "appStatusRejected": "مرفوض",
     "appStatusWithdrawn": "تم السحب",
-
     "escrowHeld": "محجوز",
     "escrowReleased": "تم التحرير",
     "escrowRefunded": "مسترد",
     "escrowDisputed": "متنازع عليه",
     "escrowHeldLabel": "مبلغ محجوز",
-
     "salaryDaily": "يومياً",
     "salaryMonthly": "شهرياً",
     "salaryYearly": "سنوياً",
     "salaryNegotiable": "قابل للتفاوض",
     "currencyOMR": "ر.ع",
-
     "notVerifiedTitle": "حسابك غير موثق",
     "notVerifiedDesc": "وثق حسابك لزيادة فرصك في الحصول على وظائف",
     "verifyNow": "وثق الآن",
-
     "noProfileTitle": "لم تنشئ ملف سائق بعد",
     "noProfileDesc": "أنشئ ملفك الشخصي كسائق لتبدأ بالتقديم على الوظائف واستقبال الدعوات",
     "createDriverProfile": "إنشاء ملف سائق",
-
     "availability": "الإتاحة",
     "availableNow": "متاح الآن",
     "notAvailable": "غير متاح",
     "toggleAvailability": "تغيير حالة الإتاحة",
-
     "withdrawApp": "سحب الطلب",
     "openDispute": "فتح نزاع",
     "acceptInvite": "قبول",
     "declineInvite": "رفض",
-
     "inviteStatusACCEPTED": "مقبول",
     "inviteStatusDECLINED": "مرفوض",
-
     "pendingInvitesTitle": "لديك {count} دعوة بانتظار الرد",
     "pendingInvitesDesc": "راجع الدعوات وقم بالرد عليها",
     "review": "مراجعة",
     "match": "تطابق",
-
     "statTotalApps": "إجمالي الطلبات",
     "statPendingApps": "قيد الانتظار",
     "statAcceptedApps": "مقبولة",
     "statPendingInvites": "دعوات جديدة",
-
     "recentApps": "آخر الطلبات",
     "recommendedJobs": "وظائف مقترحة",
     "viewAll": "عرض الكل",
     "filterAll": "الكل",
     "browseJobs": "تصفح الوظائف",
-
     "noAppsTitle": "لا توجد طلبات",
     "noAppsDesc": "لم تقدم على أي وظيفة بعد. تصفح الوظائف المتاحة وقدّم الآن",
     "noInvitesTitle": "لا توجد دعوات",
@@ -1596,47 +1567,37 @@
     "noEscrowDesc": "ستظهر هنا المدفوعات المحجوزة عند قبول طلباتك",
     "noRecsTitle": "لا توجد مقترحات",
     "noRecsDesc": "سيتم اقتراح وظائف مناسبة لملفك الشخصي",
-
     "tabMyJobs": "وظائفي",
     "tabApps": "المتقدمون",
     "tabInvite": "دعوة سائق",
-
     "jobStatusActive": "نشط",
     "jobStatusClosed": "مغلق",
     "jobStatusDraft": "مسودة",
     "jobStatusExpired": "منتهي",
-
     "statTotalJobs": "إجمالي الوظائف",
     "statActiveJobs": "وظائف نشطة",
-
     "activeJobs": "الوظائف النشطة",
     "recentApplicants": "آخر المتقدمين",
-
     "noEmployerProfileTitle": "لم تنشئ ملف صاحب عمل بعد",
     "noEmployerProfileDesc": "أنشئ ملفك كصاحب عمل لتبدأ بنشر وظائف وإدارة المتقدمين",
     "createEmployerProfile": "إنشاء ملف صاحب عمل",
-
     "pendingAppsTitle": "لديك {count} طلب بانتظار المراجعة",
     "pendingAppsDesc": "راجع الطلبات وقم بالرد عليها",
-
     "postNewJob": "نشر وظيفة جديدة",
     "editJob": "تعديل الوظيفة",
     "closeJob": "إغلاق الوظيفة",
     "viewApps": "عرض المتقدمين",
     "inviteDriver": "دعوة سائق",
-
     "accept": "قبول",
     "reject": "رفض",
     "payEscrow": "دفع أمانة",
     "releaseEscrow": "تحرير الأمانة",
-
     "payEscrowTitle": "دفع أمانة للمتقدم",
     "payEscrowDesc": "أنت على وشك دفع أمانة لـ {name}",
     "amountOMR": "المبلغ (ر.ع)",
     "escrowExplainer": "المبلغ سيُحجز حتى يتم تأكيد إتمام العمل",
     "escrowSafetyNote": "الأمانة محمية ولا يمكن سحبها إلا بعد موافقة الطرفين أو قرار التحكيم",
     "confirmPayment": "تأكيد الدفع",
-
     "searchDrivers": "بحث عن سائقين",
     "governorate": "المحافظة",
     "selectGovernorate": "اختر المحافظة",
@@ -1651,17 +1612,13 @@
     "viewProfile": "عرض الملف",
     "driverUnavailable": "غير متاح",
     "verified": "موثق",
-
     "noJobsTitle": "لا توجد وظائف",
     "noJobsDesc": "لم تقم بنشر أي وظيفة بعد",
     "createFirstJob": "نشر أول وظيفة",
-
     "jobApplicants": "متقدمون",
     "jobViews": "مشاهدات",
     "jobInvites": "دعوات",
-
     "escrowHistory": "سجل المدفوعات",
-
     "comingSoonAvailable": "سوف يتوفر قريبًا",
     "comingSoonDesc": "نعمل حاليًا على تجهيز هذا القسم ليكون جاهزًا لك بأفضل تجربة. ترقبوا التحديثات!",
     "comingSoonBack": "العودة للرئيسية",
@@ -1669,7 +1626,6 @@
     "comingSoonServices": "خدمات سيارات",
     "comingSoonBuses": "سوق الحافلات",
     "comingSoonEquipment": "سوق المعدات والخدمات",
-
     "favTitle": "المفضلة",
     "favCountSaved": "{count} عنصر محفوظ",
     "favSubtitle": "العناصر التي حفظتها لتعود إليها لاحقاً",
@@ -1683,7 +1639,6 @@
     "favEmptyTitle": "لا توجد مفضلات",
     "favEmptyDesc": "احفظ العناصر التي تعجبك بالضغط على القلب لتعود إليها لاحقاً",
     "favBrowse": "تصفح الإعلانات",
-
     "editListingTitle": "تعديل الإعلان",
     "editListingDesc": "عدّل تفاصيل إعلانك وأعد نشره.",
     "editListingSaved": "تم حفظ التعديلات بنجاح!",
@@ -1693,7 +1648,6 @@
     "editListingBasicInfo": "المعلومات الأساسية",
     "editListingImages": "الصور",
     "editListingSelectGovernorate": "اختر المحافظة",
-
     "mapLocateMe": "حدد موقعي تلقائياً",
     "mapLocating": "جارٍ التحديد...",
     "mapClickHint": "أو انقر على الخريطة لتحديد الموقع",
@@ -1704,7 +1658,6 @@
     "mapPositionUnavailable": "الموقع غير متاح حالياً",
     "mapTimeout": "انتهت مهلة تحديد الموقع",
     "mapError": "حدث خطأ أثناء تحديد الموقع",
-
     "mapViewListingLocation": "موقع الإعلان",
     "mapViewDirections": "اتجاهات",
     "mapViewWhatsapp": "واتساب",
@@ -1713,7 +1666,6 @@
     "mapViewShareWhatsapp": "واتساب",
     "mapViewShareTelegram": "تليجرام",
     "mapViewCopyLink": "نسخ الرابط",
-
     "nearbyTitle": "إعلانات قريبة منك",
     "nearbyPermissionDesc": "اسمح لنا بمعرفة موقعك لنعرض لك أقرب الإعلانات المتاحة",
     "nearbyLocating": "جارٍ تحديد الموقع...",
@@ -1723,7 +1675,6 @@
     "nearbyMeters": "{distance} م",
     "nearbyKm": "{distance} كم",
     "nearbyRental": "إيجار",
-
     "chatFilterAll": "الكل",
     "chatFilterBuying": "شراء",
     "chatFilterSelling": "بيع",
@@ -1747,13 +1698,11 @@
     "chatPlaceholder": "اكتب رسالة...",
     "chatEmojiCommon": "شائعة",
     "chatEmojiGestures": "إيماءات",
-
     "rentalTitle": "سيارات للإيجار",
     "rentalSubtitle": "استأجر سيارتك المفضلة بأفضل الأسعار في سلطنة عمان",
     "rentalViewAll": "عرض الكل ←",
     "rentalEmpty": "لا توجد سيارات للإيجار حالياً",
     "rentalAddCar": "أضف سيارة للإيجار",
-
     "imgUploadDrag": "اسحب الصور هنا أو اضغط للاختيار",
     "imgUploadHint": "JPEG, PNG, WebP — حد أقصى 10MB لكل صورة — {current}/{max}",
     "imgUploadAlt": "صورة {index}",
@@ -1761,7 +1710,6 @@
     "imgUploadDelete": "حذف الصورة",
     "imgUploadPrimary": "رئيسية",
     "imgUploadReorder": "اسحب الصور لإعادة ترتيبها. الصورة الأولى تُعرض كصورة رئيسية.",
-
     "sidebarTitle": "الدردشات",
     "sidebarSearchPlaceholder": "بحث في المحادثات...",
     "sidebarLoading": "جاري التحميل...",
@@ -1787,7 +1735,6 @@
     "entityEquipmentListing": "معدة",
     "entityEquipmentRequest": "طلب معدة",
     "entityOperatorListing": "مشغّل",
-
     "negoTitle": "مركز التفاوض",
     "negoCounterOffer": "عرض مضاد",
     "negoOffer": "عرض",
@@ -1803,7 +1750,6 @@
     "negoTimeline": "سجل التفاوض",
     "negoSafeTransaction": "معاملة آمنة",
     "negoSafeDesc": "يتم حجز المبلغ في حساب وسيط حتى يتم تأكيد استلام السيارة والفحص من الطرفين.",
-
     "lfTitleRental": "تأجير سيارتك",
     "lfTitleWanted": "مطلوب سيارة",
     "lfTitleSale": "بيع سيارتك",
@@ -1911,22 +1857,18 @@
     "lfFeatureAdaptiveCruise": "تحكم كروز تكيفي",
     "lfContactPhone": "رقم الهاتف",
     "lfWhatsapp": "واتساب",
-
     "formErrorTitle": "يوجد أخطاء في النموذج",
     "formErrorDesc": "لنشر الإعلان، يرجى مراجعة الحقول أدناه",
     "formErrorClose": "فهمت، سأصلحها",
-
     "multiStepSubmit": "نشر الإعلان",
     "multiStepPrev": "السابق",
     "multiStepNext": "التالي",
     "multiStepOf": "خطوة {current} من {total}",
     "multiStepSaving": "جاري الحفظ...",
-
     "addCarSuccess": "تم نشر الإعلان بنجاح!",
     "addCarError": "حدث خطأ أثناء إنشاء الإعلان",
     "addCarUploading": "جاري رفع الصور...",
     "addCarSubmit": "نشر الإعلان",
-
     "addListingTitle": "انشر إعلانك في ثوانٍ",
     "addListingBadge": "مجاناً بالكامل — بدون رسوم",
     "addListingSubtitle": "اختر القسم المناسب وابدأ النشر. إعلانك يصل لآلاف المستخدمين في عُمان.",
@@ -1936,7 +1878,6 @@
     "addListingHelpTitle": "تحتاج مساعدة؟",
     "addListingHelpDesc": "إذا لم تكن متأكداً من القسم المناسب لإعلانك أو لديك أي استفسار، تواصل معنا ونساعدك.",
     "addListingHelpContact": "تواصل معنا",
-
     "busTitle": "إضافة إعلان حافلة",
     "busSubmit": "نشر الإعلان",
     "busEditTitle": "تعديل إعلان الحافلة",
@@ -2061,7 +2002,6 @@
     "busLabelAvailableTo": "متاح حتى",
     "busLabelCancellation": "سياسة الإلغاء",
     "busPlaceholderCancellation": "مثال: إلغاء مجاني قبل 48 ساعة",
-
     "eqTitle": "إضافة إعلان معدة",
     "eqSubmit": "نشر الإعلان",
     "eqEditTitle": "تعديل إعلان المعدة",
@@ -2140,7 +2080,6 @@
     "eqLabelInsurance": "تأمين مشمول",
     "eqLabelCancellation": "سياسة الإلغاء",
     "eqPlaceholderCancellation": "مثال: إلغاء مجاني قبل 48 ساعة",
-
     "svcTitle": "إضافة خدمة سيارات",
     "svcSubmit": "نشر الإعلان",
     "svcEditTitle": "تعديل إعلان الخدمة",
@@ -2193,7 +2132,6 @@
     "svcLabelPhone": "رقم الهاتف",
     "svcLabelWhatsapp": "واتساب",
     "svcLabelWebsite": "الموقع الإلكتروني",
-
     "tripDaySat": "السبت",
     "tripDaySun": "الأحد",
     "tripDayMon": "الإثنين",
@@ -2201,7 +2139,6 @@
     "tripDayWed": "الأربعاء",
     "tripDayThu": "الخميس",
     "tripDayFri": "الجمعة",
-
     "partTitle": "إضافة قطعة غيار",
     "partSubmit": "نشر الإعلان",
     "partEditTitle": "تعديل إعلان القطعة",
@@ -2255,7 +2192,6 @@
     "partLabelMap": "حدد الموقع على الخريطة (اختياري)",
     "partLabelPhone": "رقم الهاتف",
     "partLabelWhatsapp": "واتساب",
-
     "opTitle": "تسجيل كمشغل/فني",
     "opSubmit": "نشر الإعلان",
     "opEditTitle": "تعديل إعلان المشغل",
@@ -2310,7 +2246,6 @@
     "opDumpTruck": "قلاب",
     "opWaterTanker": "تانكر مياه",
     "opLightEquip": "معدات خفيفة",
-
     "layoutTitle": "سوق وان | سوق السيارات في سلطنة عمان",
     "layoutTitleTemplate": "%s | سوق وان",
     "layoutDescription": "سوق وان — المعرض الرقمي الأول لبيع وشراء السيارات في سلطنة عمان. اكتشف سيارات فاخرة ومستعملة بأفضل الأسعار.",
@@ -2319,7 +2254,6 @@
     "layoutSiteName": "سوق وان",
     "layoutKeywords": "سوق وان, سيارات, عمان, بيع سيارات, شراء سيارات, سيارات مستعملة, سلطنة عمان",
     "verifiedBadge": "موثّق",
-
     "profileMemberSince": "عضو منذ {date}",
     "profileEdit": "تعديل",
     "profileAddListing": "أضف إعلان",
@@ -2390,7 +2324,6 @@
     "profilePasswordChanged": "تم تغيير كلمة المرور بنجاح",
     "profileChangingPassword": "جارٍ التغيير...",
     "profileChangePasswordBtn": "تغيير كلمة المرور",
-
     "bookingsPageTitle": "الحجوزات",
     "bookingsPageSubtitle": "{count} حجز",
     "bookingsTabMy": "حجوزاتي",
@@ -2455,7 +2388,6 @@
     "bookingCardLoginRequired": "سجل الدخول للحجز",
     "bookingCardSuccess": "تم الحجز بنجاح",
     "bookingCardError": "فشل إنشاء الحجز",
-
     "myListingsTitle": "إعلاناتي",
     "myListingsCount": "{count} إعلان",
     "myListingsAdd": "أضف إعلان جديد",
@@ -2490,7 +2422,6 @@
     "myListingsAddFirst": "أضف إعلانك الأول",
     "myListingsAddNew": "أضف إعلاناً جديداً",
     "myListingsAddListing": "أضف إعلاناً",
-
     "sectionCars": "سيارات",
     "sectionBuses": "باصات",
     "sectionEquipment": "معدات",
@@ -2500,7 +2431,6 @@
     "sectionJobs": "وظائف",
     "sectionEquipmentRequests": "طلباتي",
     "sectionTransport": "نقل",
-
     "myJobsTitle": "إعلاناتي",
     "myJobsSubtitle": "إدارة إعلانات الوظائف الخاصة بك",
     "myJobsNewListing": "إعلان جديد",
@@ -2534,7 +2464,6 @@
     "myJobsIncomingApps": "الطلبات الواردة ({count})",
     "myJobsAccept": "قبول",
     "myJobsReject": "رفض",
-
     "jobDetailNotFound": "الوظيفة غير موجودة",
     "jobDetailBackToJobs": "العودة للوظائف",
     "jobDetailHome": "الرئيسية",
@@ -2632,7 +2561,6 @@
     "jobDetailVtLimo": "ليموزين",
     "jobDetailVtVan": "فان",
     "jobDetailVtPickup": "بيك أب",
-
     "bookingDetailNotFound": "الحجز غير موجود",
     "bookingDetailNotFoundDesc": "قد يكون تم حذف هذا الحجز أو لا تملك صلاحية الوصول إليه",
     "bookingDetailBackToBookings": "العودة للحجوزات",
@@ -2677,7 +2605,6 @@
     "bookingDetailStatusCompletedDesc": "تم إكمال الحجز بنجاح",
     "bookingDetailStatusCancelledDesc": "تم إلغاء هذا الحجز",
     "bookingDetailStatusRejectedDesc": "تم رفض هذا الحجز",
-
     "partDetailNotFound": "قطعة الغيار غير موجودة",
     "partDetailErrorConversation": "حدث خطأ أثناء إنشاء المحادثة",
     "partDetailLoginToMessage": "سجّل الدخول لإرسال رسالة",
@@ -2712,7 +2639,6 @@
     "partDetailCatOils": "زيوت",
     "partDetailCatAccessories": "إكسسوارات",
     "partDetailCatOther": "أخرى",
-
     "svcDetailNotFound": "الخدمة غير موجودة",
     "svcDetailErrorConversation": "حدث خطأ أثناء إنشاء المحادثة",
     "svcDetailLoginToMessage": "سجّل الدخول لإرسال رسالة",
@@ -2748,8 +2674,6 @@
     "svcDetailDayWed": "الأربعاء",
     "svcDetailDayThu": "الخميس",
     "svcDetailDayFri": "الجمعة",
-
-
     "equipDetailNotFound": "الإعلان غير موجود",
     "equipDetailBack": "العودة",
     "equipDetailHome": "الرئيسية",
@@ -2808,7 +2732,6 @@
     "equipDetailCondUsed": "مستعمل",
     "equipDetailCondFair": "مقبول",
     "equipDetailCondPoor": "ضعيف",
-
     "busDetailNotFound": "إعلان الحافلة غير موجود",
     "busDetailBackToMarket": "العودة لسوق الحافلات",
     "busDetailHome": "الرئيسية",
@@ -2876,7 +2799,6 @@
     "busDetailUserPhone": "هاتف المعلن",
     "equipDetailFeatures": "المميزات",
     "equipDetailUserPhone": "هاتف المعلن",
-
     "carBreadcrumbMarket": "السوق",
     "carSpecs": "المواصفات",
     "carSpecMileage": "المسافة",
@@ -2947,7 +2869,6 @@
     "carSelectDates": "يرجى اختيار تاريخ البداية والنهاية",
     "carBookingSuccess": "تم إرسال طلب الحجز بنجاح!",
     "carErrorBooking": "حدث خطأ أثناء الحجز",
-
     "jnTitle": "إعلان وظيفة جديد",
     "jnSubtitle": "أضف إعلان وظيفة سائق أو اعرض خدماتك",
     "jnTypeLabel": "نوع الإعلان *",
@@ -3015,7 +2936,6 @@
     "jnErrRequired": "يرجى ملء جميع الحقول المطلوبة",
     "jnSuccess": "تم نشر إعلان الوظيفة بنجاح!",
     "jnError": "فشل في إنشاء الإعلان",
-
     "eqrTypeExcavator": "حفار",
     "eqrTypeCrane": "رافعة",
     "eqrTypeLoader": "لودر",
@@ -3069,7 +2989,8 @@
     "eqrError": "حدث خطأ",
     "myListingsFeature": "تمييز",
     "myListingsFeatured": "مميز ✦",
-    "myListingsFeatureError": "حدث خطأ في عملية التمييز"
+    "myListingsFeatureError": "حدث خطأ في عملية التمييز",
+    "customSelectSearch": "ابحث..."
   },
   "reviews": {
     "ratingsAndReviews": "التقييمات والمراجعات",
@@ -3290,7 +3211,6 @@
     "configEquipment": "معدة",
     "configPart": "قطعة غيار",
     "configService": "خدمة",
-
     "specYear": "سنة الصنع",
     "specMileage": "الكيلومترات",
     "specEngine": "المحرك",
@@ -3324,10 +3244,8 @@
     "specProviderType": "نوع المزود",
     "specHomeService": "خدمة منزلية",
     "specWorkingHours": "ساعات العمل",
-
     "unitKm": "كم",
     "unitPassenger": "راكب",
-
     "highlightCondition": "حالة {condition}",
     "highlightCarNew": "سيارة جديدة لم تُستخدم",
     "highlightCarUsed": "مستعملة بحالة ممتازة",
@@ -3367,7 +3285,6 @@
     "highlightServiceFixed": "سعر ثابت",
     "highlightServiceNegotiableSub": "ناقش السعر مع المزود",
     "highlightServiceFixedSub": "السعر محدد ونهائي",
-
     "breadcrumbHome": "السوق",
     "share": "مشاركة",
     "saved": "محفوظ",
@@ -3430,13 +3347,11 @@
     "contactForPrice": "تواصل للسعر",
     "currencyUnit": "ر.ع",
     "contractMonthlyLabel": "شهرياً (عقد)",
-
     "infoType": "النوع",
     "infoCondition": "الحالة",
     "infoGovernorate": "المحافظة",
     "infoViews": "المشاهدات",
     "infoPublishDate": "تاريخ النشر",
-
     "boolYes": "نعم",
     "boolNo": "لا",
     "specIsOriginalShort": "أصلية",
@@ -3465,7 +3380,6 @@
     "highlightProfitMargin": "عائد {margin}%",
     "highlightNegotiableProfit": "العائد قابل للتفاوض",
     "highlightProfitDetails": "تفاصيل العائد السنوي",
-
     "contractDetailsTitle": "تفاصيل العقد",
     "contractDetailsSubtitle": "معلومات العقد وشروطه",
     "contractMonthlyValue": "القيمة الشهرية",
@@ -3808,8 +3722,13 @@
     "noRating": "جديد",
     "tripsCompleted": "رحلة مكتملة",
     "status": {
-      "AVAILABLE": "متاح",
-      "UNAVAILABLE": "غير متاح"
+      "OPEN": "مفتوح",
+      "QUOTED": "وصلت عروض",
+      "ACCEPTED": "تم القبول",
+      "IN_PROGRESS": "جارٍ التنفيذ",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى",
+      "EXPIRED": "منتهي"
     },
     "verifiedCarrier": "مزود موثّق",
     "averageRating": "متوسط التقييم",
@@ -3823,26 +3742,17 @@
     "whatToTransport": "ماذا تريد أن تنقل؟",
     "serviceTypes": {
       "GOODS": "بضائع عامة",
-      "GOODSSub": "إلكترونيات، مواد غذائية، وغيرها",
-      "FURNITURE": "أثاث",
-      "FURNITURESub": "نقل الأثاث بعناية واحترافية",
-      "CONSTRUCTION": "مواد بناء",
-      "CONSTRUCTIONSub": "رمل، إسمنت، طوب، وحديد",
-      "HEAVY": "معدات ثقيلة",
-      "HEAVYSub": "حمولات ضخمة تحتاج معدات خاصة",
-      "BACKLOAD": "حمولات راجعة",
-      "BACKLOADSub": "أسعار مخفضة للشاحنات العائدة",
-      "EQUIPMENT": "تأجير معدات",
-      "EQUIPMENTSub": "حفارات، رافعات، ومعدات ثقيلة"
-    },
-    "status": {
-      "OPEN": "مفتوح",
-      "QUOTED": "وصلت عروض",
-      "ACCEPTED": "تم القبول",
-      "IN_PROGRESS": "جارٍ التنفيذ",
-      "COMPLETED": "مكتمل",
-      "CANCELLED": "ملغى",
-      "EXPIRED": "منتهي"
+      "GOODSSub": "تجارة، ملابس، إلكترونيات وغيرها",
+      "FURNITURE": "أثاث ومنزليات",
+      "FURNITURESub": "نقل منزلي وتركيب وفك",
+      "CONSTRUCTION": "مواد البناء",
+      "CONSTRUCTIONSub": "رمل، حديد، أسمنت، بلوك...",
+      "HEAVY": "شحن ثقيل",
+      "HEAVYSub": "مشاريع كبيرة وشحنات صناعية",
+      "BACKLOAD": "عودة فارغة",
+      "BACKLOADSub": "رحلات عودة بأسعار مخفضة",
+      "EQUIPMENT": "معدات وآليات",
+      "EQUIPMENTSub": "معدات ثقيلة وآلات صناعية"
     },
     "quoteStatus": {
       "PENDING": "بانتظار الرد",
@@ -3985,7 +3895,7 @@
     "sortBudgetHigh": "الأعلى ميزانية",
     "sortBudgetLow": "الأقل ميزانية",
     "requestsCount": "{count} طلب",
-    "browseTitle": "طلبات النقل",
+    "browseTitle": "تصفّح طلبات النقل",
     "loadMore": "تحميل المزيد",
     "remaining": "{n} متبقي",
     "noResults": "لا توجد نتائج",
@@ -3996,7 +3906,7 @@
     "mapUnavailable": "الخريطة غير متاحة",
     "loginToQuote": "سجّل دخول لتقديم عرض",
     "completedTrips": "رحلات مكتملة",
-    "rating": "تقييم",
+    "rating": "التقييم",
     "memberSince": "عضو منذ",
     "availableNow": "متاح الآن",
     "unavailable": "غير متاح",
@@ -4164,7 +4074,6 @@
     "filterResults": "تصفية النتائج",
     "applyFilters": "تطبيق الفلاتر",
     "activeFilters": "فلتر نشط",
-    "clearFilters": "مسح الفلاتر",
     "noCargoDesc": "لم يتم تحديد وصف للبضاعة",
     "sortOptions": {
       "createdAt_desc": "الأحدث أولاً",
@@ -4217,25 +4126,9 @@
     "activate": "تفعيل",
     "quotesSubmitted": "عروض مقدمة",
     "quotesAccepted": "عروض مقبولة",
-    "rating": "التقييم",
     "reviewCount": "التقييمات",
     "reviewsTitle": "التقييمات والآراء",
-    "memberSince": "عضو منذ",
     "vehicleTypes": "أنواع المركبات",
-    "serviceTypes": {
-      "GOODS": "بضائع عامة",
-      "GOODSSub": "تجارة، ملابس، إلكترونيات وغيرها",
-      "FURNITURE": "أثاث ومنزليات",
-      "FURNITURESub": "نقل منزلي وتركيب وفك",
-      "CONSTRUCTION": "مواد البناء",
-      "CONSTRUCTIONSub": "رمل، حديد، أسمنت، بلوك...",
-      "HEAVY": "شحن ثقيل",
-      "HEAVYSub": "مشاريع كبيرة وشحنات صناعية",
-      "BACKLOAD": "عودة فارغة",
-      "BACKLOADSub": "رحلات عودة بأسعار مخفضة",
-      "EQUIPMENT": "معدات وآليات",
-      "EQUIPMENTSub": "معدات ثقيلة وآلات صناعية"
-    },
     "bio": "نبذة تعريفية",
     "contactSection": "التواصل",
     "whatsappContact": "تواصل عبر واتساب",
@@ -4246,13 +4139,16 @@
     "profileSummary": "ملخص الملف",
     "viewMyProfile": "عرض ملفي الشخصي",
     "browseAllRequests": "عرض جميع الطلبات",
-    "browseTitle": "تصفّح طلبات النقل",
     "browseSubtitle": "ابحث عن طلبات النقل المناسبة وقدّم عروضك",
     "carrierCtaTitle": "ناقل؟ سجّل وابدأ تقديم عروض على الطلبات",
     "carrierCtaSubtitle": "انضم لشبكة ناقلي SouqOne وحقق دخلاً إضافياً",
     "carrierCtaAuthTitle": "هل لديك مركبة وتريد تقديم خدمات نقل؟",
     "carrierCtaAuthSubtitle": "سجّل كناقل مجاناً وابدأ في استقبال الطلبات",
-    "registerAsCarrier": "سجّل كناقل"
+    "registerAsCarrier": "سجّل كناقل",
+    "carrierStatus": {
+      "AVAILABLE": "متاح",
+      "UNAVAILABLE": "غير متاح"
+    }
   },
   "status": {
     "OPEN": "مفتوح",
