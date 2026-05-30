@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { z } from 'zod';
 import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from '@/i18n/navigation';
 import { toast, Toaster } from 'sonner';
 import { transportApi } from '../api';
+import { createRequestSchema, type CreateRequestFormData } from '../validation';
 import type { CreateTransportRequestDto, TransportServiceType } from '../types';
 import WizardProgress from './WizardProgress';
 import Step1ServiceType from './Step1ServiceType';
@@ -16,28 +19,7 @@ import Step5Review from './Step5Review';
 const STEP_TITLES = ['الخدمة', 'المسار', 'البضاعة', 'الموعد', 'المراجعة'];
 const TOTAL_STEPS = 5;
 
-export interface CreateRequestFormData {
-  serviceType: 'GOODS' | 'FURNITURE' | 'CONSTRUCTION' | 'HEAVY' | 'BACKLOAD' | 'EQUIPMENT';
-  fromGovernorate: string;
-  fromCity?: string;
-  fromAddress: string;
-  toGovernorate: string;
-  toCity?: string;
-  toAddress: string;
-  cargoDescription: string;
-  weightTons?: number | string;
-  requiresHelper: boolean;
-  notes?: string;
-  timingType: 'asap' | 'scheduled';
-  scheduledAt?: string;
-  isFlexible: boolean;
-  budgetMin?: number | string;
-  budgetMax?: number | string;
-  fromLat?: number | null;
-  fromLng?: number | null;
-  toLat?: number | null;
-  toLng?: number | null;
-}
+export type CreateRequestFormData = z.infer<typeof createRequestSchema>;
 
 const STEP_FIELDS: Record<number, (keyof CreateRequestFormData)[]> = {
   1: ['serviceType'],
@@ -59,6 +41,7 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
   const router = useRouter();
 
   const methods = useForm<CreateRequestFormData>({
+    resolver: zodResolver(createRequestSchema),
     defaultValues: initialData || {
       timingType: 'asap',
       isFlexible: false,
