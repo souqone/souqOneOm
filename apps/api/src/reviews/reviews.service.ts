@@ -27,6 +27,14 @@ export class ReviewsService {
       throw new BadRequestException('لا يمكنك تقييم نفسك');
     }
 
+    // Carrier reviews must go through POST /transport/bookings/:id/review
+    // to guarantee the booking validation runs and prevent duplicate notifications.
+    if (dto.entityType === 'CARRIER_PROFILE') {
+      throw new BadRequestException(
+        'يجب تقييم الناقل من خلال صفحة الحجز (POST /transport/bookings/:id/review)',
+      );
+    }
+
     // Job-related review validation: require ACCEPTED application
     if (dto.entityType === 'DRIVER_PROFILE' || dto.entityType === 'EMPLOYER_PROFILE') {
       await this.validateJobReview(dto, reviewerId);

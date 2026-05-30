@@ -304,6 +304,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.redis.subscribe('chat:message-deleted', (data: { messageId: string; conversationId: string }) => {
       this.server.to(`conversation:${data.conversationId}`).emit('message-deleted', data);
     });
+
+    // Notifications: published by any pod, delivered by whichever pod holds the socket
+    this.redis.subscribe('notification:created', (data: { userId: string; notification: any }) => {
+      this.server.to(`user:${data.userId}`).emit('notification', data.notification);
+    });
   }
 
   // Helper method to check if user is online
@@ -315,10 +320,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   @OnEvent(NOTIFICATION_EVENTS.CREATED)
   async onNotificationCreated(payload: { userId: string; notification: any }) {
-    const isOnline = await this.isUserOnline(payload.userId);
-    if (isOnline) {
-      this.server.to(`user:${payload.userId}`).emit('notification', payload.notification);
-    }
+    // Publish to Redis so ALL pods can deliver to their connected sockets
+    await this.redis.publish('notification:created', payload);
   }
 
   // Send notification via WebSocket if user is online (kept for direct calls if needed)

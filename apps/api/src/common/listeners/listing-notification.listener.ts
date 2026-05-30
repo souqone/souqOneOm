@@ -4,7 +4,13 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 
 const ENTITY_LABELS: Record<string, string> = {
-  CAR_SERVICE: 'خدمة سيارات',
+  LISTING:            'سيارة',
+  BUS_LISTING:        'حافلة',
+  EQUIPMENT_LISTING:  'معدات',
+  OPERATOR_LISTING:   'مشغّل',
+  SPARE_PART:         'قطعة غيار',
+  CAR_SERVICE:        'خدمة سيارات',
+  JOB:                'وظيفة',
 };
 
 @Injectable()
@@ -46,6 +52,17 @@ export class ListingNotificationListener {
   @OnEvent(LISTING_EVENTS.STATUS_CHANGED)
   async onListingStatusChanged(payload: ListingEventPayload) {
     const label = ENTITY_LABELS[payload.entityType] ?? 'إعلان';
+
+    // Use the dedicated LISTING_SOLD type when a listing is marked as sold
+    if (payload.status === 'SOLD') {
+      await this.notify(payload.userId, 'LISTING_SOLD',
+        `تم بيع ${label} 🎉`,
+        `تهانينا! إعلانك "${payload.title}" تم تحديده كمباع.`,
+        payload,
+      );
+      return;
+    }
+
     const statusAr = payload.status === 'ACTIVE' ? 'مفعّل' : 'معطّل';
     await this.notify(payload.userId, 'LISTING_STATUS_CHANGED',
       `تم تغيير حالة ${label}`,

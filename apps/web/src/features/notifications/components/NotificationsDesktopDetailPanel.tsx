@@ -1,6 +1,7 @@
 'use client';
 
 import { Bell } from 'lucide-react';
+import { useLocale } from 'next-intl';
 import { getNotifConfig, renderNotifIcon } from '@/lib/constants/notifications';
 import type { NotificationItem } from '@/lib/api/notifications';
 
@@ -17,6 +18,8 @@ export function NotificationsDesktopDetailPanel({
   notification,
   labels,
 }: NotificationsDesktopDetailPanelProps) {
+  const locale = useLocale();
+
   if (!notification) {
     return (
       <aside className="w-72 flex-shrink-0 sticky top-20 self-start">
@@ -43,7 +46,7 @@ export function NotificationsDesktopDetailPanel({
             {notification.isRead ? labels.readStatus : labels.unreadStatus}
           </span>
           <span className="text-[11px] text-on-surface-variant/50">
-            {new Date(notification.createdAt).toLocaleString('en-US')}
+            {new Date(notification.createdAt).toLocaleString(locale)}
           </span>
         </div>
       </div>

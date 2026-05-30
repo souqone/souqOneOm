@@ -43,12 +43,20 @@ export function NotificationsPageClient() {
     if (!authLoading && !isAuthenticated) openAuth('login');
   }, [authLoading, isAuthenticated, openAuth]);
 
-  // Mobile — infinite scroll
+  // H-2 + L-10: reset desktop page to 1 and scroll to top whenever filter changes
+  useEffect(() => {
+    setDesktopPage(1);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [filter]);
+
+  // Mobile — infinite scroll (C-1: use ?filter=unread, not ?unread=true)
   const mobileQuery = useInfiniteQuery<PaginatedNotifications>({
     queryKey: ['notifications', 'infinite', filter],
     queryFn: ({ pageParam }) =>
       apiRequest<PaginatedNotifications>(
-        `/notifications?page=${pageParam}&limit=20${filter === 'unread' ? '&unread=true' : ''}`,
+        `/notifications?page=${pageParam}&limit=20${filter === 'unread' ? '&filter=unread' : ''}`,
       ),
     getNextPageParam: (lastPage) =>
       lastPage.meta.page < lastPage.meta.totalPages
@@ -58,8 +66,8 @@ export function NotificationsPageClient() {
     enabled: !!getAuthToken(),
   });
 
-  // Desktop — paginated
-  const desktopQuery = useNotifications(desktopPage);
+  // Desktop — paginated (H-1: pass filter so it re-fetches on filter change)
+  const desktopQuery = useNotifications(desktopPage, filter);
   const { data: unreadData } = useUnreadCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
@@ -100,7 +108,20 @@ export function NotificationsPageClient() {
       const path = cfg.navigateTo(n.data);
 
       if (!n.isRead) {
-        // Optimistic update for infinite query
+        // H-7: optimistic update for desktop paginated query
+        queryClient.setQueryData(
+          ['notifications', desktopPage, filter],
+          (old: any) => {
+            if (!old?.items) return old;
+            return {
+              ...old,
+              items: old.items.map((item: any) =>
+                item.id === n.id ? { ...item, isRead: true } : item,
+              ),
+            };
+          },
+        );
+        // Optimistic update for mobile infinite query
         queryClient.setQueryData(
           ['notifications', 'infinite', filter],
           (old: any) => {
@@ -124,7 +145,7 @@ export function NotificationsPageClient() {
 
       if (path) router.push(path);
     },
-    [filter, queryClient, markRead, router],
+    [desktopPage, filter, queryClient, markRead, router],
   );
 
   const handleMarkAll = useCallback(() => {

@@ -246,7 +246,7 @@ export class TransportQuoteService {
     return this.prisma.$transaction(async (tx) => {
       const quote = await tx.transportQuote.findUnique({
         where: { id: quoteId },
-        include: { carrier: true },
+        include: { carrier: true, request: { select: { userId: true } } },
       });
       if (!quote) throw new NotFoundException('العرض غير موجود');
 
@@ -273,10 +273,20 @@ export class TransportQuoteService {
         });
       }
 
-      return { message: 'تم سحب العرض بنجاح', requestId: quote.requestId };
-    }).then(async ({ message, requestId }) => {
+      return { message: 'تم سحب العرض بنجاح', requestId: quote.requestId, shipperId: quote.request?.userId };
+    }).then(async ({ message, requestId, shipperId }) => {
       // Issue 1 fix: flush caches after withdrawal (status may revert to OPEN)
       await this.invalidateRequestCache(requestId);
+      // Notify the shipper so they know a carrier dropped out
+      if (shipperId) {
+        this.notifications.create({
+          type: 'TRANSPORT_QUOTE_REJECTED',
+          title: 'سحب عرض سعر',
+          body: 'قام أحد الناقلين بسحب عرضه على طلبك',
+          userId: shipperId,
+          data: { requestId },
+        }).catch(() => {});
+      }
       return { message };
     });
   }

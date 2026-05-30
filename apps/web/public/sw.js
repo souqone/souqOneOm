@@ -7,7 +7,7 @@ self.addEventListener('push', function(event) {
     body: data.body || '',
     icon: data.icon || '/icons/icon-192x192.png',
     badge: data.badge || '/icons/icon-72x72.png',
-    dir: 'rtl',
+    dir: 'auto',
     lang: 'ar',
     data: {
       url: data.url || '/',

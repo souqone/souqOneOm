@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -62,5 +62,17 @@ export class NotificationsController {
   @Patch('read-all')
   markAllAsRead(@CurrentUser() user: JwtPayload) {
     return this.notificationsService.markAllAsRead(user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('read')
+  deleteAllRead(@CurrentUser() user: JwtPayload) {
+    return this.notificationsService.deleteAllRead(user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.notificationsService.deleteOne(id, user.sub);
   }
 }
