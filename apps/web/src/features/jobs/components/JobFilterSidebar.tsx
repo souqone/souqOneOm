@@ -18,6 +18,8 @@ export interface JobFilters {
   wilayat: string
   licenseType: string
   sortBy: string
+  minSalary: string
+  maxSalary: string
 }
 
 interface JobFilterSidebarProps {
@@ -204,6 +206,30 @@ export default function JobFilterSidebar({ filters, onChange, onClear, totalCoun
                 {opt.label}
               </label>
             ))}
+          </div>
+        </div>
+
+        {/* Salary Range */}
+        <div>
+          <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">نطاق الراتب (ر.ع)</p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              value={filters.minSalary}
+              onChange={e => onChange('minSalary', e.target.value)}
+              placeholder="الأدنى"
+              className="input-base text-sm w-0 flex-1"
+            />
+            <span className="text-xs text-on-surface-variant shrink-0">—</span>
+            <input
+              type="number"
+              min={0}
+              value={filters.maxSalary}
+              onChange={e => onChange('maxSalary', e.target.value)}
+              placeholder="الأقصى"
+              className="input-base text-sm w-0 flex-1"
+            />
           </div>
         </div>
 

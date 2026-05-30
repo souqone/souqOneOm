@@ -43,6 +43,14 @@ export class QueryJobsDto {
   sortOrder?: string;
 
   @IsOptional()
+  @IsNumberString()
+  minSalary?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  maxSalary?: string;
+
+  @IsOptional()
   @IsString()
   userId?: string;
 }

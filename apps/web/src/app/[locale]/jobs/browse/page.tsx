@@ -21,6 +21,8 @@ const DEFAULT_FILTERS: JobFilters = {
   wilayat: '',
   licenseType: '',
   sortBy: 'createdAt_desc',
+  minSalary: '',
+  maxSalary: '',
 }
 
 const PAGE_SIZE = 9
@@ -60,6 +62,8 @@ function BrowseJobsContent() {
       if (activeFilters.employmentType) params.set('employmentType', activeFilters.employmentType)
       if (activeFilters.governorate) params.set('governorate', activeFilters.governorate)
       if (activeFilters.licenseType) params.set('licenseType', activeFilters.licenseType)
+      if (activeFilters.minSalary) params.set('minSalary', activeFilters.minSalary)
+      if (activeFilters.maxSalary) params.set('maxSalary', activeFilters.maxSalary)
       if (search) params.set('search', search)
       if (sortBy) params.set('sortBy', sortBy)
       if (sortOrder) params.set('sortOrder', sortOrder)
@@ -155,7 +159,7 @@ function BrowseJobsContent() {
       </div>
 
       {/* Active Filter Pills */}
-      {(filters.jobType || filters.employmentType || filters.governorate || filters.licenseType || searchQuery) && (
+      {(filters.jobType || filters.employmentType || filters.governorate || filters.licenseType || filters.minSalary || filters.maxSalary || searchQuery) && (
         <div className="flex flex-wrap gap-2 mb-4">
           {searchQuery && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
@@ -193,6 +197,21 @@ function BrowseJobsContent() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
               {LICENSE_TYPE_LABELS[filters.licenseType] ?? filters.licenseType}
               <button onClick={() => handleFilterChange('licenseType', '')} className="hover:text-error transition-colors">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {(filters.minSalary || filters.maxSalary) && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
+              {filters.minSalary && filters.maxSalary
+                ? `الراتب: ${filters.minSalary} – ${filters.maxSalary}`
+                : filters.minSalary
+                  ? `الراتب: ≥ ${filters.minSalary}`
+                  : `الراتب: ≤ ${filters.maxSalary}`}
+              <button
+                onClick={() => { handleFilterChange('minSalary', ''); handleFilterChange('maxSalary', ''); }}
+                className="hover:text-error transition-colors"
+              >
                 <X size={11} />
               </button>
             </span>

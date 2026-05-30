@@ -167,6 +167,13 @@ export class JobsService {
       where.licenseTypes = { has: query.licenseType as any };
     }
 
+    if (query.minSalary || query.maxSalary) {
+      const salaryFilter: Prisma.DecimalNullableFilter = {};
+      if (query.minSalary) salaryFilter.gte = parseFloat(query.minSalary) as any;
+      if (query.maxSalary) salaryFilter.lte = parseFloat(query.maxSalary) as any;
+      where.salary = salaryFilter;
+    }
+
     if (query.search) {
       where.OR = [
         { title: { contains: query.search, mode: 'insensitive' } },

@@ -184,9 +184,21 @@ function VerificationContent() {
           <p className="text-sm text-amber-600 opacity-80">سيتم الرد على طلبك خلال 24 ساعة</p>
         </div>
       ) : (
-        /* Upload Form */
+        /* Upload Form — also shown when REJECTED so user can re-submit */
         <div className="space-y-4">
-          {false /* submitted banner now shown above */ && null}
+          {/* H-4: Show rejection reason prominently before the form */}
+          {existingStatus?.status === 'REJECTED' && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+              <AlertCircle size={18} className="text-error shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm text-error">تم رفض طلبك السابق</p>
+                {existingStatus.rejectionReason && (
+                  <p className="text-sm text-error/80 mt-0.5 leading-relaxed">{existingStatus.rejectionReason}</p>
+                )}
+                <p className="text-xs text-on-surface-variant mt-2">يرجى رفع مستندات واضحة وصحيحة لإعادة التقديم.</p>
+              </div>
+            </div>
+          )}
 
           <UploadZone
             label={t('licensePhotoLabel')}

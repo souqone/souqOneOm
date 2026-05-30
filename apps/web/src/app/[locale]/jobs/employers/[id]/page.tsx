@@ -6,7 +6,7 @@ import { MapPin, Phone, MessageCircle, Calendar, Star, Briefcase, AlertCircle, R
 import JobCard from '@/features/jobs/components/JobCard';
 import { useEmployer, useJobs } from '@/lib/api/jobs';
 import { STRINGS } from '@/features/jobs/constants';
-import { getInitials, getAvatarColor, timeAgo, cn } from '@/lib/utils';
+import { getInitials, getAvatarColor, cn } from '@/lib/utils';
 import { resolveLocationLabel } from '@/lib/location-data';
 import type { DriverJob } from '@/features/jobs/types';
 
@@ -120,7 +120,7 @@ export default function EmployerProfilePage() {
               </span>
               <span className="flex items-center gap-1">
                 <Calendar size={13} />
-                عضو منذ {timeAgo(employer.createdAt)}
+                عضو منذ {new Date(employer.createdAt).toLocaleDateString('ar-OM', { year: 'numeric', month: 'long' })}
               </span>
             </div>
           </div>
