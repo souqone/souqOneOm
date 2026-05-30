@@ -3774,6 +3774,13 @@
     "featuredCarriersTitle": "Featured Carriers",
     "featuredCarriersSubtitle": "Top verified transport providers ready to serve you",
     "viewAllCarriers": "View All Carriers",
+    "viewProfile": "View Profile",
+    "noRating": "New",
+    "tripsCompleted": "Trips",
+    "status": {
+      "AVAILABLE": "Available",
+      "UNAVAILABLE": "Unavailable"
+    },
     "verifiedCarrier": "Verified Carrier",
     "averageRating": "Average Rating",
     "completedTrip": "Completed Trips",

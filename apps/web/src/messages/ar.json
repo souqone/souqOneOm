@@ -3804,6 +3804,13 @@
     "featuredCarriersTitle": "ناقلون متميزون",
     "featuredCarriersSubtitle": "أفضل مزودي خدمات النقل الموثوقين لخدمتك",
     "viewAllCarriers": "عرض كل الناقلين",
+    "viewProfile": "عرض الملف الشخصي",
+    "noRating": "جديد",
+    "tripsCompleted": "رحلة مكتملة",
+    "status": {
+      "AVAILABLE": "متاح",
+      "UNAVAILABLE": "غير متاح"
+    },
     "verifiedCarrier": "مزود موثّق",
     "averageRating": "متوسط التقييم",
     "completedTrip": "رحلة مكتملة",
