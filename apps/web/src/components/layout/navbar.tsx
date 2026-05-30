@@ -4,8 +4,10 @@ import Image from 'next/image';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth-provider';
 import { useUnreadCount, useNotifications, useMarkNotificationRead } from '@/lib/api';
+import { connectSocket } from '@/lib/socket';
 import { NotificationDropdown } from './navbar/notification-dropdown';
 import { ProfileDropdown } from './navbar/profile-dropdown';
 import { MobileDrawer } from './navbar/mobile-drawer';
@@ -64,11 +66,24 @@ export function Navbar() {
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef   = useRef<HTMLDivElement>(null);
 
+  const queryClient = useQueryClient();
   const { data: unreadData } = useUnreadCount();
   const { data: notifData } = useNotifications(1);
   const markNotifRead = useMarkNotificationRead();
   const unreadCount = isAuthenticated ? (unreadData?.count ?? 0) : 0;
   const recentNotifs = notifData?.items?.slice(0, 5) ?? [];
+
+  /* Real-time badge update via WebSocket */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const socket = connectSocket();
+    const handleNotification = () => {
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    };
+    socket.on('notification', handleNotification);
+    return () => { socket.off('notification', handleNotification); };
+  }, [isAuthenticated, queryClient]);
 
   /* click-outside for dropdowns */
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import {
   MessageCircle, ShoppingBag, Heart, Tag, AlertCircle,
-  CheckCheck, Briefcase, Bell, type LucideIcon,
+  CheckCheck, Briefcase, Bell, Star, CreditCard, type LucideIcon,
 } from 'lucide-react';
 import { createElement } from 'react';
 
@@ -169,6 +169,60 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     border: 'border-orange-200',
     labelKey: 'notifTypeTransport',
     navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-requests'),
+  },
+  REVIEW_RECEIVED: {
+    icon: Star,
+    bg: 'bg-yellow-500/10',
+    text: 'text-yellow-600',
+    strip: 'bg-yellow-500',
+    border: 'border-yellow-200',
+    labelKey: 'notifTypeReview',
+    navigateTo: (d) => {
+      if (d?.bookingId) return `/transport/bookings/${d.bookingId}`;
+      if (d?.entityType === 'DRIVER_PROFILE') return '/jobs';
+      return '/notifications';
+    },
+  },
+  FEATURED_EXPIRED: {
+    icon: Tag,
+    bg: 'bg-orange-500/10',
+    text: 'text-orange-600',
+    strip: 'bg-orange-500',
+    border: 'border-orange-200',
+    labelKey: 'notifTypeFeatured',
+    navigateTo: (d) => {
+      if (!d?.listingId) return '/profile';
+      if (d.listingType === 'bus') return `/buses/${d.listingId}`;
+      if (d.listingType === 'equipment') return `/equipment/${d.listingId}`;
+      return `/sale/car/${d.listingId}`;
+    },
+  },
+  PAYMENT_SUCCESS: {
+    icon: CreditCard,
+    bg: 'bg-green-500/10',
+    text: 'text-green-600',
+    strip: 'bg-green-500',
+    border: 'border-green-200',
+    labelKey: 'notifTypePayment',
+    navigateTo: () => '/profile',
+  },
+  SUBSCRIPTION_ACTIVATED: {
+    icon: CreditCard,
+    bg: 'bg-primary/10',
+    text: 'text-primary',
+    strip: 'bg-primary',
+    border: 'border-primary/20',
+    labelKey: 'notifTypePayment',
+    navigateTo: () => '/profile',
+  },
+  JOB_APPLICATION_WITHDRAWN: {
+    icon: Briefcase,
+    bg: 'bg-surface-container-high',
+    text: 'text-on-surface-variant',
+    strip: 'bg-outline-variant',
+    border: 'border-outline-variant/30',
+    labelKey: 'notifTypeWithdrawal',
+    navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : '/jobs'),
   },
 };
 

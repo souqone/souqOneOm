@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ThawaniService } from './thawani.service';
 import { PaymentsService } from './payments.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PaymentsCronService {
@@ -12,6 +14,7 @@ export class PaymentsCronService {
     private readonly prisma: PrismaService,
     private readonly thawani: ThawaniService,
     private readonly paymentsService: PaymentsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -86,5 +89,68 @@ export class PaymentsCronService {
     this.logger.log(
       `Reconciliation complete: ${pending.length} checked, ${synced} synced, ${failed} failed, ${errors} errors`,
     );
+  }
+
+  /* ─── FEATURED EXPIRY — runs daily at 02:00 ─── */
+
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async expireFeaturedListings() {
+    const now = new Date();
+    let expired = 0;
+
+    // ── Car Listings (owner = sellerId) ──
+    const carListings = await this.prisma.listing.findMany({
+      where: { isPremium: true, featuredUntil: { lt: now } },
+      select: { id: true, title: true, sellerId: true },
+    });
+    for (const l of carListings) {
+      await this.prisma.listing.update({ where: { id: l.id }, data: { isPremium: false } });
+      await this.notifications.create({
+        userId: l.sellerId,
+        type: NotificationType.FEATURED_EXPIRED,
+        title: 'انتهى الإعلان المميز',
+        body: `انتهت فترة تمييز إعلانك "${l.title}"`,
+        data: { listingId: l.id, listingType: 'car' },
+      });
+      expired++;
+    }
+
+    // ── Bus Listings (owner = userId) ──
+    const busListings = await this.prisma.busListing.findMany({
+      where: { isPremium: true, featuredUntil: { lt: now } },
+      select: { id: true, title: true, userId: true },
+    });
+    for (const l of busListings) {
+      await this.prisma.busListing.update({ where: { id: l.id }, data: { isPremium: false } });
+      await this.notifications.create({
+        userId: l.userId,
+        type: NotificationType.FEATURED_EXPIRED,
+        title: 'انتهى الإعلان المميز',
+        body: `انتهت فترة تمييز إعلانك "${l.title}"`,
+        data: { listingId: l.id, listingType: 'bus' },
+      });
+      expired++;
+    }
+
+    // ── Equipment Listings (owner = userId) ──
+    const equipListings = await this.prisma.equipmentListing.findMany({
+      where: { isPremium: true, featuredUntil: { lt: now } },
+      select: { id: true, title: true, userId: true },
+    });
+    for (const l of equipListings) {
+      await this.prisma.equipmentListing.update({ where: { id: l.id }, data: { isPremium: false } });
+      await this.notifications.create({
+        userId: l.userId,
+        type: NotificationType.FEATURED_EXPIRED,
+        title: 'انتهى الإعلان المميز',
+        body: `انتهت فترة تمييز إعلانك "${l.title}"`,
+        data: { listingId: l.id, listingType: 'equipment' },
+      });
+      expired++;
+    }
+
+    if (expired > 0) {
+      this.logger.log(`Expired featured status for ${expired} listing(s)`);
+    }
   }
 }

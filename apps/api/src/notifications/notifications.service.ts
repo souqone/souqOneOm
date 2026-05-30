@@ -79,11 +79,29 @@ export class NotificationsService {
   }
 
   async getUnreadCount(userId: string) {
-    // No retention filter — badge must reflect ALL unread notifications
+    // Apply the same 90-day retention so badge count matches what's visible in the list
+    const retentionDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
     const count = await this.prisma.notification.count({
-      where: { userId, isRead: false },
+      where: { userId, isRead: false, createdAt: { gt: retentionDate } },
     });
     return { count };
+  }
+
+  async deleteOne(id: string, userId: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, userId },
+    });
+    if (!notification) throw new NotFoundException('الإشعار غير موجود');
+    await this.prisma.notification.delete({ where: { id } });
+    return { message: 'تم حذف الإشعار' };
+  }
+
+  async deleteAllRead(userId: string) {
+    const retentionDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { userId, isRead: true, createdAt: { gt: retentionDate } },
+    });
+    return { message: 'تم حذف الإشعارات المقروءة', count };
   }
 
   async markAsRead(id: string, userId: string) {

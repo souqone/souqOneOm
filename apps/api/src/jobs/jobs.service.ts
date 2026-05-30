@@ -13,7 +13,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
 import { ApplyJobDto } from './dto/apply-job.dto';
-import { Prisma, ApplicationStatus } from '@prisma/client';
+import { Prisma, ApplicationStatus, NotificationType } from '@prisma/client';
 import { generateSlug } from '../common/utils/entity.utils';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
@@ -395,7 +395,7 @@ export class JobsService {
     // Notify job owner
     await this.notifications.create({
       userId: application.job.userId,
-      type: 'JOB_APPLICATION' as any,
+      type: NotificationType.JOB_APPLICATION_WITHDRAWN,
       title: 'تم سحب طلب توظيف',
       body: `قام المتقدم بسحب طلبه على "${application.job.title}"`,
       data: { jobId: application.jobId, applicationId },
