@@ -1498,6 +1498,7 @@
     "notifTypeBooking": "حجز",
     "notifTypeReminder": "تذكير",
     "notifTypeJob": "وظيفة",
+    "notifTypeTransport": "نقل",
     "notifTypeJobApplication": "تقديم جديد على إعلانك",
     "notifTypeJobAccepted": "تم قبول عرضك",
     "notifTypeJobRejected": "تم رفض عرضك",

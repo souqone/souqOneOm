@@ -1493,6 +1493,7 @@
     "notifTypeBooking": "Booking",
     "notifTypeReminder": "Reminder",
     "notifTypeJob": "Job",
+    "notifTypeTransport": "Transport",
     "notifTypeJobApplication": "New application on your job",
     "notifTypeJobAccepted": "Your application was accepted",
     "notifTypeJobRejected": "Your application was rejected",
