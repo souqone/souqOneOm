@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from '@/i18n/navigation';
 import { toast, Toaster } from 'sonner';
 import { transportApi } from '../api';
-import { createRequestSchema, type CreateRequestFormData } from '../validation';
+import { createRequestSchema } from '../validation';
 import type { CreateTransportRequestDto, TransportServiceType } from '../types';
 import WizardProgress from './WizardProgress';
 import Step1ServiceType from './Step1ServiceType';
