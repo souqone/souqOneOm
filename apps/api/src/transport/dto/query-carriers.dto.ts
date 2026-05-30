@@ -29,6 +29,11 @@ export class QueryCarriersDto {
   isAvailable?: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isVerified?: boolean;
+
+  @IsOptional()
   @IsString()
   search?: string;
 }

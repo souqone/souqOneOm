@@ -85,6 +85,7 @@ export class CarrierProfileService {
 
     if (query.governorate) where.governorate = query.governorate;
     if (query.isAvailable !== undefined) where.isAvailable = query.isAvailable;
+    if (query.isVerified !== undefined) where.isVerified = query.isVerified;
     if (query.vehicleType) where.vehicleTypes = { has: query.vehicleType };
     if (query.serviceType) where.serviceTypes = { has: query.serviceType };
     if (query.search) {
