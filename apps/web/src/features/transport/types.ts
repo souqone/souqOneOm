@@ -190,14 +190,16 @@ export interface CreateQuoteDto {
 }
 
 export interface CreateCarrierProfileDto {
-  companyName?: string
-  bio?: string
+  companyName: string
+  bio: string
   vehicleTypes: VehicleType[]
   serviceTypes: TransportServiceType[]
   governorate: string
-  city?: string
-  contactPhone?: string
-  whatsapp?: string
+  city: string
+  contactPhone: string
+  whatsapp: string
+  idCardUrl: string
+  licenseUrl: string
 }
 
 /** Alias for freighthub compatibility */

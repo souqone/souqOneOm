@@ -60,8 +60,17 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     strip: 'bg-outline-variant',
     border: 'border-outline-variant/30',
     labelKey: 'notifTypeSystem',
-    // Use data.url when the backend embeds a deep-link (e.g. driver verification)
-    navigateTo: (d) => (d?.url as string) || null,
+    // Primary: use data.url when the backend embeds a deep-link (e.g. driver verification).
+    // Fallback: handle legacy SYSTEM notifications that were created before dedicated
+    // transport types existed — they stored requestId / bookingId / conversationId in data.
+    navigateTo: (d) => {
+      if (d?.url) return d.url as string;
+      if (d?.requestId) return `/transport/requests/${d.requestId}`;
+      if (d?.bookingId) return `/transport/bookings/${d.bookingId}`;
+      if (d?.conversationId) return `/messages/${d.conversationId}`;
+      if (d?.jobId) return `/jobs/${d.jobId}`;
+      return null;
+    },
   },
   JOB_APPLICATION: {
     icon: Briefcase,
