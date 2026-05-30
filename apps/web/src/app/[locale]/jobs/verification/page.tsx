@@ -103,7 +103,7 @@ function VerificationContent() {
 
   const handleSubmit = async () => {
     if (!licenseFile || !idFile) {
-      addToast('error', 'يرجى رفع صورة الرخصة وصورة الهوية')
+      addToast('error', STRINGS.VERIFICATION_UPLOAD_ERROR)
       return
     }
     setSubmitting(true)
@@ -117,7 +117,7 @@ function VerificationContent() {
         idImageUrl: idResult.url,
         notes: notes || undefined,
       })
-      addToast('success', 'تم إرسال طلب التوثيق بنجاح')
+      addToast('success', STRINGS.VERIFICATION_SUBMIT_SUCCESS)
       setSubmitted(true)
     } catch {
       addToast('error', STRINGS.ERROR_GENERIC)
@@ -138,10 +138,10 @@ function VerificationContent() {
         <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
           <AlertCircle size={32} className="text-error" />
         </div>
-        <h1 className="text-2xl font-extrabold text-on-surface mb-2">لا يوجد بروفايل سائق</h1>
-        <p className="text-sm text-on-surface-variant mb-6">يجب إنشاء بروفايل سائق أولاً لطلب التوثيق</p>
+        <h1 className="text-2xl font-extrabold text-on-surface mb-2">{STRINGS.NO_DRIVER_PROFILE_TITLE}</h1>
+        <p className="text-sm text-on-surface-variant mb-6">{STRINGS.NO_DRIVER_PROFILE_DESC}</p>
         <Link href="/jobs/onboarding" className="btn-amber inline-flex px-6 py-3 text-sm font-bold">
-          إنشاء بروفايل
+          {STRINGS.CREATE_PROFILE}
         </Link>
       </div>
     )
@@ -184,9 +184,21 @@ function VerificationContent() {
           <p className="text-sm text-amber-600 opacity-80">سيتم الرد على طلبك خلال 24 ساعة</p>
         </div>
       ) : (
-        /* Upload Form */
+        /* Upload Form — also shown when REJECTED so user can re-submit */
         <div className="space-y-4">
-          {false /* submitted banner now shown above */ && null}
+          {/* H-4: Show rejection reason prominently before the form */}
+          {existingStatus?.status === 'REJECTED' && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+              <AlertCircle size={18} className="text-error shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm text-error">تم رفض طلبك السابق</p>
+                {existingStatus.rejectionReason && (
+                  <p className="text-sm text-error/80 mt-0.5 leading-relaxed">{existingStatus.rejectionReason}</p>
+                )}
+                <p className="text-xs text-on-surface-variant mt-2">يرجى رفع مستندات واضحة وصحيحة لإعادة التقديم.</p>
+              </div>
+            </div>
+          )}
 
           <UploadZone
             label={t('licensePhotoLabel')}

@@ -68,4 +68,6 @@ export const mockFilters = {
   governorate: '',
   wilayat: '',
   sortBy: 'createdAt_desc',
+  minSalary: '',
+  maxSalary: '',
 }

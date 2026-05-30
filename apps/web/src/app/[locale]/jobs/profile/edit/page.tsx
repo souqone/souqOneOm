@@ -222,14 +222,17 @@ function EditProfileContent() {
           {/* Availability Toggle */}
           <div className="card-base rounded-2xl p-5 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-on-surface">متاح للعمل حالياً</p>
+              <p id="is-available-label" className="text-sm font-bold text-on-surface">متاح للعمل حالياً</p>
               <p className="text-xs text-on-surface-variant mt-0.5">يظهر بروفايلك في قائمة السائقين المتاحين</p>
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={driverForm.watch('isAvailable')}
+              aria-labelledby="is-available-label"
               onClick={() => driverForm.setValue('isAvailable', !driverForm.watch('isAvailable'))}
               className={cn(
-                'relative w-11 h-6 rounded-full transition-colors duration-200',
+                'relative w-11 h-6 rounded-full transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 driverForm.watch('isAvailable') ? 'bg-primary' : 'bg-outline-variant'
               )}
             >
@@ -301,12 +304,15 @@ function EditProfileContent() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-on-surface">{t('hasOwnVehicleLabel')}</span>
+              <span id="has-own-vehicle-label" className="text-sm font-bold text-on-surface">{t('hasOwnVehicleLabel')}</span>
               <button
                 type="button"
+                role="switch"
+                aria-checked={driverForm.watch('hasOwnVehicle')}
+                aria-labelledby="has-own-vehicle-label"
                 onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
                 className={cn(
-                  'relative w-10 h-5 rounded-full transition-colors duration-200',
+                  'relative w-10 h-5 rounded-full transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   driverForm.watch('hasOwnVehicle') ? 'bg-primary' : 'bg-outline-variant'
                 )}
               >
@@ -371,11 +377,11 @@ function EditProfileContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
-                <input {...driverForm.register('contactPhone')} className="input-base text-sm w-full" placeholder="+968..." />
+                <input {...driverForm.register('contactPhone')} type="tel" autoComplete="tel" inputMode="tel" className="input-base text-sm w-full" placeholder="+968..." />
               </div>
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
-                <input {...driverForm.register('whatsapp')} className="input-base text-sm w-full" placeholder="+968..." />
+                <input {...driverForm.register('whatsapp')} type="tel" autoComplete="tel" inputMode="tel" className="input-base text-sm w-full" placeholder="+968..." />
               </div>
             </div>
           </div>
@@ -445,11 +451,11 @@ function EditProfileContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
-                <input {...employerForm.register('contactPhone')} className="input-base text-sm w-full" placeholder="+968..." />
+                <input {...employerForm.register('contactPhone')} type="tel" autoComplete="tel" inputMode="tel" className="input-base text-sm w-full" placeholder="+968..." />
               </div>
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
-                <input {...employerForm.register('whatsapp')} className="input-base text-sm w-full" placeholder="+968..." />
+                <input {...employerForm.register('whatsapp')} type="tel" autoComplete="tel" inputMode="tel" className="input-base text-sm w-full" placeholder="+968..." />
               </div>
             </div>
           </div>

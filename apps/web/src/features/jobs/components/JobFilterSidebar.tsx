@@ -18,6 +18,8 @@ export interface JobFilters {
   wilayat: string
   licenseType: string
   sortBy: string
+  minSalary: string
+  maxSalary: string
 }
 
 interface JobFilterSidebarProps {
@@ -207,9 +209,67 @@ export default function JobFilterSidebar({ filters, onChange, onClear, totalCoun
           </div>
         </div>
 
+        {/* Salary Range Sliders */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wide">{STRINGS.SALARY_RANGE_LABEL}</p>
+            {(filters.minSalary || filters.maxSalary) && (
+              <span className="text-xs font-bold text-brand-amber">
+                {filters.minSalary || '0'} – {filters.maxSalary || '2000+'} ر.ع
+              </span>
+            )}
+          </div>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-on-surface-variant">
+                <span>{STRINGS.SALARY_MIN_LABEL}</span>
+                <span className="font-bold text-on-surface">
+                  {filters.minSalary ? `${filters.minSalary} ر.ع` : STRINGS.SALARY_ANY}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={2000}
+                step={50}
+                value={Number(filters.minSalary) || 0}
+                onChange={e => {
+                  const val = Number(e.target.value)
+                  const maxVal = Number(filters.maxSalary) || 2000
+                  if (val <= maxVal - 50 || !filters.maxSalary)
+                    onChange('minSalary', val === 0 ? '' : String(val))
+                }}
+                className="w-full h-1.5 accent-brand-amber cursor-pointer"
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-on-surface-variant">
+                <span>{STRINGS.SALARY_MAX_LABEL}</span>
+                <span className="font-bold text-on-surface">
+                  {filters.maxSalary ? `${filters.maxSalary} ر.ع` : STRINGS.SALARY_UNSET}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={2000}
+                step={50}
+                value={Number(filters.maxSalary) || 2000}
+                onChange={e => {
+                  const val = Number(e.target.value)
+                  const minVal = Number(filters.minSalary) || 0
+                  if (val >= minVal + 50 || !filters.minSalary)
+                    onChange('maxSalary', val === 2000 ? '' : String(val))
+                }}
+                className="w-full h-1.5 accent-brand-amber cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Sort */}
         <div>
-          <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">ترتيب حسب</p>
+          <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">{STRINGS.SORT_BY_LABEL}</p>
           <select
             value={filters.sortBy}
             onChange={e => onChange('sortBy', e.target.value)}
