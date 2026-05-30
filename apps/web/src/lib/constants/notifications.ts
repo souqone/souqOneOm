@@ -126,6 +126,15 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     labelKey: 'notifTypeTransport',
     navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-quotes'),
   },
+  TRANSPORT_QUOTE_WITHDRAWN: {
+    icon: AlertCircle,
+    bg: 'bg-surface-container-high',
+    text: 'text-on-surface-variant',
+    strip: 'bg-outline-variant',
+    border: 'border-outline-variant/30',
+    labelKey: 'notifTypeTransportWithdrawn',
+    navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-requests'),
+  },
   TRANSPORT_BOOKING_CONFIRMED: {
     icon: CheckCheck,
     bg: 'bg-teal-500/10',
@@ -133,6 +142,28 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     strip: 'bg-teal-500',
     border: 'border-teal-200',
     labelKey: 'notifTypeTransport',
+    // Prefer conversationId deep-link when available (booking created notification)
+    navigateTo: (d) => {
+      if (d?.conversationId) return `/messages/${d.conversationId}`;
+      return d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-requests';
+    },
+  },
+  TRANSPORT_BOOKING_STARTED: {
+    icon: CheckCheck,
+    bg: 'bg-teal-500/10',
+    text: 'text-teal-600',
+    strip: 'bg-teal-500',
+    border: 'border-teal-200',
+    labelKey: 'notifTypeTransportStarted',
+    navigateTo: (d) => (d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-requests'),
+  },
+  TRANSPORT_BOOKING_COMPLETED: {
+    icon: CheckCheck,
+    bg: 'bg-green-500/10',
+    text: 'text-green-600',
+    strip: 'bg-green-500',
+    border: 'border-green-200',
+    labelKey: 'notifTypeTransportCompleted',
     navigateTo: (d) => (d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-requests'),
   },
   TRANSPORT_BOOKING_CANCELLED: {
@@ -170,6 +201,33 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     border: 'border-orange-200',
     labelKey: 'notifTypeTransport',
     navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-requests'),
+  },
+  TRANSPORT_REQUEST_NEW: {
+    icon: Tag,
+    bg: 'bg-teal-500/10',
+    text: 'text-teal-600',
+    strip: 'bg-teal-500',
+    border: 'border-teal-200',
+    labelKey: 'notifTypeTransportNew',
+    navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport'),
+  },
+  TRANSPORT_REQUEST_UPDATED: {
+    icon: RefreshCw,
+    bg: 'bg-primary/10',
+    text: 'text-primary',
+    strip: 'bg-primary',
+    border: 'border-primary/20',
+    labelKey: 'notifTypeTransportUpdated',
+    navigateTo: (d) => (d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-quotes'),
+  },
+  REVIEW_REMINDER: {
+    icon: Star,
+    bg: 'bg-yellow-500/10',
+    text: 'text-yellow-600',
+    strip: 'bg-yellow-500',
+    border: 'border-yellow-200',
+    labelKey: 'notifTypeReviewReminder',
+    navigateTo: (d) => (d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-bookings'),
   },
   REVIEW_RECEIVED: {
     icon: Star,

@@ -34,7 +34,7 @@ const mockRedis = {
   isReady: jest.fn().mockReturnValue(true),
 };
 
-const mockNotifications = { create: jest.fn() };
+const mockNotifications = { create: jest.fn().mockResolvedValue({}) };
 
 describe('TransportQuoteService', () => {
   let service: TransportQuoteService;
@@ -94,7 +94,10 @@ describe('TransportQuoteService', () => {
       mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: 'c1', userId: 'user1' });
       mockPrisma.transportRequest.findUnique.mockResolvedValue({ id: 'r1', userId: 'shipper', status: 'OPEN' });
       mockPrisma.transportQuote.findUnique.mockResolvedValue(null);
-      mockPrisma.transportQuote.create.mockResolvedValue({ id: 'q1', price: 10 });
+      mockPrisma.transportQuote.create.mockResolvedValue({
+        id: 'q1', price: 10,
+        carrier: { user: { displayName: 'Test Carrier', username: 'testcarrier' } },
+      });
 
       const result = await service.submitQuote('r1', 'user1', { price: 10 } as any);
       expect(result.id).toBe('q1');
@@ -123,7 +126,8 @@ describe('TransportQuoteService', () => {
       mockPrisma.conversation.create.mockResolvedValue({ id: 'conv-1' });
       mockPrisma.transportBooking.update.mockResolvedValue({
         id: 'b1', requestId: 'r1', quoteId: 'q1', conversationId: 'conv-1',
-        quote: { carrier: { userId: 'carrier1' } }
+        request: { userId: 'shipper' },
+        quote: { carrier: { userId: 'carrier1', user: { displayName: 'Test Carrier', username: 'testcarrier' } } },
       });
 
       const result = await service.acceptQuote('q1', 'shipper');

@@ -21,7 +21,11 @@ export class TransportExpiryService {
         status: { in: ['OPEN', 'QUOTED'] },
         expiresAt: { lt: new Date() },
       },
-      select: { id: true, userId: true, cargoDescription: true, fromGovernorate: true, toGovernorate: true },
+      select: {
+        id: true, userId: true,
+        cargoDescription: true, fromGovernorate: true, toGovernorate: true,
+        quotes: { where: { status: 'PENDING' }, select: { carrier: { select: { userId: true } } } },
+      },
     });
 
     if (expiredRequests.length === 0) return;
@@ -42,15 +46,31 @@ export class TransportExpiryService {
     }
     await Promise.allSettled(cacheInvalidations);
 
-    const notifications = expiredRequests.map((r) =>
-      this.notifications.create({
+    const notifications = expiredRequests.flatMap((r) => {
+      const body = `طلب نقل "${r.cargoDescription}" من ${r.fromGovernorate} إلى ${r.toGovernorate} انتهت صلاحيته ولم يُقبل أي عرض`;
+
+      // Notify shipper
+      const shipperNotif = this.notifications.create({
         type: 'TRANSPORT_REQUEST_EXPIRED',
         title: 'انتهاء طلب نقل',
-        body: `طلب نقل "${r.cargoDescription}" من ${r.fromGovernorate} إلى ${r.toGovernorate} انتهت صلاحيته ولم يُقبل أي عرض`,
+        body,
         userId: r.userId,
         data: { requestId: r.id },
-      }),
-    );
+      });
+
+      // Notify each carrier with a PENDING quote — their offer is now void
+      const carrierNotifs = (r.quotes ?? []).map((q: any) =>
+        this.notifications.create({
+          type: 'TRANSPORT_REQUEST_CANCELLED',
+          title: 'انتهت صلاحية الطلب',
+          body: `انتهت صلاحية طلب النقل الذي قدّمت عليه عرضاً — "${r.cargoDescription}"`,
+          userId: q.carrier.userId,
+          data: { requestId: r.id },
+        }),
+      );
+
+      return [shipperNotif, ...carrierNotifs];
+    });
     await Promise.allSettled(notifications);
 
     this.logger.log(`Expired ${expiredRequests.length} transport requests`);

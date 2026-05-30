@@ -112,11 +112,12 @@ export class TransportQuoteService {
     // Issue 1 fix: flush stale list + detail caches so subsequent reads see QUOTED status
     await this.invalidateRequestCache(requestId);
 
-    // Notify shipper
+    // Notify shipper — include carrier name so they know who sent it without opening the app
+    const carrierName = quote.carrier.user.displayName || quote.carrier.user.username;
     await this.notifications.create({
       type: 'TRANSPORT_QUOTE_RECEIVED',
       title: 'عرض سعر جديد',
-      body: `وصلك عرض بسعر ${dto.price} ر.ع.`,
+      body: `وصلك عرض من ${carrierName} بسعر ${dto.price} ر.ع.`,
       userId: request.userId,
       data: { requestId, quoteId: quote.id },
     });
@@ -223,14 +224,27 @@ export class TransportQuoteService {
   }
 
   private async sendAcceptanceNotifications(booking: any, pendingQuotes: any[]) {
+    const carrierName = booking.quote.carrier.user.displayName || booking.quote.carrier.user.username;
+
+    // Notify the accepted carrier
     await this.notifications.create({
       type: 'TRANSPORT_QUOTE_ACCEPTED',
       title: 'تم قبول عرضك',
-      body: `تم قبول عرضك على طلب النقل`,
+      body: `تم قبول عرضك على طلب النقل — تواصل مع العميل الآن`,
       userId: booking.quote.carrier.userId,
-      data: { requestId: booking.requestId, bookingId: booking.id },
+      data: { requestId: booking.requestId, bookingId: booking.id, conversationId: booking.conversationId },
     });
 
+    // Notify the shipper that booking is created and conversation is ready
+    await this.notifications.create({
+      type: 'TRANSPORT_BOOKING_CONFIRMED',
+      title: 'تم إنشاء الحجز',
+      body: `تم قبول عرض ${carrierName} وإنشاء الحجز — انضم للمحادثة`,
+      userId: booking.request.userId,
+      data: { bookingId: booking.id, conversationId: booking.conversationId },
+    }).catch(() => {});
+
+    // Notify rejected carriers
     for (const q of pendingQuotes) {
       await this.notifications.create({
         type: 'TRANSPORT_QUOTE_REJECTED',
@@ -277,10 +291,11 @@ export class TransportQuoteService {
     }).then(async ({ message, requestId, shipperId }) => {
       // Issue 1 fix: flush caches after withdrawal (status may revert to OPEN)
       await this.invalidateRequestCache(requestId);
-      // Notify the shipper so they know a carrier dropped out
+      // Notify the shipper — use dedicated WITHDRAWN type (not REJECTED) so frontend
+      // can display a different icon/message: the carrier chose to withdraw, not was rejected.
       if (shipperId) {
         this.notifications.create({
-          type: 'TRANSPORT_QUOTE_REJECTED',
+          type: 'TRANSPORT_QUOTE_WITHDRAWN',
           title: 'سحب عرض سعر',
           body: 'قام أحد الناقلين بسحب عرضه على طلبك',
           userId: shipperId,

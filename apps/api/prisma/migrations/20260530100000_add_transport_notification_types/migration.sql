@@ -1,0 +1,9 @@
+-- Add 6 new transport notification enum values
+-- These enable precise notification types instead of overloading existing ones
+
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'TRANSPORT_QUOTE_WITHDRAWN';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'TRANSPORT_BOOKING_STARTED';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'TRANSPORT_BOOKING_COMPLETED';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'TRANSPORT_REQUEST_NEW';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'TRANSPORT_REQUEST_UPDATED';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'REVIEW_REMINDER';
