@@ -154,15 +154,33 @@ export class NotificationsService {
         return d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-requests';
 
       case NotificationType.TRANSPORT_QUOTE_ACCEPTED:
+        return d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-bookings';
+
       case NotificationType.TRANSPORT_BOOKING_CONFIRMED:
+        // Booking-created notification includes conversationId — go there directly
+        if (d?.conversationId) return `/messages/${d.conversationId}`;
+        return d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-bookings';
+
+      case NotificationType.TRANSPORT_BOOKING_STARTED:
+      case NotificationType.TRANSPORT_BOOKING_COMPLETED:
       case NotificationType.TRANSPORT_BOOKING_CANCELLED:
       case NotificationType.TRANSPORT_REQUEST_CLOSED:
         return d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-bookings';
 
+      case NotificationType.TRANSPORT_QUOTE_WITHDRAWN:
       case NotificationType.TRANSPORT_QUOTE_REJECTED:
       case NotificationType.TRANSPORT_REQUEST_CANCELLED:
       case NotificationType.TRANSPORT_REQUEST_EXPIRED:
         return d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-requests';
+
+      case NotificationType.TRANSPORT_REQUEST_NEW:
+        return d?.requestId ? `/transport/requests/${d.requestId}` : '/transport';
+
+      case NotificationType.TRANSPORT_REQUEST_UPDATED:
+        return d?.requestId ? `/transport/requests/${d.requestId}` : '/transport/my-quotes';
+
+      case NotificationType.REVIEW_REMINDER:
+        return d?.bookingId ? `/transport/bookings/${d.bookingId}` : '/transport/my-bookings';
 
       case NotificationType.JOB_APPLICATION:
       case NotificationType.JOB_APPLICATION_ACCEPTED:

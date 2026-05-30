@@ -72,11 +72,11 @@ export class TransportBookingService {
     // Issue 1 fix: flush stale caches (request status changed to IN_PROGRESS)
     await this.invalidateRequestCache(booking.requestId);
 
-    // Notify shipper
+    // Notify shipper — TRANSPORT_BOOKING_STARTED: booking was confirmed earlier; this is "in motion"
     await this.notifications.create({
-      type: 'TRANSPORT_BOOKING_CONFIRMED',
+      type: 'TRANSPORT_BOOKING_STARTED',
       title: 'بدأ النقل',
-      body: 'الناقل بدأ في تنفيذ طلبك',
+      body: 'الناقل بدأ في تنفيذ طلبك وهو في الطريق',
       userId: booking.request.userId,
       data: { bookingId },
     });
@@ -123,14 +123,23 @@ export class TransportBookingService {
     // Issue 1 fix: flush stale caches (request status changed to COMPLETED)
     await this.invalidateRequestCache(booking.requestId);
 
-    // Notify carrier
+    // Notify carrier — TRANSPORT_BOOKING_COMPLETED (not TRANSPORT_REQUEST_CLOSED)
     await this.notifications.create({
-      type: 'TRANSPORT_REQUEST_CLOSED',
-      title: 'تم إتمام الطلب',
-      body: 'تم تأكيد إتمام طلب النقل بنجاح',
+      type: 'TRANSPORT_BOOKING_COMPLETED',
+      title: 'تم إتمام الحجز',
+      body: 'تم تأكيد إتمام طلب النقل بنجاح — شكراً على خدمتك',
       userId: booking.quote.carrier.userId,
       data: { bookingId },
     });
+
+    // Send review reminder to shipper — fire-and-forget so it never blocks completion
+    this.notifications.create({
+      type: 'REVIEW_REMINDER',
+      title: 'كيف كانت تجربتك؟',
+      body: 'قيّم الناقل وساعد الآخرين في اختياراتهم',
+      userId: shipperId,
+      data: { bookingId },
+    }).catch(() => {});
 
     return updated;
   }

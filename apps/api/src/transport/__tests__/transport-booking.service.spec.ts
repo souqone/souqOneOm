@@ -17,7 +17,7 @@ const mockRedis = {
   delPattern: jest.fn().mockResolvedValue(undefined),
 };
 
-const mockNotifications = { create: jest.fn() };
+const mockNotifications = { create: jest.fn().mockResolvedValue({}) };
 
 describe('TransportBookingService', () => {
   let service: TransportBookingService;

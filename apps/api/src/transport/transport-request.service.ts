@@ -112,7 +112,7 @@ export class TransportRequestService {
       if (count > DAILY_LIMIT) return;
 
       return this.notifications.create({
-        type: 'SYSTEM',
+        type: 'TRANSPORT_REQUEST_NEW',
         title: 'طلب نقل جديد قريب منك',
         body: `طلب ${request.serviceType} من ${request.fromGovernorate} إلى ${request.toGovernorate}`,
         userId: c.userId,
@@ -318,10 +318,16 @@ export class TransportRequestService {
     const request = await this.prisma.transportRequest.findUnique({ where: { id } });
     if (!request) throw new NotFoundException('طلب النقل غير موجود');
     if (request.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل طلب غيرك');
-    
+
     if (!['OPEN', 'QUOTED'].includes(request.status)) {
       throw new BadRequestException('لا يمكن تعديل هذا الطلب في حالته الحالية');
     }
+
+    // Fetch carriers with PENDING quotes BEFORE updating — so we know who to notify
+    const pendingQuotes = await this.prisma.transportQuote.findMany({
+      where: { requestId: id, status: 'PENDING' },
+      include: { carrier: { select: { userId: true } } },
+    });
 
     const updated = await this.prisma.transportRequest.update({
       where: { id },
@@ -352,6 +358,20 @@ export class TransportRequestService {
     await this.redis.del(`transport:request:${id}`);
     await this.redis.del(`transport:request:${id}:auth`);
 
+    // Notify carriers who submitted PENDING quotes so they know the details changed
+    if (pendingQuotes.length > 0) {
+      const notifications = pendingQuotes.map((q) =>
+        this.notifications.create({
+          type: 'TRANSPORT_REQUEST_UPDATED',
+          title: 'تم تعديل طلب النقل',
+          body: 'تم تعديل الطلب الذي قدّمت عليه عرضاً — راجع التفاصيل الجديدة',
+          userId: q.carrier.userId,
+          data: { requestId: id },
+        }),
+      );
+      Promise.allSettled(notifications).catch(() => {});
+    }
+
     return updated;
   }
 
@@ -378,6 +398,14 @@ export class TransportRequestService {
     await this.redis.delPattern('transport:list:*');
     await this.redis.del(`transport:request:${id}`);
     await this.redis.del(`transport:request:${id}:auth`);
+
+    // Notify matching carriers again — the request is live again and they should know
+    this.notifyMatchingCarriers({
+      id,
+      serviceType: updated.serviceType,
+      fromGovernorate: updated.fromGovernorate,
+      toGovernorate: updated.toGovernorate,
+    }).catch((err) => this.logger.error(`فشل إرسال الإشعارات عند إعادة النشر: ${err.message}`));
 
     return updated;
   }
