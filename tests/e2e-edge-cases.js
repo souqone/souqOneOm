@@ -95,19 +95,56 @@ const { chromium } = require('playwright');
   await shipperPage.fill('textarea[name="fromAddress"]', 'روي، الشارع العام');
   await shipperPage.selectOption('select[name="toGovernorate"]', { index: 2 });
   await shipperPage.fill('textarea[name="toAddress"]', 'صلالة، حي النهضة');
+  console.log('✅ تم إكمال بيانات المرحلة الثانية');
   await shipperPage.click('button:has-text("التالي")');
+  console.log('✅ تم الضغط على التالي للذهاب للمرحلة الثالثة');
+
+  await shipperPage.waitForSelector('textarea[name="cargoDescription"]');
   await shipperPage.fill('textarea[name="cargoDescription"]', 'اختبار الإلغاء السريع');
   await shipperPage.fill('input[name="weightTons"]', '2');
+  console.log('✅ تم إكمال بيانات المرحلة الثالثة');
   await shipperPage.click('button:has-text("التالي")');
-  await shipperPage.click('button:has-text("التالي")');
+  console.log('✅ تم الضغط على التالي للذهاب للمرحلة الرابعة');
   
-  const [response] = await Promise.all([
-    shipperPage.waitForResponse(res => res.url().includes('/transport/requests') && res.request().method() === 'POST'),
-    shipperPage.click('button:has-text("إرسال")')
-  ]);
-  const responseData = await response.json();
-  const requestUrl = 'https://souq-one-om-web.vercel.app/ar/transport/requests/' + responseData.id;
-  await shipperPage.waitForURL(/\/transport\/my-requests/);
+  // Wait for Step 4 (Timing) to actually render before clicking Next again!
+  await shipperPage.waitForSelector('text=نوع التوقيت مطلوب', { state: 'hidden' }); // just wait for it to be stable
+  await shipperPage.waitForTimeout(500); 
+  
+  await shipperPage.click('button:has-text("التالي")');
+  console.log('✅ تم الضغط على التالي للذهاب للمرحلة الخامسة (المراجعة)');
+  
+  await shipperPage.waitForLoadState('networkidle');
+  await shipperPage.waitForTimeout(1000); // wait 1s to ensure everything is stable
+  
+  console.log('⏳ ننتظر التحويل لصفحة طلباتي أو نضغط زر الإرسال...');
+  
+  try {
+      // Wait for URL to change OR button to be visible
+      await Promise.race([
+          shipperPage.waitForURL(/\/transport\/my-requests/, { timeout: 45000 }),
+          (async () => {
+              const btn = shipperPage.locator('button[data-testid="submit-wizard"]');
+              await btn.waitFor({ state: 'visible', timeout: 10000 });
+              if (!(await btn.evaluate(b => b.disabled))) {
+                  console.log('⏳ زر الإرسال متاح، جاري الضغط عليه...');
+                  await btn.click();
+              }
+              // now wait for the url
+              await shipperPage.waitForURL(/\/transport\/my-requests/, { timeout: 45000 });
+          })()
+      ]);
+      console.log('✅ تم التحويل بنجاح لصفحة طلباتي! (تم نشر الطلب)');
+  } catch (err) {
+      console.log('❌ فشل النشر أو التحويل:', err.message);
+      await shipperPage.screenshot({ path: 'scenario1-failed.png' });
+      throw err;
+  }
+  
+  // To get the request ID, we need to extract it from the requests list
+  // since we didn't capture the API response directly.
+  await shipperPage.waitForSelector('a[href*="/transport/requests/"]');
+  const firstRequestUrl = await shipperPage.locator('a[href*="/transport/requests/"]').first().getAttribute('href');
+  const requestUrl = 'https://souq-one-om-web.vercel.app' + firstRequestUrl;
   console.log('✅ تم نشر الطلب. الرابط:', requestUrl);
 
   console.log('⏳ الشاحن يضغط إلغاء الطلب...');
@@ -130,15 +167,35 @@ const { chromium } = require('playwright');
   // السيناريو 4: جدار الحماية (اختبار المدخلات الخاطئة)
   // ==========================================
   console.log('\\n▶️ السيناريو 4: محاولة إرسال طلب ببيانات ناقصة (اختبار الـ Validation)...');
+  shipperPage.on('console', msg => console.log(`[SHIPPER BROWSER] ${msg.text()}`));
   await shipperPage.goto('https://souq-one-om-web.vercel.app/ar/transport/new');
+  await shipperPage.waitForLoadState('domcontentloaded');
   await shipperPage.waitForSelector('button.rounded-2xl');
   await shipperPage.locator('button.rounded-2xl').nth(1).click();
+  console.log('⏳ الشاحن يتنقل إلى خطوة المحافظات (Step 2)...');
   await shipperPage.click('button:has-text("التالي")');
   
-  await shipperPage.waitForSelector('select[name="fromGovernorate"]');
-  // سنترك المحافظة فارغة ونحاول الضغط على التالي
+  console.log('⏳ انتظار ظهور حقل المحافظة...');
+  // Force clear the fields just in case they were cached from a previous scenario
+  await shipperPage.selectOption('select[name="fromGovernorate"]', '');
+  await shipperPage.fill('textarea[name="fromAddress"]', '');
+  
+  const fromGovValue = await shipperPage.$eval('select[name="fromGovernorate"]', el => el.value);
+  const fromAddressValue = await shipperPage.$eval('textarea[name="fromAddress"]', el => el.value);
+  console.log(`[DEBUG] fromGovernorate value: "${fromGovValue}", fromAddress: "${fromAddressValue}"`);
+  
+  console.log('⏳ محاولة الضغط على (التالي) والمحافظة فارغة لاختبار الـ Validation...');
   await shipperPage.click('button:has-text("التالي")');
-  await shipperPage.waitForSelector('[data-sonner-toast]', { timeout: 10000 });
+  console.log('✅ تم الضغط على التالي. ننتظر ظهور رسالة الخطأ...');
+  
+  try {
+    await shipperPage.waitForSelector('text="المحافظة مطلوبة"', { timeout: 10000 });
+    console.log('✅ ظهرت رسالة الخطأ بشكل صحيح.');
+  } catch (e) {
+    console.log('❌ خطأ: لم تظهر رسالة الخطأ في الوقت المحدد. التقاط صورة...');
+    await shipperPage.screenshot({ path: 'scenario4-failed.png' });
+    throw e;
+  }
   console.log('✅ السيناريو 4 اكتمل: تم منع الشاحن من تجاوز الخطوة ببيانات فارغة.');
 
   // ==========================================
@@ -161,22 +218,37 @@ const { chromium } = require('playwright');
   await shipperPage.click('button:has-text("التالي")');
   
   {
-    const [response] = await Promise.all([
-      shipperPage.waitForResponse(res => res.url().includes('/transport/requests') && res.request().method() === 'POST'),
-      shipperPage.click('button:has-text("إرسال")')
-    ]);
-    const responseData = await response.json();
-    const requestUrl2 = 'https://souq-one-om-web.vercel.app/ar/transport/requests/' + responseData.id;
-    await shipperPage.waitForURL(/\/transport\/my-requests/);
+    console.log('⏳ ننتظر التحويل لصفحة طلباتي أو نضغط زر الإرسال (السيناريو 2)...');
+    
+    try {
+        await Promise.race([
+            shipperPage.waitForURL(/\/transport\/my-requests/, { timeout: 45000 }),
+            (async () => {
+                const btn = shipperPage.locator('button[data-testid="submit-wizard"]');
+                await btn.waitFor({ state: 'visible', timeout: 10000 });
+                if (!(await btn.evaluate(b => b.disabled))) {
+                    await btn.click();
+                }
+                await shipperPage.waitForURL(/\/transport\/my-requests/, { timeout: 45000 });
+            })()
+        ]);
+    } catch (err) {
+        console.log('❌ فشل النشر في السيناريو 2:', err.message);
+        throw err;
+    }
+    
+    await shipperPage.waitForSelector('a[href*="/transport/requests/"]');
+    const firstRequestUrl = await shipperPage.locator('a[href*="/transport/requests/"]').first().getAttribute('href');
+    const requestUrl2 = 'https://souq-one-om-web.vercel.app' + firstRequestUrl;
 
     await carrierPage.goto(requestUrl2);
     await carrierPage.waitForSelector('input[type="number"]');
     await carrierPage.fill('input[type="number"]', '40');
-    await carrierPage.click('button:has-text("تقديم العرض")');
+    await carrierPage.click('button:has-text("إرسال العرض")');
     await carrierPage.waitForSelector('text=تم إرسال عرضك', { timeout: 15000 });
     
     await carrierPage.goto(requestUrl2);
-    const canQuote2 = await carrierPage.isVisible('button:has-text("تقديم العرض")');
+    const canQuote2 = await carrierPage.isVisible('button:has-text("إرسال العرض")');
     if (canQuote2) throw new Error('❌ الناقل استطاع الوصول لفورم التسعير مرة أخرى!');
     console.log('✅ السيناريو 2 اكتمل: النظام منع تقديم عرضين لنفس الناقل.');
   }
