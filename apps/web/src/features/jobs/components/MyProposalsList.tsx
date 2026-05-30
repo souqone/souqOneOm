@@ -79,7 +79,7 @@ export default function MyProposalsList({
               </div>
               {job && (
                 <Link
-                  href={`/jobs/browse?id=${job.id}`}
+                  href={`/jobs/${job.id}`}
                   className="p-2 rounded-xl hover:bg-surface transition-colors text-on-surface-variant shrink-0"
                   title="عرض الإعلان"
                 >
@@ -111,7 +111,7 @@ export default function MyProposalsList({
               <div className="flex items-center gap-2">
                 {job && (
                   <Link
-                    href={`/jobs/browse?id=${job.id}`}
+                    href={`/jobs/${job.id}`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-surface-container-low text-primary hover:bg-surface-container transition-colors"
                   >
                     <ExternalLink size={12} />

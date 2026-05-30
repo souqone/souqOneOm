@@ -6,7 +6,7 @@ import { MapPin, Phone, MessageCircle, Calendar, CheckCircle, AlertCircle, Refre
 import RatingBadges from '@/features/jobs/components/RatingBadges';
 import { useDriver } from '@/lib/api/jobs';
 import { LICENSE_TYPE_LABELS, STRINGS } from '@/features/jobs/constants';
-import { getInitials, getAvatarColor, timeAgo, cn } from '@/lib/utils';
+import { getInitials, getAvatarColor, cn } from '@/lib/utils';
 import { resolveLocationLabel } from '@/lib/location-data';
 
 function ProfileSkeleton() {
@@ -97,7 +97,7 @@ export default function DriverProfilePage() {
               <span>{resolveLocationLabel(driver.governorate) ?? driver.governorate}{driver.city ? ` · ${driver.city}` : ''}</span>
               <span className="text-white/40">·</span>
               <Calendar size={13} />
-              <span>عضو منذ {timeAgo(driver.createdAt)}</span>
+              <span>عضو منذ {new Date(driver.createdAt).toLocaleDateString('ar-OM', { year: 'numeric', month: 'long' })}</span>
             </div>
           </div>
         </div>
@@ -234,10 +234,11 @@ export default function DriverProfilePage() {
             )}
 
             <Link
-              href="/jobs/browse?jobType=HIRING"
+              href={`/jobs/new?type=HIRING`}
               className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-surface-container hover:bg-surface text-primary font-bold text-sm transition-colors"
+              title="انشر وظيفة وشارك رابطها مع السائق"
             >
-              دعوته للتقدم
+              انشر وظيفة لدعوته
             </Link>
           </div>
         </div>

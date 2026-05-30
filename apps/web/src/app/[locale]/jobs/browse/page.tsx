@@ -12,6 +12,7 @@ import type { DriverJob } from '@/features/jobs/types';
 import { STRINGS, SORT_OPTIONS, LICENSE_TYPE_LABELS, EMPLOYMENT_TYPE_LABELS } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { getPaginationRange } from '@/lib/pagination';
 
 const DEFAULT_FILTERS: JobFilters = {
   jobType: '',
@@ -20,6 +21,8 @@ const DEFAULT_FILTERS: JobFilters = {
   wilayat: '',
   licenseType: '',
   sortBy: 'createdAt_desc',
+  minSalary: '',
+  maxSalary: '',
 }
 
 const PAGE_SIZE = 9
@@ -59,6 +62,8 @@ function BrowseJobsContent() {
       if (activeFilters.employmentType) params.set('employmentType', activeFilters.employmentType)
       if (activeFilters.governorate) params.set('governorate', activeFilters.governorate)
       if (activeFilters.licenseType) params.set('licenseType', activeFilters.licenseType)
+      if (activeFilters.minSalary) params.set('minSalary', activeFilters.minSalary)
+      if (activeFilters.maxSalary) params.set('maxSalary', activeFilters.maxSalary)
       if (search) params.set('search', search)
       if (sortBy) params.set('sortBy', sortBy)
       if (sortOrder) params.set('sortOrder', sortOrder)
@@ -97,7 +102,7 @@ function BrowseJobsContent() {
     }, 300)
   }
 
-  const pageNumbers = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1)
+  const pageNumbers = getPaginationRange(currentPage, totalPages)
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
@@ -154,7 +159,7 @@ function BrowseJobsContent() {
       </div>
 
       {/* Active Filter Pills */}
-      {(filters.jobType || filters.employmentType || filters.governorate || filters.licenseType || searchQuery) && (
+      {(filters.jobType || filters.employmentType || filters.governorate || filters.licenseType || filters.minSalary || filters.maxSalary || searchQuery) && (
         <div className="flex flex-wrap gap-2 mb-4">
           {searchQuery && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
@@ -192,6 +197,21 @@ function BrowseJobsContent() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
               {LICENSE_TYPE_LABELS[filters.licenseType] ?? filters.licenseType}
               <button onClick={() => handleFilterChange('licenseType', '')} className="hover:text-error transition-colors">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {(filters.minSalary || filters.maxSalary) && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-primary border border-primary/20">
+              {filters.minSalary && filters.maxSalary
+                ? `الراتب: ${filters.minSalary} – ${filters.maxSalary}`
+                : filters.minSalary
+                  ? `الراتب: ≥ ${filters.minSalary}`
+                  : `الراتب: ≤ ${filters.maxSalary}`}
+              <button
+                onClick={() => { handleFilterChange('minSalary', ''); handleFilterChange('maxSalary', ''); }}
+                className="hover:text-error transition-colors"
+              >
                 <X size={11} />
               </button>
             </span>
@@ -297,20 +317,28 @@ function BrowseJobsContent() {
                 <ChevronRight size={16} />
               </button>
 
-              {pageNumbers.map(n => (
-                <button
-                  key={`page-${n}`}
-                  onClick={() => setCurrentPage(n)}
-                  className={cn(
-                    'w-9 h-9 rounded-xl text-sm font-bold transition-all duration-150',
-                    currentPage === n
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'btn-outline'
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
+              {pageNumbers.map((n, idx) =>
+                n === '…' ? (
+                  <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm text-on-surface-variant select-none">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={`page-${n}`}
+                    onClick={() => setCurrentPage(n as number)}
+                    aria-label={`صفحة ${n}`}
+                    aria-current={currentPage === n ? 'page' : undefined}
+                    className={cn(
+                      'w-9 h-9 rounded-xl text-sm font-bold transition-all duration-150',
+                      currentPage === n
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'btn-outline'
+                    )}
+                  >
+                    {n}
+                  </button>
+                )
+              )}
 
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -364,6 +392,13 @@ function MobileFilterSheet({
   filters: JobFilters; onFilterChange: (key: keyof JobFilters, value: string) => void;
   onClearFilters: () => void; totalCount: number;
 }) {
+  React.useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
+
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 lg:hidden">

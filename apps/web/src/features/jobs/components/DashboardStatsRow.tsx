@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Briefcase, Users, CheckCircle, TrendingUp } from 'lucide-react';
+import { Briefcase, Users, CheckCircle, TrendingUp, Archive } from 'lucide-react';
 
 interface StatCardProps {
   label: string
@@ -65,7 +65,7 @@ export default function DashboardStatsRow({
       label: 'إعلانات مغلقة',
       value: acceptedCount,
       sub: 'تم إغلاقها أو انتهت',
-      icon: CheckCircle,
+      icon: Archive,
       color: 'text-slate-500',
       bgColor: 'bg-slate-50',
     },

@@ -296,13 +296,14 @@ function DashboardContent() {
             )}
           >
             {statusLabels[s] ?? s}
-            {s !== 'all' && (
-              <span className="ms-1.5 opacity-80">
-                {showEmployer
-                  ? myJobs.filter(j => j.status === s).length
-                  : myApps.filter(a => a.status === s).length}
-              </span>
-            )}
+            {s !== 'all' && (() => {
+              const cnt = showEmployer
+                ? myJobs.filter(j => j.status === s).length
+                : myApps.filter(a => a.status === s).length
+              return cnt > 0 ? (
+                <span className="ms-1.5 opacity-80">{cnt}</span>
+              ) : null
+            })()}
           </button>
         ))}
       </div>

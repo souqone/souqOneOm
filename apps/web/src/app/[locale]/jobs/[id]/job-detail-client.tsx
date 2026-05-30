@@ -39,6 +39,8 @@ import { resolveLocationLabel } from '@/lib/location-data';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import ConfirmDialog from '@/components/confirm-dialog'
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 
 function DetailSkeleton() {
   return (
@@ -92,8 +94,11 @@ export default function JobDetailClient() {
   const closeMutation = useCloseJob()
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [applySheetOpen, setApplySheetOpen] = useState(false)
   const [closingJob, setClosingJob] = useState(false)
-  const [appsExpanded, setAppsExpanded] = useState(true)
+  // Proposals collapsed by default — owners expand on demand, non-owners rarely need it
+  const [appsExpanded, setAppsExpanded] = useState(false)
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
 
   const applySchema = z.object({
     message: z.string().min(10, t('messageTooShort')).max(500, t('messageTooLong')),
@@ -106,6 +111,16 @@ export default function JobDetailClient() {
     handleSubmit,
     formState: { errors },
     reset,
+  } = useForm<ApplyFormData>({
+    resolver: zodResolver(applySchema),
+  })
+
+  // Separate form instance for mobile bottom sheet to avoid double-registration
+  const {
+    register: registerSheet,
+    handleSubmit: handleSheetSubmit,
+    formState: { errors: sheetErrors },
+    reset: resetSheet,
   } = useForm<ApplyFormData>({
     resolver: zodResolver(applySchema),
   })
@@ -133,7 +148,9 @@ export default function JobDetailClient() {
         resumeUrl: data.resumeUrl || undefined,
       })
       setSubmitSuccess(true)
+      setApplySheetOpen(false)
       reset()
+      resetSheet()
       refetchApps()
     } catch {
       // error handled inline
@@ -162,6 +179,7 @@ export default function JobDetailClient() {
       await closeMutation.mutateAsync(job.id)
     } finally {
       setClosingJob(false)
+      setCloseConfirmOpen(false)
     }
   }
 
@@ -170,10 +188,10 @@ export default function JobDetailClient() {
       <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-12">
         <div className="card-base rounded-2xl p-8 text-center max-w-md mx-auto">
           <AlertCircle size={40} className="text-error mx-auto mb-3" />
-          <h2 className="font-bold text-base text-on-surface mb-2">خطأ في التحميل</h2>
-          <p className="text-sm text-on-surface-variant mb-4">تعذّر تحميل الوظيفة. تحقق من الاتصال وحاول مرة أخرى.</p>
+          <h2 className="font-bold text-base text-on-surface mb-2">{STRINGS.LOAD_ERROR_TITLE}</h2>
+          <p className="text-sm text-on-surface-variant mb-4">{STRINGS.LOAD_ERROR_DESC}</p>
           <Link href="/jobs/browse" className="btn-primary text-sm">
-            العودة للوظائف
+            {STRINGS.BACK_TO_JOBS}
           </Link>
         </div>
       </div>
@@ -194,8 +212,11 @@ export default function JobDetailClient() {
   const posterName = job?.jobType === 'HIRING' ? (employerInfo?.companyName ?? job?.user.displayName ??'')
     : (driverInfo?.user.displayName ?? job?.user.displayName ?? '')
 
+  const showStickyApplyCTA =
+    !loading && job && !isJobOwner && !alreadyApplied && canApply && !submitSuccess
+
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
+    <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6 pb-24 lg:pb-6">
 
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-on-surface-variant mb-5">
@@ -251,7 +272,7 @@ export default function JobDetailClient() {
                     !job.user.avatarUrl && getAvatarColor(job.userId)
                   )}>
                     {job.user.avatarUrl ? (
-                      <img src={job.user.avatarUrl} alt={posterName} className="w-full h-full object-cover" />
+                      <img src={job.user.avatarUrl} alt={posterName} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
                       getInitials(posterName)
                     )}
@@ -473,7 +494,7 @@ export default function JobDetailClient() {
                       <div className="text-center py-8">
                         <Users size={28} className="text-on-surface-variant mx-auto mb-2" />
                         <p className="text-sm font-bold text-on-surface mb-1">{STRINGS.EMPTY_PROPOSALS}</p>
-                        <p className="text-xs text-on-surface-variant">لم يصل أي عرض لهذا الإعلان بعد</p>
+                        <p className="text-xs text-on-surface-variant">{STRINGS.NO_PROPOSALS_YET}</p>
                       </div>
                     ) : (
                       applications.map(app => (
@@ -502,19 +523,20 @@ export default function JobDetailClient() {
 
             {/* Apply Form — most important CTA */}
             {!loading && job && !isJobOwner && (
-              <div className="card-base rounded-2xl p-5">
+              <div id="apply-sidebar" className="card-base rounded-2xl p-5">
                 {!isAuthenticated ? (
                   <div className="text-center py-4">
-                    <p className="text-sm font-bold text-on-surface mb-3">سجّل دخولك لتقديم عرض</p>
-                    <Link href="/jobs/browse" className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
+                    <p className="text-sm font-bold text-on-surface mb-3">{STRINGS.APPLY_LOGIN_PROMPT}</p>
+                    {/* C-2: redirect back to this job after login */}
+                    <Link href={`/login?redirect=/jobs/${jobId}`} className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
                       {STRINGS.LOGIN}
                     </Link>
                   </div>
                 ) : alreadyApplied && ownApplication ? (
                   <div>
-                    <h3 className="font-bold text-sm text-on-surface mb-3">عرضك المقدم</h3>
+                    <h3 className="font-bold text-sm text-on-surface mb-3">{STRINGS.YOUR_PROPOSAL}</h3>
                     <div className="p-3 bg-surface-container-low rounded-xl mb-3">
-                      <p className="text-xs text-on-surface-variant mb-1">رسالتك:</p>
+                      <p className="text-xs text-on-surface-variant mb-1">{STRINGS.YOUR_MESSAGE}</p>
                       <p className="text-sm text-on-surface line-clamp-3">{ownApplication.message}</p>
                     </div>
                     <div className="flex items-center justify-between">
@@ -535,14 +557,14 @@ export default function JobDetailClient() {
                     {submitSuccess ? (
                       <div className="text-center py-4">
                         <CheckCircle size={32} className="text-green-600 mx-auto mb-2" />
-                        <p className="text-sm font-bold text-green-700">تم إرسال عرضك بنجاح!</p>
-                        <p className="text-xs text-on-surface-variant mt-1">سيتواصل معك صاحب الإعلان قريباً</p>
+                        <p className="text-sm font-bold text-green-700">{STRINGS.PROPOSAL_SENT_SUCCESS}</p>
+                        <p className="text-xs text-on-surface-variant mt-1">{STRINGS.EMPLOYER_WILL_CONTACT}</p>
                       </div>
                     ) : (
                       <form onSubmit={handleSubmit(onSubmitProposal)} noValidate>
                         <div className="mb-4">
                           <label className="block text-xs font-bold text-on-surface mb-1.5">
-                            رسالتك التعريفية <span className="text-error me-1">*</span>
+                            {STRINGS.INTRO_MESSAGE_LABEL} <span className="text-error me-1">*</span>
                           </label>
                           <textarea
                             {...register('message')}
@@ -553,7 +575,7 @@ export default function JobDetailClient() {
                           {errors.message && <p className="mt-1 text-xs text-error">{errors.message.message}</p>}
                         </div>
                         <div className="mb-4">
-                          <label className="block text-xs font-bold text-on-surface mb-1.5">رابط السيرة الذاتية (اختياري)</label>
+                          <label className="block text-xs font-bold text-on-surface mb-1.5">{STRINGS.RESUME_URL_LABEL}</label>
                           <input
                             {...register('resumeUrl')}
                             type="url"
@@ -564,7 +586,7 @@ export default function JobDetailClient() {
                         </div>
                         <button type="submit" disabled={applyMutation.isPending} className="btn-amber w-full flex items-center justify-center gap-2">
                           {applyMutation.isPending && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                          {applyMutation.isPending ? 'جاري الإرسال...' : STRINGS.SUBMIT_PROPOSAL}
+                          {applyMutation.isPending ? STRINGS.SENDING : STRINGS.SUBMIT_PROPOSAL}
                         </button>
                       </form>
                     )}
@@ -578,10 +600,10 @@ export default function JobDetailClient() {
                   <div className="text-center py-4">
                     <Briefcase size={24} className="text-on-surface-variant mx-auto mb-2" />
                     <p className="text-sm font-bold text-on-surface mb-1">
-                      {job.jobType === 'HIRING' ? 'مخصص للسائقين فقط' : 'مخصص لأصحاب العمل فقط'}
+                      {job.jobType === 'HIRING' ? STRINGS.DRIVER_ONLY : STRINGS.EMPLOYER_ONLY}
                     </p>
                     <p className="text-xs text-on-surface-variant">
-                      {job.jobType === 'HIRING' ? 'يجب أن يكون لديك بروفايل سائق للتقديم' : 'يجب أن يكون لديك بروفايل صاحب عمل للتقديم'}
+                      {job.jobType === 'HIRING' ? STRINGS.DRIVER_PROFILE_REQUIRED : STRINGS.EMPLOYER_PROFILE_REQUIRED}
                     </p>
                   </div>
                 )}
@@ -646,24 +668,24 @@ export default function JobDetailClient() {
             {/* Job Owner Management Panel — last */}
             {!loading && isJobOwner && job && (
               <div className="card-base rounded-2xl p-5">
-                <h3 className="font-bold text-sm text-on-surface mb-4">إدارة الإعلان</h3>
+                <h3 className="font-bold text-sm text-on-surface mb-4">{STRINGS.JOB_MANAGEMENT}</h3>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="text-center p-3 bg-surface-container-low rounded-xl">
                     <p className="text-xl font-extrabold text-primary font-tabular">{job._count.applications}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">عرض</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">{STRINGS.PROPOSALS_LABEL}</p>
                   </div>
                   <div className="text-center p-3 bg-surface-container-low rounded-xl">
                     <p className="text-xl font-extrabold text-brand-amber font-tabular">{job.viewCount}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">مشاهدة</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">{STRINGS.VIEWS_LABEL}</p>
                   </div>
                   <div className="text-center p-3 bg-surface-container-low rounded-xl">
                     <p className="text-xs font-bold text-on-surface mt-1">{timeAgo(job.createdAt)}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">نُشر</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">{STRINGS.PUBLISHED_LABEL}</p>
                   </div>
                 </div>
                 {job.status === 'ACTIVE' && (
                   <button
-                    onClick={handleCloseJob}
+                    onClick={() => setCloseConfirmOpen(true)}
                     disabled={closingJob}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-error/40 text-error text-sm font-bold hover:bg-red-50 transition-colors disabled:opacity-50 active:scale-95"
                   >
@@ -676,6 +698,82 @@ export default function JobDetailClient() {
           </div>
         </div>
       </div>
+
+      {/* Sticky mobile CTA — opens BottomSheet instead of scrolling */}
+      {showStickyApplyCTA && (
+        <div
+          className="lg:hidden fixed start-0 end-0 z-40 bg-white/95 backdrop-blur-sm border-t border-outline-variant px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]"
+          style={{ bottom: 'calc(53px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <button
+            onClick={() => setApplySheetOpen(true)}
+            className="btn-amber w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
+          >
+            {STRINGS.APPLY}
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Apply BottomSheet */}
+      <BottomSheet
+        open={applySheetOpen}
+        onClose={() => setApplySheetOpen(false)}
+        title={STRINGS.APPLY}
+      >
+        {submitSuccess ? (
+          <div className="text-center py-6">
+            <CheckCircle size={40} className="text-green-600 mx-auto mb-3" />
+            <p className="text-base font-bold text-green-700">{STRINGS.PROPOSAL_SENT_SUCCESS}</p>
+            <p className="text-sm text-on-surface-variant mt-1">{STRINGS.EMPLOYER_WILL_CONTACT}</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSheetSubmit(onSubmitProposal)} noValidate className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">
+                {STRINGS.INTRO_MESSAGE_LABEL} <span className="text-error">*</span>
+              </label>
+              <textarea
+                {...registerSheet('message')}
+                rows={4}
+                placeholder={t('applyMessagePlaceholder')}
+                className={cn('input-base resize-none text-sm w-full', sheetErrors.message && 'border-error focus:ring-error focus:border-error')}
+              />
+              {sheetErrors.message && <p className="mt-1 text-xs text-error">{sheetErrors.message.message}</p>}
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">{STRINGS.RESUME_URL_LABEL}</label>
+              <input
+                {...registerSheet('resumeUrl')}
+                type="url"
+                placeholder="https://..."
+                className={cn('input-base text-sm w-full', sheetErrors.resumeUrl && 'border-error focus:ring-error focus:border-error')}
+              />
+              {sheetErrors.resumeUrl && <p className="mt-1 text-xs text-error">{sheetErrors.resumeUrl.message}</p>}
+            </div>
+            <button
+              type="submit"
+              disabled={applyMutation.isPending}
+              className="btn-amber w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
+            >
+              {applyMutation.isPending && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {applyMutation.isPending ? STRINGS.SENDING : STRINGS.SUBMIT_PROPOSAL}
+            </button>
+          </form>
+        )}
+      </BottomSheet>
+
+      {/* Close Job Confirmation */}
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        title="تأكيد إغلاق الإعلان"
+        description={job?.title ? STRINGS.CLOSE_JOB_CONFIRM_DESC(job.title) : ''}
+        confirmLabel="إغلاق الإعلان"
+        cancelLabel="إلغاء"
+        variant="warning"
+        loading={closingJob}
+        onConfirm={handleCloseJob}
+        onCancel={() => setCloseConfirmOpen(false)}
+      />
     </div>
   )
 }

@@ -82,6 +82,40 @@ function OnboardingContent() {
     defaultValues: {},
   })
 
+  // H-5: Pre-fill forms with existing profile data when user returns to onboarding
+  React.useEffect(() => {
+    if (existingDriver && profileType === 'DRIVER') {
+      driverForm.reset({
+        licenseTypes: (existingDriver.licenseTypes as string[]) ?? [],
+        experienceYears: existingDriver.experienceYears ?? undefined,
+        vehicleTypes: existingDriver.vehicleTypes ?? [],
+        hasOwnVehicle: existingDriver.hasOwnVehicle ?? false,
+        bio: existingDriver.bio ?? '',
+        governorate: existingDriver.governorate ?? '',
+        city: existingDriver.city ?? '',
+        contactPhone: existingDriver.contactPhone ?? '',
+        whatsapp: existingDriver.whatsapp ?? '',
+        languages: existingDriver.languages ?? [],
+        nationality: existingDriver.nationality ?? '',
+      })
+    }
+  }, [existingDriver, profileType, driverForm])
+
+  React.useEffect(() => {
+    if (existingEmployer && profileType === 'EMPLOYER') {
+      employerForm.reset({
+        companyName: existingEmployer.companyName ?? '',
+        companySize: existingEmployer.companySize ?? '',
+        industry: existingEmployer.industry ?? '',
+        bio: existingEmployer.bio ?? '',
+        governorate: existingEmployer.governorate ?? '',
+        city: existingEmployer.city ?? '',
+        contactPhone: existingEmployer.contactPhone ?? '',
+        whatsapp: existingEmployer.whatsapp ?? '',
+      })
+    }
+  }, [existingEmployer, profileType, employerForm])
+
   if (!loadingDriver && !loadingEmployer && existingDriver && existingEmployer) {
     router.replace('/jobs/dashboard')
     return null
@@ -271,13 +305,38 @@ function OnboardingContent() {
           </button>
           <h1 className="text-xl font-extrabold text-on-surface mb-6">{t('driverProfileTitle')}</h1>
 
+          {/* H-10: Sub-section progress for the 4 sections of the driver form */}
+          <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1">
+            {[
+              { n: 1, label: 'الرخصة' },
+              { n: 2, label: 'الخبرة' },
+              { n: 3, label: 'اللغات' },
+              { n: 4, label: 'بياناتك' },
+            ].map((s, idx, arr) => (
+              <React.Fragment key={`sub-${s.n}`}>
+                <div className="flex flex-col items-center gap-0.5 min-w-[48px]">
+                  <div className="w-6 h-6 rounded-full bg-brand-amber/20 text-brand-amber text-xs font-bold flex items-center justify-center">
+                    {s.n}
+                  </div>
+                  <span className="text-[10px] text-on-surface-variant whitespace-nowrap">{s.label}</span>
+                </div>
+                {idx < arr.length - 1 && (
+                  <div className="flex-1 h-0.5 bg-outline-variant mt-[-10px]" />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+
           <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-5">
 
-            {/* License Types */}
+            {/* Section 1: License Types */}
             <div className="card-base rounded-2xl p-5">
-              <label className="block text-sm font-bold text-on-surface mb-3">
-                {t('licenseTypesLabel')} <span className="text-error">*</span>
-              </label>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                <span className="text-sm font-bold text-on-surface">
+                  {t('licenseTypesLabel')} <span className="text-error">*</span>
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(LICENSE_TYPE_LABELS).map(([value, label]) => {
                   const selected = driverForm.watch('licenseTypes').includes(value)
@@ -306,8 +365,12 @@ function OnboardingContent() {
               )}
             </div>
 
-            {/* Experience + Vehicle */}
+            {/* Section 2: Experience + Vehicle */}
             <div className="card-base rounded-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                <span className="text-sm font-bold text-on-surface">الخبرة والمركبة</span>
+              </div>
               <div>
                 <label className="block text-sm font-bold text-on-surface mb-1.5">{t('experienceYearsLabel')}</label>
                 <input
@@ -348,12 +411,15 @@ function OnboardingContent() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-on-surface">{t('hasOwnVehicleLabel')}</span>
+                <span className="text-sm font-bold text-on-surface" id="own-vehicle-label">{t('hasOwnVehicleLabel')}</span>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={driverForm.watch('hasOwnVehicle')}
+                  aria-labelledby="own-vehicle-label"
                   onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
                   className={cn(
-                    'relative w-10 h-5 rounded-full transition-colors duration-200',
+                    'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                     driverForm.watch('hasOwnVehicle') ? 'bg-primary' : 'bg-outline-variant'
                   )}
                 >
@@ -365,9 +431,12 @@ function OnboardingContent() {
               </div>
             </div>
 
-            {/* Languages */}
+            {/* Section 3: Languages */}
             <div className="card-base rounded-2xl p-5">
-              <label className="block text-sm font-bold text-on-surface mb-2">{t('languagesLabel')}</label>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                <label className="text-sm font-bold text-on-surface">{t('languagesLabel')}</label>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map(lang => {
                   const selected = driverForm.watch('languages').includes(lang)
@@ -434,6 +503,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                   <input
                     {...driverForm.register('contactPhone')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
@@ -442,6 +514,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                   <input
                     {...driverForm.register('whatsapp')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
@@ -546,6 +621,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                   <input
                     {...employerForm.register('contactPhone')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
@@ -554,6 +632,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                   <input
                     {...employerForm.register('whatsapp')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
