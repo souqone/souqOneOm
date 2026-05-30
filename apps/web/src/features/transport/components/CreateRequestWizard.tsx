@@ -40,8 +40,7 @@ export default function CreateRequestWizard({ requestId, initialData }: CreateRe
   const submittedRef = useRef(false);
   const router = useRouter();
 
-  const methods = useForm<z.infer<typeof createRequestSchema>>({
-    // @ts-expect-error - bypass zodResolver type mismatch with react-hook-form in Vercel build
+  const methods = useForm<z.input<typeof createRequestSchema>>({
     resolver: zodResolver(createRequestSchema),
     defaultValues: initialData || {
       timingType: 'asap',
