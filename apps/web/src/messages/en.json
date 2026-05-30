@@ -4094,7 +4094,11 @@
     "recentQuotes": "My Recent Quotes",
     "profileSummary": "Profile Summary",
     "viewMyProfile": "View My Profile",
-    "browseAllRequests": "Browse All Requests"
+    "browseAllRequests": "Browse All Requests",
+    "carrierStatus": {
+      "AVAILABLE": "Available",
+      "UNAVAILABLE": "Unavailable"
+    }
   },
   "status": {
     "OPEN": "Open",

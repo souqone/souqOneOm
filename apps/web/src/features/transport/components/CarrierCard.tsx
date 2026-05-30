@@ -63,7 +63,7 @@ export default function CarrierCard({ carrier }: CarrierCardProps) {
               'w-1.5 h-1.5 rounded-full',
               carrier.isAvailable ? 'bg-green-600' : 'bg-gray-400'
             )} />
-            {carrier.isAvailable ? t('status.AVAILABLE') : t('status.UNAVAILABLE')}
+            {carrier.isAvailable ? t('carrierStatus.AVAILABLE') : t('carrierStatus.UNAVAILABLE')}
           </span>
         </div>
       </div>

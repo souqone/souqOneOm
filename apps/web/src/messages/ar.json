@@ -4144,7 +4144,11 @@
     "carrierCtaSubtitle": "انضم لشبكة ناقلي SouqOne وحقق دخلاً إضافياً",
     "carrierCtaAuthTitle": "هل لديك مركبة وتريد تقديم خدمات نقل؟",
     "carrierCtaAuthSubtitle": "سجّل كناقل مجاناً وابدأ في استقبال الطلبات",
-    "registerAsCarrier": "سجّل كناقل"
+    "registerAsCarrier": "سجّل كناقل",
+    "carrierStatus": {
+      "AVAILABLE": "متاح",
+      "UNAVAILABLE": "غير متاح"
+    }
   },
   "status": {
     "OPEN": "مفتوح",
