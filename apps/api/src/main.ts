@@ -18,6 +18,9 @@ async function bootstrap() {
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
 
+  // M-8: trust the first proxy hop so req.ip / X-Forwarded-For reflects the real client IP
+  app.set('trust proxy', 1);
+
   // تفعيل CORS للسماح بالاتصال من واجهة Next.js
   app.enableCors({
     origin: true,

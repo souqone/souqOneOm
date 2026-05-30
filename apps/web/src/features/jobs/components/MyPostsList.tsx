@@ -178,7 +178,8 @@ export default function MyPostsList({ jobs, statusFilter }: MyPostsListProps) {
 }
 
 function InlineProposals({ jobId, onAccept, onReject }: { jobId: string; onAccept: (id: string) => void; onReject: (id: string) => void }) {
-  const { data: apps, isLoading } = useJobApplications(jobId)
+  const { data, isLoading } = useJobApplications(jobId)
+  const apps = data?.items ?? []
 
   return (
     <div className="border-t border-outline-variant bg-surface p-4 space-y-3">
@@ -195,7 +196,7 @@ function InlineProposals({ jobId, onAccept, onReject }: { jobId: string; onAccep
             <div className="h-4 bg-surface-dim rounded-lg" />
           </div>
         ))
-      ) : !apps || apps.length === 0 ? (
+      ) : apps.length === 0 ? (
         <p className="text-sm text-on-surface-variant text-center py-4">
           {STRINGS.EMPTY_PROPOSALS}
         </p>

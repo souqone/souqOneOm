@@ -4,7 +4,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
-  JobType, EmploymentType, SalaryPeriod, LicenseType, JobStatus,
+  EmploymentType, SalaryPeriod, LicenseType, JobStatus,
 } from '@prisma/client';
 
 export class UpdateJobDto {
@@ -18,9 +18,7 @@ export class UpdateJobDto {
   @MinLength(10)
   description?: string;
 
-  @IsOptional()
-  @IsEnum(JobType)
-  jobType?: JobType;
+  // M-6: jobType is immutable after creation — changing it would invalidate existing applications
 
   @IsOptional()
   @IsEnum(EmploymentType)

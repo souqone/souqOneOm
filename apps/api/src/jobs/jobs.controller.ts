@@ -3,6 +3,7 @@ import {
   UseGuards, Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -46,12 +47,13 @@ export class JobsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  myJobs(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
-    return this.jobsService.myJobs(
-      user.sub,
-      query.page ?? 1,
-      query.limit ?? 20,
-    );
+  myJobs(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: PaginationQueryDto,
+    @Query('status') status?: string,
+  ) {
+    // UX-2: pass status filter so dashboard tabs hit the right slice
+    return this.jobsService.myJobs(user.sub, query.page ?? 1, query.limit ?? 20, status);
   }
 
   // ─── Driver Profile ───
@@ -112,7 +114,6 @@ export class JobsController {
     return this.employerProfileService.findOne(id);
   }
 
-
   // ─── Verification ───
   @UseGuards(JwtAuthGuard)
   @Post('verification/submit')
@@ -132,8 +133,11 @@ export class JobsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('admin/verifications')
-  adminListVerifications(@Query('status') status?: string) {
-    return this.verificationService.adminList(status);
+  adminListVerifications(
+    @Query('status') status?: string,
+    @Query() query?: PaginationQueryDto,
+  ) {
+    return this.verificationService.adminList(status, query?.page ?? 1, query?.limit ?? 20);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -147,34 +151,13 @@ export class JobsController {
     return this.verificationService.adminReview(id, user.sub, body.decision, body.rejectionReason);
   }
 
-
-  @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
-    return this.jobsService.findOne(decodeURIComponent(id), req.ip);
-  }
+  // ─── Jobs CRUD + Applications ───
+  // NOTE: specific routes (applications/my, applications/:id, admin/*) are declared before :id to avoid route shadowing
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateJobDto, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.update(decodeURIComponent(id), user.sub, dto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.remove(decodeURIComponent(id), user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/apply')
-  apply(@Param('id') jobId: string, @Body() dto: ApplyJobDto, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.apply(decodeURIComponent(jobId), user.sub, dto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get(':id/applications')
-  getApplications(@Param('id') jobId: string, @CurrentUser() user: JwtPayload) {
-    return this.jobsService.getApplications(decodeURIComponent(jobId), user.sub);
+  @Get('applications/my')
+  myApplications(@CurrentUser() user: JwtPayload) {
+    return this.jobsService.myApplications(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -191,5 +174,48 @@ export class JobsController {
   @Post('applications/:id/withdraw')
   withdrawApplication(@Param('id') applicationId: string, @CurrentUser() user: JwtPayload) {
     return this.jobsService.withdrawApplication(applicationId, user.sub);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @Req() req: Request) {
+    // M-8: read real client IP from X-Forwarded-For (behind load balancer/proxy)
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.ip;
+    return this.jobsService.findOne(decodeURIComponent(id), clientIp);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateJobDto, @CurrentUser() user: JwtPayload) {
+    return this.jobsService.update(decodeURIComponent(id), user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.jobsService.remove(decodeURIComponent(id), user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // L-3: tighter per-user limit for apply
+  @Post(':id/apply')
+  apply(@Param('id') jobId: string, @Body() dto: ApplyJobDto, @CurrentUser() user: JwtPayload) {
+    return this.jobsService.apply(decodeURIComponent(jobId), user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/applications')
+  getApplications(
+    @Param('id') jobId: string,
+    @CurrentUser() user: JwtPayload,
+    @Query() query: PaginationQueryDto,
+  ) {
+    // BL-1: pass pagination so large job applications don't blow memory
+    return this.jobsService.getApplications(
+      decodeURIComponent(jobId),
+      user.sub,
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
   }
 }

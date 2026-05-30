@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { AuthGuard } from '@/components/auth-guard';
+import { useAuth } from '@/providers/auth-provider';
 import { useAdminJobs, useAdminJobStats, useAdminUpdateJob, useAdminDeleteJob } from '@/lib/api/admin-jobs';
 import { useAdminVerifications, useAdminReviewVerification } from '@/lib/api';
 import { useToast } from '@/components/toast';
@@ -19,18 +20,34 @@ export default function AdminJobsPage() {
 }
 
 function AdminJobsContent() {
+  // All hooks must be called unconditionally (Rules of Hooks)
+  const { user } = useAuth();
   const locale = useLocale();
   const { addToast } = useToast();
   const [tab, setTab] = useState<'stats' | 'jobs' | 'verifications'>('stats');
   const [page, setPage] = useState(1);
+  const [verPage, setVerPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
 
+  const isAdmin = user?.role === 'ADMIN';
+
+  // H-6: queries only enabled when the user is actually an admin — avoids 403 spam
   const { data: stats, isLoading: statsLoading } = useAdminJobStats();
   const { data: jobsData, isLoading: jobsLoading } = useAdminJobs({ page, status: statusFilter || undefined });
-  const { data: verifications, isLoading: verLoading } = useAdminVerifications('PENDING');
+  const { data: verificationsData, isLoading: verLoading } = useAdminVerifications('PENDING', verPage);
+  const verifications = verificationsData?.items;
   const updateJob = useAdminUpdateJob();
   const deleteJob = useAdminDeleteJob();
   const reviewVerification = useAdminReviewVerification();
+
+  // H-6: role guard — render access-denied AFTER all hooks
+  if (!isAdmin) {
+    return (
+      <div className="flex-1 min-h-[60vh] flex items-center justify-center">
+        <p className="text-on-surface-variant text-sm">غير مصرح لك بالوصول إلى هذه الصفحة</p>
+      </div>
+    );
+  }
 
   const tabs = [
     { key: 'stats' as const, label: 'الإحصائيات', icon: 'analytics' },
@@ -172,33 +189,42 @@ function AdminJobsContent() {
                 {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-surface-container-low rounded-lg" />)}
               </div>
             ) : verifications?.length ? (
-              <div className="space-y-3">
-                {verifications.map((v) => (
-                  <div key={v.id} className="p-4 bg-surface-container-lowest border border-outline-variant/10 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-sm">
-                          {v.driverProfile?.user.displayName || v.driverProfile?.user.username}
-                        </p>
-                        <p className="text-xs text-on-surface-variant">{v.driverProfile?.user.email}</p>
-                        <p className="text-xs text-on-surface-variant mt-1">
-                          {new Date(v.createdAt).toLocaleDateString('ar-OM-u-nu-latn')}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleReview(v.id, 'APPROVED')}
-                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
-                        >قبول</button>
-                        <button
-                          onClick={() => handleReview(v.id, 'REJECTED')}
-                          className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700"
-                        >رفض</button>
+              <>
+                <div className="space-y-3">
+                  {verifications.map((v) => (
+                    <div key={v.id} className="p-4 bg-surface-container-lowest border border-outline-variant/10 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-sm">
+                            {v.driverProfile?.user.displayName || v.driverProfile?.user.username}
+                          </p>
+                          <p className="text-xs text-on-surface-variant">{v.driverProfile?.user.email}</p>
+                          <p className="text-xs text-on-surface-variant mt-1">
+                            {new Date(v.createdAt).toLocaleDateString('ar-OM-u-nu-latn')}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleReview(v.id, 'APPROVED')}
+                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                          >قبول</button>
+                          <button
+                            onClick={() => handleReview(v.id, 'REJECTED')}
+                            className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700"
+                          >رفض</button>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+                {verificationsData && verificationsData.meta.totalPages > 1 && (
+                  <div className="flex justify-center gap-2 mt-4">
+                    <button disabled={verPage <= 1} onClick={() => setVerPage(verPage - 1)} className="px-3 py-1 text-sm bg-surface-container-low rounded disabled:opacity-30">السابق</button>
+                    <span className="px-3 py-1 text-sm">{verPage} / {verificationsData.meta.totalPages}</span>
+                    <button disabled={verPage >= verificationsData.meta.totalPages} onClick={() => setVerPage(verPage + 1)} className="px-3 py-1 text-sm bg-surface-container-low rounded disabled:opacity-30">التالي</button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ) : (
               <p className="text-center text-on-surface-variant py-8">لا توجد طلبات توثيق معلّقة</p>
             )}

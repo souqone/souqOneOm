@@ -48,22 +48,32 @@ export class DriverVerificationService {
     });
   }
 
-  /* ───── ADMIN: LIST VERIFICATIONS ───── */
-  async adminList(status?: string) {
+  /* ───── ADMIN: LIST VERIFICATIONS (paginated) ───── */
+  async adminList(status?: string, page = 1, limit = 20) {
     const where: any = {};
     if (status) where.status = status;
 
-    return this.prisma.driverVerification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        driverProfile: {
-          include: {
-            user: { select: { id: true, username: true, displayName: true, avatarUrl: true, email: true } },
+    const take = Math.min(limit, 50);
+    const skip = (page - 1) * take;
+
+    const [items, total] = await Promise.all([
+      this.prisma.driverVerification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          driverProfile: {
+            include: {
+              user: { select: { id: true, username: true, displayName: true, avatarUrl: true, email: true } },
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.driverVerification.count({ where }),
+    ]);
+
+    return { items, meta: { total, page, limit: take, totalPages: Math.ceil(total / take) } };
   }
 
   /* ───── ADMIN: REVIEW ───── */

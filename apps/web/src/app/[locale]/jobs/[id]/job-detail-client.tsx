@@ -12,6 +12,7 @@ import RatingBadges from '@/features/jobs/components/RatingBadges';
 import {
   useJob,
   useJobApplications,
+  useMyApplications,
   useApplyToJob,
   useUpdateApplicationStatus,
   useWithdrawApplication,
@@ -80,7 +81,10 @@ export default function JobDetailClient() {
   const { data: jobData, isLoading: loading, error: jobError } = useJob(jobId)
   const job = jobData as unknown as DriverJob | undefined
   const { data: applicationsData, isLoading: appsLoading, refetch: refetchApps } = useJobApplications(jobId)
-  const applications = (applicationsData ?? []) as unknown as JobApplication[]
+  // applicationsData is paginated { items, meta } — extract items (owner-only endpoint)
+  const applications = (applicationsData?.items ?? []) as unknown as JobApplication[]
+
+  const { data: myAppsData } = useMyApplications()
 
   const applyMutation = useApplyToJob()
   const updateStatusMutation = useUpdateApplicationStatus()
@@ -107,8 +111,11 @@ export default function JobDetailClient() {
   })
 
   const isJobOwner = job?.userId === user?.id
-  const alreadyApplied = applications.some(a => a.applicantId === user?.id)
-  const ownApplication = applications.find(a => a.applicantId === user?.id)
+  // Non-owners: own application comes from /applications/my (owner-only getApplications returns 404 for non-owners)
+  const ownApplication = (!isJobOwner && isAuthenticated)
+    ? myAppsData?.find(a => a.jobId === job?.id)
+    : undefined
+  const alreadyApplied = !!ownApplication
 
   const canApply =
     isAuthenticated &&
@@ -434,7 +441,7 @@ export default function JobDetailClient() {
                   <div className="flex items-center gap-3">
                     <h2 className="font-bold text-base text-on-surface">العروض المقدمة</h2>
                     <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
-                      {applications.length}
+                      {job?._count?.applications ?? applications.length}
                     </span>
                   </div>
                   <ArrowRight
@@ -627,7 +634,7 @@ export default function JobDetailClient() {
                 )}
 
                 <Link
-                  href="/jobs/dashboard"
+                  href={`/jobs/employers/${employerInfo.id}`}
                   className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-outline-variant text-sm font-bold text-on-surface hover:bg-surface transition-colors"
                 >
                   <Briefcase size={14} />

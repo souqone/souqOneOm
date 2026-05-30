@@ -7,14 +7,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployerProfileDto } from './dto/create-employer-profile.dto';
 import { UpdateEmployerProfileDto } from './dto/update-employer-profile.dto';
 
-const USER_SELECT = {
+/** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
+const PUBLIC_USER_SELECT = {
   id: true,
   username: true,
   displayName: true,
   avatarUrl: true,
-  phone: true,
   governorate: true,
   createdAt: true,
+};
+
+/** Private profile — returned only to the profile owner */
+const PRIVATE_USER_SELECT = {
+  ...PUBLIC_USER_SELECT,
+  phone: true,
 };
 
 @Injectable()
@@ -38,15 +44,15 @@ export class EmployerProfileService {
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PRIVATE_USER_SELECT } },
     });
   }
 
-  /* ───── GET MY PROFILE ───── */
+  /* ───── GET MY PROFILE (owner — includes phone) ───── */
   async getMyProfile(userId: string) {
     const profile = await this.prisma.employerProfile.findUnique({
       where: { userId },
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PRIVATE_USER_SELECT } },
     });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل صاحب عمل');
     return profile;
@@ -65,15 +71,15 @@ export class EmployerProfileService {
     return this.prisma.employerProfile.update({
       where: { userId },
       data,
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PRIVATE_USER_SELECT } },
     });
   }
 
-  /* ───── FIND ONE BY ID ───── */
+  /* ───── FIND ONE BY ID (public — no phone) ───── */
   async findOne(id: string) {
     const profile = await this.prisma.employerProfile.findUnique({
       where: { id },
-      include: { user: { select: USER_SELECT } },
+      include: { user: { select: PUBLIC_USER_SELECT } },
     });
     if (!profile) throw new NotFoundException('بروفايل صاحب العمل غير موجود');
     return profile;
