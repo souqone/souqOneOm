@@ -190,14 +190,16 @@ export class TransportBookingService {
       data: { bookingId },
     });
 
-    // If the carrier cancelled, notify the shipper their request is open again
+    // If the carrier cancelled, tell the shipper their request is open again.
+    // Use TRANSPORT_BOOKING_CANCELLED so the user can navigate to the booking
+    // and see the request is back to OPEN for new quotes.
     if (isCarrier) {
       this.notifications.create({
-        type: 'SYSTEM',
+        type: 'TRANSPORT_BOOKING_CANCELLED',
         title: 'طلبك متاح مجدداً',
         body: 'ألغى الناقل الحجز — طلبك الآن مفتوح لاستقبال عروض جديدة',
         userId: booking.request.userId,
-        data: { requestId: booking.requestId },
+        data: { bookingId, requestId: booking.requestId },
       }).catch(() => {});
     }
 

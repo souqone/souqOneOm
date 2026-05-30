@@ -73,14 +73,17 @@ export class PushService {
 
     if (subs.length === 0) return;
 
+    // Use a unique tag per notification so OS keeps all alerts in the tray.
+    // We prefix with userId so notifications from different users don't collide.
+    const uniqueTag = `souqone-${userId}-${Date.now()}`;
     const jsonPayload = JSON.stringify({
       title: payload.title,
       body: payload.body,
       icon: payload.icon || '/icons/icon-192x192.png',
       badge: '/icons/icon-72x72.png',
       url: payload.url || '/',
-      tag: `souqone-${userId}`,
-      renotify: true,
+      tag: uniqueTag,
+      renotify: false,
       data: payload.data,
     });
 

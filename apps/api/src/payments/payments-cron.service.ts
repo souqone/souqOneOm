@@ -98,56 +98,70 @@ export class PaymentsCronService {
     const now = new Date();
     let expired = 0;
 
+    // Helper: process one listing — isolated so a single failure doesn't halt the batch
+    const processOne = async (
+      updater: () => Promise<void>,
+      userId: string,
+      title: string,
+      listingId: string,
+      listingType: string,
+    ) => {
+      try {
+        await updater();
+        await this.notifications.create({
+          userId,
+          type: NotificationType.FEATURED_EXPIRED,
+          title: 'انتهى الإعلان المميز',
+          body: `انتهت فترة تمييز إعلانك "${title}"`,
+          data: { listingId, listingType },
+        });
+        expired++;
+      } catch (err) {
+        this.logger.error(`Failed to expire featured listing ${listingId}: ${(err as Error).message}`);
+      }
+    };
+
     // ── Car Listings (owner = sellerId) ──
     const carListings = await this.prisma.listing.findMany({
       where: { isPremium: true, featuredUntil: { lt: now } },
       select: { id: true, title: true, sellerId: true },
     });
-    for (const l of carListings) {
-      await this.prisma.listing.update({ where: { id: l.id }, data: { isPremium: false } });
-      await this.notifications.create({
-        userId: l.sellerId,
-        type: NotificationType.FEATURED_EXPIRED,
-        title: 'انتهى الإعلان المميز',
-        body: `انتهت فترة تمييز إعلانك "${l.title}"`,
-        data: { listingId: l.id, listingType: 'car' },
-      });
-      expired++;
-    }
+    await Promise.allSettled(
+      carListings.map((l) =>
+        processOne(
+          () => this.prisma.listing.update({ where: { id: l.id }, data: { isPremium: false } }).then(() => {}),
+          l.sellerId, l.title, l.id, 'car',
+        ),
+      ),
+    );
 
     // ── Bus Listings (owner = userId) ──
     const busListings = await this.prisma.busListing.findMany({
       where: { isPremium: true, featuredUntil: { lt: now } },
       select: { id: true, title: true, userId: true },
     });
-    for (const l of busListings) {
-      await this.prisma.busListing.update({ where: { id: l.id }, data: { isPremium: false } });
-      await this.notifications.create({
-        userId: l.userId,
-        type: NotificationType.FEATURED_EXPIRED,
-        title: 'انتهى الإعلان المميز',
-        body: `انتهت فترة تمييز إعلانك "${l.title}"`,
-        data: { listingId: l.id, listingType: 'bus' },
-      });
-      expired++;
-    }
+    await Promise.allSettled(
+      busListings.map((l) =>
+        processOne(
+          () => this.prisma.busListing.update({ where: { id: l.id }, data: { isPremium: false } }).then(() => {}),
+          l.userId, l.title, l.id, 'bus',
+        ),
+      ),
+    );
 
     // ── Equipment Listings (owner = userId) ──
     const equipListings = await this.prisma.equipmentListing.findMany({
       where: { isPremium: true, featuredUntil: { lt: now } },
       select: { id: true, title: true, userId: true },
     });
-    for (const l of equipListings) {
-      await this.prisma.equipmentListing.update({ where: { id: l.id }, data: { isPremium: false } });
-      await this.notifications.create({
-        userId: l.userId,
-        type: NotificationType.FEATURED_EXPIRED,
-        title: 'انتهى الإعلان المميز',
-        body: `انتهت فترة تمييز إعلانك "${l.title}"`,
-        data: { listingId: l.id, listingType: 'equipment' },
-      });
-      expired++;
-    }
+    await Promise.allSettled(
+      equipListings.map((l) =>
+        processOne(
+          () => this.prisma.equipmentListing.update({ where: { id: l.id }, data: { isPremium: false } }).then(() => {}),
+          l.userId, l.title, l.id, 'equipment',
+        ),
+      ),
+    );
 
     if (expired > 0) {
       this.logger.log(`Expired featured status for ${expired} listing(s)`);

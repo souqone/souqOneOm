@@ -79,6 +79,13 @@ export class TransportRequestService {
     return request;
   }
 
+  /**
+   * L-8 fix: notify matching carriers with a per-carrier daily cap (5/day).
+   * Without this, a busy region could spam a carrier dozens of times per day.
+   * The Redis key auto-expires after 24 h so the counter resets daily.
+   * Fails open — if Redis is unavailable the count returns 0 and the cap is bypassed,
+   * which is acceptable (carrier gets notified) versus silently dropping notifications.
+   */
   private async notifyMatchingCarriers(request: {
     id: string;
     serviceType: string;
@@ -95,15 +102,23 @@ export class TransportRequestService {
       take: 30,
     });
 
-    const notifications = carriers.map((c) =>
-      this.notifications.create({
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const DAILY_LIMIT = 5;
+
+    const notifications = carriers.map(async (c) => {
+      // Rate-limit: skip if this carrier already received ≥ DAILY_LIMIT nearby-request alerts today
+      const key = `carrier:newreq:notify:${c.userId}:${today}`;
+      const count = await this.redis.incr(key, 86400).catch(() => 0);
+      if (count > DAILY_LIMIT) return;
+
+      return this.notifications.create({
         type: 'SYSTEM',
         title: 'طلب نقل جديد قريب منك',
         body: `طلب ${request.serviceType} من ${request.fromGovernorate} إلى ${request.toGovernorate}`,
         userId: c.userId,
         data: { requestId: request.id },
-      }),
-    );
+      });
+    });
 
     await Promise.allSettled(notifications);
   }

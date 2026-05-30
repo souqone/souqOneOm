@@ -354,14 +354,15 @@ export class PaymentsService {
 
     if (payment.type === 'FEATURED' && payment.entityType && payment.entityId) {
       await this.activation.activateFeatured(payment.entityType, payment.entityId);
+      // PAYMENT_SUCCESS fired once here — no duplicate
+      await this.activation.notifyPaymentSuccess(payment);
     }
 
     if (payment.type === 'SUBSCRIPTION') {
       const plan = (payment.metadata as any)?.plan as string;
+      // activateSubscription sends SUBSCRIPTION_ACTIVATED — no separate PAYMENT_SUCCESS to avoid spam
       await this.activation.activateSubscription(payment.userId, plan as SubscriptionPlan, payment.id);
     }
-
-    await this.activation.notifyPaymentSuccess(payment);
   }
 
   // ── User payments history ──

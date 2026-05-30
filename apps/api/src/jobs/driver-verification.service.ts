@@ -100,14 +100,14 @@ export class DriverVerificationService {
       });
     }
 
-    // Notify the driver
+    // Notify the driver — include data.url so the SYSTEM type navigates to their profile
     const statusText = decision === 'APPROVED' ? 'تم توثيق حسابك بنجاح ✓' : `تم رفض طلب التوثيق: ${rejectionReason || 'بدون سبب'}`;
     await this.notifications.create({
       userId: verification.driverProfile.userId,
       type: 'SYSTEM' as any,
       title: decision === 'APPROVED' ? 'تم التوثيق' : 'رُفض التوثيق',
       body: statusText,
-      data: { verificationId },
+      data: { verificationId, url: '/jobs/driver-profile' },
     });
 
     return updated;

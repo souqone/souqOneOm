@@ -16,10 +16,13 @@ export interface PaginatedNotifications {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
-export function useNotifications(page = 1) {
+export function useNotifications(page = 1, filter?: 'all' | 'unread') {
   return useQuery<PaginatedNotifications>({
-    queryKey: ['notifications', page],
-    queryFn: () => apiRequest<PaginatedNotifications>(`/notifications?page=${page}&limit=20`),
+    queryKey: ['notifications', page, filter],
+    queryFn: () =>
+      apiRequest<PaginatedNotifications>(
+        `/notifications?page=${page}&limit=20${filter === 'unread' ? '&filter=unread' : ''}`,
+      ),
     enabled: !!getAuthToken(),
   });
 }

@@ -21,7 +21,7 @@ export class TransportExpiryService {
         status: { in: ['OPEN', 'QUOTED'] },
         expiresAt: { lt: new Date() },
       },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, cargoDescription: true, fromGovernorate: true, toGovernorate: true },
     });
 
     if (expiredRequests.length === 0) return;
@@ -46,7 +46,7 @@ export class TransportExpiryService {
       this.notifications.create({
         type: 'TRANSPORT_REQUEST_EXPIRED',
         title: 'انتهاء طلب نقل',
-        body: 'انتهت صلاحية طلب النقل الخاص بك ولم يتم قبول أي عرض',
+        body: `طلب نقل "${r.cargoDescription}" من ${r.fromGovernorate} إلى ${r.toGovernorate} انتهت صلاحيته ولم يُقبل أي عرض`,
         userId: r.userId,
         data: { requestId: r.id },
       }),

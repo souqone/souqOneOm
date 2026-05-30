@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { USER_SELECT } from '../common/utils/entity.utils';
 
 const IMAGES_INCLUDE = { images: { orderBy: { order: 'asc' as const }, take: 5 } } as const;
@@ -10,7 +11,10 @@ const SELLER_INCLUDE = { seller: { select: USER_SELECT } } as const;
 export class FavoritesService {
   private readonly logger = new Logger(FavoritesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async toggle(
     entityType: string,
@@ -44,18 +48,16 @@ export class FavoritesService {
       },
     });
 
-    // Notify owner for any entity type
+    // Notify owner — goes through full pipeline: WebSocket + Push
     try {
       const ownerInfo = await this.resolveEntityOwner(entityType, entityId);
       if (ownerInfo && ownerInfo.ownerId !== userId) {
-        await this.prisma.notification.create({
-          data: {
-            type: 'LISTING_FAVORITED',
-            title: 'إعلانك أُعجب به',
-            body: `أحد المستخدمين أضاف "${ownerInfo.title}" للمفضلة`,
-            userId: ownerInfo.ownerId,
-            data: { entityType, entityId },
-          },
+        await this.notifications.create({
+          type: 'LISTING_FAVORITED',
+          title: 'إعلانك أُعجب به',
+          body: `أحد المستخدمين أضاف "${ownerInfo.title}" للمفضلة`,
+          userId: ownerInfo.ownerId,
+          data: { entityType, entityId },
         });
       }
     } catch (err) {

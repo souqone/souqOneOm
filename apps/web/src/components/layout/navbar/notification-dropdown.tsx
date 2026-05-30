@@ -4,6 +4,7 @@ import { forwardRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/navigation';
 import type { NotificationItem } from '@/lib/api';
+import { getNotifConfig } from '@/lib/constants/notifications';
 
 interface NotificationDropdownProps {
   open: boolean;
@@ -50,9 +51,8 @@ export const NotificationDropdown = forwardRef<HTMLDivElement, NotificationDropd
                     onClick={() => {
                       if (!n.isRead) onMarkRead(n.id);
                       close();
-                      if (n.type === 'MESSAGE' && n.data?.conversationId) {
-                        router.push(`/messages/${n.data.conversationId}`);
-                      }
+                      const path = getNotifConfig(n.type).navigateTo(n.data);
+                      if (path) router.push(path);
                     }}
                     className={`w-full text-start px-4 py-3 flex items-start gap-2.5 hover:bg-surface-container transition-colors ${
                       !n.isRead ? 'bg-primary/[0.03]' : ''

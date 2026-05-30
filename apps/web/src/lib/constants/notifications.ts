@@ -2,7 +2,7 @@
 
 import {
   MessageCircle, ShoppingBag, Heart, Tag, AlertCircle,
-  CheckCheck, Briefcase, Bell, Star, CreditCard, type LucideIcon,
+  CheckCheck, Briefcase, Bell, Star, CreditCard, PlusCircle, RefreshCw, Trash2, type LucideIcon,
 } from 'lucide-react';
 import { createElement } from 'react';
 
@@ -60,7 +60,8 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     strip: 'bg-outline-variant',
     border: 'border-outline-variant/30',
     labelKey: 'notifTypeSystem',
-    navigateTo: () => null,
+    // Use data.url when the backend embeds a deep-link (e.g. driver verification)
+    navigateTo: (d) => (d?.url as string) || null,
   },
   JOB_APPLICATION: {
     icon: Briefcase,
@@ -223,6 +224,58 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotifTypeConfig> = {
     border: 'border-outline-variant/30',
     labelKey: 'notifTypeWithdrawal',
     navigateTo: (d) => (d?.jobId ? `/jobs/${d.jobId}` : '/jobs'),
+  },
+  // Listing lifecycle events — emitted via EventEmitter / listing-notification.listener.ts
+  LISTING_CREATED: {
+    icon: PlusCircle,
+    bg: 'bg-green-500/10',
+    text: 'text-green-600',
+    strip: 'bg-green-500',
+    border: 'border-green-200',
+    labelKey: 'notifTypeListingCreated',
+    navigateTo: (d) => {
+      if (!d?.listingId) return '/profile';
+      if (d.entityType === 'BUS_LISTING') return `/buses/${d.listingId}`;
+      if (d.entityType === 'EQUIPMENT_LISTING') return `/equipment/${d.listingId}`;
+      return `/sale/car/${d.listingId}`;
+    },
+  },
+  LISTING_UPDATED: {
+    icon: RefreshCw,
+    bg: 'bg-primary/10',
+    text: 'text-primary',
+    strip: 'bg-primary',
+    border: 'border-primary/20',
+    labelKey: 'notifTypeListingUpdated',
+    navigateTo: (d) => {
+      if (!d?.listingId) return '/profile';
+      if (d.entityType === 'BUS_LISTING') return `/buses/${d.listingId}`;
+      if (d.entityType === 'EQUIPMENT_LISTING') return `/equipment/${d.listingId}`;
+      return `/sale/car/${d.listingId}`;
+    },
+  },
+  LISTING_DELETED: {
+    icon: Trash2,
+    bg: 'bg-error/10',
+    text: 'text-error',
+    strip: 'bg-error',
+    border: 'border-error/20',
+    labelKey: 'notifTypeListingDeleted',
+    navigateTo: () => '/profile',
+  },
+  LISTING_STATUS_CHANGED: {
+    icon: RefreshCw,
+    bg: 'bg-orange-500/10',
+    text: 'text-orange-500',
+    strip: 'bg-orange-500',
+    border: 'border-orange-200',
+    labelKey: 'notifTypeListingStatus',
+    navigateTo: (d) => {
+      if (!d?.listingId) return '/profile';
+      if (d.entityType === 'BUS_LISTING') return `/buses/${d.listingId}`;
+      if (d.entityType === 'EQUIPMENT_LISTING') return `/equipment/${d.listingId}`;
+      return `/sale/car/${d.listingId}`;
+    },
   },
 };
 
