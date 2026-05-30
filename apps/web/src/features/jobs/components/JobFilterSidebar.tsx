@@ -86,24 +86,44 @@ export default function JobFilterSidebar({ filters, onChange, onClear, totalCoun
           </div>
         </div>
 
-        {/* Employment Type */}
+        {/* Employment Type — H-1: radio for single-select semantics */}
         <div>
           <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">نوع التوظيف</p>
           <div className="space-y-1">
+            <label
+              key="filter-emp-all"
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors text-sm font-bold',
+                filters.employmentType === ''
+                  ? 'bg-surface-container-low text-primary' : 'hover:bg-surface text-on-surface-variant'
+              )}
+            >
+              <input
+                type="radio"
+                name="employmentType"
+                value=""
+                checked={filters.employmentType === ''}
+                onChange={() => onChange('employmentType', '')}
+                className="accent-primary"
+              />
+              الكل
+            </label>
             {EMPLOYMENT_OPTIONS.map(opt => (
               <label
                 key={`filter-emp-${opt.value}`}
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors text-sm',
                   filters.employmentType === opt.value
-                    ? 'bg-surface-container-low text-primary font-bold' :'hover:bg-surface text-on-surface-variant'
+                    ? 'bg-surface-container-low text-primary font-bold' : 'hover:bg-surface text-on-surface-variant'
                 )}
               >
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="employmentType"
+                  value={opt.value}
                   checked={filters.employmentType === opt.value}
-                  onChange={() => onChange('employmentType', filters.employmentType === opt.value ? '' : opt.value)}
-                  className="accent-primary rounded"
+                  onChange={() => onChange('employmentType', opt.value)}
+                  className="accent-primary"
                 />
                 {opt.label}
               </label>
@@ -142,24 +162,44 @@ export default function JobFilterSidebar({ filters, onChange, onClear, totalCoun
           </div>
         </div>
 
-        {/* License Type */}
+        {/* License Type — radio for single-select */}
         <div>
           <p className="text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wide">نوع الرخصة</p>
           <div className="space-y-1">
+            <label
+              key="filter-lic-all"
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors text-sm font-bold',
+                filters.licenseType === ''
+                  ? 'bg-surface-container-low text-primary' : 'hover:bg-surface text-on-surface-variant'
+              )}
+            >
+              <input
+                type="radio"
+                name="licenseType"
+                value=""
+                checked={filters.licenseType === ''}
+                onChange={() => onChange('licenseType', '')}
+                className="accent-primary"
+              />
+              الكل
+            </label>
             {LICENSE_OPTIONS.map(opt => (
               <label
                 key={`filter-lic-${opt.value}`}
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors text-sm',
                   filters.licenseType === opt.value
-                    ? 'bg-surface-container-low text-primary font-bold' :'hover:bg-surface text-on-surface-variant'
+                    ? 'bg-surface-container-low text-primary font-bold' : 'hover:bg-surface text-on-surface-variant'
                 )}
               >
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="licenseType"
+                  value={opt.value}
                   checked={filters.licenseType === opt.value}
-                  onChange={() => onChange('licenseType', filters.licenseType === opt.value ? '' : opt.value)}
-                  className="accent-primary rounded"
+                  onChange={() => onChange('licenseType', opt.value)}
+                  className="accent-primary"
                 />
                 {opt.label}
               </label>

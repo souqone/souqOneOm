@@ -39,6 +39,7 @@ import { resolveLocationLabel } from '@/lib/location-data';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import ConfirmDialog from '@/components/confirm-dialog';
 
 function DetailSkeleton() {
   return (
@@ -93,7 +94,9 @@ export default function JobDetailClient() {
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [closingJob, setClosingJob] = useState(false)
-  const [appsExpanded, setAppsExpanded] = useState(true)
+  // Proposals collapsed by default — owners expand on demand, non-owners rarely need it
+  const [appsExpanded, setAppsExpanded] = useState(false)
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
 
   const applySchema = z.object({
     message: z.string().min(10, t('messageTooShort')).max(500, t('messageTooLong')),
@@ -162,6 +165,7 @@ export default function JobDetailClient() {
       await closeMutation.mutateAsync(job.id)
     } finally {
       setClosingJob(false)
+      setCloseConfirmOpen(false)
     }
   }
 
@@ -194,8 +198,11 @@ export default function JobDetailClient() {
   const posterName = job?.jobType === 'HIRING' ? (employerInfo?.companyName ?? job?.user.displayName ??'')
     : (driverInfo?.user.displayName ?? job?.user.displayName ?? '')
 
+  const showStickyApplyCTA =
+    !loading && job && !isJobOwner && !alreadyApplied && canApply && !submitSuccess
+
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
+    <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6 pb-24 lg:pb-6">
 
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-on-surface-variant mb-5">
@@ -251,7 +258,7 @@ export default function JobDetailClient() {
                     !job.user.avatarUrl && getAvatarColor(job.userId)
                   )}>
                     {job.user.avatarUrl ? (
-                      <img src={job.user.avatarUrl} alt={posterName} className="w-full h-full object-cover" />
+                      <img src={job.user.avatarUrl} alt={posterName} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
                       getInitials(posterName)
                     )}
@@ -502,11 +509,12 @@ export default function JobDetailClient() {
 
             {/* Apply Form — most important CTA */}
             {!loading && job && !isJobOwner && (
-              <div className="card-base rounded-2xl p-5">
+              <div id="apply-sidebar" className="card-base rounded-2xl p-5">
                 {!isAuthenticated ? (
                   <div className="text-center py-4">
                     <p className="text-sm font-bold text-on-surface mb-3">سجّل دخولك لتقديم عرض</p>
-                    <Link href="/jobs/browse" className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
+                    {/* C-2: redirect back to this job after login */}
+                    <Link href={`/login?redirect=/jobs/${jobId}`} className="btn-primary text-sm font-bold py-2.5 w-full block text-center">
                       {STRINGS.LOGIN}
                     </Link>
                   </div>
@@ -663,7 +671,7 @@ export default function JobDetailClient() {
                 </div>
                 {job.status === 'ACTIVE' && (
                   <button
-                    onClick={handleCloseJob}
+                    onClick={() => setCloseConfirmOpen(true)}
                     disabled={closingJob}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-error/40 text-error text-sm font-bold hover:bg-red-50 transition-colors disabled:opacity-50 active:scale-95"
                   >
@@ -676,6 +684,34 @@ export default function JobDetailClient() {
           </div>
         </div>
       </div>
+
+      {/* C-6: Sticky mobile CTA — visible only on mobile for eligible applicants */}
+      {showStickyApplyCTA && (
+        <div
+          className="lg:hidden fixed start-0 end-0 z-40 bg-white/95 backdrop-blur-sm border-t border-outline-variant px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]"
+          style={{ bottom: 'calc(53px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <button
+            onClick={() => document.getElementById('apply-sidebar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="btn-amber w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
+          >
+            {STRINGS.APPLY}
+          </button>
+        </div>
+      )}
+
+      {/* Close Job Confirmation */}
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        title="تأكيد إغلاق الإعلان"
+        description={`هل تريد إغلاق إعلان "${job?.title}"؟ لن يتمكن المتقدمون من إرسال عروض جديدة بعد الإغلاق.`}
+        confirmLabel="إغلاق الإعلان"
+        cancelLabel="إلغاء"
+        variant="warning"
+        loading={closingJob}
+        onConfirm={handleCloseJob}
+        onCancel={() => setCloseConfirmOpen(false)}
+      />
     </div>
   )
 }

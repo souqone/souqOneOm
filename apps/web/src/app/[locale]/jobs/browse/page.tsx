@@ -12,6 +12,7 @@ import type { DriverJob } from '@/features/jobs/types';
 import { STRINGS, SORT_OPTIONS, LICENSE_TYPE_LABELS, EMPLOYMENT_TYPE_LABELS } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { getPaginationRange } from '@/lib/pagination';
 
 const DEFAULT_FILTERS: JobFilters = {
   jobType: '',
@@ -97,7 +98,7 @@ function BrowseJobsContent() {
     }, 300)
   }
 
-  const pageNumbers = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1)
+  const pageNumbers = getPaginationRange(currentPage, totalPages)
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 xl:px-10 2xl:px-16 py-6">
@@ -297,20 +298,28 @@ function BrowseJobsContent() {
                 <ChevronRight size={16} />
               </button>
 
-              {pageNumbers.map(n => (
-                <button
-                  key={`page-${n}`}
-                  onClick={() => setCurrentPage(n)}
-                  className={cn(
-                    'w-9 h-9 rounded-xl text-sm font-bold transition-all duration-150',
-                    currentPage === n
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'btn-outline'
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
+              {pageNumbers.map((n, idx) =>
+                n === '…' ? (
+                  <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm text-on-surface-variant select-none">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={`page-${n}`}
+                    onClick={() => setCurrentPage(n as number)}
+                    aria-label={`صفحة ${n}`}
+                    aria-current={currentPage === n ? 'page' : undefined}
+                    className={cn(
+                      'w-9 h-9 rounded-xl text-sm font-bold transition-all duration-150',
+                      currentPage === n
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'btn-outline'
+                    )}
+                  >
+                    {n}
+                  </button>
+                )
+              )}
 
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -364,6 +373,13 @@ function MobileFilterSheet({
   filters: JobFilters; onFilterChange: (key: keyof JobFilters, value: string) => void;
   onClearFilters: () => void; totalCount: number;
 }) {
+  React.useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
+
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 lg:hidden">

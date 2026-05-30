@@ -9,6 +9,7 @@ import { OMAN_GOVERNORATES, LICENSE_TYPE_LABELS, STRINGS } from '@/features/jobs
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import type { DriverProfile } from '@/features/jobs/types';
+import { getPaginationRange } from '@/lib/pagination';
 
 const PAGE_SIZE = 12
 
@@ -66,9 +67,13 @@ function BrowseDriversContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
 
+  // Pass sort to server so it works across pages (not just the current page)
+  const [sortField, sortOrder] = filters.sortBy.split('_')
   const params: Record<string, string> = {
     page: String(currentPage),
     limit: String(PAGE_SIZE),
+    ...(sortField && { sortBy: sortField }),
+    ...(sortOrder && { sortOrder }),
   }
   if (filters.governorate) params.governorate = filters.governorate
   if (filters.licenseType) params.licenseType = filters.licenseType
@@ -82,15 +87,7 @@ function BrowseDriversContent() {
   const totalCount = data?.meta?.total ?? 0
   const totalPages = data?.meta?.totalPages ?? 1
 
-  // Client-side sort
-  let drivers = [...rawDrivers] as unknown as DriverProfile[]
-  if (filters.sortBy === 'rating_desc') {
-    drivers = drivers.sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0))
-  } else if (filters.sortBy === 'completion_desc') {
-    drivers = drivers.sort((a, b) => (b.completionRate ?? 0) - (a.completionRate ?? 0))
-  } else if (filters.sortBy === 'response_asc') {
-    drivers = drivers.sort((a, b) => (a.responseTimeHours ?? 999) - (b.responseTimeHours ?? 999))
-  }
+  const drivers = rawDrivers as unknown as DriverProfile[]
 
   const handleFilterChange = (key: keyof DriverFilters, value: DriverFilters[keyof DriverFilters]) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -170,12 +167,15 @@ function BrowseDriversContent() {
 
       {/* Availability */}
       <div>
-        <label className="flex items-center justify-between cursor-pointer">
-          <span className="text-sm font-bold text-on-surface">متاح الآن فقط</span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold text-on-surface" id="avail-label">متاح الآن فقط</span>
           <button
+            role="switch"
+            aria-checked={filters.isAvailable === true}
+            aria-labelledby="avail-label"
             onClick={() => handleFilterChange('isAvailable', filters.isAvailable === true ? undefined : true)}
             className={cn(
-              'relative w-10 h-5 rounded-full transition-colors duration-200',
+              'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
               filters.isAvailable === true ? 'bg-primary' : 'bg-outline-variant'
             )}
           >
@@ -184,17 +184,20 @@ function BrowseDriversContent() {
               filters.isAvailable === true ? 'start-5' : 'start-0.5'
             )} />
           </button>
-        </label>
+        </div>
       </div>
 
       {/* Verified */}
       <div>
-        <label className="flex items-center justify-between cursor-pointer">
-          <span className="text-sm font-bold text-on-surface">موثّق فقط</span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold text-on-surface" id="verified-label">موثّق فقط</span>
           <button
+            role="switch"
+            aria-checked={filters.isVerified === true}
+            aria-labelledby="verified-label"
             onClick={() => handleFilterChange('isVerified', filters.isVerified === true ? undefined : true)}
             className={cn(
-              'relative w-10 h-5 rounded-full transition-colors duration-200',
+              'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
               filters.isVerified === true ? 'bg-primary' : 'bg-outline-variant'
             )}
           >
@@ -203,7 +206,7 @@ function BrowseDriversContent() {
               filters.isVerified === true ? 'start-5' : 'start-0.5'
             )} />
           </button>
-        </label>
+        </div>
       </div>
 
       {/* Sort */}
@@ -311,62 +314,59 @@ function BrowseDriversContent() {
             </div>
           )}
 
-          {/* Pagination */}
+          {/* Pagination — windowed ellipsis */}
           {totalPages > 1 && !isLoading && (
-            <div className="flex items-center justify-center gap-2 mt-8">
+            <nav aria-label="تصفح الصفحات" className="flex items-center justify-center gap-2 mt-8">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                aria-label="الصفحة السابقة"
                 className="px-3 py-2 rounded-xl text-sm font-bold border border-outline-variant hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 السابق
               </button>
-              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map(page => (
-                <button
-                  key={`page-${page}`}
-                  onClick={() => setCurrentPage(page)}
-                  className={cn(
-                    'w-9 h-9 rounded-xl text-sm font-bold transition-colors',
-                    currentPage === page
-                      ? 'bg-primary text-white' :'border border-outline-variant hover:bg-surface text-on-surface'
-                  )}
-                >
-                  {page}
-                </button>
-              ))}
+              {getPaginationRange(currentPage, totalPages).map((page, idx) =>
+                page === '…' ? (
+                  <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm text-on-surface-variant select-none">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={`page-${page}`}
+                    onClick={() => setCurrentPage(page as number)}
+                    aria-label={`صفحة ${page}`}
+                    aria-current={currentPage === page ? 'page' : undefined}
+                    className={cn(
+                      'w-9 h-9 rounded-xl text-sm font-bold transition-colors',
+                      currentPage === page
+                        ? 'bg-primary text-white' : 'border border-outline-variant hover:bg-surface text-on-surface'
+                    )}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                aria-label="الصفحة التالية"
                 className="px-3 py-2 rounded-xl text-sm font-bold border border-outline-variant hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 التالي
               </button>
-            </div>
+            </nav>
           )}
         </div>
       </div>
     </div>
 
-    {/* Mobile Filter Drawer */}
+    {/* Mobile Filter Drawer — H-6: correct bottom offset + Escape key */}
     {mobileFilterOpen && (
-      <div className="fixed inset-0 z-50 lg:hidden">
-        <div className="absolute inset-0 bg-black/40" onClick={() => setMobileFilterOpen(false)} />
-        <div className="absolute bottom-0 start-0 end-0 bg-white rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-base text-on-surface">{STRINGS.FILTER_TITLE}</h3>
-            <button onClick={() => setMobileFilterOpen(false)}>
-              <X size={20} className="text-on-surface-variant" />
-            </button>
-          </div>
-          <FilterPanel />
-          <button
-            onClick={() => setMobileFilterOpen(false)}
-            className="btn-amber w-full mt-4"
-          >
-            تطبيق الفلاتر
-          </button>
-        </div>
-      </div>
+      <MobileDriverFilterDrawer
+        onClose={() => setMobileFilterOpen(false)}
+        filterPanel={<FilterPanel />}
+        totalCount={totalCount}
+      />
     )}
     </>
   )
@@ -377,5 +377,52 @@ export default function BrowseDriversPage() {
     <Suspense fallback={<div className="p-8 text-center text-on-surface-variant">{STRINGS.LOADING}</div>}>
       <BrowseDriversContent />
     </Suspense>
+  )
+}
+
+/* H-6: Mobile filter drawer with correct bottom offset for the bottom nav bar */
+function MobileDriverFilterDrawer({
+  onClose,
+  filterPanel,
+  totalCount,
+}: {
+  onClose: () => void;
+  filterPanel: React.ReactNode;
+  totalCount: number;
+}) {
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="فلاتر البحث">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div
+        className="absolute inset-x-0 bg-white rounded-t-3xl max-h-[calc(85vh-53px)] overflow-y-auto"
+        style={{ bottom: 'calc(53px + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <div className="sticky top-0 bg-white border-b border-outline-variant px-5 py-4 flex items-center justify-between rounded-t-3xl">
+          <h3 className="font-bold text-base text-on-surface">{STRINGS.FILTER_TITLE}</h3>
+          <button
+            onClick={onClose}
+            aria-label="إغلاق الفلاتر"
+            className="p-2 rounded-xl hover:bg-surface transition-colors"
+          >
+            <X size={18} className="text-on-surface-variant" />
+          </button>
+        </div>
+        <div className="p-5">
+          {filterPanel}
+          <button
+            onClick={onClose}
+            className="btn-amber w-full mt-4"
+          >
+            عرض {STRINGS.RESULTS_COUNT(totalCount)}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

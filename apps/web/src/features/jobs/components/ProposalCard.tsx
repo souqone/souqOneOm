@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { CheckCircle, X, RotateCcw, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, X, RotateCcw, Lock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import type { JobApplication } from '../types';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, STRINGS } from '../constants';
 import { timeAgo, getInitials, getAvatarColor, cn } from '@/lib/utils';
@@ -11,9 +11,9 @@ interface ProposalCardProps {
   isJobOwner: boolean
   isOwnProposal: boolean
   isAuthenticated: boolean
-  onAccept?: (id: string) => void
-  onReject?: (id: string) => void
-  onWithdraw?: (id: string) => void
+  onAccept?: (id: string) => void | Promise<void>
+  onReject?: (id: string) => void | Promise<void>
+  onWithdraw?: (id: string) => void | Promise<void>
 }
 
 export default function ProposalCard({
@@ -26,6 +26,9 @@ export default function ProposalCard({
   onWithdraw,
 }: ProposalCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
 
   const canSeeAll = isJobOwner || isOwnProposal
   const statusColor = APPLICATION_STATUS_COLORS[application.status] ?? '#9ca3af'
@@ -41,6 +44,24 @@ export default function ProposalCard({
   const previewMessage = isLongMessage && !expanded && !canSeeAll
     ? message.slice(0, 100) + '...'
     : message
+
+  const handleAccept = async () => {
+    if (!onAccept || accepting || rejecting) return
+    setAccepting(true)
+    try { await onAccept(application.id) } finally { setAccepting(false) }
+  }
+
+  const handleReject = async () => {
+    if (!onReject || accepting || rejecting) return
+    setRejecting(true)
+    try { await onReject(application.id) } finally { setRejecting(false) }
+  }
+
+  const handleWithdraw = async () => {
+    if (!onWithdraw || withdrawing) return
+    setWithdrawing(true)
+    try { await onWithdraw(application.id) } finally { setWithdrawing(false) }
+  }
 
   return (
     <div className="card-base rounded-2xl p-4 transition-all duration-200 hover:shadow-card-hover">
@@ -122,28 +143,40 @@ export default function ProposalCard({
           {isJobOwner && application.status === 'PENDING' && (
             <>
               <button
-                onClick={() => onAccept?.(application.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors active:scale-95"
+                onClick={handleAccept}
+                disabled={accepting || rejecting}
+                aria-label={`قبول عرض ${displayName}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-w-[4rem] justify-center"
               >
-                <CheckCircle size={13} />
-                {STRINGS.ACCEPT}
+                {accepting
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <><CheckCircle size={13} />{STRINGS.ACCEPT}</>
+                }
               </button>
               <button
-                onClick={() => onReject?.(application.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-error hover:bg-red-100 transition-colors active:scale-95"
+                onClick={handleReject}
+                disabled={accepting || rejecting}
+                aria-label={`رفض عرض ${displayName}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-error hover:bg-red-100 transition-colors active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-w-[4rem] justify-center"
               >
-                <X size={13} />
-                {STRINGS.REJECT}
+                {rejecting
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <><X size={13} />{STRINGS.REJECT}</>
+                }
               </button>
             </>
           )}
           {isOwnProposal && application.status === 'PENDING' && (
             <button
-              onClick={() => onWithdraw?.(application.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-surface text-on-surface-variant hover:bg-surface-dim transition-colors active:scale-95"
+              onClick={handleWithdraw}
+              disabled={withdrawing}
+              aria-label="سحب الطلب"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-surface text-on-surface-variant hover:bg-surface-dim transition-colors active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <RotateCcw size={13} />
-              {STRINGS.WITHDRAW}
+              {withdrawing
+                ? <Loader2 size={12} className="animate-spin" />
+                : <><RotateCcw size={13} />{STRINGS.WITHDRAW}</>
+              }
             </button>
           )}
         </div>

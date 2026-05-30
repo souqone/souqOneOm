@@ -348,12 +348,15 @@ function OnboardingContent() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-on-surface">{t('hasOwnVehicleLabel')}</span>
+                <span className="text-sm font-bold text-on-surface" id="own-vehicle-label">{t('hasOwnVehicleLabel')}</span>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={driverForm.watch('hasOwnVehicle')}
+                  aria-labelledby="own-vehicle-label"
                   onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
                   className={cn(
-                    'relative w-10 h-5 rounded-full transition-colors duration-200',
+                    'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                     driverForm.watch('hasOwnVehicle') ? 'bg-primary' : 'bg-outline-variant'
                   )}
                 >
@@ -434,6 +437,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                   <input
                     {...driverForm.register('contactPhone')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
@@ -442,6 +448,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                   <input
                     {...driverForm.register('whatsapp')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
@@ -546,6 +555,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
                   <input
                     {...employerForm.register('contactPhone')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />
@@ -554,6 +566,9 @@ function OnboardingContent() {
                   <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
                   <input
                     {...employerForm.register('whatsapp')}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     className="input-base text-sm w-full"
                     placeholder="+968..."
                   />

@@ -15,8 +15,12 @@ interface DriverCardProps {
 export default function DriverCard({ driver }: DriverCardProps) {
   const name = driver.user.displayName ?? driver.user.username
 
+  // H-2: Entire card is a link for a larger tap target
   return (
-    <div className="card-base rounded-2xl p-4 hover:shadow-card-hover hover:border-outline transition-all duration-200">
+    <Link
+      href={`/jobs/drivers/${driver.id}`}
+      className="card-base rounded-2xl p-4 hover:shadow-card-hover hover:border-outline transition-all duration-200 block group"
+    >
       {/* Top row: avatar + name + badges */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -37,7 +41,7 @@ export default function DriverCard({ driver }: DriverCardProps) {
           )}
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm text-on-surface">{name}</span>
+              <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{name}</span>
               {driver.isVerified && (
                 <CheckCircle size={14} className="text-primary shrink-0" fill="currentColor" />
               )}
@@ -52,7 +56,7 @@ export default function DriverCard({ driver }: DriverCardProps) {
           <span className={cn(
             'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold',
             driver.isAvailable
-              ? 'bg-green-50 text-green-700 border border-green-200' :'bg-surface-container text-on-surface-variant border border-outline-variant'
+              ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-surface-container text-on-surface-variant border border-outline-variant'
           )}>
             <span className={cn(
               'w-1.5 h-1.5 rounded-full',
@@ -88,13 +92,10 @@ export default function DriverCard({ driver }: DriverCardProps) {
         </div>
       )}
 
-      {/* CTA */}
-      <Link
-        href={`/jobs/drivers/${driver.id}`}
-        className="block w-full text-center btn-outline text-sm py-2 rounded-xl font-bold hover:bg-surface-container transition-colors"
-      >
+      {/* CTA indicator */}
+      <div className="block w-full text-center text-sm py-2 rounded-xl font-bold text-primary border border-primary/20 bg-surface-container-low group-hover:bg-primary group-hover:text-white transition-colors">
         عرض الملف الشخصي
-      </Link>
-    </div>
+      </div>
+    </Link>
   )
 }

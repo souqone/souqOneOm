@@ -176,15 +176,17 @@ function VerificationContent() {
             <p className="text-xs mt-0.5 opacity-80">{statusConfig[existingStatus.status]?.desc}</p>
           </div>
         </div>
+      ) : submitted ? (
+        /* Success state — hide form entirely after submission */
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 flex flex-col items-center text-center gap-3">
+          <Clock size={32} className="text-amber-500" />
+          <p className="font-bold text-base text-amber-700">{t('verificationSubmitted')}</p>
+          <p className="text-sm text-amber-600 opacity-80">سيتم الرد على طلبك خلال 24 ساعة</p>
+        </div>
       ) : (
         /* Upload Form */
         <div className="space-y-4">
-          {submitted && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
-              <Clock size={18} className="text-amber-500 shrink-0" />
-              <p className="text-sm font-bold text-amber-700">{t('verificationSubmitted')}</p>
-            </div>
-          )}
+          {false /* submitted banner now shown above */ && null}
 
           <UploadZone
             label={t('licensePhotoLabel')}
