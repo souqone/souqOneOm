@@ -16,6 +16,7 @@ import {
   NewsletterCta,
 } from '@/features/home';
 import { LazyBuses, LazyParts, LazyEquipment, LazyServices, LazyJobs } from '@/features/home/lazy';
+import FeaturedCarriers from '@/features/transport/components/FeaturedCarriers';
 
 interface Paginated<T> {
   items: T[];
@@ -72,6 +73,9 @@ export default async function Home() {
 
         {/* 9. Driver jobs — lazy loaded */}
         <LazyJobs items={jobs?.items ?? []} />
+
+        {/* 10. Featured Carriers */}
+        <FeaturedCarriers />
 
         {/* 9. Newsletter CTA */}
         <NewsletterCta />
