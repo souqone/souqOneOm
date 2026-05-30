@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const mockPrisma = {
   listing: { findUnique: jest.fn() },
@@ -19,6 +20,10 @@ const mockPrisma = {
   $transaction: jest.fn(),
 };
 
+const mockNotifications = {
+  create: jest.fn().mockResolvedValue({}),
+};
+
 describe('FavoritesService', () => {
   let service: FavoritesService;
 
@@ -29,6 +34,7 @@ describe('FavoritesService', () => {
       providers: [
         FavoritesService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 
