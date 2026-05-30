@@ -69,7 +69,7 @@ export default function CarrierCard({ carrier }: CarrierCardProps) {
       </div>
 
       {/* Stats / Rating */}
-      <div className="flex items-center gap-3 mb-3 bg-[var(--color-surface-container-low)] p-2 rounded-xl">
+      <div className="flex items-center gap-3 mb-3">
         <div className="flex items-center gap-1.5">
           <Star size={14} className="text-[var(--color-brand-amber)]" fill="currentColor" />
           <span className="text-sm font-bold text-[var(--color-on-surface)]">{carrier.averageRating > 0 ? carrier.averageRating.toFixed(1) : t('noRating')}</span>
@@ -86,17 +86,17 @@ export default function CarrierCard({ carrier }: CarrierCardProps) {
 
       {/* Vehicles Tags */}
       {carrier.vehicleTypes && carrier.vehicleTypes.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {carrier.vehicleTypes.slice(0, 3).map(vt => (
             <span
               key={`vehicle-${carrier.id}-${vt}`}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-[var(--color-brand-navy)]/5 text-[var(--color-brand-navy)] border border-[var(--color-brand-navy)]/10"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--color-brand-navy)]/5 text-[var(--color-brand-navy)] border border-[var(--color-brand-navy)]/10"
             >
               {VEHICLE_TYPE_LABELS[vt] ?? vt}
             </span>
           ))}
           {carrier.vehicleTypes.length > 3 && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)]">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)]">
               +{carrier.vehicleTypes.length - 3}
             </span>
           )}
@@ -106,7 +106,7 @@ export default function CarrierCard({ carrier }: CarrierCardProps) {
       {/* CTA */}
       <Link
         href={`/transport/carriers/${carrier.id}`}
-        className="block w-full text-center text-sm py-2.5 rounded-xl font-bold transition-colors bg-[var(--color-brand-navy)] text-white hover:bg-[var(--color-brand-navy)]/90"
+        className="block w-full text-center text-sm py-2 rounded-xl font-bold transition-colors bg-[var(--color-brand-navy)] text-white hover:bg-[var(--color-brand-navy)]/90"
       >
         {t('viewProfile')}
       </Link>
