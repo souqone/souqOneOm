@@ -22,6 +22,16 @@ const USER_SELECT = {
   isVerified: true,
 };
 
+/** Human-readable Arabic labels for TransportServiceType enum values */
+const SERVICE_TYPE_AR: Record<string, string> = {
+  GOODS: 'نقل بضائع',
+  FURNITURE: 'نقل أثاث',
+  CONSTRUCTION: 'مواد بناء',
+  HEAVY: 'شحن ثقيل',
+  BACKLOAD: 'عودة فارغة',
+  EQUIPMENT: 'معدات',
+};
+
 const LIST_CACHE_TTL = 300;
 const DETAIL_CACHE_TTL = 600;
 const DEFAULT_LIMIT = 12;
@@ -114,7 +124,7 @@ export class TransportRequestService {
       return this.notifications.create({
         type: 'TRANSPORT_REQUEST_NEW',
         title: 'طلب نقل جديد قريب منك',
-        body: `طلب ${request.serviceType} من ${request.fromGovernorate} إلى ${request.toGovernorate}`,
+        body: `${SERVICE_TYPE_AR[request.serviceType] ?? request.serviceType} من ${request.fromGovernorate} إلى ${request.toGovernorate}`,
         userId: c.userId,
         data: { requestId: request.id },
       });

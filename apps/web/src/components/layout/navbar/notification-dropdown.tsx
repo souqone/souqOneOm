@@ -51,8 +51,8 @@ export const NotificationDropdown = forwardRef<HTMLDivElement, NotificationDropd
                     onClick={() => {
                       if (!n.isRead) onMarkRead(n.id);
                       close();
-                      const path = getNotifConfig(n.type).navigateTo(n.data);
-                      if (path) router.push(path);
+                      const path = getNotifConfig(n.type).navigateTo(n.data) ?? '/notifications';
+                      router.push(path);
                     }}
                     className={`w-full text-start px-4 py-3 flex items-start gap-2.5 hover:bg-surface-container transition-colors ${
                       !n.isRead ? 'bg-primary/[0.03]' : ''
