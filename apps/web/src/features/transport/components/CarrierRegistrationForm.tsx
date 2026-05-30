@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { z } from 'zod';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,7 @@ import {
   VEHICLE_TYPE_LABELS,
   OMAN_GOVERNORATES,
 } from '../constants';
-import { CheckCircle, Loader2, Phone, MessageCircle, AlertCircle, Upload, ShieldCheck, MapPin } from 'lucide-react';
+import { Loader2, Phone, MessageCircle, AlertCircle, Upload, ShieldCheck } from 'lucide-react';
 import type { VehicleType, TransportServiceType } from '../types';
 
 const ALL_VEHICLE_TYPES: VehicleType[] = [

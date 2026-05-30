@@ -6,6 +6,7 @@ import LatestRequests from '@/features/transport/components/LatestRequests'
 import HowItWorks from '@/features/transport/components/HowItWorks'
 import CarrierCTA from '@/features/transport/components/CarrierCTA'
 import TransportFAQ from '@/features/transport/components/TransportFAQ'
+import FeaturedCarriers from '@/features/transport/components/FeaturedCarriers'
 
 export default function TransportLandingPage() {
   return (
@@ -36,6 +37,9 @@ export default function TransportLandingPage() {
 
       {/* ── Latest Requests ── */}
       <LatestRequests />
+
+      {/* ── Featured Carriers ── */}
+      <FeaturedCarriers />
 
       {/* ── How It Works ── */}
       <HowItWorks />
