@@ -2,7 +2,7 @@ import {
   IsString, IsEnum, IsOptional, IsNumber, IsArray,
   IsBoolean, Min, MinLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { LicenseType } from '@prisma/client';
 
 export class CreateDriverProfileDto {
@@ -36,6 +36,7 @@ export class CreateDriverProfileDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
   @MinLength(10)
   bio?: string;
 

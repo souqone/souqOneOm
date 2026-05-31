@@ -22,6 +22,7 @@ const mockPrisma = {
 const mockRedis = {
   get: jest.fn().mockResolvedValue(null),
   set: jest.fn().mockResolvedValue(undefined),
+  setNX: jest.fn().mockResolvedValue(true),
   del: jest.fn().mockResolvedValue(undefined),
   delPattern: jest.fn().mockResolvedValue(undefined),
 };
@@ -163,11 +164,9 @@ describe('ServicesService', () => {
     });
 
     it('should NOT increment viewCount for duplicate IP within cooldown', async () => {
-      // First call: no cache for the detail
-      mockRedis.get.mockResolvedValueOnce(null);
+      mockRedis.get.mockResolvedValueOnce(null); // detail cache miss
       mockPrisma.carService.findUnique.mockResolvedValue(mockItem);
-      // Second call for view key: returns existing (already viewed)
-      mockRedis.get.mockResolvedValueOnce(1);
+      mockRedis.setNX.mockResolvedValueOnce(false); // IP already viewed
 
       await service.findOne('svc-1', '192.168.1.1');
 
