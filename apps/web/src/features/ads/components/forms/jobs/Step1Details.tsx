@@ -20,20 +20,36 @@ export function Step1Details({ form, onChange }: Props) {
     <div className="space-y-6">
       <FormSection title={tp('jnBasicTitle')} icon="edit_note">
         <div className="space-y-4">
-          <FormInput
-            name="title"
-            label={tp('jnLabelTitle')}
-            value={form.title}
-            onChange={(v) => onChange({ title: v })}
-            placeholder={tp('jnTitlePlaceholder')}
-          />
-          <FormTextarea
-            name="description"
-            label={tp('jnLabelDesc')}
-            value={form.description}
-            onChange={(v) => onChange({ description: v })}
-            rows={4}
-          />
+          <div>
+            <FormInput
+              name="title"
+              label={`${tp('jnLabelTitle')} *`}
+              value={form.title}
+              onChange={(v) => onChange({ title: v })}
+              placeholder={tp('jnLabelTitle')} // Fixed translation key from jnTitlePlaceholder
+            />
+            {form.title.length > 0 && form.title.length < 3 && (
+              <p className="text-xs text-error mt-1">العنوان يجب أن يكون 3 أحرف على الأقل</p>
+            )}
+            {form.title.length === 0 && (
+              <p className="text-xs text-error mt-1">مطلوب</p>
+            )}
+          </div>
+          <div>
+            <FormTextarea
+              name="description"
+              label={`${tp('jnLabelDesc')} *`}
+              value={form.description}
+              onChange={(v) => onChange({ description: v })}
+              rows={4}
+            />
+            {form.description.length > 0 && form.description.length < 10 && (
+              <p className="text-xs text-error mt-1">الوصف يجب أن يكون 10 أحرف على الأقل</p>
+            )}
+            {form.description.length === 0 && (
+              <p className="text-xs text-error mt-1">مطلوب</p>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>{tp('jnLabelEmployment')}</label>
