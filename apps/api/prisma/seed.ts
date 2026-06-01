@@ -165,16 +165,171 @@ async function main() {
   });
 
   console.log('✅ Transport requests ready');
+  // ─── Jobs Users ───────────────────────────────────────────────────────────────
+
+  const jobsEmployer = await prisma.user.upsert({
+    where: { email: 'employer@souqone.om' },
+    update: {},
+    create: {
+      email: 'employer@souqone.om',
+      username: 'jobs_employer',
+      displayName: 'صاحب عمل تجريبي',
+      passwordHash,
+      role: 'USER',
+      isVerified: true,
+    },
+  });
+
+  const jobsDriver = await prisma.user.upsert({
+    where: { email: 'driver@souqone.om' },
+    update: {},
+    create: {
+      email: 'driver@souqone.om',
+      username: 'jobs_driver',
+      displayName: 'سائق تجريبي',
+      passwordHash,
+      role: 'USER',
+      isVerified: true,
+    },
+  });
+
+  const jobsApplicant = await prisma.user.upsert({
+    where: { email: 'applicant@souqone.om' },
+    update: {},
+    create: {
+      email: 'applicant@souqone.om',
+      username: 'jobs_applicant',
+      displayName: 'مقدم طلب تجريبي',
+      passwordHash,
+      role: 'USER',
+      isVerified: true,
+    },
+  });
+
+  const jobsNoProfile = await prisma.user.upsert({
+    where: { email: 'noprofile@souqone.om' },
+    update: {},
+    create: {
+      email: 'noprofile@souqone.om',
+      username: 'jobs_noprofile',
+      displayName: 'مستخدم بلا بروفايل',
+      passwordHash,
+      role: 'USER',
+      isVerified: true,
+    },
+  });
+
+  console.log('✅ Jobs users ready');
+
+  // ─── Jobs Profiles ────────────────────────────────────────────────────────────
+
+  const employerProfile = await prisma.employerProfile.upsert({
+    where: { userId: jobsEmployer.id },
+    update: {},
+    create: {
+      userId: jobsEmployer.id,
+      companyName: 'شركة الوظائف ذ.م.م',
+      governorate: 'مسقط',
+      bio: 'شركة تبحث عن سائقين للوظائف',
+    },
+  });
+
+  const driverProfile = await prisma.driverProfile.upsert({
+    where: { userId: jobsDriver.id },
+    update: {},
+    create: {
+      userId: jobsDriver.id,
+      governorate: 'مسقط',
+      bio: 'سائق محترف يبحث عن عمل',
+      licenseTypes: ['HEAVY'],
+      isVerified: true,
+    },
+  });
+
+  const applicantProfile = await prisma.driverProfile.upsert({
+    where: { userId: jobsApplicant.id },
+    update: {},
+    create: {
+      userId: jobsApplicant.id,
+      governorate: 'صلالة',
+      bio: 'سائق يقدم على الوظائف',
+      licenseTypes: ['LIGHT'],
+      isVerified: true,
+    },
+  });
+
+  console.log('✅ Jobs profiles ready');
+
+  // ─── Jobs Postings ────────────────────────────────────────────────────────────
+
+  const activeJob = await prisma.driverJob.upsert({
+    where: { id: 'seed-job-active-001' },
+    update: {},
+    create: {
+      id: 'seed-job-active-001',
+      userId: jobsEmployer.id,
+      jobType: 'HIRING',
+      employmentType: 'FULL_TIME',
+      title: 'مطلوب سائق شاحنة خفيفة',
+      slug: 'light-truck-driver',
+      description: 'نبحث عن سائق ذو خبرة في توصيل الطلبات داخل مسقط.',
+      governorate: 'مسقط',
+      city: 'السيب',
+      status: 'ACTIVE',
+    },
+  });
+
+  const pendingApp = await prisma.jobApplication.upsert({
+    where: { id: 'seed-app-pending-001' },
+    update: {},
+    create: {
+      id: 'seed-app-pending-001',
+      jobId: activeJob.id,
+      applicantId: jobsApplicant.id,
+      status: 'PENDING',
+      message: 'مرحباً، لدي خبرة 3 سنوات وأرغب بالتقديم على الوظيفة.',
+    },
+  });
+
+  const closedJob = await prisma.driverJob.upsert({
+    where: { id: 'seed-job-closed-002' },
+    update: {},
+    create: {
+      id: 'seed-job-closed-002',
+      userId: jobsEmployer.id,
+      jobType: 'HIRING',
+      employmentType: 'PART_TIME',
+      title: 'سائق حافلة مطلوب',
+      slug: 'bus-driver-needed',
+      description: 'مطلوب سائق حافلة متوسطة بعقد جزئي.',
+      governorate: 'ظفار',
+      city: 'صلالة',
+      status: 'CLOSED',
+    },
+  });
+
+  console.log('✅ Jobs postings ready');
+
   console.log('');
-  console.log('📋 Test accounts:');
+  console.log('📋 Transport Test accounts:');
   console.log('   shipper@souqone.om / Test1234');
   console.log('   carrier@souqone.om / Test1234');
   console.log('   other@souqone.om   / Test1234');
   console.log('');
-  console.log('📦 Seed IDs:');
+  console.log('📋 Jobs Test accounts:');
+  console.log('   employer@souqone.om   / Test1234');
+  console.log('   driver@souqone.om     / Test1234');
+  console.log('   applicant@souqone.om  / Test1234');
+  console.log('   noprofile@souqone.om  / Test1234');
+  console.log('');
+  console.log('📦 Transport Seed IDs:');
   console.log('   seed-tr-open-001   (OPEN, owned by shipper)');
   console.log('   seed-tr-other-002  (OPEN, owned by other)');
   console.log('   seed-tr-quoted-003 (QUOTED, has pending quote)');
+  console.log('');
+  console.log('📦 Jobs Seed IDs:');
+  console.log('   seed-job-active-001 (ACTIVE, owned by employer)');
+  console.log('   seed-job-closed-002 (CLOSED, owned by employer)');
 }
 
 main()

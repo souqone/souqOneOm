@@ -10,7 +10,7 @@ import { useCreateDriverProfile, useCreateEmployerProfile, useMyDriverProfile, u
 import { useToast } from '@/components/toast';
 import {
   OMAN_GOVERNORATES, LICENSE_TYPE_LABELS, VEHICLE_TYPE_OPTIONS,
-  LANGUAGE_OPTIONS, STRINGS
+  LANGUAGE_OPTIONS
 } from '@/features/jobs/constants';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
@@ -32,6 +32,7 @@ function OnboardingContent() {
   const [step, setStep] = useState(1)
   const [profileType, setProfileType] = useState<ProfileType>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [driverSubStep, setDriverSubStep] = useState(1)
 
   const driverSchema = z.object({
     licenseTypes: z.array(z.string()).min(1, t('selectAtLeastOneLicense')),
@@ -124,6 +125,7 @@ function OnboardingContent() {
   const handleSelectType = (type: ProfileType) => {
     setProfileType(type)
     setStep(2)
+    setDriverSubStep(1)
   }
 
   const handleDriverSubmit = async (data: DriverFormData) => {
@@ -153,6 +155,14 @@ function OnboardingContent() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleDriverNext = async () => {
+    if (driverSubStep === 1) {
+      const isValid = await driverForm.trigger('licenseTypes')
+      if (!isValid) return
+    }
+    setDriverSubStep(s => s + 1)
   }
 
   const toggleArrayValue = (
@@ -273,6 +283,7 @@ function OnboardingContent() {
               <button
                 key={`type-${option.type}`}
                 onClick={() => handleSelectType(option.type)}
+                aria-pressed={profileType === option.type}
                 className={cn(
                   'relative p-6 rounded-2xl border-2 text-start transition-all duration-200 hover:shadow-card-hover',
                   profileType === option.type
@@ -293,11 +304,11 @@ function OnboardingContent() {
         </div>
       )}
 
-      {/* Step 2a — Driver Form */}
+      {/* Step 2a — Driver Form (real multi-step wizard) */}
       {step === 2 && profileType === 'DRIVER' && (
         <div>
           <button
-            onClick={() => setStep(1)}
+            onClick={() => driverSubStep > 1 ? setDriverSubStep(s => s - 1) : setStep(1)}
             className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant hover:text-on-surface mb-6 transition-colors"
           >
             <ChevronRight size={16} />
@@ -305,23 +316,36 @@ function OnboardingContent() {
           </button>
           <h1 className="text-xl font-extrabold text-on-surface mb-6">{t('driverProfileTitle')}</h1>
 
-          {/* H-10: Sub-section progress for the 4 sections of the driver form */}
+          {/* Sub-section progress — active step highlighted */}
           <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1">
             {[
-              { n: 1, label: 'الرخصة' },
-              { n: 2, label: 'الخبرة' },
-              { n: 3, label: 'اللغات' },
-              { n: 4, label: 'بياناتك' },
-            ].map((s, idx, arr) => (
+              { n: 1, label: t('driverFormStep1') },
+              { n: 2, label: t('driverFormStep2') },
+              { n: 3, label: t('driverFormStep3') },
+              { n: 4, label: t('driverFormStep4') },
+            ].map((s, idx) => (
               <React.Fragment key={`sub-${s.n}`}>
                 <div className="flex flex-col items-center gap-0.5 min-w-[48px]">
-                  <div className="w-6 h-6 rounded-full bg-brand-amber/20 text-brand-amber text-xs font-bold flex items-center justify-center">
-                    {s.n}
+                  <div className={cn(
+                    'w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-all',
+                    driverSubStep > s.n
+                      ? 'bg-brand-amber text-white'
+                      : driverSubStep === s.n
+                        ? 'bg-brand-amber text-white ring-2 ring-brand-amber ring-offset-2'
+                        : 'bg-brand-amber/20 text-brand-amber'
+                  )}>
+                    {driverSubStep > s.n ? <CheckCircle size={12} /> : s.n}
                   </div>
-                  <span className="text-[10px] text-on-surface-variant whitespace-nowrap">{s.label}</span>
+                  <span className={cn(
+                    'text-[10px] whitespace-nowrap transition-all',
+                    driverSubStep >= s.n ? 'text-on-surface font-bold' : 'text-on-surface-variant'
+                  )}>{s.label}</span>
                 </div>
-                {idx < arr.length - 1 && (
-                  <div className="flex-1 h-0.5 bg-outline-variant mt-[-10px]" />
+                {idx < 3 && (
+                  <div className={cn(
+                    'flex-1 h-0.5 mt-[-10px] transition-all',
+                    driverSubStep > s.n ? 'bg-brand-amber' : 'bg-outline-variant'
+                  )} />
                 )}
               </React.Fragment>
             ))}
@@ -329,208 +353,222 @@ function OnboardingContent() {
 
           <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-5">
 
-            {/* Section 1: License Types */}
-            <div className="card-base rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
-                <span className="text-sm font-bold text-on-surface">
-                  {t('licenseTypesLabel')} <span className="text-error">*</span>
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(LICENSE_TYPE_LABELS).map(([value, label]) => {
-                  const selected = driverForm.watch('licenseTypes').includes(value)
-                  return (
-                    <button
-                      key={`license-${value}`}
-                      type="button"
-                      onClick={() => toggleArrayValue(
-                        driverForm.watch('licenseTypes'),
-                        value,
-                        v => driverForm.setValue('licenseTypes', v)
-                      )}
-                      className={cn(
-                        'p-3 rounded-xl border-2 text-sm font-bold transition-all',
-                        selected
-                          ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
-                      )}
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
-              {driverForm.formState.errors.licenseTypes && (
-                <p className="text-xs text-error mt-1">{driverForm.formState.errors.licenseTypes.message}</p>
-              )}
-            </div>
-
-            {/* Section 2: Experience + Vehicle */}
-            <div className="card-base rounded-2xl p-5 space-y-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
-                <span className="text-sm font-bold text-on-surface">الخبرة والمركبة</span>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('experienceYearsLabel')}</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={50}
-                  {...driverForm.register('experienceYears', { valueAsNumber: true })}
-                  className="input-base text-sm w-full"
-                  placeholder={t('placeholderExperience')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-on-surface mb-2">{t('vehicleTypesLabel')}</label>
-                <div className="flex flex-wrap gap-2">
-                  {VEHICLE_TYPE_OPTIONS.map(vt => {
-                    const selected = driverForm.watch('vehicleTypes').includes(vt)
+            {/* Sub-step 1: License Types */}
+            {driverSubStep === 1 && (
+              <div className="card-base rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                  <span className="text-sm font-bold text-on-surface">
+                    {t('licenseTypesLabel')} <span className="text-error">*</span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(LICENSE_TYPE_LABELS).map(([value, label]) => {
+                    const selected = driverForm.watch('licenseTypes').includes(value)
                     return (
                       <button
-                        key={`vt-${vt}`}
+                        key={`license-${value}`}
                         type="button"
                         onClick={() => toggleArrayValue(
-                          driverForm.watch('vehicleTypes'),
-                          vt,
-                          v => driverForm.setValue('vehicleTypes', v)
+                          driverForm.watch('licenseTypes'),
+                          value,
+                          v => driverForm.setValue('licenseTypes', v)
+                        )}
+                        className={cn(
+                          'p-3 rounded-xl border-2 text-sm font-bold transition-all',
+                          selected
+                            ? 'border-brand-amber bg-amber-50 text-brand-amber' : 'border-outline-variant text-on-surface hover:border-outline'
+                        )}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {driverForm.formState.errors.licenseTypes && (
+                  <p className="text-xs text-error mt-1">{driverForm.formState.errors.licenseTypes.message}</p>
+                )}
+              </div>
+            )}
+
+            {/* Sub-step 2: Experience + Vehicle */}
+            {driverSubStep === 2 && (
+              <div className="card-base rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                  <span className="text-sm font-bold text-on-surface">{t('experienceAndVehicle')}</span>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('experienceYearsLabel')}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    {...driverForm.register('experienceYears', { valueAsNumber: true })}
+                    className="input-base text-sm w-full"
+                    placeholder={t('placeholderExperience')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-2">{t('vehicleTypesLabel')}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {VEHICLE_TYPE_OPTIONS.map(vt => {
+                      const selected = driverForm.watch('vehicleTypes').includes(vt)
+                      return (
+                        <button
+                          key={`vt-${vt}`}
+                          type="button"
+                          onClick={() => toggleArrayValue(
+                            driverForm.watch('vehicleTypes'),
+                            vt,
+                            v => driverForm.setValue('vehicleTypes', v)
+                          )}
+                          className={cn(
+                            'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all',
+                            selected
+                              ? 'border-brand-amber bg-amber-50 text-brand-amber' : 'border-outline-variant text-on-surface hover:border-outline'
+                          )}
+                        >
+                          {vt}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-on-surface" id="own-vehicle-label">{t('hasOwnVehicleLabel')}</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={driverForm.watch('hasOwnVehicle')}
+                    aria-labelledby="own-vehicle-label"
+                    onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
+                    className={cn(
+                      'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                      driverForm.watch('hasOwnVehicle') ? 'bg-primary' : 'bg-outline-variant'
+                    )}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200',
+                      driverForm.watch('hasOwnVehicle') ? 'start-5' : 'start-0.5'
+                    )} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-step 3: Languages */}
+            {driverSubStep === 3 && (
+              <div className="card-base rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                  <label className="text-sm font-bold text-on-surface">{t('languagesLabel')}</label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGE_OPTIONS.map(lang => {
+                    const selected = driverForm.watch('languages').includes(lang)
+                    return (
+                      <button
+                        key={`lang-${lang}`}
+                        type="button"
+                        onClick={() => toggleArrayValue(
+                          driverForm.watch('languages'),
+                          lang,
+                          v => driverForm.setValue('languages', v)
                         )}
                         className={cn(
                           'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all',
                           selected
-                            ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
+                            ? 'border-brand-amber bg-amber-50 text-brand-amber' : 'border-outline-variant text-on-surface hover:border-outline'
                         )}
                       >
-                        {vt}
+                        {lang}
                       </button>
                     )
                   })}
                 </div>
               </div>
+            )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-on-surface" id="own-vehicle-label">{t('hasOwnVehicleLabel')}</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={driverForm.watch('hasOwnVehicle')}
-                  aria-labelledby="own-vehicle-label"
-                  onClick={() => driverForm.setValue('hasOwnVehicle', !driverForm.watch('hasOwnVehicle'))}
-                  className={cn(
-                    'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                    driverForm.watch('hasOwnVehicle') ? 'bg-primary' : 'bg-outline-variant'
+            {/* Sub-step 4: Bio + Location + Contact */}
+            {driverSubStep === 4 && (
+              <div className="card-base rounded-2xl p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('bioLabel')}</label>
+                  <textarea
+                    {...driverForm.register('bio')}
+                    rows={3}
+                    className="input-base text-sm w-full resize-none"
+                    placeholder={t('placeholderBio')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">
+                    {t('governorateLabel')} <span className="text-error">*</span>
+                  </label>
+                  <select {...driverForm.register('governorate')} className="input-base text-sm w-full">
+                    <option value="">{t('selectGovernorateOption')}</option>
+                    {OMAN_GOVERNORATES.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                  {driverForm.formState.errors.governorate && (
+                    <p className="text-xs text-error mt-1">{driverForm.formState.errors.governorate.message}</p>
                   )}
-                >
-                  <span className={cn(
-                    'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200',
-                    driverForm.watch('hasOwnVehicle') ? 'start-5' : 'start-0.5'
-                  )} />
-                </button>
-              </div>
-            </div>
-
-            {/* Section 3: Languages */}
-            <div className="card-base rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-brand-amber text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
-                <label className="text-sm font-bold text-on-surface">{t('languagesLabel')}</label>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {LANGUAGE_OPTIONS.map(lang => {
-                  const selected = driverForm.watch('languages').includes(lang)
-                  return (
-                    <button
-                      key={`lang-${lang}`}
-                      type="button"
-                      onClick={() => toggleArrayValue(
-                        driverForm.watch('languages'),
-                        lang,
-                        v => driverForm.setValue('languages', v)
-                      )}
-                      className={cn(
-                        'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all',
-                        selected
-                          ? 'border-brand-amber bg-amber-50 text-brand-amber' :'border-outline-variant text-on-surface hover:border-outline'
-                      )}
-                    >
-                      {lang}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Bio + Location + Contact */}
-            <div className="card-base rounded-2xl p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('bioLabel')}</label>
-                <textarea
-                  {...driverForm.register('bio')}
-                  rows={3}
-                  className="input-base text-sm w-full resize-none"
-                  placeholder={t('placeholderBio')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">
-                  {t('governorateLabel')} <span className="text-error">*</span>
-                </label>
-                <select {...driverForm.register('governorate')} className="input-base text-sm w-full">
-                  <option value="">{t('selectGovernorateOption')}</option>
-                  {OMAN_GOVERNORATES.map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-                {driverForm.formState.errors.governorate && (
-                  <p className="text-xs text-error mt-1">{driverForm.formState.errors.governorate.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-on-surface mb-1.5">{t('cityLabel')}</label>
-                <input
-                  {...driverForm.register('city')}
-                  className="input-base text-sm w-full"
-                  placeholder={t('placeholderCity')}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
-                  <input
-                    {...driverForm.register('contactPhone')}
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    className="input-base text-sm w-full"
-                    placeholder="+968..."
-                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
+                  <label className="block text-sm font-bold text-on-surface mb-1.5">{t('cityLabel')}</label>
                   <input
-                    {...driverForm.register('whatsapp')}
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
+                    {...driverForm.register('city')}
                     className="input-base text-sm w-full"
-                    placeholder="+968..."
+                    placeholder={t('placeholderCity')}
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-bold text-on-surface mb-1.5">{t('contactPhoneLabel')}</label>
+                    <input
+                      {...driverForm.register('contactPhone')}
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      className="input-base text-sm w-full"
+                      placeholder="+968..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-on-surface mb-1.5">{t('whatsappLabel')}</label>
+                    <input
+                      {...driverForm.register('whatsapp')}
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      className="input-base text-sm w-full"
+                      placeholder="+968..."
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
-            >
-              {submitting ? STRINGS.LOADING : t('createProfile')}
-            </button>
+            {/* Navigation: Next (steps 1-3) or Submit (step 4) */}
+            {driverSubStep < 4 ? (
+              <button
+                type="button"
+                onClick={handleDriverNext}
+                className="btn-amber w-full py-3 text-base font-bold"
+              >
+                {t('next')}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
+              >
+                {submitting ? t('loading') : t('createProfile')}
+              </button>
+            )}
           </form>
         </div>
       )}
@@ -647,7 +685,7 @@ function OnboardingContent() {
               disabled={submitting}
               className="btn-amber w-full py-3 text-base font-bold disabled:opacity-60"
             >
-              {submitting ? STRINGS.LOADING : t('createProfile')}
+              {submitting ? t('loading') : t('createProfile')}
             </button>
           </form>
         </div>

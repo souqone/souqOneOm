@@ -915,6 +915,7 @@
     "industryLabel": "Industry",
     "companyBioLabel": "About Company",
     "back": "Back",
+    "next": "Next",
     "createProfile": "Create Profile",
     "manageProfileTitle": "Manage Your Profile",
     "chooseAction": "Choose what you want to do",
@@ -992,7 +993,18 @@
     "licensePhotoLabel": "License Photo",
     "idPhotoLabel": "National ID Photo",
     "additionalNotesPlaceholder": "Any additional information you'd like to add...",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "noProfileTitle": "No Profile Found",
+    "noProfileDesc": "Create a driver or employer profile to access the dashboard",
+    "asEmployer": "As Employer",
+    "asDriver": "As Driver",
+    "driverFormStep1": "License",
+    "driverFormStep2": "Experience",
+    "driverFormStep3": "Languages",
+    "driverFormStep4": "Your Details",
+    "experienceAndVehicle": "Experience & Vehicle",
+    "statusDraft": "Draft",
+    "editProfile": "Edit Profile"
   },
   "time": {
     "now": "Just now",
