@@ -32,6 +32,12 @@ yarn-error.log*
 
 # Testing
 coverage/
+!**/e2e/**/coverage/
+test-results/
+playwright-report/
+evidence/
+*.png
+*.webm
 
 # Prisma
 prisma/*.db

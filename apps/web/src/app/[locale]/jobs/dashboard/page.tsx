@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Plus, AlertCircle, ShieldCheck, Briefcase, Truck } from 'lucide-react';
 import { AuthGuard } from '@/components/auth-guard';
@@ -16,7 +17,6 @@ import { useWithdrawApplication } from '@/lib/api/jobs';
 import {
   JOB_STATUS_LABELS,
   APPLICATION_STATUS_LABELS,
-  STRINGS,
 } from '@/features/jobs/constants';
 import type { DriverJob, JobApplication } from '@/features/jobs/types';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
+  const t = useTranslations('jobs')
   const { data: employer, isLoading: empLoading } = useMyEmployerProfile()
   const { data: driver, isLoading: drvLoading } = useMyDriverProfile()
   const { data: jobsData, isLoading: jobsLoading } = useMyJobs()
@@ -156,9 +157,15 @@ function DashboardContent() {
     ? ['all', ...Object.keys(JOB_STATUS_LABELS)]
     : ['all', ...Object.keys(APPLICATION_STATUS_LABELS)]
   const statusLabels: Record<string, string> = {
-    all: 'الكل',
-    ...JOB_STATUS_LABELS,
-    ...APPLICATION_STATUS_LABELS,
+    all: t('tabAll'),
+    ACTIVE: t('statusActive'),
+    CLOSED: t('statusClosed'),
+    EXPIRED: t('statusExpired'),
+    DRAFT: t('statusDraft'),
+    PENDING: t('appPending'),
+    ACCEPTED: t('appAccepted'),
+    REJECTED: t('appRejected'),
+    WITHDRAWN: t('appWithdrawn'),
   }
 
   const handleWithdraw = async (id: string) => {
@@ -171,10 +178,10 @@ function DashboardContent() {
         <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
           <AlertCircle size={32} className="text-brand-amber" />
         </div>
-        <h1 className="text-2xl font-extrabold text-on-surface mb-2">لا يوجد بروفايل</h1>
-        <p className="text-sm text-on-surface-variant mb-6">أنشئ بروفايل سائق أو صاحب عمل للوصول للوحة التحكم</p>
+        <h1 className="text-2xl font-extrabold text-on-surface mb-2">{t('noProfileTitle')}</h1>
+        <p className="text-sm text-on-surface-variant mb-6">{t('noProfileDesc')}</p>
         <Link href="/jobs/onboarding" className="btn-amber inline-flex px-6 py-3 text-sm font-bold">
-          إنشاء بروفايل
+          {t('createProfile')}
         </Link>
       </div>
     )
@@ -186,9 +193,9 @@ function DashboardContent() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-on-surface">{STRINGS.DASHBOARD}</h1>
+          <h1 className="text-2xl font-extrabold text-on-surface">{t('dashboardTitle')}</h1>
           <p className="text-sm text-on-surface-variant mt-0.5">
-            {showEmployer ? 'إدارة إعلاناتك والعروض المقدمة' : 'متابعة عروضك وحالتها'}
+            {showEmployer ? t('dashboardEmployerSubtitle') : t('dashboardDriverSubtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -196,7 +203,7 @@ function DashboardContent() {
             href="/jobs/profile/edit"
             className="btn-outline flex items-center gap-2 px-4 py-2.5 text-sm font-bold"
           >
-            تعديل البروفايل
+            {t('editProfile')}
           </Link>
           {showEmployer && (
             <Link
@@ -204,7 +211,7 @@ function DashboardContent() {
               className="btn-amber flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
             >
               <Plus size={16} />
-              {STRINGS.POST_JOB}
+              {t('postJob')}
             </Link>
           )}
         </div>
@@ -215,6 +222,7 @@ function DashboardContent() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setActiveRole('employer'); setStatusFilter('all') }}
+            aria-pressed={activeRole === 'employer'}
             className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
               activeRole === 'employer'
@@ -223,10 +231,11 @@ function DashboardContent() {
             )}
           >
             <Briefcase size={16} />
-            كصاحب عمل
+            {t('asEmployer')}
           </button>
           <button
             onClick={() => { setActiveRole('driver'); setStatusFilter('all') }}
+            aria-pressed={activeRole === 'driver'}
             className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
               activeRole === 'driver'
@@ -235,7 +244,7 @@ function DashboardContent() {
             )}
           >
             <Truck size={16} />
-            كسائق
+            {t('asDriver')}
           </button>
         </div>
       )}
@@ -275,10 +284,10 @@ function DashboardContent() {
             <ShieldCheck size={20} className="text-brand-amber" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-on-surface">وثّق بروفايلك لزيادة فرصك</p>
-            <p className="text-xs text-on-surface-variant mt-0.5">ارفع صورة الرخصة والهوية للحصول على شارة الموثّق ✓</p>
+            <p className="text-sm font-bold text-on-surface">{t('verifyBannerTitle')}</p>
+            <p className="text-xs text-on-surface-variant mt-0.5">{t('verifyBannerDesc')}</p>
           </div>
-          <span className="text-xs font-bold text-brand-amber shrink-0">ابدأ ←</span>
+          <span className="text-xs font-bold text-brand-amber shrink-0">{t('verifyBannerCta')} ←</span>
         </Link>
       )}
 

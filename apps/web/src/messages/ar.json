@@ -919,6 +919,7 @@
     "industryLabel": "المجال",
     "companyBioLabel": "نبذة عن الشركة",
     "back": "رجوع",
+    "next": "التالي",
     "createProfile": "إنشاء البروفايل",
     "manageProfileTitle": "إدارة بروفايلك",
     "chooseAction": "اختر ما تريد القيام به",
@@ -996,7 +997,18 @@
     "licensePhotoLabel": "صورة الرخصة",
     "idPhotoLabel": "صورة الهوية الوطنية",
     "additionalNotesPlaceholder": "أي معلومات إضافية تريد إضافتها...",
-    "saveChanges": "حفظ التغييرات"
+    "saveChanges": "حفظ التغييرات",
+    "noProfileTitle": "لا يوجد بروفايل",
+    "noProfileDesc": "أنشئ بروفايل سائق أو صاحب عمل للوصول للوحة التحكم",
+    "asEmployer": "كصاحب عمل",
+    "asDriver": "كسائق",
+    "driverFormStep1": "الرخصة",
+    "driverFormStep2": "الخبرة",
+    "driverFormStep3": "اللغات",
+    "driverFormStep4": "بياناتك",
+    "experienceAndVehicle": "الخبرة والمركبة",
+    "statusDraft": "مسودة",
+    "editProfile": "تعديل البروفايل"
   },
   "time": {
     "now": "الآن",
