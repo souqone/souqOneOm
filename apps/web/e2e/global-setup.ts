@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import https from 'https';
 
 function loadEnvFile(envPath: string): Record<string, string> {
   if (!fs.existsSync(envPath)) return {};
@@ -50,6 +51,23 @@ async function globalSetup() {
   } catch {
     console.warn('⚠️ Seed failed (data may already exist), continuing...\n');
   }
+
+  // Warm up Railway API to avoid cold-start timeouts on first authenticated test
+  const apiUrl = 'https://caroneapi-production-255b.up.railway.app/health';
+  console.log('🔥 Warming up Railway API...');
+  await new Promise<void>((resolve) => {
+    const req = https.get(apiUrl, (res) => {
+      res.resume();
+      console.log(`   Railway API status: ${res.statusCode}`);
+      resolve();
+    });
+    req.on('error', () => {
+      console.warn('   Railway warmup ping failed (will retry during tests)');
+      resolve();
+    });
+    req.setTimeout(60000, () => { req.destroy(); resolve(); });
+  });
+  console.log('✅ Railway API ready\n');
 }
 
 export default globalSetup;
