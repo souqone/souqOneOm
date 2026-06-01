@@ -37,7 +37,8 @@ export async function loginAs(
   await page.fill('input[placeholder="••••••••"]', password)
   // force:true bypasses any residual overlay that cannot be dismissed
   await page.locator('button[type="submit"]').click({ force: true })
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 25000 })
+  // 60s timeout: Railway API can take up to 60s on cold start (Vercel remote testing)
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000 })
 }
 
 // ─── Screenshot Helper ─────────────────────────────────────────────────────────
