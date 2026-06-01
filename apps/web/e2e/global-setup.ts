@@ -2,6 +2,14 @@ import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import https from 'https';
+import { chromium } from '@playwright/test';
+
+const USERS = {
+  employer:  { email: 'employer@souqone.om',  password: 'Test1234' },
+  driver:    { email: 'driver@souqone.om',    password: 'Test1234' },
+  applicant: { email: 'applicant@souqone.om', password: 'Test1234' },
+  noProfile: { email: 'noprofile@souqone.om', password: 'Test1234' },
+} as const;
 
 function loadEnvFile(envPath: string): Record<string, string> {
   if (!fs.existsSync(envPath)) return {};
@@ -68,6 +76,35 @@ async function globalSetup() {
     req.setTimeout(60000, () => { req.destroy(); resolve(); });
   });
   console.log('✅ Railway API ready\n');
+
+  // ─── Pre-authenticate all users (saves session for reuse in tests) ─────────────
+  // Railway is warm right now — do all logins here to avoid mid-run cold starts.
+  const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+  const AUTH_DIR = path.join(__dirname, '.auth');
+  if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+
+  console.log('🔐 Pre-authenticating test users...');
+  const browser = await chromium.launch();
+  for (const [role, creds] of Object.entries(USERS)) {
+    try {
+      const ctx = await browser.newContext({ baseURL: BASE_URL, locale: 'ar' });
+      const page = await ctx.newPage();
+      await page.goto('/ar/login');
+      await page.waitForSelector('.auth-sheet', { timeout: 20000 });
+      const modal = page.locator('.auth-sheet');
+      await modal.locator('input[type="email"]').fill(creds.email);
+      await modal.locator('input[type="password"]').fill(creds.password);
+      await modal.locator('button[type="submit"]').click({ force: true });
+      await page.locator('.auth-sheet').waitFor({ state: 'detached', timeout: 60000 });
+      await ctx.storageState({ path: path.join(AUTH_DIR, `${role}.json`) });
+      await ctx.close();
+      console.log(`   ✅ ${role} (${creds.email})`);
+    } catch (err) {
+      console.warn(`   ⚠️  ${role} auth failed — tests will fall back to UI login`);
+    }
+  }
+  await browser.close();
+  console.log('✅ Auth states saved\n');
 }
 
 export default globalSetup;

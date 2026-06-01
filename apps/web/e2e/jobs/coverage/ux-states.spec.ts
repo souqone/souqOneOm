@@ -241,25 +241,7 @@ test.describe('UX5 · Mobile Viewport (375px)', () => {
   })
 
   test('dashboard is usable on mobile', async ({ page }) => {
-    // Note: on mobile viewport a modal/overlay may appear on page load
-    // (UX BUG: blocking the login submit button on 375px)
-    await page.goto('/login')
-    await page.waitForLoadState('networkidle')
-
-    // Dismiss any visible overlay/modal before interacting
-    const overlay = page.locator('.fixed.inset-0[class*="z-"]').first()
-    if (await overlay.count() > 0) {
-      await page.keyboard.press('Escape')
-      await page.waitForTimeout(500)
-    }
-
-    await page.fill('input[placeholder="البريد الإلكتروني"]', 'employer@souqone.om')
-    await page.fill('input[placeholder="••••••••"]', 'Test1234')
-
-    // Use force:true to bypass any residual overlay
-    await page.locator('button[type="submit"]').click({ force: true })
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20000 })
-
+    await loginAs(page, 'employer')
     await page.goto('/ar/jobs/dashboard')
     await page.waitForLoadState('networkidle')
     await capture(page, 'ux-mobile-dashboard')

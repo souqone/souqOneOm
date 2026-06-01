@@ -1,6 +1,7 @@
 import {
   IsString, IsOptional, MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateEmployerProfileDto {
   @IsOptional()
@@ -17,6 +18,7 @@ export class UpdateEmployerProfileDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
   @MinLength(10)
   bio?: string;
 
