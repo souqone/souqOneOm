@@ -3,7 +3,7 @@
  * Collects: URL, HTTP status, response body, console errors, screenshots, form state
  */
 import { test, expect } from '@playwright/test'
-import { loginAs, capture, SEED_JOBS, jobUrl, jobApplicationsUrl } from './helpers'
+import { loginAs, SEED_JOBS, jobApplicationsUrl } from './helpers'
 import path from 'path'
 import fs from 'fs'
 
