@@ -22,23 +22,20 @@ export async function loginAs(
   role: keyof typeof USERS
 ): Promise<void> {
   const { email, password } = USERS[role]
-  await page.goto('/login')
-  await page.waitForLoadState('networkidle')
+  // /ar/login redirects to / and opens the AuthOverlay (.auth-sheet modal)
+  await page.goto('/ar/login')
 
-  // Dismiss any modal/overlay that intercepts pointer events on login page
-  // (Known UX Bug: fixed.inset-0 modal appears and blocks the submit button)
-  const overlay = page.locator('.fixed.inset-0').first()
-  if (await overlay.count() > 0) {
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(400)
-  }
+  // Wait for the auth modal card to appear (not just any email input on the page)
+  await page.waitForSelector('.auth-sheet', { timeout: 20000 })
 
-  await page.fill('input[placeholder="البريد الإلكتروني"]', email)
-  await page.fill('input[placeholder="••••••••"]', password)
-  // force:true bypasses any residual overlay that cannot be dismissed
-  await page.locator('button[type="submit"]').click({ force: true })
-  // 60s timeout: Railway API can take up to 60s on cold start (Vercel remote testing)
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000 })
+  // Scope all interactions to the modal to avoid hitting newsletter/other forms
+  const modal = page.locator('.auth-sheet')
+  await modal.locator('input[type="email"]').fill(email)
+  await modal.locator('input[type="password"]').fill(password)
+  await modal.locator('button[type="submit"]').click({ force: true })
+
+  // Wait for the modal to close = login completed (60s for Railway cold start)
+  await page.locator('.auth-sheet').waitFor({ state: 'detached', timeout: 60000 })
 }
 
 // ─── Screenshot Helper ─────────────────────────────────────────────────────────
