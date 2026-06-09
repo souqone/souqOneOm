@@ -333,6 +333,12 @@ export class ListingsService {
     if (dto.dailyPrice !== undefined) data.dailyPrice = dto.dailyPrice ? new Prisma.Decimal(dto.dailyPrice) : null;
     if (dto.monthlyPrice !== undefined) data.monthlyPrice = dto.monthlyPrice ? new Prisma.Decimal(dto.monthlyPrice) : null;
     if (dto.withDriver !== undefined) data.withDriver = dto.withDriver;
+    if (dto.depositAmount !== undefined) data.depositAmount = dto.depositAmount ? new Prisma.Decimal(dto.depositAmount) : null;
+    if (dto.minRentalDays !== undefined) data.minRentalDays = dto.minRentalDays;
+    if (dto.kmLimitPerDay !== undefined) data.kmLimitPerDay = dto.kmLimitPerDay;
+    if (dto.cancellationPolicy !== undefined) data.cancellationPolicy = dto.cancellationPolicy;
+    if (dto.deliveryAvailable !== undefined) data.deliveryAvailable = dto.deliveryAvailable;
+    if (dto.insuranceIncluded !== undefined) data.insuranceIncluded = dto.insuranceIncluded;
     if (dto.brandId !== undefined)    data.brand    = dto.brandId    ? { connect: { id: dto.brandId    } } : { disconnect: true };
     if (dto.carModelId !== undefined) data.carModel = dto.carModelId ? { connect: { id: dto.carModelId } } : { disconnect: true };
     if (dto.carTrimId !== undefined)  data.carTrim  = dto.carTrimId  ? { connect: { id: dto.carTrimId  } } : { disconnect: true };
