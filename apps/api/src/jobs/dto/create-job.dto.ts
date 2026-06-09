@@ -33,6 +33,10 @@ export class CreateJobDto {
   salaryPeriod?: SalaryPeriod;
 
   @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
   @IsArray()
   @IsEnum(LicenseType, { each: true })
   licenseTypes?: LicenseType[];
