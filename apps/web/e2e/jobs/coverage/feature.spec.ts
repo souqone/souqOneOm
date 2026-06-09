@@ -174,8 +174,10 @@ test.describe('F4 · Create Hiring Job [employer]', () => {
     await page.locator('button:has-text("التالي")').click()
 
     // Step 3: Location & Submit
-    const govSelect = page.locator('select[name="governorate"]')
+    // LocationSection renders <select> without name attr — use role-based selector
+    const govSelect = page.locator('select').first()
     if (await govSelect.count() > 0) await govSelect.selectOption({ index: 1 })
+    await capture(page, 'create-step3-location')
     const submitBtn = page.locator('button:has-text("نشر الإعلان")')
     if (await submitBtn.count() === 0) {
       test.skip(true, 'Publish button not found')

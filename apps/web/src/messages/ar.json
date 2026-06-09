@@ -2890,6 +2890,7 @@
     "jnTypeHiringDesc": "قم بنشر إعلان توظيف أو طلب سائق لمركبتك أو أعمالك.",
     "jnBasicTitle": "المعلومات الأساسية",
     "jnLabelTitle": "العنوان *",
+    "jnTitlePlaceholder": "اكتب عنواناً واضحاً ومختصراً...",
     "jnPlaceholderTitleOffering": "مثال: سائق خبرة 5 سنوات يبحث عن عمل في مسقط",
     "jnPlaceholderTitleHiring": "مثال: مطلوب سائق خاص لعائلة في بوشر",
     "jnLabelDesc": "الوصف *",

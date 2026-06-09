@@ -2,7 +2,7 @@ import {
   IsString, IsEnum, IsOptional, IsNumber, IsArray,
   IsBoolean, Min, MinLength,
 } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { LicenseType } from '@prisma/client';
 
 export class CreateDriverProfileDto {

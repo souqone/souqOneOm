@@ -22,6 +22,11 @@ export class UpdateListingDto {
   model?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  trim?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1900)
   @Max(2030)
@@ -116,6 +121,33 @@ export class UpdateListingDto {
   @IsOptional()
   @IsBoolean()
   withDriver?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  depositAmount?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  minRentalDays?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  kmLimitPerDay?: number;
+
+  @IsOptional()
+  @IsString()
+  cancellationPolicy?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  deliveryAvailable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  insuranceIncluded?: boolean;
 
   @IsOptional()
   @IsString()

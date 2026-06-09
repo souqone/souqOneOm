@@ -36,6 +36,7 @@ coverage/
 test-results/
 playwright-report/
 evidence/
+e2e/.auth/
 *.png
 *.webm
 
