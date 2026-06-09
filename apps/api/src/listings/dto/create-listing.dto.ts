@@ -113,6 +113,33 @@ export class CreateListingDto {
   withDriver?: boolean;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  depositAmount?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  minRentalDays?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  kmLimitPerDay?: number;
+
+  @IsOptional()
+  @IsString()
+  cancellationPolicy?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  deliveryAvailable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  insuranceIncluded?: boolean;
+
+  @IsOptional()
   @IsString()
   governorate?: string;
 

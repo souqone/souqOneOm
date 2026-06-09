@@ -21,21 +21,34 @@ export async function loginAs(
   page: Page,
   role: keyof typeof USERS
 ): Promise<void> {
+  const stateFile = path.join(process.cwd(), 'e2e', '.auth', `${role}.json`)
+
+  if (fs.existsSync(stateFile)) {
+    // Fast path: restore saved auth state from globalSetup (no UI login needed)
+    const { cookies = [], origins = [] } = JSON.parse(fs.readFileSync(stateFile, 'utf-8'))
+    if (cookies.length) await page.context().addCookies(cookies)
+    // Inject localStorage items before next navigation
+    for (const origin of origins) {
+      if (origin.localStorage?.length) {
+        await page.addInitScript(({ items }: { items: { name: string; value: string }[] }) => {
+          items.forEach(({ name, value }) => localStorage.setItem(name, value))
+        }, { items: origin.localStorage })
+      }
+    }
+    await page.goto('/ar')
+    await page.waitForLoadState('networkidle')
+    return
+  }
+
+  // Fallback: full UI login (when storageState not available)
   const { email, password } = USERS[role]
-  // /ar/login redirects to / and opens the AuthOverlay (.auth-sheet modal)
   await page.goto('/ar/login')
-
-  // Wait for the auth modal card to appear (not just any email input on the page)
   await page.waitForSelector('.auth-sheet', { timeout: 20000 })
-
-  // Scope all interactions to the modal to avoid hitting newsletter/other forms
   const modal = page.locator('.auth-sheet')
   await modal.locator('input[type="email"]').fill(email)
   await modal.locator('input[type="password"]').fill(password)
   await modal.locator('button[type="submit"]').click({ force: true })
-
-  // Wait for the modal to close = login completed (60s for Railway cold start)
-  await page.locator('.auth-sheet').waitFor({ state: 'detached', timeout: 60000 })
+  await page.locator('.auth-sheet').waitFor({ state: 'detached', timeout: 90000 })
 }
 
 // ─── Screenshot Helper ─────────────────────────────────────────────────────────

@@ -221,6 +221,10 @@ async function main() {
 
   console.log('✅ Jobs users ready');
 
+  // Ensure noProfile user has NO profiles (E1 test creates one — clean it each run)
+  await prisma.driverProfile.deleteMany({ where: { user: { email: 'noprofile@souqone.om' } } });
+  await prisma.employerProfile.deleteMany({ where: { user: { email: 'noprofile@souqone.om' } } });
+
   // ─── Jobs Profiles ────────────────────────────────────────────────────────────
 
   const employerProfile = await prisma.employerProfile.upsert({
