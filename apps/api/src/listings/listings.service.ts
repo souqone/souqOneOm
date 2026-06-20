@@ -120,6 +120,15 @@ export class ListingsService {
         ...(dto.carTrimId  && { carTrim:  { connect: { id: dto.carTrimId  } } }),
         status: 'ACTIVE',
         seller: { connect: { id: sellerId } },
+        ...(dto.images && dto.images.length > 0 && {
+          images: {
+            create: dto.images.map((url, i) => ({
+              url,
+              order: i,
+              isPrimary: i === 0,
+            })),
+          },
+        }),
     });
 
     // Invalidate listings cache
