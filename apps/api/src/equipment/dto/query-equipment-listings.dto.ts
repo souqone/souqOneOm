@@ -5,7 +5,7 @@ export class QueryEquipmentListingsDto {
   @IsOptional() @IsString()
   equipmentType?: string;
 
-  @IsOptional() @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT'])
+  @IsOptional() @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT', 'EQUIPMENT_WANTED'])
   listingType?: string;
 
   @IsOptional() @IsString()
