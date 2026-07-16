@@ -118,7 +118,7 @@ export class JobsController {
   @UseGuards(JwtAuthGuard)
   @Post('verification/submit')
   submitVerification(
-    @Body() body: { licenseImageUrl: string; idImageUrl: string; notes?: string },
+    @Body() body: { licenseImageUrl: string; licenseBackImageUrl?: string; idImageUrl: string; idBackImageUrl?: string; notes?: string },
     @CurrentUser() user: JwtPayload,
   ) {
     return this.verificationService.submit(user.sub, body);

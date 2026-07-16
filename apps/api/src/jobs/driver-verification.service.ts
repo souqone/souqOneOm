@@ -15,7 +15,7 @@ export class DriverVerificationService {
   ) {}
 
   /* ───── SUBMIT VERIFICATION ───── */
-  async submit(userId: string, data: { licenseImageUrl: string; idImageUrl: string; notes?: string }) {
+  async submit(userId: string, data: { licenseImageUrl: string; licenseBackImageUrl?: string; idImageUrl: string; idBackImageUrl?: string; notes?: string }) {
     const profile = await this.prisma.driverProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('يجب إنشاء بروفايل سائق أولاً');
 
@@ -31,7 +31,9 @@ export class DriverVerificationService {
       data: {
         driverProfileId: profile.id,
         licenseImageUrl: data.licenseImageUrl,
+        licenseBackImageUrl: data.licenseBackImageUrl,
         idImageUrl: data.idImageUrl,
+        idBackImageUrl: data.idBackImageUrl,
         notes: data.notes,
       },
     });

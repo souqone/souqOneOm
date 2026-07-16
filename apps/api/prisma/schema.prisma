@@ -546,9 +546,11 @@ model DriverVerification {
   driverProfileId String
   driverProfile   DriverProfile        @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
 
-  licenseImageUrl String
-  idImageUrl      String
-  notes           String?
+  licenseImageUrl     String
+  licenseBackImageUrl String?
+  idImageUrl          String
+  idBackImageUrl      String?
+  notes               String?
 
   status          VerificationStatus   @default(PENDING)
   reviewedBy      String?
