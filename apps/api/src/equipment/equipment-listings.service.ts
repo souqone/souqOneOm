@@ -53,6 +53,15 @@ export class EquipmentListingsService {
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
         userId,
+        ...(dto.images && dto.images.length > 0 && {
+          images: {
+            create: dto.images.map((url, i) => ({
+              url,
+              order: i,
+              isPrimary: i === 0,
+            })),
+          },
+        }),
       },
       include: { user: { select: USER_SELECT }, images: true },
     });

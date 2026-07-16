@@ -166,4 +166,9 @@ export class CreateListingDto {
   @IsOptional()
   @IsString()
   carTrimId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
 }
