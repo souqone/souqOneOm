@@ -26,6 +26,26 @@ function IsBudgetRangeValid(validationOptions?: ValidationOptions) {
     });
   };
 }
+
+export function IsFutureDate(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'isFutureDate',
+      target: (object as any).constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: any, args: ValidationArguments) {
+          if (!value) return true;
+          return new Date(value).getTime() > Date.now();
+        },
+        defaultMessage() {
+          return 'scheduledAt يجب أن تكون في المستقبل';
+        }
+      },
+    });
+  };
+}
 import { Type } from 'class-transformer';
 import { TransportServiceType } from '@prisma/client';
 
@@ -99,7 +119,7 @@ export class CreateTransportRequestDto {
   // Timing
   @IsOptional()
   @IsDateString()
-  @MinDate(new Date(), { message: 'scheduledAt يجب أن تكون في المستقبل' })
+  @IsFutureDate()
   scheduledAt?: string;
 
   @IsOptional()
