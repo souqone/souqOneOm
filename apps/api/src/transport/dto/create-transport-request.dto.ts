@@ -1,6 +1,6 @@
 import {
   IsString, IsEnum, IsOptional, IsNumber, IsBoolean,
-  IsDateString, Min, MinLength, MinDate,
+  IsDateString, Min, MinLength,
   registerDecorator, ValidationOptions, ValidationArguments,
 } from 'class-validator';
 
@@ -35,7 +35,7 @@ export function IsFutureDate(validationOptions?: ValidationOptions) {
       propertyName: propertyName,
       options: validationOptions,
       validator: {
-        validate(value: any, args: ValidationArguments) {
+        validate(value: any) {
           if (!value) return true;
           return new Date(value).getTime() > Date.now();
         },
