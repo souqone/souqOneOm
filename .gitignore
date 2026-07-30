@@ -48,8 +48,9 @@ prisma/*.db-journal
 # Uploads (user-uploaded files)
 apps/api/uploads/
 
-# SQL backups
+# SQL backups (but keep Prisma migration files tracked)
 *.sql
+!apps/api/prisma/migrations/**/*.sql
 
 # Windsurf / AI
 .windsurf/
