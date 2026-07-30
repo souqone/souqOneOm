@@ -4,6 +4,7 @@ import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PushService } from './push.service';
+import { ExpoPushService } from './expo-push.service';
 import { NOTIFICATION_EVENTS } from './notification.events';
 
 /** Retention window for the notification list (findAll only) */
@@ -17,16 +18,20 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly events: EventEmitter2,
     private readonly pushService: PushService,
+    private readonly expoPushService: ExpoPushService,
   ) {}
 
   async create(dto: CreateNotificationDto) {
+    // Normalize data for mobile deep-linking — keeps original fields intact
+    const normalizedData = this.normalizeNotificationData(dto.type, dto.data);
+
     const notification = await this.prisma.notification.create({
       data: {
         type: dto.type,
         title: dto.title,
         body: dto.body,
         userId: dto.userId,
-        data: dto.data ? (dto.data as any) : undefined,
+        data: normalizedData ? (normalizedData as any) : undefined,
       },
     });
 
@@ -43,11 +48,25 @@ export class NotificationsService {
       await this.pushService.sendToUser(dto.userId, {
         title: dto.title,
         body: dto.body,
-        url: this.resolveNavigationUrl(dto.type, dto.data),
-        data: dto.data,
+        url: this.resolveNavigationUrl(dto.type, normalizedData),
+        data: normalizedData,
       });
     } catch (err) {
       this.logger.error('Push notification failed', err instanceof Error ? err.stack : String(err));
+    }
+
+    // Send Expo Push notification — delivers to mobile devices
+    try {
+      await this.expoPushService.sendToUser(dto.userId, {
+        title: dto.title,
+        body: dto.body,
+        data: normalizedData,
+      });
+    } catch (err) {
+      this.logger.error(
+        'Expo push notification failed',
+        err instanceof Error ? err.stack : String(err),
+      );
     }
 
     return notification;
@@ -128,6 +147,38 @@ export class NotificationsService {
     });
 
     return { message: 'تم تحديد جميع الإشعارات كمقروءة' };
+  }
+
+  /**
+   * Best-effort normalization for mobile deep-linking.
+   * Keeps all existing fields intact and ADDS entityType/entityId if they
+   * can be inferred — so mobile clients can deep-link without knowing
+   * every possible data shape per module.
+   */
+  private normalizeNotificationData(_type: string, data?: Record<string, any>) {
+    if (!data) return data;
+    if (data.entityType && data.entityId) return data; // already normalized
+
+    const inferred: Record<string, any> = { ...data };
+
+    if (data.jobId && !data.applicationId) {
+      inferred.entityType = 'JOB';
+      inferred.entityId = data.jobId;
+    } else if (data.applicationId) {
+      inferred.entityType = 'JOB_APPLICATION';
+      inferred.entityId = data.applicationId;
+    } else if (data.requestId) {
+      inferred.entityType = 'TRANSPORT_REQUEST';
+      inferred.entityId = data.requestId;
+    } else if (data.bookingId) {
+      inferred.entityType = 'TRANSPORT_BOOKING';
+      inferred.entityId = data.bookingId;
+    } else if (data.listingId) {
+      inferred.entityType = data.entityType ?? 'LISTING';
+      inferred.entityId = data.listingId;
+    }
+
+    return inferred;
   }
 
   /**
