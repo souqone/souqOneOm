@@ -3,7 +3,10 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
 import { Prisma, EquipmentType, EquipmentListingType, ItemCondition } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEquipmentListingDto } from './dto/create-equipment-listing.dto';
@@ -13,10 +16,15 @@ import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.u
 
 @Injectable()
 export class EquipmentListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EquipmentListingsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
-    return this.prisma.equipmentListing.create({
+    const item = await this.prisma.equipmentListing.create({
       data: {
         title: dto.title,
         slug: generateSlug(dto.title),
@@ -65,6 +73,8 @@ export class EquipmentListingsService {
       },
       include: { user: { select: USER_SELECT }, images: true },
     });
+    this.emitListingEvent(LISTING_EVENTS.CREATED, item);
+    return item;
   }
 
   async findAll(q: QueryEquipmentListingsDto) {
@@ -199,7 +209,9 @@ export class EquipmentListingsService {
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    return this.prisma.equipmentListing.update({ where: { id }, data, include: { user: { select: USER_SELECT }, images: true } });
+    const updated = await this.prisma.equipmentListing.update({ where: { id }, data, include: { user: { select: USER_SELECT }, images: true } });
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    return updated;
   }
 
   async remove(id: string, userId: string) {
@@ -210,6 +222,8 @@ export class EquipmentListingsService {
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('EQUIPMENT_LISTING', id);
+
+    this.emitListingEvent(LISTING_EVENTS.DELETED, item);
 
     return { deleted: true };
   }
@@ -242,5 +256,20 @@ export class EquipmentListingsService {
     if (img.equipmentListing.userId !== userId) throw new ForbiddenException('لا يمكنك حذف صورة غيرك');
     await this.prisma.equipmentListingImage.delete({ where: { id: imageId } });
     return { deleted: true };
+  }
+
+  private emitListingEvent(event: string, item: any, status?: string) {
+    try {
+      const payload: ListingEventPayload = {
+        entityType: 'EQUIPMENT_LISTING',
+        listingId: item.id,
+        title: item.title,
+        userId: item.userId,
+        status,
+      };
+      this.eventEmitter.emit(event, payload);
+    } catch (err) {
+      this.logger.error(`Failed to emit ${event}`, err);
+    }
   }
 }

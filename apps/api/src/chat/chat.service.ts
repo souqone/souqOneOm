@@ -11,6 +11,7 @@ import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { CHAT_EVENTS } from './chat.events';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatService {
@@ -19,6 +20,7 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly events: EventEmitter2,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /* ───── RESOLVE ENTITY OWNER ───── */
@@ -264,21 +266,32 @@ export class ChatService {
       data: { updatedAt: new Date() },
     });
 
-    // إنشاء إشعار للمستلم
+    // إنشاء إشعار للمستلم — routed through NotificationsService so it 
+    // reaches Web Push AND Expo Push (mobile), not just the in-app list
     const otherParticipants = await this.prisma.conversationParticipant.findMany({
       where: { conversationId, userId: { not: userId } },
     });
 
-    if (otherParticipants.length > 0) {
-      await this.prisma.notification.createMany({
-        data: otherParticipants.map((p) => ({
-          type: 'MESSAGE' as const,
+    for (const p of otherParticipants) {
+      try {
+        await this.notifications.create({
+          type: 'MESSAGE',
           title: 'رسالة جديدة',
           body: dto.content.substring(0, 100),
           userId: p.userId,
-          data: { conversationId, messageId: message.id },
-        })),
-      });
+          data: {
+            conversationId,
+            messageId: message.id,
+            entityType: 'ROOM',
+            entityId: conversationId,
+          },
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to send message notification to ${p.userId}`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
     }
 
     // Fire event — Gateway listens and broadcasts via Redis

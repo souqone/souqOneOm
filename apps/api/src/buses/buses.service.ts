@@ -3,7 +3,10 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
 import { ListingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -28,10 +31,13 @@ const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
 
 @Injectable()
 export class BusesService {
+  private readonly logger = new Logger(BusesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly search: SearchService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getManufacturers() {
@@ -124,6 +130,7 @@ export class BusesService {
     await this.invalidateCache();
     this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(bus)).catch(() => {});
 
+    this.emitListingEvent(LISTING_EVENTS.CREATED, bus);
 
     return bus;
   }
@@ -354,6 +361,11 @@ export class BusesService {
     await this.invalidateCache(id);
     this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(updated)).catch(() => {});
 
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    if (statusChanged) {
+      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
+    }
+
     return updated;
   }
 
@@ -368,6 +380,8 @@ export class BusesService {
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('BUS_LISTING', id);
+
+    this.emitListingEvent(LISTING_EVENTS.DELETED, bus);
 
     return { message: 'تم حذف الإعلان بنجاح' };
   }
@@ -455,5 +469,20 @@ export class BusesService {
       createdAt: listing.createdAt,
       statusHistory,
     };
+  }
+
+  private emitListingEvent(event: string, item: any, status?: string) {
+    try {
+      const payload: ListingEventPayload = {
+        entityType: 'BUS_LISTING',
+        listingId: item.id,
+        title: item.title,
+        userId: item.userId,
+        status,
+      };
+      this.eventEmitter.emit(event, payload);
+    } catch (err) {
+      this.logger.error(`Failed to emit ${event}`, err);
+    }
   }
 }
