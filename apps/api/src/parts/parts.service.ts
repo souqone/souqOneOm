@@ -2,7 +2,10 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchService, INDEXES } from '../search/search.service';
@@ -12,9 +15,12 @@ import { USER_SELECT } from '../common/utils/entity.utils';
 
 @Injectable()
 export class PartsService {
+  private readonly logger = new Logger(PartsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly searchService: SearchService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private generateSlug(title: string): string {
@@ -67,6 +73,8 @@ export class PartsService {
       isOriginal: part.isOriginal, governorate: part.governorate, city: part.city,
       status: part.status, imageUrl: part.images?.[0]?.url || null, createdAt: part.createdAt,
     }).catch(() => {});
+
+    this.emitListingEvent(LISTING_EVENTS.CREATED, part);
 
     return part;
   }
@@ -171,6 +179,8 @@ export class PartsService {
       status: updated.status, imageUrl: updated.images?.[0]?.url || null, createdAt: updated.createdAt,
     }).catch(() => {});
 
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+
     return updated;
   }
 
@@ -187,6 +197,22 @@ export class PartsService {
     // Remove from Meilisearch
     this.searchService.removeDocument(INDEXES.PARTS, id).catch(() => {});
 
+    this.emitListingEvent(LISTING_EVENTS.DELETED, part);
+
     return { message: 'تم حذف الإعلان بنجاح' };
+  }
+  private emitListingEvent(event: string, item: any, status?: string) {
+    try {
+      const payload: ListingEventPayload = {
+        entityType: 'SPARE_PART',
+        listingId: item.id,
+        title: item.title,
+        userId: item.sellerId,
+        status,
+      };
+      this.eventEmitter.emit(event, payload);
+    } catch (err) {
+      this.logger.error(`Failed to emit ${event}`, err);
+    }
   }
 }
