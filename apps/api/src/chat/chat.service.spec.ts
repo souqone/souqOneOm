@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const mockConversation = {
   id: 'conv-1',
@@ -45,6 +46,10 @@ const mockPrisma = {
   $transaction: jest.fn(),
 };
 
+const mockNotifications = {
+  create: jest.fn(),
+};
+
 describe('ChatService', () => {
   let service: ChatService;
 
@@ -56,6 +61,7 @@ describe('ChatService', () => {
         ChatService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 
@@ -107,12 +113,16 @@ describe('ChatService', () => {
       mockPrisma.message.create.mockResolvedValue(mockMessage);
       mockPrisma.conversation.update.mockResolvedValue({});
       mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'seller-1' }]);
-      mockPrisma.notification.createMany.mockResolvedValue({ count: 1 });
+      mockNotifications.create.mockResolvedValue({});
 
       const result = await service.sendMessage('conv-1', { content: 'مرحبا' }, 'buyer-1');
 
       expect(result.content).toBe('مرحبا');
-      expect(mockPrisma.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(mockNotifications.create).toHaveBeenCalledTimes(1);
+      expect(mockNotifications.create).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'MESSAGE',
+        userId: 'seller-1',
+      }));
     });
 
     it('should throw if user is not a participant', async () => {
