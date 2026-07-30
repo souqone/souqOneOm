@@ -5,10 +5,15 @@ import type { JwtPayload } from '../auth/auth.types';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { RegisterPushTokenDto } from './dto/register-push-token.dto';
+import { ExpoPushService } from '../notifications/expo-push.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly expoPushService: ExpoPushService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -52,8 +57,19 @@ export class UsersController {
     return this.usersService.getLoginHistory(user.sub);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('push-token')
+  async registerPushToken(
+    @Body() dto: RegisterPushTokenDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    await this.expoPushService.registerToken(user.sub, dto.token, dto.deviceType);
+    return { success: true };
+  }
+
   @Get(':id')
   getPublicProfile(@Param('id') id: string) {
     return this.usersService.getPublicProfile(id);
   }
 }
+

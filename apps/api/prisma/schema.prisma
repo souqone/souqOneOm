@@ -60,6 +60,7 @@ model User {
   averageRating      Float?
   reviewCount        Int                 @default(0)
   pushSubscriptions  PushSubscription[]
+  pushTokens         PushToken[]
   loginAudits        LoginAudit[]
   driverProfile      DriverProfile?
   employerProfile    EmployerProfile?
@@ -382,6 +383,22 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+// ──────────────────────────────────────
+// رموز Expo للجوال — PushToken
+// ──────────────────────────────────────
+model PushToken {
+  id         String    @id @default(cuid())
+  token      String    @unique  // ExponentPushToken[xxxxxxxxxxxx]
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType String?   // "ios" | "android" | null if unknown
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 // ──────────────────────────────────────
