@@ -57,6 +57,10 @@ apps/api/uploads/
 .agents/
 .claude/worktrees
 
+# Prompt / phase planning docs (local dev only)
+PHASE*.md
+*PROMPT.md
+
 # Misc
 *.tsbuildinfo
 next-env.d.ts

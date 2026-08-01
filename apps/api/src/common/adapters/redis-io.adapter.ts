@@ -12,26 +12,51 @@ export class RedisIoAdapter extends IoAdapter {
     const redisUrl = process.env.REDIS_URL;
     this.logger.log(`REDIS_URL configured: ${!!redisUrl}`);
 
-    try {
-      const pubClient = redisUrl
-        ? createClient({ url: redisUrl })
-        : createClient({
-            socket: {
-              host: process.env.REDIS_HOST || 'localhost',
-              port: parseInt(process.env.REDIS_PORT || '6379', 10),
-            },
-            password: process.env.REDIS_PASSWORD || undefined,
-          });
+    const maxAttempts = 5;
+    const baseDelayMs = 1000;
 
-      const subClient = pubClient.duplicate();
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const pubClient = redisUrl
+          ? createClient({ url: redisUrl })
+          : createClient({
+              socket: {
+                host: process.env.REDIS_HOST || 'localhost',
+                port: parseInt(process.env.REDIS_PORT || '6379', 10),
+              },
+              password: process.env.REDIS_PASSWORD || undefined,
+            });
 
-      await Promise.all([pubClient.connect(), subClient.connect()]);
+        const subClient = pubClient.duplicate();
 
-      this.adapterConstructor = createAdapter(pubClient, subClient);
-      this.logger.log('Redis Socket.IO Adapter connected');
-    } catch (err) {
-      this.logger.warn(`Redis Socket.IO Adapter failed — using default adapter: ${(err as Error).message}`);
-      this.adapterConstructor = null;
+        // Surface connection drops AFTER a successful initial connect too —
+        // the 'redis' client library auto-reconnects by default, but we log
+        // it loudly so it's visible in monitoring instead of silent.
+        pubClient.on('error', (err) => this.logger.error(`Redis IO Adapter pubClient error: ${err.message}`));
+        subClient.on('error', (err) => this.logger.error(`Redis IO Adapter subClient error: ${err.message}`));
+
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+
+        this.adapterConstructor = createAdapter(pubClient, subClient);
+        this.logger.log(`Redis Socket.IO Adapter connected (attempt ${attempt}/${maxAttempts})`);
+        return;
+      } catch (err) {
+        const message = (err as Error).message;
+        if (attempt === maxAttempts) {
+          // Loud, unambiguous failure — this state should never pass silently
+          this.logger.error(
+            `Redis Socket.IO Adapter FAILED after ${maxAttempts} attempts — ` +
+            `falling back to in-memory adapter. Real-time features will NOT ` +
+            `work correctly across multiple instances until this is fixed ` +
+            `and the server is restarted. Last error: ${message}`,
+          );
+          this.adapterConstructor = null;
+          return;
+        }
+        const delay = baseDelayMs * attempt;
+        this.logger.warn(`Redis Socket.IO Adapter attempt ${attempt}/${maxAttempts} failed (${message}), retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
     }
   }
 
