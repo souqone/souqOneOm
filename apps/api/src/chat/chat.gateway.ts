@@ -46,8 +46,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   async afterInit() {
     this.logger.log('ChatGateway initialized');
-    await this.redis.waitForReady();
-    this.subscribeToRedis();
+    // subscribeToRedis() call removed — broadcasting now goes directly
+    // through the Socket.IO Redis Adapter (see redis-io.adapter.ts),
+    // no manual relay needed
   }
 
   async handleConnection(client: Socket) {
@@ -154,7 +155,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       };
 
       const message = await this.chatService.sendMessage(data.conversationId, dto, user.sub);
-      // Broadcast is handled by @OnEvent → Redis publish → subscriber emit
+      // Broadcast is handled by @OnEvent → direct emit via Socket.IO Redis Adapter
       return { success: true, message };
     } catch (err: any) {
       client.emit('error', { message: err.message || 'فشل إرسال الرسالة' });
@@ -230,7 +231,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
     try {
       await this.chatService.deleteMessage(data.messageId, user.sub);
-      // Broadcast is handled by @OnEvent → Redis publish → subscriber emit
+      // Broadcast is handled by @OnEvent → direct emit via Socket.IO Redis Adapter
       return { success: true };
     } catch (err: any) {
       client.emit('error', { message: err.message || 'فشل حذف الرسالة' });
@@ -286,29 +287,15 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   /* ───── EVENT-DRIVEN BROADCAST ───── */
 
   @OnEvent(CHAT_EVENTS.MESSAGE_SENT)
-  async onMessageSent(payload: { conversationId: string; message: any }) {
-    await this.redis.publish('chat:message', payload);
+  onMessageSent(payload: { conversationId: string; message: any }) {
+    // The Socket.IO Redis Adapter fans this out to all instances automatically
+    this.server.to(`conversation:${payload.conversationId}`).emit('message', payload.message);
   }
 
   @OnEvent(CHAT_EVENTS.MESSAGE_DELETED)
-  async onMessageDeleted(payload: { messageId: string; conversationId: string }) {
-    await this.redis.publish('chat:message-deleted', payload);
-  }
-
-  // Subscribe to Redis Pub/Sub for multi-instance support
-  private subscribeToRedis() {
-    this.redis.subscribe('chat:message', (data: { conversationId: string; message: any }) => {
-      this.server.to(`conversation:${data.conversationId}`).emit('message', data.message);
-    });
-
-    this.redis.subscribe('chat:message-deleted', (data: { messageId: string; conversationId: string }) => {
-      this.server.to(`conversation:${data.conversationId}`).emit('message-deleted', data);
-    });
-
-    // Notifications: published by any pod, delivered by whichever pod holds the socket
-    this.redis.subscribe('notification:created', (data: { userId: string; notification: any }) => {
-      this.server.to(`user:${data.userId}`).emit('notification', data.notification);
-    });
+  onMessageDeleted(payload: { messageId: string; conversationId: string }) {
+    // The Socket.IO Redis Adapter fans this out to all instances automatically
+    this.server.to(`conversation:${payload.conversationId}`).emit('message-deleted', payload);
   }
 
   // Helper method to check if user is online
@@ -319,9 +306,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   /* ───── NOTIFICATION BROADCAST ───── */
 
   @OnEvent(NOTIFICATION_EVENTS.CREATED)
-  async onNotificationCreated(payload: { userId: string; notification: any }) {
-    // Publish to Redis so ALL pods can deliver to their connected sockets
-    await this.redis.publish('notification:created', payload);
+  onNotificationCreated(payload: { userId: string; notification: any }) {
+    // The Socket.IO Redis Adapter fans this out to all instances automatically
+    this.server.to(`user:${payload.userId}`).emit('notification', payload.notification);
   }
 
   // Send notification via WebSocket if user is online (kept for direct calls if needed)
