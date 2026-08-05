@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://souq-one-om-web.vercel.app",
+      "localStorage": [
+        {
+          "name": "carone.auth_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXB1NzVpbmIwMDA5cmEwMGV5andjN2hqIiwiZW1haWwiOiJub3Byb2ZpbGVAc291cW9uZS5vbSIsInVzZXJuYW1lIjoiam9ic19ub3Byb2ZpbGUiLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc4NTQxMDAyMSwiZXhwIjoxNzg2MDE0ODIxfQ.4GY544xhH56FYfHoUuCg3JqbnR5gFUsp9j2FoCzZK9Y"
+        },
+        {
+          "name": "carone.refresh_token",
+          "value": "3873a8ba982b097b87680368abaed903cbed580b77993fdf5ed3711e9d62e0dde3a2c469861cba699d1d6304059b5c3f5bdf7d6a6d93f8d35d76e5ad8b257749"
+        }
+      ]
+    }
+  ]
+}

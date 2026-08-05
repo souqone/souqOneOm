@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "NEXT_LOCALE",
+      "value": "ar",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "g_state",
+      "value": "{\"i_l\":0,\"i_ll\":1778561067570,\"i_b\":\"dpyPRT/r0jsn2Ds0hty+0DgujxUnoM6CHd2dciUduKQ\",\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":1778561067570}",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1794113067,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
