@@ -96,19 +96,31 @@ export class PartsService {
     if (query.condition) where.condition = query.condition;
     if (query.make) where.compatibleMakes = { has: query.make };
     if (query.governorate) where.governorate = query.governorate;
+    if (query.city) where.city = query.city;
     if (query.sellerId) where.sellerId = query.sellerId;
+    if (query.partNumber) where.partNumber = { contains: query.partNumber, mode: 'insensitive' };
+    if (query.isOriginal !== undefined) where.isOriginal = query.isOriginal === 'true';
+    // isScrap is not a Prisma field — accepted by DTO to avoid 400, but not applied as filter
     if (query.minPrice || query.maxPrice) {
       where.price = {};
       if (query.minPrice) where.price.gte = new Prisma.Decimal(query.minPrice);
       if (query.maxPrice) where.price.lte = new Prisma.Decimal(query.maxPrice);
     }
 
+    const sortOrder = (query.sortOrder?.toLowerCase() === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
+    const orderBy: Prisma.SparePartOrderByWithRelationInput =
+      query.sortBy === 'price'
+        ? { price: sortOrder }
+        : query.sortBy === 'viewCount'
+          ? { viewCount: sortOrder }
+          : { createdAt: 'desc' };
+
     const [items, total] = await Promise.all([
       this.prisma.sparePart.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           seller: { select: USER_SELECT },
           images: { orderBy: { order: 'asc' }, take: 1 },
