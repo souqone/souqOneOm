@@ -61,6 +61,15 @@ export class PartsService {
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
         sellerId,
+        ...(dto.images && dto.images.length > 0 && {
+          images: {
+            create: dto.images.map((url, i) => ({
+              url,
+              order: i,
+              isPrimary: i === 0,
+            })),
+          },
+        }),
       },
       include: { seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true } }, images: true },
     });
