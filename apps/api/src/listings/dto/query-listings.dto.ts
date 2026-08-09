@@ -30,6 +30,10 @@ export class QueryListingsDto {
   model?: string;
 
   @IsOptional()
+  @IsString()
+  trim?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   yearMin?: number;
@@ -46,6 +50,18 @@ export class QueryListingsDto {
   @IsOptional()
   @Type(() => Number)
   priceMax?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  mileageMin?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  mileageMax?: number;
 
   @IsOptional()
   @IsString()
