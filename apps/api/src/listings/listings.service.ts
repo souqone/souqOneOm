@@ -197,6 +197,7 @@ export class ListingsService {
 
     if (query.make) where.make = { equals: query.make, mode: 'insensitive' };
     if (query.model) where.model = { equals: query.model, mode: 'insensitive' };
+    if (query.trim) where.trim = { equals: query.trim, mode: 'insensitive' };
     if (query.fuelType) {
       const fuels = query.fuelType.split(',').filter(Boolean);
       if (fuels.length === 1) {
@@ -231,6 +232,12 @@ export class ListingsService {
       where.price = {};
       if (query.priceMin) where.price.gte = new Prisma.Decimal(query.priceMin);
       if (query.priceMax) where.price.lte = new Prisma.Decimal(query.priceMax);
+    }
+
+    if (query.mileageMin || query.mileageMax) {
+      where.mileage = {};
+      if (query.mileageMin) where.mileage.gte = query.mileageMin;
+      if (query.mileageMax) where.mileage.lte = query.mileageMax;
     }
 
     const orderBy: Prisma.ListingOrderByWithRelationInput = {

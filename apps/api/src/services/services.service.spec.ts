@@ -25,7 +25,7 @@ const mockRedis = {
   setNX: jest.fn().mockResolvedValue(true),
   del: jest.fn().mockResolvedValue(undefined),
   delPattern: jest.fn().mockResolvedValue(undefined),
-  setNX: jest.fn().mockResolvedValue(true),
+
   isReady: jest.fn().mockReturnValue(true),
 };
 
