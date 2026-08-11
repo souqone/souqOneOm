@@ -1,6 +1,6 @@
-import { IsOptional, IsString, IsEnum, IsNumberString, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsNumberString, IsBoolean, IsArray, IsNumber } from 'class-validator';
 import { ServiceType, ProviderType } from '@prisma/client';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class QueryServicesDto {
   @IsOptional()
@@ -23,6 +23,31 @@ export class QueryServicesDto {
   @Transform(({ value }) => value === 'true')
   @IsBoolean()
   isHomeService?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  specializations?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  isOpenNow?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  longitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  radiusKm?: number;
 
   @IsOptional()
   @IsNumberString()

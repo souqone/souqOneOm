@@ -50,6 +50,64 @@ export class ServicesService extends BaseListingService {
     };
   }
 
+  async findAll(query: QueryServicesDto) {
+    if (query.latitude && query.longitude) {
+      const page = parseInt(query.page ?? '1');
+      const limit = Math.min(parseInt(query.limit ?? '20'), 50);
+      const skip = (page - 1) * limit;
+
+      const queryHash = Buffer.from(JSON.stringify(query)).toString('base64url');
+      const cacheKey = `${this.config.modelName}:list:${queryHash}`;
+      const cached = await this.redis.get<any>(cacheKey);
+      if (cached) return cached;
+
+      const where = { status: 'ACTIVE', ...this.buildWhereFilter(query) };
+      
+      const allItems = await this.model.findMany({
+        where,
+        include: this.getListInclude(),
+      });
+
+      const radius = query.radiusKm || 10;
+
+      const withDistance = allItems.map((item: any) => {
+        if (item.latitude === null || item.longitude === null || item.latitude === undefined || item.longitude === undefined) {
+          return { ...item, distance: null };
+        }
+        const distance = this.calculateDistance(
+          query.latitude!, query.longitude!,
+          item.latitude, item.longitude
+        );
+        return { ...item, distance };
+      });
+
+      const filtered = withDistance
+        .filter((item: any) => item.distance !== null && item.distance <= radius)
+        .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
+
+      const total = filtered.length;
+      const items = filtered.slice(skip, skip + limit);
+
+      const result = { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+      await this.redis.set(cacheKey, result, 300);
+      return result;
+    }
+
+    return super.findAll(query);
+  }
+
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   protected buildMeiliDoc(item: any) {
     return {
       id: item.id, title: item.title, slug: item.slug, description: item.description,
@@ -74,6 +132,25 @@ export class ServicesService extends BaseListingService {
     if (query.governorate) where.governorate = query.governorate;
     if (query.isHomeService !== undefined) where.isHomeService = query.isHomeService;
     if (query.userId) where.userId = query.userId;
+
+    if (query.specializations && query.specializations.length > 0) {
+      where.specializations = { hasSome: query.specializations };
+    }
+
+    if (query.isOpenNow) {
+      const omanTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Muscat" }));
+      const dayIndex = omanTime.getDay();
+      const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+      const currentDay = days[dayIndex];
+      const currentHour = omanTime.getHours().toString().padStart(2, '0');
+      const currentMinute = omanTime.getMinutes().toString().padStart(2, '0');
+      const currentTime = `${currentHour}:${currentMinute}`;
+
+      where.workingDays = { has: currentDay };
+      where.workingHoursOpen = { lte: currentTime };
+      where.workingHoursClose = { gt: currentTime };
+    }
+
     return where;
   }
 }
