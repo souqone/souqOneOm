@@ -14,7 +14,8 @@ const validOperator = {
   certifications: ['OSHA Certified', 'ISO 9001'],
   dailyRate: 45,
   hourlyRate: 8,
-  governorate: 'Muscat',
+  governorateId: 1, // Muscat
+  wilayaId: 1,      // Seeb
   contactPhone: '+96899445566',
 };
 
@@ -56,6 +57,16 @@ describe('Operators API (e2e)', () => {
         .post('/api/operators')
         .set('Authorization', `Bearer ${accessToken}`)
         .send(noTitle)
+        .expect(400);
+    });
+
+    it('should reject invalid location pair (governorate vs wilaya mismatch)', async () => {
+      const { accessToken } = await registerUser();
+      // wilayaId: 50 exists but does not belong to governorateId: 1
+      await request(getApp().getHttpServer())
+        .post('/api/operators')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ ...validOperator, governorateId: 1, wilayaId: 50 })
         .expect(400);
     });
   });
@@ -139,7 +150,8 @@ describe('Operators API (e2e)', () => {
       const created = await request(getApp().getHttpServer())
         .post('/api/operators')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send(validOperator);
+        .send(validOperator)
+        .expect(201);
 
       const res = await request(getApp().getHttpServer())
         .patch(`/api/operators/${created.body.id}`)

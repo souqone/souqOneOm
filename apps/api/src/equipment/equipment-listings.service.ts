@@ -14,16 +14,23 @@ import { UpdateEquipmentListingDto } from './dto/update-equipment-listing.dto';
 import { QueryEquipmentListingsDto } from './dto/query-equipment-listings.dto';
 import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.utils';
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class EquipmentListingsService {
   private readonly logger = new Logger(EquipmentListingsService.name);
 
   constructor(
+    private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
+    if (dto.governorateId && dto.wilayaId) {
+      await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    }
+
     const item = await this.prisma.equipmentListing.create({
       data: {
         title: dto.title,
@@ -55,6 +62,8 @@ export class EquipmentListingsService {
         quantity: dto.quantity,
         siteDetails: dto.siteDetails,
         governorate: dto.governorate,
+        governorateId: dto.governorateId,
+        wilayaId: dto.wilayaId,
         city: dto.city,
         latitude: dto.latitude,
         longitude: dto.longitude,
@@ -73,6 +82,11 @@ export class EquipmentListingsService {
       },
       include: { user: { select: USER_SELECT }, images: true },
     });
+
+    if (dto.latitude && dto.longitude) {
+      await this.geoService.syncLocation('equipment_listings', item.id, dto.latitude, dto.longitude);
+    }
+
     this.emitListingEvent(LISTING_EVENTS.CREATED, item);
     return item;
   }
@@ -174,6 +188,14 @@ export class EquipmentListingsService {
     if (!item) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
+    if (dto.governorateId || dto.wilayaId) {
+      const targetGov = dto.governorateId ?? item.governorateId;
+      const targetWilaya = dto.wilayaId ?? item.wilayaId;
+      if (targetGov && targetWilaya) {
+        await this.geoService.validateLocationPair(targetGov, targetWilaya);
+      }
+    }
+
     const data: Record<string, unknown> = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
@@ -203,6 +225,8 @@ export class EquipmentListingsService {
     if (dto.quantity !== undefined) data.quantity = dto.quantity;
     if (dto.siteDetails !== undefined) data.siteDetails = dto.siteDetails;
     if (dto.governorate !== undefined) data.governorate = dto.governorate;
+    if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
+    if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.city !== undefined) data.city = dto.city;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
@@ -210,6 +234,15 @@ export class EquipmentListingsService {
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
     const updated = await this.prisma.equipmentListing.update({ where: { id }, data, include: { user: { select: USER_SELECT }, images: true } });
+
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('equipment_listings', updated.id, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('equipment_listings', updated.id);
+      }
+    }
+
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
     return updated;
   }

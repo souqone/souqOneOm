@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ListingsService } from './listings.service';
+import { GeoService } from '../locations/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { SearchService } from '../search/search.service';
@@ -31,6 +32,9 @@ const mockPrisma = {
   },
   cleanupPolymorphicOrphans: jest.fn().mockResolvedValue(undefined),
   $transaction: jest.fn().mockImplementation((args) => Promise.all(args)),
+  wilaya: {
+    findUnique: jest.fn(),
+  },
 };
 
 const mockRedis = {
@@ -58,6 +62,10 @@ const mockRepo = {
   incrementViewCount: jest.fn(),
 };
 
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
+
 describe('ListingsService', () => {
   let service: ListingsService;
 
@@ -70,6 +78,7 @@ describe('ListingsService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockRedis },
         { provide: SearchService, useValue: mockSearchService },
+        { provide: GeoService, useValue: mockGeoService },
         { provide: ListingsRepository, useValue: mockRepo },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
@@ -95,6 +104,24 @@ describe('ListingsService', () => {
       expect(result).toBeDefined();
       expect(mockRepo.create).toHaveBeenCalledTimes(1);
       expect(mockRedis.delPattern).toHaveBeenCalledWith('listings:*');
+    });
+  });
+
+  describe('cross-validation for locations', () => {
+    it('should throw BadRequestException if wilaya does not belong to governorate', async () => {
+      // RED: Mock geoService to throw if invalid
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(
+        new Error('الولاية لا تتبع للمحافظة المحددة')
+      );
+
+      const dto = {
+        title: 'سيارة',
+        price: 12000,
+        governorateId: 1, // Muscat
+        wilayaId: 10, // Salalah (Mismatch!)
+      } as any;
+
+      await expect(service.create(dto, 'seller-1')).rejects.toThrow('الولاية لا تتبع للمحافظة المحددة');
     });
   });
 

@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DriverProfileService } from '../driver-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { GeoService } from '../../locations/geo.service';
+
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
 
 const mockPrisma = {
   driverProfile: {
@@ -22,6 +27,7 @@ describe('DriverProfileService', () => {
       providers: [
         DriverProfileService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: GeoService, useValue: mockGeoService },
       ],
     }).compile();
     service = module.get<DriverProfileService>(DriverProfileService);
@@ -52,6 +58,13 @@ describe('DriverProfileService', () => {
       await expect(
         service.create('user1', { licenseTypes: ['HEAVY'], governorate: 'Muscat' } as any),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('should fail on create if wilaya mismatch (RED)', async () => {
+      mockPrisma.driverProfile.findUnique.mockResolvedValue(null);
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.create('user1', dto)).rejects.toThrow('Mismatch');
     });
   });
 
@@ -89,6 +102,13 @@ describe('DriverProfileService', () => {
       await expect(
         service.update('user1', { bio: 'test' } as any),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should fail on update if wilaya mismatch (RED)', async () => {
+      mockPrisma.driverProfile.findUnique.mockResolvedValue({ id: 'dp1', userId: 'user1' });
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.update('user1', dto)).rejects.toThrow('Mismatch');
     });
   });
 

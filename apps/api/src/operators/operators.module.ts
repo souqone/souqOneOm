@@ -3,8 +3,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { OperatorsService } from './operators.service';
 import { OperatorsController } from './operators.controller';
 
+import { LocationsModule } from '../locations/locations.module';
+
 @Module({
-  imports: [PrismaModule],
+  imports: [LocationsModule, PrismaModule],
   controllers: [OperatorsController],
   providers: [OperatorsService],
   exports: [OperatorsService],

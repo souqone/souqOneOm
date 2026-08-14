@@ -13,11 +13,14 @@ import { CreatePartDto } from './dto/create-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
 import { USER_SELECT } from '../common/utils/entity.utils';
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class PartsService {
   private readonly logger = new Logger(PartsService.name);
 
   constructor(
+    private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly searchService: SearchService,
     private readonly eventEmitter: EventEmitter2,
@@ -36,6 +39,8 @@ export class PartsService {
   }
 
   async create(dto: CreatePartDto, sellerId: string) {
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
     const slug = this.generateSlug(dto.title);
 
     const part = await this.prisma.sparePart.create({
@@ -55,7 +60,9 @@ export class PartsService {
         currency: dto.currency ?? 'OMR',
         isPriceNegotiable: dto.isPriceNegotiable ?? false,
         governorate: dto.governorate,
+        governorateId: dto.governorateId,
         city: dto.city,
+        wilayaId: dto.wilayaId,
         latitude: dto.latitude,
         longitude: dto.longitude,
         contactPhone: dto.contactPhone,
@@ -73,6 +80,10 @@ export class PartsService {
       },
       include: { seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true } }, images: true },
     });
+
+    if (dto.latitude && dto.longitude) {
+      await this.geoService.syncLocation('spare_parts', part.id, dto.latitude, dto.longitude);
+    }
 
     // Sync to Meilisearch
     this.searchService.indexDocument(INDEXES.PARTS, {
@@ -168,6 +179,12 @@ export class PartsService {
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : part.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : part.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
+
     const data: Record<string, unknown> = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
@@ -183,13 +200,23 @@ export class PartsService {
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
     if (dto.governorate !== undefined) data.governorate = dto.governorate;
+    if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
     if (dto.city !== undefined) data.city = dto.city;
+    if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
     const updated = await this.prisma.sparePart.update({ where: { id }, data, include: { images: { take: 1, orderBy: { order: 'asc' } } } });
+
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('spare_parts', updated.id, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('spare_parts', updated.id);
+      }
+    }
 
     // Sync to Meilisearch
     this.searchService.indexDocument(INDEXES.PARTS, {

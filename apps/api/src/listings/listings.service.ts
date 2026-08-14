@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { SearchService, INDEXES } from '../search/search.service';
+import { GeoService } from '../locations/geo.service';
 import { ListingsRepository } from './listings.repository';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
@@ -37,6 +38,7 @@ export class ListingsService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly searchService: SearchService,
+    private readonly geoService: GeoService,
     private readonly repo: ListingsRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -88,6 +90,8 @@ export class ListingsService {
   }
 
   async create(dto: CreateListingDto, sellerId: string) {
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
     const slug = this.generateSlug(`${dto.make}-${dto.model}-${dto.year}-${dto.title}`);
 
     const listing = await this.repo.create({
@@ -119,6 +123,8 @@ export class ListingsService {
         withDriver: dto.withDriver ?? false,
         governorate: dto.governorate,
         city: dto.city,
+        governorateRef: dto.governorateId ? { connect: { id: dto.governorateId } } : undefined,
+        wilayaRef: dto.wilayaId ? { connect: { id: dto.wilayaId } } : undefined,
         latitude: dto.latitude,
         longitude: dto.longitude,
         ...(dto.brandId    && { brand:    { connect: { id: dto.brandId    } } }),
@@ -136,6 +142,10 @@ export class ListingsService {
           },
         }),
     });
+
+    if (listing.latitude && listing.longitude) {
+      await this.geoService.syncLocation('listings', listing.id, listing.latitude, listing.longitude);
+    }
 
     // Invalidate listings cache
     await this.redis.delPattern('listings:*');
@@ -326,6 +336,12 @@ export class ListingsService {
       throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
     }
 
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : listing.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : listing.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
+
     const data: Prisma.ListingUpdateInput = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
@@ -350,7 +366,15 @@ export class ListingsService {
     if (dto.condition !== undefined) data.condition = dto.condition;
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.governorate !== undefined) data.governorate = dto.governorate;
+    if (dto.governorateId !== undefined) {
+      if (dto.governorateId) data.governorateRef = { connect: { id: dto.governorateId } };
+      else data.governorateRef = { disconnect: true };
+    }
     if (dto.city !== undefined) data.city = dto.city;
+    if (dto.wilayaId !== undefined) {
+      if (dto.wilayaId) data.wilayaRef = { connect: { id: dto.wilayaId } };
+      else data.wilayaRef = { disconnect: true };
+    }
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.listingType !== undefined) data.listingType = dto.listingType;
@@ -368,6 +392,12 @@ export class ListingsService {
     if (dto.carTrimId !== undefined)  data.carTrim  = dto.carTrimId  ? { connect: { id: dto.carTrimId  } } : { disconnect: true };
 
     const updated = await this.repo.update(id, data);
+
+    if (updated.latitude && updated.longitude) {
+      await this.geoService.syncLocation('listings', updated.id, updated.latitude, updated.longitude);
+    } else if (dto.latitude === null || dto.longitude === null) {
+      await this.geoService.clearLocation('listings', updated.id);
+    }
 
     // Invalidate cache
     await this.redis.delPattern('listings:*');

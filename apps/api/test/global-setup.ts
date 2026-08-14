@@ -33,31 +33,40 @@ export default async function globalSetup() {
   }
 
   // Push schema to test database (fast if already in sync)
-  try {
-    fs.writeFileSync(envPath, `DATABASE_URL="${DATABASE_URL}"\n`);
-    execSync('npx prisma db push --skip-generate --accept-data-loss', {
-      cwd: apiDir,
-      stdio: 'pipe',
-    });
-    console.log(`   ✔ Schema synced`);
-  } catch (err: any) {
-    const stderr = err.stderr?.toString() || '';
-    // If the database doesn't exist, give a clear error
-    if (stderr.includes('does not exist')) {
-      console.error(`\n   ✖ Database "${dbName}" does not exist!`);
-      console.error(`   Run: docker exec carone-postgres psql -U postgres -c "CREATE DATABASE ${dbName}"`);
-      console.error(`   Then re-run tests.\n`);
-    } else {
-      console.error(`   ✖ Schema push failed:`, stderr || err.message);
-    }
-    throw err;
-  } finally {
-    // Restore original .env
-    if (envBackup !== null) {
-      fs.writeFileSync(envPath, envBackup);
-    } else {
-      // No original .env existed — remove the temp one
-      if (fs.existsSync(envPath)) fs.unlinkSync(envPath);
+  if (process.env.SKIP_DB_PUSH === 'true') {
+    console.log(`   ⚡ SKIP_DB_PUSH is set — skipping schema push & PostGIS setup`);
+  } else {
+    try {
+      fs.writeFileSync(envPath, `DATABASE_URL="${DATABASE_URL}"\n`);
+      console.log(`   ⏳ Syncing schema via prisma db push...`);
+      execSync('npx prisma db push --skip-generate --accept-data-loss', {
+        cwd: apiDir,
+        stdio: 'inherit',
+        env: { ...process.env, DATABASE_URL },
+      });
+      console.log(`   ⏳ Ensuring PostGIS columns...`);
+      execSync('npx ts-node prisma/add-postgis.ts', {
+        cwd: apiDir,
+        stdio: 'inherit',
+        env: { ...process.env, DATABASE_URL },
+      });
+      console.log(`   ✔ Schema and PostGIS columns synced`);
+    } catch (err: any) {
+      const stderr = err.stderr?.toString() || '';
+      if (stderr.includes('does not exist')) {
+        console.error(`\n   ✖ Database "${dbName}" does not exist!`);
+        throw err;
+      } else {
+        console.warn(`   ⚠ Schema push skipped or already up-to-date:`, stderr || err.message);
+      }
+    } finally {
+      // Restore original .env
+      if (envBackup !== null) {
+        fs.writeFileSync(envPath, envBackup);
+      } else {
+        // No original .env existed — remove the temp one
+        if (fs.existsSync(envPath)) fs.unlinkSync(envPath);
+      }
     }
   }
 

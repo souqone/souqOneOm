@@ -1,7 +1,5 @@
-import {
-  IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, Max, MinLength,
-} from 'class-validator';
+import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
+  IsBoolean, Min, Max, MinLength, } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   JobType, EmploymentType, SalaryPeriod, LicenseType,
@@ -82,8 +80,16 @@ export class CreateJobDto {
   governorate!: string;
 
   @IsOptional()
+  @IsInt()
+  governorateId?: number;
+
+  @IsOptional()
   @IsString()
   city?: string;
+
+  @IsOptional()
+  @IsInt()
+  wilayaId?: number;
 
   @IsOptional()
   @IsString()
@@ -96,4 +102,12 @@ export class CreateJobDto {
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 }

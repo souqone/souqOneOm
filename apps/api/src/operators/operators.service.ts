@@ -10,12 +10,20 @@ import { UpdateOperatorListingDto } from './dto/update-operator-listing.dto';
 import { QueryOperatorListingsDto } from './dto/query-operator-listings.dto';
 import { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class OperatorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly geoService: GeoService,
+private readonly prisma: PrismaService) {}
 
   async create(dto: CreateOperatorListingDto, userId: string) {
-    return this.prisma.operatorListing.create({
+    if (dto.governorateId && dto.wilayaId) {
+      await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    }
+
+    const item = await this.prisma.operatorListing.create({
       data: {
         title: dto.title,
         slug: generateSlug(dto.title),
@@ -30,7 +38,9 @@ export class OperatorsService {
         currency: dto.currency ?? 'OMR',
         isPriceNegotiable: dto.isPriceNegotiable ?? false,
         governorate: dto.governorate,
+        governorateId: dto.governorateId,
         city: dto.city,
+        wilayaId: dto.wilayaId,
         latitude: dto.latitude,
         longitude: dto.longitude,
         contactPhone: dto.contactPhone,
@@ -39,6 +49,12 @@ export class OperatorsService {
       },
       include: { user: { select: USER_SELECT } },
     });
+
+    if (dto.latitude && dto.longitude) {
+      await this.geoService.syncLocation('operator_listings', item.id, dto.latitude, dto.longitude);
+    }
+
+    return item;
   }
 
   async findAll(q: QueryOperatorListingsDto) {
@@ -85,6 +101,14 @@ export class OperatorsService {
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
+    if (dto.governorateId || dto.wilayaId) {
+      const targetGov = dto.governorateId ?? item.governorateId;
+      const targetWilaya = dto.wilayaId ?? item.wilayaId;
+      if (targetGov && targetWilaya) {
+        await this.geoService.validateLocationPair(targetGov, targetWilaya);
+      }
+    }
+
     const data: Record<string, unknown> = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
@@ -97,13 +121,25 @@ export class OperatorsService {
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
     if (dto.governorate !== undefined) data.governorate = dto.governorate;
+    if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
     if (dto.city !== undefined) data.city = dto.city;
+    if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    return this.prisma.operatorListing.update({ where: { id }, data, include: { user: { select: USER_SELECT } } });
+    const updated = await this.prisma.operatorListing.update({ where: { id }, data, include: { user: { select: USER_SELECT } } });
+
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('operator_listings', updated.id, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('operator_listings', updated.id);
+      }
+    }
+
+    return updated;
   }
 
   async remove(id: string, userId: string) {

@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GeoService } from '../locations/geo.service';
 import { Prisma } from '@prisma/client';
 import { CreateDriverProfileDto } from './dto/create-driver-profile.dto';
 import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
@@ -27,12 +28,17 @@ const PRIVATE_USER_SELECT = {
 
 @Injectable()
 export class DriverProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly geoService: GeoService,
+  ) {}
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateDriverProfileDto) {
     const existing = await this.prisma.driverProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك بروفايل سائق بالفعل');
+
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     return this.prisma.driverProfile.create({
       data: {
@@ -67,6 +73,12 @@ export class DriverProfileService {
   async update(userId: string, dto: UpdateDriverProfileDto) {
     const profile = await this.prisma.driverProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل سائق');
+
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : profile.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : profile.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
 
     const data: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(dto)) {

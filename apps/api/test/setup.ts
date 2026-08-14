@@ -23,7 +23,6 @@ import { UploadsModule } from '../src/uploads/uploads.module';
 import { MailModule } from '../src/mail/mail.module';
 import { CloudinaryModule } from '../src/cloudinary/cloudinary.module';
 import { CarsModule } from '../src/cars/cars.module';
-import { BookingsModule } from '../src/bookings/bookings.module';
 import { JobsModule } from '../src/jobs/jobs.module';
 import { PartsModule } from '../src/parts/parts.module';
 import { ServicesModule } from '../src/services/services.module';
@@ -31,6 +30,10 @@ import { TransportModule } from '../src/transport/transport.module';
 import { SearchModule } from '../src/search/search.module';
 import { BusesModule } from '../src/buses/buses.module';
 import { EquipmentModule } from '../src/equipment/equipment.module';
+import { OperatorsModule } from '../src/operators/operators.module';
+import { ReviewsModule } from '../src/reviews/reviews.module';
+import { PaymentsModule } from '../src/payments/payments.module';
+import { LocationsModule } from '../src/locations/locations.module';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 import { MailService } from '../src/mail/mail.service';
@@ -108,7 +111,6 @@ export async function createTestApp(): Promise<INestApplication> {
       MailModule,
       CloudinaryModule,
       CarsModule,
-      BookingsModule,
       JobsModule,
       PartsModule,
       ServicesModule,
@@ -116,6 +118,10 @@ export async function createTestApp(): Promise<INestApplication> {
       SearchModule,
       BusesModule,
       EquipmentModule,
+      OperatorsModule,
+      ReviewsModule,
+      PaymentsModule,
+      LocationsModule,
     ],
     controllers: [AppController],
     providers: [

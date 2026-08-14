@@ -4,7 +4,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { SearchService } from '../../search/search.service';
+import { GeoService } from '../../locations/geo.service';
 import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
 
 // ── Mocks ──
 const mockPrisma: any = {
@@ -67,6 +72,7 @@ describe('JobsService', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: SearchService, useValue: mockSearch },
+        { provide: GeoService, useValue: mockGeoService },
       ],
     }).compile();
 
@@ -112,6 +118,15 @@ describe('JobsService', () => {
       mockPrisma.driverJob.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('create', () => {
+    it('should fail on create if wilaya mismatch (RED)', async () => {
+      mockPrisma.employerProfile.findUnique.mockResolvedValue({ id: 'emp-1', userId: 'user1' });
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { title: 'New Job', jobType: 'HIRING', governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.create('user1', dto)).rejects.toThrow('Mismatch');
     });
   });
 
@@ -169,6 +184,13 @@ describe('JobsService', () => {
       await expect(
         service.update('nonexistent', 'user1', {} as any),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should fail on update if wilaya mismatch (RED)', async () => {
+      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.update('1', 'user1', dto)).rejects.toThrow('Mismatch');
     });
 
     it('should reject minAge >= maxAge (BL-4)', async () => {

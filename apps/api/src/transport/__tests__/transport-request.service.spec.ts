@@ -3,7 +3,12 @@ import { TransportRequestService } from '../transport-request.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { GeoService } from '../../locations/geo.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
 
 const mockPrisma = {
   transportRequest: {
@@ -47,6 +52,7 @@ describe('TransportRequestService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockRedis },
         { provide: NotificationsService, useValue: mockNotifications },
+        { provide: GeoService, useValue: mockGeoService },
       ],
     }).compile();
 
@@ -91,6 +97,14 @@ describe('TransportRequestService', () => {
       const result = await service.findAll({});
       expect(result.items).toEqual(items);
       expect(mockRedis.set).toHaveBeenCalled();
+    });
+  });
+
+  describe('create', () => {
+    it('should fail on create if wilaya mismatch (RED)', async () => {
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { pickupGovId: 1, pickupWilayaId: 10, dropoffGovId: 2, dropoffWilayaId: 2 } as any;
+      await expect(service.create('user1', dto)).rejects.toThrow('Mismatch');
     });
   });
 

@@ -1,8 +1,6 @@
-import {
-  IsString, IsEnum, IsOptional, IsNumber, IsBoolean,
+import { IsString, IsEnum, IsOptional, IsNumber, IsBoolean,
   IsDateString, Min, MinLength,
-  registerDecorator, ValidationOptions, ValidationArguments,
-} from 'class-validator';
+  registerDecorator, ValidationOptions, ValidationArguments, } from 'class-validator';
 
 function IsBudgetRangeValid(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {

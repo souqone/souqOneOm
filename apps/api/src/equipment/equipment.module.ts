@@ -4,13 +4,13 @@ import { RedisModule } from '../redis/redis.module';
 import { UploadsModule } from '../uploads/uploads.module';
 import { EquipmentListingsService } from './equipment-listings.service';
 import { EquipmentController } from './equipment.controller';
-import { OperatorsController } from './operators.controller';
-import { OperatorsService } from './operators.service';
+
+import { LocationsModule } from '../locations/locations.module';
 
 @Module({
-  imports: [PrismaModule, RedisModule, UploadsModule],
-  controllers: [EquipmentController, OperatorsController],
-  providers: [EquipmentListingsService, OperatorsService],
+  imports: [LocationsModule, PrismaModule, RedisModule, UploadsModule],
+  controllers: [EquipmentController],
+  providers: [EquipmentListingsService],
   exports: [EquipmentListingsService],
 })
 export class EquipmentModule {}

@@ -12,8 +12,10 @@ import { RedisModule } from '../redis/redis.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SearchModule } from '../search/search.module';
 
+import { LocationsModule } from '../locations/locations.module';
+
 @Module({
-  imports: [PrismaModule, RedisModule, NotificationsModule, SearchModule],
+  imports: [LocationsModule, PrismaModule, RedisModule, NotificationsModule, SearchModule],
   controllers: [JobsController, AdminJobsController],
   providers: [JobsService, JobExpiryService, DriverProfileService, EmployerProfileService, DriverVerificationService, AdminJobsService],
 })

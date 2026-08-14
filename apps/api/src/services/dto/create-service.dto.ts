@@ -1,7 +1,5 @@
-import {
-  IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, MaxLength, MinLength,
-} from 'class-validator';
+import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
+  IsBoolean, Min, MaxLength, MinLength, } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ServiceType, ProviderType } from '@prisma/client';
 
@@ -66,8 +64,16 @@ export class CreateServiceDto {
   governorate!: string;
 
   @IsOptional()
+  @IsInt()
+  governorateId?: number;
+
+  @IsOptional()
   @IsString()
   city?: string;
+
+  @IsOptional()
+  @IsInt()
+  wilayaId?: number;
 
   @IsOptional()
   @IsString()

@@ -8,6 +8,8 @@ import { BaseListingService, ListingConfig } from '../common/services/base-listi
 import { CreateServiceDto } from './dto/create-service.dto';
 import { QueryServicesDto } from './dto/query-services.dto';
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class ServicesService extends BaseListingService {
   protected readonly config: ListingConfig = {
@@ -18,7 +20,9 @@ export class ServicesService extends BaseListingService {
     decimalFields: ['priceFrom', 'priceTo'],
   };
 
-  constructor(prisma: PrismaService, searchService: SearchService, redis: RedisService, eventEmitter: EventEmitter2) {
+  constructor(
+    private readonly geoService: GeoService,
+prisma: PrismaService, searchService: SearchService, redis: RedisService, eventEmitter: EventEmitter2) {
     super(prisma, searchService, redis, eventEmitter);
   }
 
@@ -39,7 +43,9 @@ export class ServicesService extends BaseListingService {
       workingHoursClose: dto.workingHoursClose,
       workingDays: dto.workingDays ?? [],
       governorate: dto.governorate,
+        governorateId: dto.governorateId,
       city: dto.city,
+        wilayaId: dto.wilayaId,
       address: dto.address,
       latitude: dto.latitude,
       longitude: dto.longitude,
@@ -48,6 +54,37 @@ export class ServicesService extends BaseListingService {
       website: dto.website,
       userId,
     };
+  }
+
+  async create(dto: CreateServiceDto, userId: string) {
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
+    const item = await super.create(dto, userId);
+    if (dto.latitude && dto.longitude) {
+      await this.geoService.syncLocation('car_services', item.id, dto.latitude, dto.longitude);
+    }
+    return item;
+  }
+
+  async update(id: string, userId: string, dto: Partial<CreateServiceDto>) {
+    const existing = await this.prisma.carService.findUnique({ where: { id } });
+    if (existing) {
+      const nextGovId = dto.governorateId !== undefined ? dto.governorateId : existing.governorateId;
+      const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : existing.wilayaId;
+      if (nextGovId || nextWilayaId) {
+        await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+      }
+    }
+
+    const item = await super.update(id, userId, dto);
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('car_services', item.id, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('car_services', item.id);
+      }
+    }
+    return item;
   }
 
   async findAll(query: QueryServicesDto) {
