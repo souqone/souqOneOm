@@ -1,6 +1,6 @@
 import {
   IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, MinLength,
+  IsBoolean, Min, MinLength, IsInt, IsPositive,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { LicenseType } from '@prisma/client';
@@ -54,4 +54,16 @@ export class CreateDriverProfileDto {
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  governorateId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  wilayaId?: number;
 }

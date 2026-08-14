@@ -37,17 +37,31 @@ const DETAIL_CACHE_TTL = 600;
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class TransportRequestService {
   private readonly logger = new Logger(TransportRequestService.name);
 
   constructor(
+    private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly notifications: NotificationsService,
   ) {}
 
   async create(userId: string, dto: CreateTransportRequestDto) {
+    const fromGovId = dto.fromGovernorateId ?? dto.pickupGovId;
+    const fromWilayaId = dto.fromWilayaId ?? dto.pickupWilayaId;
+    if (fromGovId && fromWilayaId) {
+      await this.geoService.validateLocationPair(fromGovId, fromWilayaId);
+    }
+    const toGovId = dto.toGovernorateId ?? dto.dropoffGovId;
+    const toWilayaId = dto.toWilayaId ?? dto.dropoffWilayaId;
+    if (toGovId && toWilayaId) {
+      await this.geoService.validateLocationPair(toGovId, toWilayaId);
+    }
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
@@ -60,11 +74,15 @@ export class TransportRequestService {
         fromAddress: dto.fromAddress,
         fromLat: dto.fromLat,
         fromLng: dto.fromLng,
+        fromGovernorateId: fromGovId,
+        fromWilayaId: fromWilayaId,
         toGovernorate: dto.toGovernorate,
         toCity: dto.toCity,
         toAddress: dto.toAddress,
         toLat: dto.toLat,
         toLng: dto.toLng,
+        toGovernorateId: toGovId,
+        toWilayaId: toWilayaId,
         cargoDescription: dto.cargoDescription,
         weightTons: dto.weightTons,
         requiresHelper: dto.requiresHelper ?? false,
@@ -77,6 +95,13 @@ export class TransportRequestService {
       },
       include: { user: { select: USER_SELECT } },
     });
+
+    if (dto.fromLat && dto.fromLng) {
+      await this.geoService.syncLocation('transport_requests', request.id, dto.fromLat, dto.fromLng, 'id', 'fromLocation');
+    }
+    if (dto.toLat && dto.toLng) {
+      await this.geoService.syncLocation('transport_requests', request.id, dto.toLat, dto.toLng, 'id', 'toLocation');
+    }
 
     // Notify matching available carriers
     this.notifyMatchingCarriers(request).catch((err) =>
@@ -363,6 +388,22 @@ export class TransportRequestService {
         ...(dto.budgetMax !== undefined && { budgetMax: new Prisma.Decimal(dto.budgetMax) }),
       },
     });
+
+    if (dto.fromLat !== undefined && dto.fromLng !== undefined) {
+      if (dto.fromLat && dto.fromLng) {
+        await this.geoService.syncLocation('transport_requests', updated.id, dto.fromLat, dto.fromLng, 'id', 'fromLocation');
+      } else if (dto.fromLat === null || dto.fromLng === null) {
+        await this.geoService.clearLocation('transport_requests', updated.id, 'id', 'fromLocation');
+      }
+    }
+
+    if (dto.toLat !== undefined && dto.toLng !== undefined) {
+      if (dto.toLat && dto.toLng) {
+        await this.geoService.syncLocation('transport_requests', updated.id, dto.toLat, dto.toLng, 'id', 'toLocation');
+      } else if (dto.toLat === null || dto.toLng === null) {
+        await this.geoService.clearLocation('transport_requests', updated.id, 'id', 'toLocation');
+      }
+    }
 
     await this.redis.delPattern('transport:list:*');
     await this.redis.del(`transport:request:${id}`);

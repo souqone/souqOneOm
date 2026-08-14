@@ -15,7 +15,8 @@ const validEquipment = {
   condition: 'USED',
   dailyPrice: 120,
   monthlyPrice: 2800,
-  governorate: 'Muscat',
+  governorateId: 1, // Muscat
+  wilayaId: 1,      // Seeb
   contactPhone: '+96899223344',
 };
 
@@ -67,6 +68,16 @@ describe('Equipment Listings API (e2e)', () => {
         .post('/api/equipment')
         .set('Authorization', `Bearer ${accessToken}`)
         .send(noTitle)
+        .expect(400);
+    });
+
+    it('should reject invalid location pair (governorate vs wilaya mismatch)', async () => {
+      const { accessToken } = await registerUser();
+      // wilayaId: 50 exists but does not belong to governorateId: 1
+      await request(getApp().getHttpServer())
+        .post('/api/equipment')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ ...validEquipment, governorateId: 1, wilayaId: 50 })
         .expect(400);
     });
   });

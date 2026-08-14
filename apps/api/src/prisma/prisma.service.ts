@@ -5,8 +5,20 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
+  constructor() {
+    const url = process.env.DATABASE_URL;
+    super({
+      datasources: url ? { db: { url } } : undefined,
+    });
+  }
+
   async onModuleInit() {
-    await this.$connect();
+    try {
+      await this.$connect();
+    } catch (err: any) {
+      this.logger.error(`Prisma connection error: ${err.message}`);
+      throw err;
+    }
   }
 
   async onModuleDestroy() {

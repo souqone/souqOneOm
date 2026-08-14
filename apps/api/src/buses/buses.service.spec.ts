@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SearchService } from '../search/search.service';
+import { GeoService } from '../locations/geo.service';
 
 // ── Mocks ──
 
@@ -55,6 +56,10 @@ const mockSearch = {
   removeDocument: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
+
 // ── Test Data ──
 
 const mockBus = {
@@ -99,6 +104,7 @@ describe('BusesService', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: SearchService, useValue: mockSearch },
+        { provide: GeoService, useValue: mockGeoService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
@@ -569,6 +575,20 @@ describe('BusesService', () => {
       await service.update('bus-1', 'user-1', { title: 'new title' });
 
       expect(mockPrisma.busListingPriceHistory.create).not.toHaveBeenCalled();
+    });
+  });
+  describe('cross-validation for locations (RED)', () => {
+    it('should fail on create if wilaya mismatch', async () => {
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { title: 'Bus', governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.create(dto, 'user-1')).rejects.toThrow('Mismatch');
+    });
+
+    it('should fail on update if wilaya mismatch', async () => {
+      mockPrisma.busListing.findUnique.mockResolvedValueOnce(mockBus);
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.update('bus-1', 'user-1', dto)).rejects.toThrow('Mismatch');
     });
   });
 });

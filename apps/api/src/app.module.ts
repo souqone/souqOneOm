@@ -27,6 +27,7 @@ import { OperatorsModule } from './operators/operators.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { PaymentsModule } from './payments/payments.module';
 import { TransportModule } from './transport/transport.module';
+import { LocationsModule } from './locations/locations.module';
 import { ListingNotificationListener } from './common/listeners/listing-notification.listener';
 
 @Module({
@@ -56,6 +57,7 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     ReviewsModule,
     PaymentsModule,
     TransportModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [

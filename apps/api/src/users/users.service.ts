@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GeoService } from '../locations/geo.service';
 import * as bcrypt from 'bcryptjs';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly geoService: GeoService,
+  ) {}
 
   private readonly publicSelect = {
     id: true,
@@ -85,7 +89,7 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
         displayName: dto.displayName,
@@ -93,11 +97,25 @@ export class UsersService {
         phone: dto.phone,
         country: dto.country,
         governorate: dto.governorate,
+        governorateId: dto.governorateId,
         city: dto.city,
+        wilayaId: dto.wilayaId,
         avatarUrl: dto.avatarUrl,
+        ...(dto.latitude !== undefined && { latitude: dto.latitude }),
+        ...(dto.longitude !== undefined && { longitude: dto.longitude }),
       },
       select: this.privateSelect,
     });
+
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('users', userId, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('users', userId);
+      }
+    }
+
+    return updated;
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {

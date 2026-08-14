@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GeoService } from '../locations/geo.service';
 import { CreateEmployerProfileDto } from './dto/create-employer-profile.dto';
 import { UpdateEmployerProfileDto } from './dto/update-employer-profile.dto';
 
@@ -25,12 +26,17 @@ const PRIVATE_USER_SELECT = {
 
 @Injectable()
 export class EmployerProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly geoService: GeoService,
+  ) {}
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateEmployerProfileDto) {
     const existing = await this.prisma.employerProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك بروفايل صاحب عمل بالفعل');
+
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     return this.prisma.employerProfile.create({
       data: {
@@ -41,6 +47,8 @@ export class EmployerProfileService {
         bio: dto.bio,
         governorate: dto.governorate,
         city: dto.city,
+        governorateId: dto.governorateId,
+        wilayaId: dto.wilayaId,
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },
@@ -62,6 +70,12 @@ export class EmployerProfileService {
   async update(userId: string, dto: UpdateEmployerProfileDto) {
     const profile = await this.prisma.employerProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل صاحب عمل');
+
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : profile.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : profile.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
 
     const data: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(dto)) {

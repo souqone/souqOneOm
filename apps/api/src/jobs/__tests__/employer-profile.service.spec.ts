@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EmployerProfileService } from '../employer-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { GeoService } from '../../locations/geo.service';
+
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
 
 const mockPrisma = {
   employerProfile: {
@@ -20,6 +25,7 @@ describe('EmployerProfileService', () => {
       providers: [
         EmployerProfileService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: GeoService, useValue: mockGeoService },
       ],
     }).compile();
     service = module.get<EmployerProfileService>(EmployerProfileService);
@@ -49,6 +55,13 @@ describe('EmployerProfileService', () => {
       await expect(
         service.create('user1', { governorate: 'Muscat' } as any),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('should fail on create if wilaya mismatch (RED)', async () => {
+      mockPrisma.employerProfile.findUnique.mockResolvedValue(null);
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.create('user1', dto)).rejects.toThrow('Mismatch');
     });
   });
 
@@ -85,6 +98,13 @@ describe('EmployerProfileService', () => {
       await expect(
         service.update('user1', { companyName: 'X' } as any),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should fail on update if wilaya mismatch (RED)', async () => {
+      mockPrisma.employerProfile.findUnique.mockResolvedValue({ id: 'ep1', userId: 'user1' });
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.update('user1', dto)).rejects.toThrow('Mismatch');
     });
   });
 

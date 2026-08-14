@@ -3,6 +3,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { GeoService } from '../locations/geo.service';
 import { RedisService } from '../redis/redis.service';
 import { SearchService } from '../search/search.service';
 
@@ -38,6 +39,10 @@ const mockEventEmitter = {
   emit: jest.fn(),
 };
 
+const mockGeoService = {
+  validateLocationPair: jest.fn(),
+};
+
 // ── Test data ──────────────────────────────────────
 const mockItem = {
   id: 'svc-1',
@@ -70,6 +75,7 @@ describe('ServicesService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockRedis },
         { provide: SearchService, useValue: mockSearch },
+        { provide: GeoService, useValue: mockGeoService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
@@ -99,6 +105,12 @@ describe('ServicesService', () => {
       expect(mockPrisma.carService.create).toHaveBeenCalledTimes(1);
       expect(mockSearch.indexDocument).toHaveBeenCalledTimes(1);
       expect(mockRedis.delPattern).toHaveBeenCalled();
+    });
+
+    it('should fail on create if wilaya mismatch (RED)', async () => {
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { title: 'Service', governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.create(dto, 'user-1')).rejects.toThrow('Mismatch');
     });
   });
 
@@ -233,6 +245,12 @@ describe('ServicesService', () => {
       const updateCall = mockPrisma.carService.update.mock.calls[0][0];
       const { Decimal } = require('@prisma/client/runtime/library');
       expect(updateCall.data.priceFrom).toBeInstanceOf(Decimal);
+    });
+    it('should fail on update if wilaya mismatch (RED)', async () => {
+      mockPrisma.carService.findUnique.mockResolvedValueOnce(mockItem);
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
+      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      await expect(service.update('svc-1', 'user-1', dto)).rejects.toThrow('Mismatch');
     });
   });
 

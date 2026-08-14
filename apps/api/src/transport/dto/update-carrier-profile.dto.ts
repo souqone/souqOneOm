@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsArray, IsEnum, IsBoolean, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsEnum, IsBoolean, MinLength, IsInt, IsPositive } from 'class-validator';
+import { Type } from 'class-transformer';
 import { VehicleType, TransportServiceType } from '@prisma/client';
 
 export class UpdateCarrierProfileDto {
@@ -40,4 +41,16 @@ export class UpdateCarrierProfileDto {
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  governorateId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  wilayaId?: number;
 }

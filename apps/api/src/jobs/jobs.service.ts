@@ -46,11 +46,14 @@ const PUBLIC_USER_SELECT = {
   createdAt: true,
 };
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class JobsService {
   private readonly logger = new Logger(JobsService.name);
 
   constructor(
+    private readonly geoService: GeoService,
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsService,
@@ -92,6 +95,8 @@ export class JobsService {
       if (!dp) throw new ForbiddenException('يجب إنشاء ملف سائق قبل نشر عرض خدمة');
     }
 
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
     const baseSlug = generateSlug(dto.title);
 
     const createData = {
@@ -110,7 +115,9 @@ export class JobsService {
       vehicleTypes: dto.vehicleTypes ?? [],
       hasOwnVehicle: dto.hasOwnVehicle ?? false,
       governorate: dto.governorate,
+        governorateId: dto.governorateId,
       city: dto.city,
+        wilayaId: dto.wilayaId,
       contactPhone: dto.contactPhone,
       contactEmail: dto.contactEmail,
       whatsapp: dto.whatsapp,
@@ -129,6 +136,10 @@ export class JobsService {
           data: { ...createData, slug },
           include,
         });
+
+        if (dto.latitude && dto.longitude) {
+          await this.geoService.syncLocation('driver_jobs', job.id, dto.latitude, dto.longitude);
+        }
 
         this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(job))
           .catch((err) => this.logger.warn(`Failed to index job ${job.id}: ${(err as Error).message}`));
@@ -245,6 +256,12 @@ export class JobsService {
     if (!job) throw new NotFoundException('الوظيفة غير موجودة');
     if (job.userId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذه الوظيفة');
 
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : job.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : job.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
+
     // AUTH-2: enforce state machine — EXPIRED is terminal, CLOSED cannot re-open
     if (dto.status !== undefined) {
       const allowed = JOB_STATUS_TRANSITIONS[job.status] ?? [];
@@ -279,6 +296,14 @@ export class JobsService {
       data,
       include: { user: { select: PUBLIC_USER_SELECT } },
     });
+
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('driver_jobs', updated.id, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('driver_jobs', updated.id);
+      }
+    }
 
     // M-1 + NOTIF-2: on close, reject all PENDING applications and notify applicants
     if (dto.status === 'CLOSED') {

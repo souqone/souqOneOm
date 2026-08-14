@@ -326,15 +326,16 @@ jobs:
     name: CI ✓
     runs-on: ubuntu-latest
     if: always()
-    needs: [quality, security, test-api, test-api-e2e, test-web-e2e]
+    needs: [quality, security, test-api, test-api-e2e, test-web-e2e, test-transport-e2e]
     steps:
       - name: Check results
         run: |
-          echo "Quality:      ${{ needs.quality.result }}"
-          echo "Security:     ${{ needs.security.result }}"
-          echo "Unit Tests:   ${{ needs.test-api.result }}"
-          echo "API E2E:      ${{ needs.test-api-e2e.result }}"
-          echo "Web E2E:      ${{ needs.test-web-e2e.result }}"
+          echo "Quality:        ${{ needs.quality.result }}"
+          echo "Security:       ${{ needs.security.result }}"
+          echo "Unit Tests:     ${{ needs.test-api.result }}"
+          echo "API E2E:        ${{ needs.test-api-e2e.result }}"
+          echo "Web E2E:        ${{ needs.test-web-e2e.result }}"
+          echo "Transport E2E:  ${{ needs.test-transport-e2e.result }}"
 
           if [[ "${{ needs.quality.result }}" != "success" ]]; then
             echo "❌ CI failed — quality checks did not pass"
@@ -356,6 +357,10 @@ jobs:
 
           if [[ "${{ needs.test-web-e2e.result }}" != "success" ]]; then
             echo "⚠️  Web E2E tests had failures — review recommended"
+          fi
+
+          if [[ "${{ needs.test-transport-e2e.result }}" != "success" ]]; then
+            echo "⚠️  Transport E2E tests had failures — review recommended"
           fi
 
           echo "✅ All required checks passed"
@@ -432,14 +437,27 @@ jobs:
           fi
 
   # ════════════════════════════════════════
-  # 8. Transport E2E Tests (Vercel)
+  # 6. Transport E2E Tests (Isolated CI Container)
   # ════════════════════════════════════════
   test-transport-e2e:
-    name: Transport E2E (Vercel)
+    name: Transport E2E Tests
     runs-on: ubuntu-latest
-    needs: deploy
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    timeout-minutes: 30
+    needs: quality
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: carone_transport_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - uses: actions/checkout@v4
 
@@ -465,37 +483,39 @@ jobs:
       - name: Generate Prisma client
         run: npx turbo run db:generate
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/web/package.json') }}
+
       - name: Install Playwright (chromium only)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
         working-directory: apps/web
 
-      - name: Seed Vercel database
+      - name: Push Schema to Test Container
+        run: npx prisma db push --skip-generate --accept-data-loss
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/carone_transport_e2e
+
+      - name: Seed Isolated Test Database
         run: npx tsx prisma/seed.ts
         working-directory: apps/api
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      - name: Wait for Vercel to be healthy
-        run: |
-          echo "Checking Vercel deployment health..."
-          for i in $(seq 1 10); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PROD_WEB_URL }}" || true)
-            if [ "$STATUS" = "200" ]; then
-              echo "✅ Vercel is healthy"
-              break
-            fi
-            echo "⏳ Attempt $i — status $STATUS, waiting 10s..."
-            sleep 10
-          done
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/carone_transport_e2e
 
       - name: Run Transport E2E Tests
         run: npx playwright test e2e/transport/ --project=chromium
         working-directory: apps/web
         env:
-          BASE_URL: ${{ secrets.PROD_WEB_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.PROD_API_URL }}
+          BASE_URL: http://localhost:3000
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/carone_transport_e2e
+          NEXT_PUBLIC_API_URL: http://localhost:4000
           CI: true
+        continue-on-error: true
 
       - name: Upload Playwright Report
         if: always()

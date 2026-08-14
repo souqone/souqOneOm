@@ -23,9 +23,13 @@ const USER_SELECT = {
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 
+
+
 @Injectable()
 export class CarrierProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService
+  ) {}
 
   async create(userId: string, dto: CreateCarrierProfileDto) {
     const existing = await this.prisma.carrierProfile.findUnique({ where: { userId } });

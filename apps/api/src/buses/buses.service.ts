@@ -29,11 +29,14 @@ const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
   SUSPENDED: [],
 };
 
+import { GeoService } from '../locations/geo.service';
+
 @Injectable()
 export class BusesService {
   private readonly logger = new Logger(BusesService.name);
 
   constructor(
+    private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly search: SearchService,
@@ -81,6 +84,8 @@ export class BusesService {
 
 
   async create(dto: CreateBusListingDto, userId: string) {
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
     const slug = generateSlug(dto.title);
 
     const bus = await this.prisma.busListing.create({
@@ -114,7 +119,9 @@ export class BusesService {
         monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
         withDriver: dto.withDriver ?? false,
         governorate: dto.governorate,
+        governorateId: dto.governorateId,
         city: dto.city,
+        wilayaId: dto.wilayaId,
         latitude: dto.latitude,
         longitude: dto.longitude,
         contactPhone: dto.contactPhone,
@@ -126,6 +133,10 @@ export class BusesService {
         images: true,
       },
     });
+
+    if (dto.latitude && dto.longitude) {
+      await this.geoService.syncLocation('bus_listings', bus.id, dto.latitude, dto.longitude);
+    }
 
     await this.invalidateCache();
     this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(bus)).catch(() => {});
@@ -298,6 +309,12 @@ export class BusesService {
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (bus.userId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : bus.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : bus.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
+
     // Status state machine validation
     if (dto.status) {
       const allowed = ALLOWED_TRANSITIONS[bus.status] ?? [];
@@ -334,6 +351,14 @@ export class BusesService {
         images: { orderBy: { order: 'asc' } },
       },
     });
+
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      if (dto.latitude && dto.longitude) {
+        await this.geoService.syncLocation('bus_listings', updated.id, dto.latitude, dto.longitude);
+      } else if (dto.latitude === null || dto.longitude === null) {
+        await this.geoService.clearLocation('bus_listings', updated.id);
+      }
+    }
 
     if (statusChanged) {
       await this.prisma.busListingStatusLog.create({

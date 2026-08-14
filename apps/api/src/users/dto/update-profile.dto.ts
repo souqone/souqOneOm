@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, IsInt } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -27,9 +27,23 @@ export class UpdateProfileDto {
   governorate?: string;
 
   @IsOptional()
+  @IsInt()
+  governorateId?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(50)
   city?: string;
+
+  @IsOptional()
+  @IsInt()
+  wilayaId?: number;
+
+  @IsOptional()
+  latitude?: number;
+
+  @IsOptional()
+  longitude?: number;
 
   @IsOptional()
   @IsString()

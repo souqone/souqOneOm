@@ -3,8 +3,10 @@ import { PartsController } from './parts.controller';
 import { PartsService } from './parts.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
+import { LocationsModule } from '../locations/locations.module';
+
 @Module({
-  imports: [PrismaModule],
+  imports: [LocationsModule, PrismaModule],
   controllers: [PartsController],
   providers: [PartsService],
   exports: [PartsService],

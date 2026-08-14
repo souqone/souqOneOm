@@ -18,54 +18,65 @@ datasource db {
 // المستخدم — User
 // ──────────────────────────────────────
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
-  displayName   String?
-  avatarUrl     String?
-  passwordHash  String?
-  googleId      String?   @unique
-  bio           String?
-  phone         String?
-  country       String?
-  governorate   String?
-  city          String?
+  id                      String    @id @default(cuid())
+  email                   String    @unique
+  username                String    @unique
+  displayName             String?
+  avatarUrl               String?
+  passwordHash            String?
+  googleId                String?   @unique
+  bio                     String?
+  phone                   String?
+  country                 String?
+  governorate             String?
+  city                    String?
   isVerified              Boolean   @default(false)
   emailVerificationCode   String?
   emailVerificationExpiry DateTime?
   passwordResetCode       String?
   passwordResetExpiry     DateTime?
   role                    UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
-  listings      Listing[]
-  favorites     Favorite[]
-  sentMessages  Message[]                @relation("SentMessages")
-  conversations ConversationParticipant[]
-  notifications Notification[]
-  refreshTokens RefreshToken[]
-  driverJobs     DriverJob[]
-  jobApplications JobApplication[]
-  messageReactions MessageReaction[]
-  spareParts        SparePart[]        @relation("UserSpareParts")
-  carServices       CarService[]       @relation("UserCarServices")
-  busListings       BusListing[]       @relation("UserBusListings")
-  equipmentListings  EquipmentListing[]  @relation("UserEquipmentListings")
-  operatorListings   OperatorListing[]   @relation("UserOperatorListings")
-  reviewsGiven       Review[]            @relation("ReviewsGiven")
-  reviewsReceived    Review[]            @relation("ReviewsReceived")
-  payments           Payment[]
-  subscription       Subscription?
-  averageRating      Float?
-  reviewCount        Int                 @default(0)
-  pushSubscriptions  PushSubscription[]
-  pushTokens         PushToken[]
-  loginAudits        LoginAudit[]
-  driverProfile      DriverProfile?
-  employerProfile    EmployerProfile?
-  carrierProfile     CarrierProfile?
-  transportRequests  TransportRequest[] @relation("UserTransportRequests")
+  listings          Listing[]
+  favorites         Favorite[]
+  sentMessages      Message[]                 @relation("SentMessages")
+  conversations     ConversationParticipant[]
+  notifications     Notification[]
+  refreshTokens     RefreshToken[]
+  driverJobs        DriverJob[]
+  jobApplications   JobApplication[]
+  messageReactions  MessageReaction[]
+  spareParts        SparePart[]               @relation("UserSpareParts")
+  carServices       CarService[]              @relation("UserCarServices")
+  busListings       BusListing[]              @relation("UserBusListings")
+  equipmentListings EquipmentListing[]        @relation("UserEquipmentListings")
+  operatorListings  OperatorListing[]         @relation("UserOperatorListings")
+  reviewsGiven      Review[]                  @relation("ReviewsGiven")
+  reviewsReceived   Review[]                  @relation("ReviewsReceived")
+  payments          Payment[]
+  subscription      Subscription?
+  averageRating     Float?
+  reviewCount       Int                       @default(0)
+  pushSubscriptions PushSubscription[]
+  pushTokens        PushToken[]
+  loginAudits       LoginAudit[]
+  driverProfile     DriverProfile?
+  employerProfile   EmployerProfile?
+  carrierProfile    CarrierProfile?
+  transportRequests TransportRequest[]        @relation("UserTransportRequests")
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([email])
   @@index([username])
@@ -84,7 +95,7 @@ model LoginAudit {
   method    String   @default("EMAIL") // EMAIL | GOOGLE
   ipAddress String?
   userAgent String?
-  reason    String?  // e.g. "WRONG_PASSWORD", "ACCOUNT_LOCKED", "GOOGLE_ONLY"
+  reason    String? // e.g. "WRONG_PASSWORD", "ACCOUNT_LOCKED", "GOOGLE_ONLY"
   createdAt DateTime @default(now())
 
   @@index([email])
@@ -111,82 +122,155 @@ model RefreshToken {
 }
 
 // ──────────────────────────────────────
+// المحافظات والولايات (Location System)
+// ──────────────────────────────────────
+model Governorate {
+  id       Int     @id @default(autoincrement())
+  nameAr   String  @unique
+  nameEn   String  @unique
+  isActive Boolean @default(true)
+
+  wilayas Wilaya[]
+
+  // Relations
+  users             User[]
+  listings          Listing[]
+  driverJobs        DriverJob[]
+  driverProfiles    DriverProfile[]
+  employerProfiles  EmployerProfile[]
+  spareParts        SparePart[]
+  carServices       CarService[]
+  busListings       BusListing[]
+  equipmentListings EquipmentListing[]
+  operatorListings  OperatorListing[]
+  carrierProfiles   CarrierProfile[]
+
+  transportRequestsFrom TransportRequest[] @relation("FromGovernorate")
+  transportRequestsTo   TransportRequest[] @relation("ToGovernorate")
+
+  @@map("governorates")
+}
+
+model Wilaya {
+  id            Int     @id @default(autoincrement())
+  nameAr        String
+  nameEn        String
+  isActive      Boolean @default(true)
+  governorateId Int
+
+  governorate Governorate @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+
+  // Relations
+  users             User[]
+  listings          Listing[]
+  driverJobs        DriverJob[]
+  driverProfiles    DriverProfile[]
+  employerProfiles  EmployerProfile[]
+  spareParts        SparePart[]
+  carServices       CarService[]
+  busListings       BusListing[]
+  equipmentListings EquipmentListing[]
+  operatorListings  OperatorListing[]
+  carrierProfiles   CarrierProfile[]
+
+  transportRequestsFrom TransportRequest[] @relation("FromWilaya")
+  transportRequestsTo   TransportRequest[] @relation("ToWilaya")
+
+  @@unique([governorateId, nameAr])
+  @@unique([governorateId, nameEn])
+  @@index([governorateId])
+  @@map("wilayas")
+}
+
+// ──────────────────────────────────────
 // إعلان السيارة — Listing
 // ──────────────────────────────────────
 model Listing {
-  id                String         @id @default(cuid())
-  title             String
-  slug              String         @unique
-  description       String
+  id          String @id @default(cuid())
+  title       String
+  slug        String @unique
+  description String
 
   // بيانات السيارة
-  make              String
-  model             String
-  trim              String?
-  year              Int
-  mileage           Int?
-  fuelType          FuelType?
-  transmission      Transmission?
-  bodyType          String?
-  exteriorColor     String?
-  interior          String?
-  engineSize        String?
-  horsepower        Int?
-  doors             Int?
-  seats             Int?
-  driveType         String?
-  features          String[]
+  make          String
+  model         String
+  trim          String?
+  year          Int
+  mileage       Int?
+  fuelType      FuelType?
+  transmission  Transmission?
+  bodyType      String?
+  exteriorColor String?
+  interior      String?
+  engineSize    String?
+  horsepower    Int?
+  doors         Int?
+  seats         Int?
+  driveType     String?
+  features      String[]
 
   // نوع الإعلان
-  listingType       ListingType    @default(SALE)
+  listingType ListingType @default(SALE)
 
   // السعر (بيع)
-  price             Decimal        @db.Decimal(12, 2)
-  currency          String         @default("OMR")
-  isPriceNegotiable Boolean        @default(false)
+  price             Decimal @db.Decimal(12, 2)
+  currency          String  @default("OMR")
+  isPriceNegotiable Boolean @default(false)
 
   // سعر الإيجار الاسترشادي
-  dailyPrice        Decimal?       @db.Decimal(12, 2)
-  monthlyPrice      Decimal?       @db.Decimal(12, 2)
-  withDriver        Boolean        @default(false)
-  depositAmount     Decimal?       @db.Decimal(12, 2)
-  minRentalDays     Int?
-  kmLimitPerDay     Int?
+  dailyPrice         Decimal? @db.Decimal(12, 2)
+  monthlyPrice       Decimal? @db.Decimal(12, 2)
+  withDriver         Boolean  @default(false)
+  depositAmount      Decimal? @db.Decimal(12, 2)
+  minRentalDays      Int?
+  kmLimitPerDay      Int?
   cancellationPolicy String?
-  deliveryAvailable  Boolean        @default(false)
-  insuranceIncluded  Boolean        @default(false)
+  deliveryAvailable  Boolean  @default(false)
+  insuranceIncluded  Boolean  @default(false)
 
   // الحالة والعرض
-  condition         ItemCondition  @default(USED)
-  status            ListingStatus  @default(DRAFT)
-  isPremium         Boolean        @default(false)
-  featuredUntil     DateTime?
+  condition     ItemCondition @default(USED)
+  status        ListingStatus @default(DRAFT)
+  isPremium     Boolean       @default(false)
+  featuredUntil DateTime?
 
   // الموقع
-  governorate       String?
-  city              String?
-  latitude          Float?
-  longitude         Float?
+  governorate String?
 
-  viewCount         Int            @default(0)
+  city      String?
+  latitude  Float?
+  longitude Float?
+
+  viewCount Int @default(0)
 
   // روابط master data (اختيارية للتوافق مع الإعلانات القديمة)
-  brandId           String?
-  brand             Brand?         @relation(fields: [brandId], references: [id])
-  carModelId        String?
-  carModel          CarModel?      @relation(fields: [carModelId], references: [id])
-  carTrimId         String?
-  carTrim           CarTrim?       @relation(fields: [carTrimId], references: [id])
+  brandId    String?
+  brand      Brand?    @relation(fields: [brandId], references: [id])
+  carModelId String?
+  carModel   CarModel? @relation(fields: [carModelId], references: [id])
+  carTrimId  String?
+  carTrim    CarTrim?  @relation(fields: [carTrimId], references: [id])
 
-  sellerId          String
-  seller            User           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId String
+  seller   User   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
-  images            ListingImage[]
-  favorites         Favorite[]
-  conversations     Conversation[]
+  images        ListingImage[]
+  favorites     Favorite[]
+  conversations Conversation[]
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([sellerId])
   @@index([brandId])
@@ -209,14 +293,14 @@ model Listing {
 // صور الإعلان — ListingImage
 // ──────────────────────────────────────
 model ListingImage {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   url       String
   alt       String?
-  order     Int      @default(0)
-  isPrimary Boolean  @default(false)
+  order     Int     @default(0)
+  isPrimary Boolean @default(false)
 
   listingId String
-  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -228,14 +312,14 @@ model ListingImage {
 // المحادثات — Conversation (Generic Entity)
 // ──────────────────────────────────────
 model Conversation {
-  id         String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  entityType String   // LISTING | SPARE_PART | CAR_SERVICE | JOB
-  entityId   String   // ID of the related entity
+  entityType String // LISTING | SPARE_PART | CAR_SERVICE | JOB
+  entityId   String // ID of the related entity
 
   // Backward compat — optional relation kept for existing listing conversations
-  listingId  String?
-  listing    Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String?
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   transportBooking TransportBooking?
 
@@ -254,16 +338,16 @@ model Conversation {
 // مشاركي المحادثة — ConversationParticipant
 // ──────────────────────────────────────
 model ConversationParticipant {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  lastReadAt     DateTime?
-  isArchived     Boolean   @default(false)
+  lastReadAt DateTime?
+  isArchived Boolean   @default(false)
 
   @@unique([userId, conversationId])
   @@index([userId])
@@ -275,19 +359,19 @@ model ConversationParticipant {
 // الرسائل — Message
 // ──────────────────────────────────────
 model Message {
-  id        String      @id @default(cuid())
-  content   String
-  type      MessageType @default(TEXT)
-  mediaUrl  String?
+  id       String      @id @default(cuid())
+  content  String
+  type     MessageType @default(TEXT)
+  mediaUrl String?
 
-  senderId       String
-  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId String
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  isRead    Boolean  @default(false)
-  isDeleted Boolean  @default(false)
+  isRead    Boolean   @default(false)
+  isDeleted Boolean   @default(false)
   deletedAt DateTime?
 
   reactions MessageReaction[]
@@ -305,14 +389,14 @@ model Message {
 // ردود الفعل على الرسائل — MessageReaction
 // ──────────────────────────────────────
 model MessageReaction {
-  id        String   @id @default(cuid())
-  emoji     String
+  id    String @id @default(cuid())
+  emoji String
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   messageId String
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -325,19 +409,19 @@ model MessageReaction {
 // المفضلة — Favorite
 // ──────────────────────────────────────
 model Favorite {
-  id         String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  entityType String   @default("LISTING") // LISTING | JOB | SPARE_PART | CAR_SERVICE
+  entityType String @default("LISTING") // LISTING | JOB | SPARE_PART | CAR_SERVICE
   entityId   String
 
   // Keep optional relation for listing queries
-  listingId  String?
-  listing    Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String?
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, entityType, entityId])
   @@index([userId])
@@ -349,17 +433,17 @@ model Favorite {
 // الإشعارات — Notification
 // ──────────────────────────────────────
 model Notification {
-  id        String           @id @default(cuid())
-  type      NotificationType
-  title     String
-  body      String
-  data      Json?
-  isRead    Boolean          @default(false)
+  id     String           @id @default(cuid())
+  type   NotificationType
+  title  String
+  body   String
+  data   Json?
+  isRead Boolean          @default(false)
 
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([isRead])
@@ -371,13 +455,13 @@ model Notification {
 // اشتراكات الدفع — PushSubscription
 // ──────────────────────────────────────
 model PushSubscription {
-  id        String   @id @default(cuid())
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
+  id       String @id @default(cuid())
+  endpoint String @unique
+  p256dh   String
+  auth     String
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -389,13 +473,13 @@ model PushSubscription {
 // رموز Expo للجوال — PushToken
 // ──────────────────────────────────────
 model PushToken {
-  id         String    @id @default(cuid())
-  token      String    @unique  // ExponentPushToken[xxxxxxxxxxxx]
+  id         String   @id @default(cuid())
+  token      String   @unique // ExponentPushToken[xxxxxxxxxxxx]
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceType String?   // "ios" | "android" | null if unknown
-  createdAt  DateTime  @default(now())
-  lastUsedAt DateTime  @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType String? // "ios" | "android" | null if unknown
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
 
   @@index([userId])
   @@map("push_tokens")
@@ -405,18 +489,18 @@ model PushToken {
 // وظائف السائقين — DriverJob
 // ──────────────────────────────────────
 model DriverJob {
-  id              String          @id @default(cuid())
-  title           String
-  slug            String          @unique
-  description     String
+  id          String @id @default(cuid())
+  title       String
+  slug        String @unique
+  description String
 
-  jobType         JobType
-  employmentType  EmploymentType
+  jobType        JobType
+  employmentType EmploymentType
 
   // الراتب
-  salary          Decimal?        @db.Decimal(12, 2)
-  salaryPeriod    SalaryPeriod?
-  currency        String          @default("OMR")
+  salary       Decimal?      @db.Decimal(12, 2)
+  salaryPeriod SalaryPeriod?
+  currency     String        @default("OMR")
 
   // متطلبات السائق
   licenseTypes    LicenseType[]
@@ -427,29 +511,40 @@ model DriverJob {
   nationality     String?
 
   // نوع المركبة
-  vehicleTypes    String[]
-  hasOwnVehicle   Boolean         @default(false)
+  vehicleTypes  String[]
+  hasOwnVehicle Boolean  @default(false)
 
   // الموقع
-  governorate     String
-  city            String?
+  governorate String
+  city        String?
 
   // التواصل
-  contactPhone    String?
-  contactEmail    String?
-  whatsapp        String?
+  contactPhone String?
+  contactEmail String?
+  whatsapp     String?
 
-  status          JobStatus       @default(ACTIVE)
-  expiresAt       DateTime?
-  viewCount       Int             @default(0)
+  status    JobStatus @default(ACTIVE)
+  expiresAt DateTime?
+  viewCount Int       @default(0)
 
-  userId          String
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  applications    JobApplication[]
+  applications JobApplication[]
 
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([userId])
   @@index([jobType])
@@ -464,20 +559,19 @@ model DriverJob {
 // طلبات التقديم — JobApplication
 // ──────────────────────────────────────
 model JobApplication {
-  id          String              @id @default(cuid())
-  message     String?
-  resumeUrl   String?
-  status      ApplicationStatus   @default(PENDING)
+  id        String            @id @default(cuid())
+  message   String?
+  resumeUrl String?
+  status    ApplicationStatus @default(PENDING)
 
-  jobId       String
-  job         DriverJob           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId String
+  job   DriverJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   applicantId String
-  applicant   User                @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicant   User   @relation(fields: [applicantId], references: [id], onDelete: Cascade)
 
-
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([jobId, applicantId])
   @@index([jobId])
@@ -485,14 +579,13 @@ model JobApplication {
   @@map("job_applications")
 }
 
-
 // ──────────────────────────────────────
 // بروفايل السائق — DriverProfile
 // ──────────────────────────────────────
 model DriverProfile {
-  id              String        @id @default(cuid())
-  userId          String        @unique
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   licenseTypes    LicenseType[]
   experienceYears Int?
@@ -502,22 +595,33 @@ model DriverProfile {
   hasOwnVehicle   Boolean       @default(false)
   bio             String?
 
-  governorate     String
-  city            String?
+  governorate String
+  city        String?
 
-  contactPhone    String?
-  whatsapp        String?
+  contactPhone String?
+  whatsapp     String?
 
-  isAvailable     Boolean       @default(true)
-  isVerified      Boolean       @default(false)
+  isAvailable Boolean @default(true)
+  isVerified  Boolean @default(false)
 
-  averageRating   Float?
-  reviewCount     Int           @default(0)
+  averageRating Float?
+  reviewCount   Int    @default(0)
 
-  verifications   DriverVerification[]
+  verifications DriverVerification[]
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([governorate])
   @@index([isAvailable])
@@ -529,39 +633,49 @@ model DriverProfile {
 // بروفايل صاحب العمل — EmployerProfile
 // ──────────────────────────────────────
 model EmployerProfile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  companyName   String?
-  companySize   String?  // SMALL, MEDIUM, LARGE
-  industry      String?
-  bio           String?
+  companyName String?
+  companySize String? // SMALL, MEDIUM, LARGE
+  industry    String?
+  bio         String?
 
-  governorate   String
-  city          String?
-  contactPhone  String?
-  whatsapp      String?
+  governorate  String
+  city         String?
+  contactPhone String?
+  whatsapp     String?
 
-  isVerified    Boolean  @default(false)
+  isVerified    Boolean @default(false)
   averageRating Float?
-  reviewCount   Int      @default(0)
+  reviewCount   Int     @default(0)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([governorate])
   @@map("employer_profiles")
 }
 
-
 // ──────────────────────────────────────
 // توثيق السائق — DriverVerification
 // ──────────────────────────────────────
 model DriverVerification {
-  id              String               @id @default(cuid())
+  id              String        @id @default(cuid())
   driverProfileId String
-  driverProfile   DriverProfile        @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
 
   licenseImageUrl     String
   licenseBackImageUrl String?
@@ -569,13 +683,13 @@ model DriverVerification {
   idBackImageUrl      String?
   notes               String?
 
-  status          VerificationStatus   @default(PENDING)
+  status          VerificationStatus @default(PENDING)
   reviewedBy      String?
   reviewedAt      DateTime?
   rejectionReason String?
 
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([driverProfileId])
   @@index([status])
@@ -643,7 +757,7 @@ model CarYear {
 // فئات / تريمات السيارات — CarTrim
 // ──────────────────────────────────────
 model CarTrim {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
   nameAr         String?
   slug           String
@@ -658,11 +772,11 @@ model CarTrim {
   transmission   String?
   fuelType       String?
   seats          Int?
-  isFullOption   Boolean  @default(false)
+  isFullOption   Boolean   @default(false)
   modelId        String
-  model          CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  model          CarModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
   listings       Listing[]
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   @@unique([name, modelId])
   @@index([modelId])
@@ -761,13 +875,11 @@ enum ApplicationStatus {
   WITHDRAWN
 }
 
-
 enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
 }
-
 
 enum NotificationType {
   MESSAGE
@@ -849,7 +961,6 @@ enum ProviderType {
   COMPANY
 }
 
-
 // ── تعدادات المركبات الموسعة ──
 enum VehicleCategory {
   CAR
@@ -886,12 +997,23 @@ model SparePart {
   status            ListingStatus @default(ACTIVE)
   viewCount         Int           @default(0)
 
-  sellerId          String
-  seller            User          @relation("UserSpareParts", fields: [sellerId], references: [id], onDelete: Cascade)
-  images            SparePartImage[]
+  sellerId String
+  seller   User             @relation("UserSpareParts", fields: [sellerId], references: [id], onDelete: Cascade)
+  images   SparePartImage[]
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([sellerId])
   @@index([partCategory])
@@ -918,18 +1040,18 @@ model SparePartImage {
 // خدمات السيارات — CarService
 // ──────────────────────────────────────
 model CarService {
-  id                String       @id @default(cuid())
+  id                String        @id @default(cuid())
   title             String
-  slug              String       @unique
+  slug              String        @unique
   description       String
   serviceType       ServiceType
   providerType      ProviderType
   providerName      String
   specializations   String[]
-  priceFrom         Decimal?     @db.Decimal(12, 2)
-  priceTo           Decimal?     @db.Decimal(12, 2)
-  currency          String       @default("OMR")
-  isHomeService     Boolean      @default(false)
+  priceFrom         Decimal?      @db.Decimal(12, 2)
+  priceTo           Decimal?      @db.Decimal(12, 2)
+  currency          String        @default("OMR")
+  isHomeService     Boolean       @default(false)
   workingHoursOpen  String?
   workingHoursClose String?
   workingDays       String[]
@@ -944,12 +1066,23 @@ model CarService {
   status            ListingStatus @default(ACTIVE)
   viewCount         Int           @default(0)
 
-  userId            String
-  user              User          @relation("UserCarServices", fields: [userId], references: [id], onDelete: Cascade)
-  images            CarServiceImage[]
+  userId String
+  user   User              @relation("UserCarServices", fields: [userId], references: [id], onDelete: Cascade)
+  images CarServiceImage[]
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([userId])
   @@index([serviceType])
@@ -971,7 +1104,6 @@ model CarServiceImage {
   @@index([carServiceId])
   @@map("car_service_images")
 }
-
 
 // ══════════════════════════════════════════════════
 // قسم الحافلات — Bus Marketplace
@@ -1026,67 +1158,78 @@ model BusModel {
 }
 
 model BusListing {
-  id                String          @id @default(cuid())
-  title             String
-  slug              String          @unique
-  description       String
+  id          String @id @default(cuid())
+  title       String
+  slug        String @unique
+  description String
 
-  busListingType    BusListingType
-  busType           BusType
+  busListingType BusListingType
+  busType        BusType
 
-  make              String
-  model             String
+  make  String
+  model String
 
-  manufacturerId    String?
-  modelId           String?
-  busManufacturer   BusManufacturer? @relation(fields: [manufacturerId], references: [id])
-  busModel          BusModel?        @relation(fields: [modelId], references: [id])
-  year              Int
-  capacity          Int
-  mileage           Int?
-  fuelType          FuelType?
-  transmission      Transmission?
-  condition         ItemCondition   @default(USED)
-  features          String[]
-  plateNumber       String?
+  manufacturerId  String?
+  modelId         String?
+  busManufacturer BusManufacturer? @relation(fields: [manufacturerId], references: [id])
+  busModel        BusModel?        @relation(fields: [modelId], references: [id])
+  year            Int
+  capacity        Int
+  mileage         Int?
+  fuelType        FuelType?
+  transmission    Transmission?
+  condition       ItemCondition    @default(USED)
+  features        String[]
+  plateNumber     String?
 
-  price             Decimal?        @db.Decimal(12, 2)
-  currency          String          @default("OMR")
-  isPriceNegotiable Boolean         @default(false)
+  price             Decimal? @db.Decimal(12, 2)
+  currency          String   @default("OMR")
+  isPriceNegotiable Boolean  @default(false)
 
-  contractType      ContractType?
-  contractClient    String?
-  contractMonthly   Decimal?        @db.Decimal(12, 2)
-  contractDuration  Int?
-  contractExpiry    DateTime?
+  contractType     ContractType?
+  contractClient   String?
+  contractMonthly  Decimal?      @db.Decimal(12, 2)
+  contractDuration Int?
+  contractExpiry   DateTime?
 
   // سعر الإيجار الاسترشادي
-  dailyPrice        Decimal?        @db.Decimal(12, 2)
-  monthlyPrice      Decimal?        @db.Decimal(12, 2)
-  withDriver        Boolean         @default(false)
+  dailyPrice   Decimal? @db.Decimal(12, 2)
+  monthlyPrice Decimal? @db.Decimal(12, 2)
+  withDriver   Boolean  @default(false)
 
-  governorate       String?
-  city              String?
-  latitude          Float?
-  longitude         Float?
+  governorate String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
 
-  contactPhone      String?
-  whatsapp          String?
+  contactPhone String?
+  whatsapp     String?
 
-  status            ListingStatus   @default(ACTIVE)
-  isPremium         Boolean         @default(false)
-  featuredUntil     DateTime?
-  viewCount         Int             @default(0)
+  status        ListingStatus @default(ACTIVE)
+  isPremium     Boolean       @default(false)
+  featuredUntil DateTime?
+  viewCount     Int           @default(0)
 
-  userId            String
-  user              User            @relation("UserBusListings", fields: [userId], references: [id], onDelete: Cascade)
-  images            BusListingImage[]
-  statusLogs        BusListingStatusLog[] @relation("BusStatusLogs")
-  priceHistory      BusListingPriceHistory[] @relation("BusPriceHistory")
+  userId       String
+  user         User                     @relation("UserBusListings", fields: [userId], references: [id], onDelete: Cascade)
+  images       BusListingImage[]
+  statusLogs   BusListingStatusLog[]    @relation("BusStatusLogs")
+  priceHistory BusListingPriceHistory[] @relation("BusPriceHistory")
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  deletedAt         DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([userId])
   @@index([busListingType])
@@ -1102,39 +1245,39 @@ model BusListing {
 }
 
 model BusListingImage {
-  id             String      @id @default(cuid())
-  url            String
-  isPrimary      Boolean     @default(false)
-  order          Int         @default(0)
-  busListingId   String
-  busListing     BusListing  @relation(fields: [busListingId], references: [id], onDelete: Cascade)
-  createdAt      DateTime    @default(now())
+  id           String     @id @default(cuid())
+  url          String
+  isPrimary    Boolean    @default(false)
+  order        Int        @default(0)
+  busListingId String
+  busListing   BusListing @relation(fields: [busListingId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
 
   @@index([busListingId])
   @@map("bus_listing_images")
 }
 
 model BusListingPriceHistory {
-  id             String     @id @default(cuid())
-  oldPrice       Decimal?   @db.Decimal(12, 2)
-  newPrice       Decimal?   @db.Decimal(12, 2)
-  changedBy      String
-  busListingId   String
-  busListing     BusListing @relation("BusPriceHistory", fields: [busListingId], references: [id], onDelete: Cascade)
-  createdAt      DateTime   @default(now())
+  id           String     @id @default(cuid())
+  oldPrice     Decimal?   @db.Decimal(12, 2)
+  newPrice     Decimal?   @db.Decimal(12, 2)
+  changedBy    String
+  busListingId String
+  busListing   BusListing @relation("BusPriceHistory", fields: [busListingId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
 
   @@index([busListingId])
   @@map("bus_listing_price_history")
 }
 
 model BusListingStatusLog {
-  id             String        @id @default(cuid())
-  fromStatus     ListingStatus
-  toStatus       ListingStatus
-  changedBy      String
-  busListingId   String
-  busListing     BusListing    @relation("BusStatusLogs", fields: [busListingId], references: [id], onDelete: Cascade)
-  createdAt      DateTime      @default(now())
+  id           String        @id @default(cuid())
+  fromStatus   ListingStatus
+  toStatus     ListingStatus
+  changedBy    String
+  busListingId String
+  busListing   BusListing    @relation("BusStatusLogs", fields: [busListingId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
 
   @@index([busListingId])
   @@map("bus_listing_status_logs")
@@ -1179,61 +1322,72 @@ enum OperatorType {
 // إعلان معدات — EquipmentListing
 // ──────────────────────────────────────
 model EquipmentListing {
-  id                  String               @id @default(cuid())
-  title               String
-  slug                String               @unique
-  description         String
+  id          String @id @default(cuid())
+  title       String
+  slug        String @unique
+  description String
 
-  equipmentType       EquipmentType
-  listingType         EquipmentListingType
+  equipmentType EquipmentType
+  listingType   EquipmentListingType
 
-  make                String?
-  model               String?
-  year                Int?
-  condition           ItemCondition        @default(USED)
-  capacity            String?
-  power               String?
-  weight              String?
-  hoursUsed           Int?
-  features            String[]
+  make      String?
+  model     String?
+  year      Int?
+  condition ItemCondition @default(USED)
+  capacity  String?
+  power     String?
+  weight    String?
+  hoursUsed Int?
+  features  String[]
 
-  price               Decimal?             @db.Decimal(12, 2)
+  price             Decimal? @db.Decimal(12, 2)
   // سعر الإيجار الاسترشادي
-  dailyPrice          Decimal?             @db.Decimal(12, 2)
-  monthlyPrice        Decimal?             @db.Decimal(12, 2)
-  currency            String               @default("OMR")
-  isPriceNegotiable   Boolean              @default(false)
-  withOperator        Boolean              @default(false)
-  deliveryAvailable   Boolean              @default(false)
+  dailyPrice        Decimal? @db.Decimal(12, 2)
+  monthlyPrice      Decimal? @db.Decimal(12, 2)
+  currency          String   @default("OMR")
+  isPriceNegotiable Boolean  @default(false)
+  withOperator      Boolean  @default(false)
+  deliveryAvailable Boolean  @default(false)
 
   // حقول EQUIPMENT_WANTED
-  budgetMin           Decimal?             @db.Decimal(12, 2)
-  budgetMax           Decimal?             @db.Decimal(12, 2)
-  rentalDuration      String?
-  startDate           DateTime?
-  endDate             DateTime?
-  quantity            Int?
-  siteDetails         String?
+  budgetMin      Decimal?  @db.Decimal(12, 2)
+  budgetMax      Decimal?  @db.Decimal(12, 2)
+  rentalDuration String?
+  startDate      DateTime?
+  endDate        DateTime?
+  quantity       Int?
+  siteDetails    String?
 
-  governorate         String?
-  city                String?
-  latitude            Float?
-  longitude           Float?
+  governorate String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
 
-  contactPhone        String?
-  whatsapp            String?
+  contactPhone String?
+  whatsapp     String?
 
-  status              ListingStatus        @default(ACTIVE)
-  isPremium           Boolean              @default(false)
-  featuredUntil       DateTime?
-  viewCount           Int                  @default(0)
+  status        ListingStatus @default(ACTIVE)
+  isPremium     Boolean       @default(false)
+  featuredUntil DateTime?
+  viewCount     Int           @default(0)
 
-  userId              String
-  user                User                 @relation("UserEquipmentListings", fields: [userId], references: [id], onDelete: Cascade)
-  images              EquipmentListingImage[]
+  userId String
+  user   User                    @relation("UserEquipmentListings", fields: [userId], references: [id], onDelete: Cascade)
+  images EquipmentListingImage[]
 
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([userId])
   @@index([equipmentType])
@@ -1246,13 +1400,13 @@ model EquipmentListing {
 }
 
 model EquipmentListingImage {
-  id                   String             @id @default(cuid())
-  url                  String
-  isPrimary            Boolean            @default(false)
-  order                Int                @default(0)
-  equipmentListingId   String
-  equipmentListing     EquipmentListing   @relation(fields: [equipmentListingId], references: [id], onDelete: Cascade)
-  createdAt            DateTime           @default(now())
+  id                 String           @id @default(cuid())
+  url                String
+  isPrimary          Boolean          @default(false)
+  order              Int              @default(0)
+  equipmentListingId String
+  equipmentListing   EquipmentListing @relation(fields: [equipmentListingId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
 
   @@index([equipmentListingId])
   @@map("equipment_listing_images")
@@ -1262,38 +1416,49 @@ model EquipmentListingImage {
 // خدمات التشغيل — OperatorListing
 // ──────────────────────────────────────
 model OperatorListing {
-  id                  String           @id @default(cuid())
-  title               String
-  slug                String           @unique
-  description         String
+  id          String @id @default(cuid())
+  title       String
+  slug        String @unique
+  description String
 
-  operatorType        OperatorType
-  specializations     String[]
-  experienceYears     Int?
-  equipmentTypes      EquipmentType[]
-  certifications      String[]
+  operatorType    OperatorType
+  specializations String[]
+  experienceYears Int?
+  equipmentTypes  EquipmentType[]
+  certifications  String[]
 
-  dailyRate           Decimal?         @db.Decimal(12, 2)
-  hourlyRate          Decimal?         @db.Decimal(12, 2)
-  currency            String           @default("OMR")
-  isPriceNegotiable   Boolean          @default(false)
+  dailyRate         Decimal? @db.Decimal(12, 2)
+  hourlyRate        Decimal? @db.Decimal(12, 2)
+  currency          String   @default("OMR")
+  isPriceNegotiable Boolean  @default(false)
 
-  governorate         String?
-  city                String?
-  latitude            Float?
-  longitude           Float?
+  governorate String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
 
-  contactPhone        String?
-  whatsapp            String?
+  contactPhone String?
+  whatsapp     String?
 
-  status              ListingStatus    @default(ACTIVE)
-  viewCount           Int              @default(0)
+  status    ListingStatus @default(ACTIVE)
+  viewCount Int           @default(0)
 
-  userId              String
-  user                User             @relation("UserOperatorListings", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation("UserOperatorListings", fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([userId])
   @@index([operatorType])
@@ -1318,23 +1483,23 @@ enum ReviewEntityType {
 }
 
 model Review {
-  id           String           @id @default(cuid())
-  rating       Int              // 1-5
-  comment      String?
+  id      String  @id @default(cuid())
+  rating  Int // 1-5
+  comment String?
 
-  entityType   ReviewEntityType
-  entityId     String
+  entityType ReviewEntityType
+  entityId   String
 
-  reviewerId   String
-  reviewer     User             @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User   @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
 
-  revieweeId   String
-  reviewee     User             @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+  revieweeId String
+  reviewee   User   @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
 
-  reply        ReviewReply?
+  reply ReviewReply?
 
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([reviewerId, entityType, entityId])
   @@index([revieweeId])
@@ -1344,11 +1509,11 @@ model Review {
 }
 
 model ReviewReply {
-  id        String   @id @default(cuid())
-  body      String
+  id   String @id @default(cuid())
+  body String
 
-  reviewId  String   @unique
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reviewId String @unique
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -1386,30 +1551,30 @@ enum SubscriptionStatus {
 }
 
 model Payment {
-  id                String        @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  amount            Int           // amount in baisa (1 OMR = 1000 baisa)
-  currency          String        @default("OMR")
-  type              PaymentType
-  status            PaymentStatus @default(PENDING)
+  amount   Int // amount in baisa (1 OMR = 1000 baisa)
+  currency String        @default("OMR")
+  type     PaymentType
+  status   PaymentStatus @default(PENDING)
 
-  thawaniSessionId  String?       @unique
-  thawaniPaymentId  String?
-  idempotencyKey    String?       @unique
+  thawaniSessionId String? @unique
+  thawaniPaymentId String?
+  idempotencyKey   String? @unique
 
-  entityType        String?       // e.g. LISTING, BUS_LISTING
-  entityId          String?
-  metadata          Json?
-  ipAddress         String?
+  entityType String? // e.g. LISTING, BUS_LISTING
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
 
-  createdAt         DateTime      @default(now())
-  paidAt            DateTime?
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
 
-  subscription      Subscription?
-  events            PaymentEvent[]
+  subscription Subscription?
+  events       PaymentEvent[]
 
   @@index([userId])
   @@index([status])
@@ -1420,13 +1585,13 @@ model Payment {
 }
 
 model PaymentEvent {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   paymentId String
-  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
-  event     String   // CREATED, SESSION_CREATED, WEBHOOK_RECEIVED, VERIFIED, PAID, FAILED, RECONCILED
-  data      Json?    // extra context
+  event String // CREATED, SESSION_CREATED, WEBHOOK_RECEIVED, VERIFIED, PAID, FAILED, RECONCILED
+  data  Json? // extra context
 
   createdAt DateTime @default(now())
 
@@ -1436,23 +1601,23 @@ model PaymentEvent {
 }
 
 model Subscription {
-  id          String             @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId      String             @unique
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  plan        SubscriptionPlan   @default(BASIC)
-  status      SubscriptionStatus @default(ACTIVE)
+  plan   SubscriptionPlan   @default(BASIC)
+  status SubscriptionStatus @default(ACTIVE)
 
-  startDate   DateTime           @default(now())
-  endDate     DateTime?
-  autoRenew   Boolean            @default(true)
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  autoRenew Boolean   @default(true)
 
-  paymentId   String?            @unique
-  payment     Payment?           @relation(fields: [paymentId], references: [id])
+  paymentId String?  @unique
+  payment   Payment? @relation(fields: [paymentId], references: [id])
 
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([endDate])
@@ -1502,41 +1667,52 @@ enum VehicleType {
 }
 
 model CarrierProfile {
-  id              String      @id @default(cuid())
-  userId          String      @unique
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  companyName     String?
-  bio             String?
-  vehicleTypes    VehicleType[]
-  serviceTypes    TransportServiceType[]
-  governorate     String
-  city            String?
-  contactPhone    String?
-  whatsapp        String?
+  companyName  String?
+  bio          String?
+  vehicleTypes VehicleType[]
+  serviceTypes TransportServiceType[]
+  governorate  String
+  city         String?
+  contactPhone String?
+  whatsapp     String?
 
-  isAvailable     Boolean     @default(false)
-  isVerified      Boolean     @default(false)
+  isAvailable Boolean @default(false)
+  isVerified  Boolean @default(false)
 
-  completedTrips  Int         @default(0)
-  averageRating   Float       @default(0)
-  reviewCount     Int         @default(0)
+  completedTrips Int   @default(0)
+  averageRating  Float @default(0)
+  reviewCount    Int   @default(0)
 
-  quotes          TransportQuote[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  quotes    TransportQuote[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // New Location Fields
+  governorateId  Int?
+  governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  wilayaId       Int?
+  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
+  // but we can define it as Unsupported("geography(Point, 4326)")? 
+  /// @Prisma.ignore
+  // location Unsupported("geography(Point, 4326)")?
 
   @@index([governorate, isAvailable])
   @@map("carrier_profiles")
 }
 
 model TransportRequest {
-  id              String                  @id @default(cuid())
-  userId          String
-  user            User                    @relation("UserTransportRequests", fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("UserTransportRequests", fields: [userId], references: [id], onDelete: Cascade)
 
-  serviceType     TransportServiceType
-  status          TransportRequestStatus  @default(OPEN)
+  serviceType TransportServiceType
+  status      TransportRequestStatus @default(OPEN)
 
   fromGovernorate String
   fromCity        String?
@@ -1544,32 +1720,47 @@ model TransportRequest {
   fromLat         Float?
   fromLng         Float?
 
-  toGovernorate   String
-  toCity          String?
-  toAddress       String
-  toLat           Float?
-  toLng           Float?
+  toGovernorate String
+  toCity        String?
+  toAddress     String
+  toLat         Float?
+  toLng         Float?
 
   cargoDescription String
-  weightTons      Float?
-  requiresHelper  Boolean     @default(false)
-  notes           String?
+  weightTons       Float?
+  requiresHelper   Boolean @default(false)
+  notes            String?
 
-  scheduledAt     DateTime?
-  isFlexible      Boolean     @default(false)
+  scheduledAt DateTime?
+  isFlexible  Boolean   @default(false)
 
-  budgetMin       Decimal?    @db.Decimal(10, 3)
-  budgetMax       Decimal?    @db.Decimal(10, 3)
-  currency        String      @default("OMR")
+  budgetMin Decimal? @db.Decimal(10, 3)
+  budgetMax Decimal? @db.Decimal(10, 3)
+  currency  String   @default("OMR")
 
-  viewCount       Int         @default(0)
-  expiresAt       DateTime?
+  viewCount Int       @default(0)
+  expiresAt DateTime?
 
-  quotes          TransportQuote[]
-  booking         TransportBooking?
+  quotes  TransportQuote[]
+  booking TransportBooking?
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New Location Fields
+  fromGovernorateId  Int?
+  fromGovernorateRef Governorate? @relation("FromGovernorate", fields: [fromGovernorateId], references: [id], onDelete: Restrict)
+  fromWilayaId       Int?
+  fromWilayaRef      Wilaya?      @relation("FromWilaya", fields: [fromWilayaId], references: [id], onDelete: Restrict)
+  fromLatitude       Float?
+  fromLongitude      Float?
+
+  toGovernorateId  Int?
+  toGovernorateRef Governorate? @relation("ToGovernorate", fields: [toGovernorateId], references: [id], onDelete: Restrict)
+  toWilayaId       Int?
+  toWilayaRef      Wilaya?      @relation("ToWilaya", fields: [toWilayaId], references: [id], onDelete: Restrict)
+  toLatitude       Float?
+  toLongitude      Float?
 
   @@index([status, fromGovernorate])
   @@index([userId])
@@ -1578,23 +1769,23 @@ model TransportRequest {
 }
 
 model TransportQuote {
-  id              String        @id @default(cuid())
-  requestId       String
-  request         TransportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  carrierId       String
-  carrier         CarrierProfile   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  id        String           @id @default(cuid())
+  requestId String
+  request   TransportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  carrierId String
+  carrier   CarrierProfile   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
 
-  status          QuoteStatus   @default(PENDING)
+  status QuoteStatus @default(PENDING)
 
-  price           Decimal       @db.Decimal(10, 3)
-  currency        String        @default("OMR")
-  estimatedHours  Float?
-  message         String?
+  price          Decimal @db.Decimal(10, 3)
+  currency       String  @default("OMR")
+  estimatedHours Float?
+  message        String?
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  booking         TransportBooking?
+  booking TransportBooking?
 
   @@unique([requestId, carrierId])
   @@index([requestId, status])
@@ -1610,25 +1801,25 @@ enum BookingStatus {
 }
 
 model TransportBooking {
-  id              String        @id @default(cuid())
-  requestId       String        @unique
-  request         TransportRequest @relation(fields: [requestId], references: [id])
-  quoteId         String        @unique
-  quote           TransportQuote   @relation(fields: [quoteId], references: [id])
+  id        String           @id @default(cuid())
+  requestId String           @unique
+  request   TransportRequest @relation(fields: [requestId], references: [id])
+  quoteId   String           @unique
+  quote     TransportQuote   @relation(fields: [quoteId], references: [id])
 
-  status          BookingStatus @default(ACCEPTED)
-  confirmedAt     DateTime      @default(now())
-  completedAt     DateTime?
-  cancelledAt     DateTime?
+  status             BookingStatus @default(ACCEPTED)
+  confirmedAt        DateTime      @default(now())
+  completedAt        DateTime?
+  cancelledAt        DateTime?
   cancellationReason String?
 
-  conversationId  String?       @unique
-  conversation    Conversation? @relation(fields: [conversationId], references: [id])
+  conversationId String?       @unique
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
 
-  deliveryNote    String?
+  deliveryNote String?
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("transport_bookings")
 }

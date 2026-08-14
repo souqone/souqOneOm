@@ -95,8 +95,16 @@ export class UpdateEquipmentListingDto {
   @IsOptional() @IsString()
   governorate?: string;
 
+  @IsOptional()
+  @IsInt()
+  governorateId?: number;
+
   @IsOptional() @IsString()
   city?: string;
+
+  @IsOptional()
+  @IsInt()
+  wilayaId?: number;
 
   @IsOptional() @IsNumber()
   latitude?: number;
