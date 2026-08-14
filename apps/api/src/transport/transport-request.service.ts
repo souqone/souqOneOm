@@ -51,11 +51,15 @@ export class TransportRequestService {
   ) {}
 
   async create(userId: string, dto: CreateTransportRequestDto) {
-    if (dto.pickupGovId && dto.pickupWilayaId) {
-      await this.geoService.validateLocationPair(dto.pickupGovId, dto.pickupWilayaId);
+    const fromGovId = dto.fromGovernorateId ?? dto.pickupGovId;
+    const fromWilayaId = dto.fromWilayaId ?? dto.pickupWilayaId;
+    if (fromGovId && fromWilayaId) {
+      await this.geoService.validateLocationPair(fromGovId, fromWilayaId);
     }
-    if (dto.dropoffGovId && dto.dropoffWilayaId) {
-      await this.geoService.validateLocationPair(dto.dropoffGovId, dto.dropoffWilayaId);
+    const toGovId = dto.toGovernorateId ?? dto.dropoffGovId;
+    const toWilayaId = dto.toWilayaId ?? dto.dropoffWilayaId;
+    if (toGovId && toWilayaId) {
+      await this.geoService.validateLocationPair(toGovId, toWilayaId);
     }
 
     const expiresAt = new Date();
@@ -70,11 +74,15 @@ export class TransportRequestService {
         fromAddress: dto.fromAddress,
         fromLat: dto.fromLat,
         fromLng: dto.fromLng,
+        fromGovernorateId: fromGovId,
+        fromWilayaId: fromWilayaId,
         toGovernorate: dto.toGovernorate,
         toCity: dto.toCity,
         toAddress: dto.toAddress,
         toLat: dto.toLat,
         toLng: dto.toLng,
+        toGovernorateId: toGovId,
+        toWilayaId: toWilayaId,
         cargoDescription: dto.cargoDescription,
         weightTons: dto.weightTons,
         requiresHelper: dto.requiresHelper ?? false,

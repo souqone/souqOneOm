@@ -47,6 +47,8 @@ export class EmployerProfileService {
         bio: dto.bio,
         governorate: dto.governorate,
         city: dto.city,
+        governorateId: dto.governorateId,
+        wilayaId: dto.wilayaId,
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },

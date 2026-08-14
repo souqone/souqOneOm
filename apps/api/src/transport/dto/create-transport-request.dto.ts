@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional, IsNumber, IsBoolean,
-  IsDateString, Min, MinLength,
+  IsDateString, Min, MinLength, IsInt, IsPositive,
   registerDecorator, ValidationOptions, ValidationArguments, } from 'class-validator';
 
 function IsBudgetRangeValid(validationOptions?: ValidationOptions) {
@@ -73,6 +73,31 @@ export class CreateTransportRequestDto {
   @Type(() => Number)
   fromLng?: number;
 
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  fromGovernorateId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  fromWilayaId?: number;
+
+  // From Aliases (for backwards compatibility)
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  pickupGovId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  pickupWilayaId?: number;
+
   // To
   @IsString()
   toGovernorate!: string;
@@ -94,6 +119,31 @@ export class CreateTransportRequestDto {
   @IsNumber()
   @Type(() => Number)
   toLng?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  toGovernorateId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  toWilayaId?: number;
+
+  // To Aliases (for backwards compatibility)
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  dropoffGovId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  dropoffWilayaId?: number;
 
   // Cargo
   @IsString()
