@@ -19,8 +19,12 @@ export class QueryBusListingsDto {
   make?: string;
 
   @IsOptional()
-  @IsString()
-  governorate?: string;
+  @IsNumberString()
+  governorateId?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  wilayaId?: string;
 
   @IsOptional()
   @IsNumberString()

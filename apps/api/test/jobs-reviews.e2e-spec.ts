@@ -9,13 +9,15 @@ const validJob = {
   description: 'وظيفة للاختبار',
   jobType: 'HIRING',
   employmentType: 'FULL_TIME',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   licenseTypes: ['HEAVY'],
 };
 
 const validDriverProfile = {
   licenseTypes: ['HEAVY'],
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 describe('Jobs Reviews API (e2e)', () => {

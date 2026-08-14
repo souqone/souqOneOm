@@ -515,7 +515,7 @@ model DriverJob {
   hasOwnVehicle Boolean  @default(false)
 
   // الموقع
-  governorate String
+  governorate String?
   city        String?
 
   // التواصل
@@ -595,7 +595,7 @@ model DriverProfile {
   hasOwnVehicle   Boolean       @default(false)
   bio             String?
 
-  governorate String
+  governorate String?
   city        String?
 
   contactPhone String?
@@ -642,7 +642,7 @@ model EmployerProfile {
   industry    String?
   bio         String?
 
-  governorate  String
+  governorate  String?
   city         String?
   contactPhone String?
   whatsapp     String?
@@ -1055,7 +1055,7 @@ model CarService {
   workingHoursOpen  String?
   workingHoursClose String?
   workingDays       String[]
-  governorate       String
+  governorate       String?
   city              String?
   address           String?
   latitude          Float?
@@ -1675,7 +1675,7 @@ model CarrierProfile {
   bio          String?
   vehicleTypes VehicleType[]
   serviceTypes TransportServiceType[]
-  governorate  String
+  governorate  String?
   city         String?
   contactPhone String?
   whatsapp     String?
@@ -1714,13 +1714,13 @@ model TransportRequest {
   serviceType TransportServiceType
   status      TransportRequestStatus @default(OPEN)
 
-  fromGovernorate String
+  fromGovernorate String?
   fromCity        String?
   fromAddress     String
   fromLat         Float?
   fromLng         Float?
 
-  toGovernorate String
+  toGovernorate String?
   toCity        String?
   toAddress     String
   toLat         Float?

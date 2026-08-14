@@ -12,7 +12,8 @@ const validRequest = {
   budgetMin: 500,
   budgetMax: 3000,
   rentalDuration: '3 months',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899334455',
 };
 

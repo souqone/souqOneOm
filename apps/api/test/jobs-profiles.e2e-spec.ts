@@ -12,8 +12,8 @@ const validDriverProfile = {
   vehicleTypes: ['HEAVY_TRUCK'],
   hasOwnVehicle: true,
   bio: 'سائق محترف بخبرة طويلة في النقل الثقيل',
-  governorate: 'Muscat',
-  city: 'Seeb',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899001122',
 };
 
@@ -22,7 +22,8 @@ const validEmployerProfile = {
   companySize: 'MEDIUM',
   industry: 'نقل ولوجستيات',
   bio: 'شركة متخصصة في خدمات النقل والشحن',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899003344',
 };
 
@@ -39,7 +40,7 @@ describe('Jobs Profiles API (e2e)', () => {
 
       expect(res.body.id).toBeDefined();
       expect(res.body.licenseTypes).toContain('HEAVY');
-      expect(res.body.governorate).toBe('Muscat');
+      expect(res.body.governorateRef.nameEn).toBe('Muscat');
     });
 
     it('should reject duplicate driver profile', async () => {
@@ -70,7 +71,7 @@ describe('Jobs Profiles API (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(res.body.governorate).toBe('Muscat');
+      expect(res.body.governorateRef.nameEn).toBe('Muscat');
     });
 
     it('should return 404 if no driver profile', async () => {
@@ -130,7 +131,7 @@ describe('Jobs Profiles API (e2e)', () => {
       expect(res.body.user).toBeDefined();
     });
 
-    it('should filter drivers by governorate', async () => {
+    it('should filter drivers by governorateId', async () => {
       const { accessToken } = await registerUser();
       await request(getApp().getHttpServer())
         .post('/api/jobs/driver-profile')
@@ -139,10 +140,10 @@ describe('Jobs Profiles API (e2e)', () => {
         .expect(201);
 
       const res = await request(getApp().getHttpServer())
-        .get('/api/jobs/drivers?governorate=Muscat')
+        .get('/api/jobs/drivers?governorateId=1')
         .expect(200);
 
-      res.body.items.forEach((d: any) => expect(d.governorate).toBe('Muscat'));
+      res.body.items.forEach((d: any) => expect(d.governorateId).toBe(1));
     });
 
     it('should require auth for profile creation', async () => {

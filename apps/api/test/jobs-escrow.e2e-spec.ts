@@ -9,7 +9,8 @@ const validJob = {
   description: 'وظيفة للاختبار',
   jobType: 'HIRING',
   employmentType: 'FULL_TIME',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   licenseTypes: ['HEAVY'],
 };
 

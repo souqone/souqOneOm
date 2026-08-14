@@ -12,14 +12,42 @@ const validJob = {
   salary: 800,
   salaryPeriod: 'MONTHLY',
   experienceYears: 3,
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899556677',
 };
+
+async function registerEmployer() {
+  const user = await registerUser();
+  await request(getApp().getHttpServer())
+    .post('/api/jobs/employer-profile')
+    .set('Authorization', `Bearer ${user.accessToken}`)
+    .send({
+      companyName: 'Test Employer Company',
+      companySize: 'MEDIUM',
+      governorateId: 1,
+      wilayaId: 1,
+    });
+  return user;
+}
+
+async function registerDriver() {
+  const user = await registerUser();
+  await request(getApp().getHttpServer())
+    .post('/api/jobs/driver-profile')
+    .set('Authorization', `Bearer ${user.accessToken}`)
+    .send({
+      licenseTypes: ['HEAVY'],
+      governorateId: 1,
+      wilayaId: 1,
+    });
+  return user;
+}
 
 describe('Jobs API (e2e)', () => {
   describe('POST /api/jobs', () => {
     it('should create a job', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       const res = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -58,7 +86,7 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should filter by jobType', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -82,7 +110,7 @@ describe('Jobs API (e2e)', () => {
 
   describe('GET /api/jobs/:id', () => {
     it('should return job by id', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -102,7 +130,7 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should include poster info', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -118,7 +146,7 @@ describe('Jobs API (e2e)', () => {
 
   describe('DELETE /api/jobs/:id', () => {
     it('should delete own job', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -131,7 +159,7 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should reject delete by other user', async () => {
-      const user1 = await registerUser();
+      const user1 = await registerEmployer();
       const user2 = await registerUser();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -154,7 +182,7 @@ describe('Jobs API (e2e)', () => {
   // ─── Status Toggle ───
   describe('PATCH /api/jobs/:id (status toggle)', () => {
     it('should toggle status to CLOSED', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -170,8 +198,8 @@ describe('Jobs API (e2e)', () => {
       expect(res.body.status).toBe('CLOSED');
     });
 
-    it('should toggle status back to ACTIVE', async () => {
-      const { accessToken } = await registerUser();
+    it('should reject reopening a CLOSED job', async () => {
+      const { accessToken } = await registerEmployer();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -184,17 +212,15 @@ describe('Jobs API (e2e)', () => {
         .send({ status: 'CLOSED' })
         .expect(200);
 
-      const res = await request(getApp().getHttpServer())
+      await request(getApp().getHttpServer())
         .patch(`/api/jobs/${created.body.id}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ status: 'ACTIVE' })
-        .expect(200);
-
-      expect(res.body.status).toBe('ACTIVE');
+        .expect(400);
     });
 
     it('should reject EXPIRED status via update', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       const created = await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -212,7 +238,7 @@ describe('Jobs API (e2e)', () => {
   // ─── My Jobs ───
   describe('GET /api/jobs/my', () => {
     it('should return paginated response with items and meta', async () => {
-      const { accessToken } = await registerUser();
+      const { accessToken } = await registerEmployer();
       await request(getApp().getHttpServer())
         .post('/api/jobs')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -240,8 +266,8 @@ describe('Jobs API (e2e)', () => {
   // ─── Apply + Withdraw ───
   describe('Application flow', () => {
     it('should apply to a job', async () => {
-      const owner = await registerUser();
-      const applicant = await registerUser();
+      const owner = await registerEmployer();
+      const applicant = await registerDriver();
 
       const job = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -260,8 +286,8 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should reject duplicate application', async () => {
-      const owner = await registerUser();
-      const applicant = await registerUser();
+      const owner = await registerEmployer();
+      const applicant = await registerDriver();
 
       const job = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -283,7 +309,7 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should reject self-application', async () => {
-      const owner = await registerUser();
+      const owner = await registerEmployer();
 
       const job = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -299,8 +325,8 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should withdraw own application', async () => {
-      const owner = await registerUser();
-      const applicant = await registerUser();
+      const owner = await registerEmployer();
+      const applicant = await registerDriver();
 
       const job = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -323,8 +349,8 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should reject withdraw by non-applicant', async () => {
-      const owner = await registerUser();
-      const applicant = await registerUser();
+      const owner = await registerEmployer();
+      const applicant = await registerDriver();
       const other = await registerUser();
 
       const job = await request(getApp().getHttpServer())
@@ -346,8 +372,8 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should reject withdraw of non-PENDING application', async () => {
-      const owner = await registerUser();
-      const applicant = await registerUser();
+      const owner = await registerEmployer();
+      const applicant = await registerDriver();
 
       const job = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -376,8 +402,8 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should get applications for own job', async () => {
-      const owner = await registerUser();
-      const applicant = await registerUser();
+      const owner = await registerEmployer();
+      const applicant = await registerDriver();
 
       const job = await request(getApp().getHttpServer())
         .post('/api/jobs')
@@ -402,7 +428,7 @@ describe('Jobs API (e2e)', () => {
     });
 
     it('should reject getting applications by non-owner', async () => {
-      const owner = await registerUser();
+      const owner = await registerEmployer();
       const other = await registerUser();
 
       const job = await request(getApp().getHttpServer())

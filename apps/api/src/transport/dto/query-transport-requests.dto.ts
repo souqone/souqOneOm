@@ -19,28 +19,20 @@ export class QueryTransportRequestsDto {
   status?: TransportRequestStatus;
 
   @IsOptional()
-  @IsString()
-  fromGovernorate?: string;
+  @IsNumberString()
+  fromGovernorateId?: string;
 
   @IsOptional()
-  @IsString()
-  fromCity?: string;
+  @IsNumberString()
+  fromWilayaId?: string;
 
   @IsOptional()
-  @IsString()
-  fromWilayat?: string;
+  @IsNumberString()
+  toGovernorateId?: string;
 
   @IsOptional()
-  @IsString()
-  toGovernorate?: string;
-
-  @IsOptional()
-  @IsString()
-  toWilayat?: string;
-
-  @IsOptional()
-  @IsString()
-  toCity?: string;
+  @IsNumberString()
+  toWilayaId?: string;
 
   @IsOptional()
   @IsString()

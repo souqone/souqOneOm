@@ -13,7 +13,11 @@ export class QueryCarriersDto {
 
   @IsOptional()
   @IsString()
-  governorate?: string;
+  governorateId?: string;
+
+  @IsOptional()
+  @IsString()
+  wilayaId?: string;
 
   @IsOptional()
   @IsEnum(VehicleType)

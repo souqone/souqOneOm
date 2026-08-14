@@ -27,9 +27,7 @@ export class EquipmentListingsService {
   ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
-    if (dto.governorateId && dto.wilayaId) {
-      await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
-    }
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     const item = await this.prisma.equipmentListing.create({
       data: {
@@ -61,10 +59,8 @@ export class EquipmentListingsService {
         endDate: dto.endDate ? new Date(dto.endDate) : null,
         quantity: dto.quantity,
         siteDetails: dto.siteDetails,
-        governorate: dto.governorate,
         governorateId: dto.governorateId,
         wilayaId: dto.wilayaId,
-        city: dto.city,
         latitude: dto.latitude,
         longitude: dto.longitude,
         contactPhone: dto.contactPhone,
@@ -80,7 +76,12 @@ export class EquipmentListingsService {
           },
         }),
       },
-      include: { user: { select: USER_SELECT }, images: true },
+      include: {
+        user: { select: USER_SELECT },
+        images: true,
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
 
     if (dto.latitude && dto.longitude) {
@@ -99,7 +100,8 @@ export class EquipmentListingsService {
     // ─── Existing filters ────────────────────────────────────────────────────
     if (q.equipmentType) where.equipmentType = q.equipmentType as EquipmentType;
     if (q.listingType) where.listingType = q.listingType as EquipmentListingType;
-    if (q.governorate) where.governorate = q.governorate;
+    if (q.governorateId) where.governorateId = q.governorateId;
+    if (q.wilayaId) where.wilayaId = q.wilayaId;
     if (q.userId) where.userId = q.userId;
     if (q.search) {
       where.OR = [
@@ -141,16 +143,26 @@ export class EquipmentListingsService {
       }
     }
 
-    const orderBy: Prisma.EquipmentListingOrderByWithRelationInput =
-      q.sortBy === 'price_asc' ? { price: 'asc' } :
-      q.sortBy === 'price_desc' ? { price: 'desc' } :
-      q.sortBy === 'oldest' ? { createdAt: 'asc' } :
-      { createdAt: 'desc' };
+    let orderBy: Prisma.EquipmentListingOrderByWithRelationInput = { createdAt: 'desc' };
+    if (q.sortBy === 'price_asc') {
+      orderBy = q.listingType === 'EQUIPMENT_RENT' ? { dailyPrice: 'asc' } : { price: 'asc' };
+    } else if (q.sortBy === 'price_desc') {
+      orderBy = q.listingType === 'EQUIPMENT_RENT' ? { dailyPrice: 'desc' } : { price: 'desc' };
+    } else if (q.sortBy === 'year_desc') {
+      orderBy = { year: 'desc' };
+    } else if (q.sortBy === 'views_desc') {
+      orderBy = { viewCount: 'desc' };
+    }
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.equipmentListing.findMany({
         where, orderBy, skip: (page - 1) * limit, take: limit,
-        include: { user: { select: USER_SELECT }, images: { orderBy: { order: 'asc' }, take: 1 } },
+        include: {
+          user: { select: USER_SELECT },
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
       }),
       this.prisma.equipmentListing.count({ where }),
     ]);
@@ -159,7 +171,13 @@ export class EquipmentListingsService {
 
   async findOne(id: string) {
     const item = await this.prisma.equipmentListing.findUnique({
-      where: { id }, include: { user: { select: USER_SELECT }, images: { orderBy: { order: 'asc' } } },
+      where: { id },
+      include: {
+        user: { select: USER_SELECT },
+        images: { orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!item) throw new NotFoundException('الإعلان غير موجود');
     // TODO: migrate viewCount to Redis INCR + periodic sync for high traffic
@@ -169,7 +187,13 @@ export class EquipmentListingsService {
 
   async findBySlug(slug: string) {
     const item = await this.prisma.equipmentListing.findUnique({
-      where: { slug }, include: { user: { select: USER_SELECT }, images: { orderBy: { order: 'asc' } } },
+      where: { slug },
+      include: {
+        user: { select: USER_SELECT },
+        images: { orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!item) throw new NotFoundException('الإعلان غير موجود');
     this.prisma.equipmentListing.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
@@ -179,7 +203,11 @@ export class EquipmentListingsService {
   async my(userId: string) {
     return this.prisma.equipmentListing.findMany({
       where: { userId }, orderBy: { createdAt: 'desc' },
-      include: { images: { orderBy: { order: 'asc' }, take: 1 } },
+      include: {
+        images: { orderBy: { order: 'asc' }, take: 1 },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
@@ -224,16 +252,23 @@ export class EquipmentListingsService {
     if (dto.endDate !== undefined) data.endDate = dto.endDate ? new Date(dto.endDate) : null;
     if (dto.quantity !== undefined) data.quantity = dto.quantity;
     if (dto.siteDetails !== undefined) data.siteDetails = dto.siteDetails;
-    if (dto.governorate !== undefined) data.governorate = dto.governorate;
     if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
-    if (dto.city !== undefined) data.city = dto.city;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.equipmentListing.update({ where: { id }, data, include: { user: { select: USER_SELECT }, images: true } });
+    const updated = await this.prisma.equipmentListing.update({
+      where: { id },
+      data,
+      include: {
+        user: { select: USER_SELECT },
+        images: true,
+        governorateRef: true,
+        wilayaRef: true,
+      },
+    });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {

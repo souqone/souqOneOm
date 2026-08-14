@@ -19,12 +19,12 @@ export class QueryPartsDto {
   make?: string;
 
   @IsOptional()
-  @IsString()
-  governorate?: string;
+  @IsNumberString()
+  governorateId?: string;
 
   @IsOptional()
-  @IsString()
-  city?: string;
+  @IsNumberString()
+  wilayaId?: string;
 
   @IsOptional()
   @IsString()

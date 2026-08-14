@@ -52,12 +52,15 @@ export class CreateTransportRequestDto {
   serviceType!: TransportServiceType;
 
   // From
-  @IsString()
-  fromGovernorate!: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  fromGovernorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  fromCity?: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  fromWilayaId!: number;
 
   @IsString()
   @MinLength(5)
@@ -73,18 +76,6 @@ export class CreateTransportRequestDto {
   @Type(() => Number)
   fromLng?: number;
 
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  fromGovernorateId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  fromWilayaId?: number;
-
   // From Aliases (for backwards compatibility)
   @IsOptional()
   @IsInt()
@@ -99,12 +90,15 @@ export class CreateTransportRequestDto {
   pickupWilayaId?: number;
 
   // To
-  @IsString()
-  toGovernorate!: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  toGovernorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  toCity?: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  toWilayaId!: number;
 
   @IsString()
   @MinLength(5)
@@ -119,18 +113,6 @@ export class CreateTransportRequestDto {
   @IsNumber()
   @Type(() => Number)
   toLng?: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  toGovernorateId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  toWilayaId?: number;
 
   // To Aliases (for backwards compatibility)
   @IsOptional()

@@ -30,38 +30,38 @@ interface IndexConfig {
 
 const INDEX_CONFIGS: Record<IndexName, IndexConfig> = {
   listings: {
-    searchableAttributes: ['title', 'description', 'make', 'model', 'governorate', 'city'],
-    filterableAttributes: ['price', 'make', 'model', 'year', 'fuelType', 'transmission', 'condition', 'governorate', 'city', 'listingType', 'status', 'isPremium'],
+    searchableAttributes: ['title', 'description', 'make', 'model'],
+    filterableAttributes: ['price', 'make', 'model', 'year', 'fuelType', 'transmission', 'condition', 'governorateId', 'wilayaId', 'listingType', 'status', 'isPremium'],
     sortableAttributes: ['price', 'createdAt', 'year', 'mileage', 'viewCount'],
   },
   parts: {
-    searchableAttributes: ['title', 'description', 'partNumber', 'compatibleMakes', 'governorate', 'city'],
-    filterableAttributes: ['price', 'partCategory', 'condition', 'governorate', 'city', 'status', 'isOriginal'],
+    searchableAttributes: ['title', 'description', 'partNumber', 'compatibleMakes'],
+    filterableAttributes: ['price', 'partCategory', 'condition', 'governorateId', 'wilayaId', 'status', 'isOriginal'],
     sortableAttributes: ['price', 'createdAt'],
   },
   services: {
-    searchableAttributes: ['title', 'description', 'providerName', 'governorate', 'city'],
-    filterableAttributes: ['serviceType', 'providerType', 'governorate', 'city', 'status', 'isHomeService'],
+    searchableAttributes: ['title', 'description', 'providerName'],
+    filterableAttributes: ['serviceType', 'providerType', 'governorateId', 'wilayaId', 'status', 'isHomeService'],
     sortableAttributes: ['priceFrom', 'createdAt'],
   },
   jobs: {
-    searchableAttributes: ['title', 'description', 'governorate', 'city'],
-    filterableAttributes: ['jobType', 'employmentType', 'governorate', 'status', 'salary'],
+    searchableAttributes: ['title', 'description'],
+    filterableAttributes: ['jobType', 'employmentType', 'governorateId', 'wilayaId', 'status', 'salary'],
     sortableAttributes: ['salary', 'createdAt', 'viewCount', 'experienceYears'],
   },
   buses: {
-    searchableAttributes: ['title', 'description', 'make', 'model', 'governorate'],
-    filterableAttributes: ['price', 'busListingType', 'busType', 'make', 'governorate', 'status', 'capacity', 'isPremium'],
+    searchableAttributes: ['title', 'description', 'make', 'model'],
+    filterableAttributes: ['price', 'busListingType', 'busType', 'make', 'governorateId', 'wilayaId', 'status', 'capacity', 'isPremium'],
     sortableAttributes: ['price', 'createdAt', 'viewCount', 'capacity'],
   },
   equipment: {
-    searchableAttributes: ['title', 'description', 'make', 'model', 'governorate', 'city'],
-    filterableAttributes: ['price', 'dailyPrice', 'equipmentType', 'listingType', 'condition', 'governorate', 'status', 'isPremium'],
+    searchableAttributes: ['title', 'description', 'make', 'model'],
+    filterableAttributes: ['price', 'dailyPrice', 'equipmentType', 'listingType', 'condition', 'governorateId', 'wilayaId', 'status', 'isPremium'],
     sortableAttributes: ['price', 'dailyPrice', 'createdAt', 'viewCount'],
   },
   operators: {
-    searchableAttributes: ['title', 'description', 'governorate', 'city'],
-    filterableAttributes: ['operatorType', 'governorate', 'status', 'dailyRate', 'hourlyRate'],
+    searchableAttributes: ['title', 'description'],
+    filterableAttributes: ['operatorType', 'governorateId', 'wilayaId', 'status', 'dailyRate', 'hourlyRate'],
     sortableAttributes: ['dailyRate', 'hourlyRate', 'createdAt', 'viewCount'],
   },
 };
@@ -347,8 +347,8 @@ export class SearchService implements OnModuleInit {
       transmission: l.transmission,
       condition: l.condition,
       listingType: l.listingType,
-      governorate: l.governorate,
-      city: l.city,
+      governorateId: l.governorateId,
+      wilayaId: l.wilayaId,
       isPremium: l.isPremium,
       status: l.status,
       viewCount: l.viewCount,
@@ -377,8 +377,8 @@ export class SearchService implements OnModuleInit {
       price: Number(p.price),
       currency: p.currency,
       isOriginal: p.isOriginal,
-      governorate: p.governorate,
-      city: p.city,
+      governorateId: p.governorateId,
+      wilayaId: p.wilayaId,
       status: p.status,
       imageUrl: p.images[0]?.url || null,
       createdAt: p.createdAt.getTime(),
@@ -403,8 +403,8 @@ export class SearchService implements OnModuleInit {
       providerType: s.providerType,
       priceFrom: s.priceFrom ? Number(s.priceFrom) : null,
       currency: s.currency,
-      governorate: s.governorate,
-      city: s.city,
+      governorateId: s.governorateId,
+      wilayaId: s.wilayaId,
       isHomeService: s.isHomeService,
       status: s.status,
       imageUrl: s.images[0]?.url || null,
@@ -429,8 +429,8 @@ export class SearchService implements OnModuleInit {
       salary: j.salary ? Number(j.salary) : null,
       salaryPeriod: j.salaryPeriod,
       currency: j.currency,
-      governorate: j.governorate,
-      city: j.city,
+      governorateId: j.governorateId,
+      wilayaId: j.wilayaId,
       status: j.status,
       viewCount: j.viewCount,
       createdAt: j.createdAt.getTime(),
@@ -459,7 +459,8 @@ export class SearchService implements OnModuleInit {
       price: b.price ? Number(b.price) : null,
       currency: b.currency,
       isPremium: b.isPremium,
-      governorate: b.governorate,
+      governorateId: b.governorateId,
+      wilayaId: b.wilayaId,
       status: b.status,
       viewCount: b.viewCount,
       imageUrl: b.images[0]?.url || null,
@@ -489,8 +490,8 @@ export class SearchService implements OnModuleInit {
       dailyPrice: e.dailyPrice ? Number(e.dailyPrice) : null,
       currency: e.currency,
       isPremium: e.isPremium,
-      governorate: e.governorate,
-      city: e.city,
+      governorateId: e.governorateId,
+      wilayaId: e.wilayaId,
       status: e.status,
       viewCount: e.viewCount,
       imageUrl: e.images[0]?.url || null,
@@ -514,8 +515,8 @@ export class SearchService implements OnModuleInit {
       dailyRate: o.dailyRate ? Number(o.dailyRate) : null,
       hourlyRate: o.hourlyRate ? Number(o.hourlyRate) : null,
       currency: o.currency,
-      governorate: o.governorate,
-      city: o.city,
+      governorateId: o.governorateId,
+      wilayaId: o.wilayaId,
       status: o.status,
       viewCount: o.viewCount,
       createdAt: o.createdAt.getTime(),
@@ -570,11 +571,11 @@ export class SearchService implements OnModuleInit {
       // Use OR across possible category fields
       filters.push(`(partCategory = "${dto.category}" OR serviceType = "${dto.category}")`);
     }
-    if (dto.city) {
-      filters.push(`city = "${dto.city}"`);
+    if (dto.governorateId !== undefined) {
+      filters.push(`governorateId = ${dto.governorateId}`);
     }
-    if (dto.governorate) {
-      filters.push(`governorate = "${dto.governorate}"`);
+    if (dto.wilayaId !== undefined) {
+      filters.push(`wilayaId = ${dto.wilayaId}`);
     }
     if (dto.make) {
       filters.push(`make = "${dto.make}"`);

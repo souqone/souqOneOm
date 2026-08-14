@@ -14,7 +14,8 @@ const validTransport = {
   pricingType: 'FIXED',
   hasInsurance: true,
   hasTracking: false,
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899223344',
 };
 

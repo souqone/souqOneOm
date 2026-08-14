@@ -16,8 +16,12 @@ export class QueryServicesDto {
   providerType?: ProviderType;
 
   @IsOptional()
-  @IsString()
-  governorate?: string;
+  @IsNumberString()
+  governorateId?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  wilayaId?: string;
 
   @IsOptional()
   @Transform(({ value }) => value === 'true')

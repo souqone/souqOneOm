@@ -59,9 +59,7 @@ export class PartsService {
         price: new Prisma.Decimal(dto.price),
         currency: dto.currency ?? 'OMR',
         isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        governorate: dto.governorate,
         governorateId: dto.governorateId,
-        city: dto.city,
         wilayaId: dto.wilayaId,
         latitude: dto.latitude,
         longitude: dto.longitude,
@@ -78,7 +76,12 @@ export class PartsService {
           },
         }),
       },
-      include: { seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true } }, images: true },
+      include: {
+        seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true } },
+        images: true,
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
 
     if (dto.latitude && dto.longitude) {
@@ -90,7 +93,7 @@ export class PartsService {
       id: part.id, title: part.title, slug: part.slug, description: part.description,
       partCategory: part.partCategory, condition: part.condition, partNumber: part.partNumber,
       compatibleMakes: part.compatibleMakes, price: Number(part.price), currency: part.currency,
-      isOriginal: part.isOriginal, governorate: part.governorate, city: part.city,
+      isOriginal: part.isOriginal, governorateId: part.governorateId, wilayaId: part.wilayaId,
       status: part.status, imageUrl: part.images?.[0]?.url || null, createdAt: part.createdAt,
     }).catch(() => {});
 
@@ -115,8 +118,8 @@ export class PartsService {
     if (query.partCategory) where.partCategory = query.partCategory;
     if (query.condition) where.condition = query.condition;
     if (query.make) where.compatibleMakes = { has: query.make };
-    if (query.governorate) where.governorate = query.governorate;
-    if (query.city) where.city = query.city;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.sellerId) where.sellerId = query.sellerId;
     if (query.partNumber) where.partNumber = { contains: query.partNumber, mode: 'insensitive' };
     if (query.isOriginal !== undefined) where.isOriginal = query.isOriginal === 'true';
@@ -144,6 +147,8 @@ export class PartsService {
         include: {
           seller: { select: USER_SELECT },
           images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
         },
       }),
       this.prisma.sparePart.count({ where }),
@@ -156,8 +161,10 @@ export class PartsService {
     const part = await this.prisma.sparePart.findUnique({
       where: { id },
       include: {
-        seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, governorate: true, isVerified: true, createdAt: true } },
+        seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, isVerified: true, createdAt: true } },
         images: { orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
       },
     });
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
@@ -170,7 +177,11 @@ export class PartsService {
     return this.prisma.sparePart.findMany({
       where: { sellerId: userId },
       orderBy: { createdAt: 'desc' },
-      include: { images: { orderBy: { order: 'asc' }, take: 1 } },
+      include: {
+        images: { orderBy: { order: 'asc' }, take: 1 },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
@@ -199,16 +210,22 @@ export class PartsService {
     if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
-    if (dto.governorate !== undefined) data.governorate = dto.governorate;
     if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
-    if (dto.city !== undefined) data.city = dto.city;
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.sparePart.update({ where: { id }, data, include: { images: { take: 1, orderBy: { order: 'asc' } } } });
+    const updated = await this.prisma.sparePart.update({
+      where: { id },
+      data,
+      include: {
+        images: { take: 1, orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
+      },
+    });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
@@ -223,7 +240,7 @@ export class PartsService {
       id: updated.id, title: updated.title, slug: updated.slug, description: updated.description,
       partCategory: updated.partCategory, condition: updated.condition, partNumber: updated.partNumber,
       compatibleMakes: updated.compatibleMakes, price: Number(updated.price), currency: updated.currency,
-      isOriginal: updated.isOriginal, governorate: updated.governorate, city: updated.city,
+      isOriginal: updated.isOriginal, governorateId: updated.governorateId, wilayaId: updated.wilayaId,
       status: updated.status, imageUrl: updated.images?.[0]?.url || null, createdAt: updated.createdAt,
     }).catch(() => {});
 

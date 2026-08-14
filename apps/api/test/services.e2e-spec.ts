@@ -12,7 +12,8 @@ const validService = {
   providerName: 'AutoClean Oman',
   priceFrom: 5,
   priceTo: 25,
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899112233',
 };
 

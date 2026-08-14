@@ -40,12 +40,15 @@ export class CreateDriverProfileDto {
   @MinLength(10)
   bio?: string;
 
-  @IsString()
-  governorate!: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  governorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  city?: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  wilayaId!: number;
 
   @IsOptional()
   @IsString()
@@ -54,16 +57,4 @@ export class CreateDriverProfileDto {
   @IsOptional()
   @IsString()
   whatsapp?: string;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  governorateId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  wilayaId?: number;
 }

@@ -19,8 +19,10 @@ export class UsersService {
     avatarUrl: true,
     bio: true,
     country: true,
-    governorate: true,
-    city: true,
+    governorateId: true,
+    wilayaId: true,
+    governorateRef: true,
+    wilayaRef: true,
     isVerified: true,
     role: true,
     createdAt: true,
@@ -89,6 +91,12 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : user.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : user.wilayaId;
+    if (nextGovId && nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId, nextWilayaId);
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -96,9 +104,7 @@ export class UsersService {
         bio: dto.bio,
         phone: dto.phone,
         country: dto.country,
-        governorate: dto.governorate,
         governorateId: dto.governorateId,
-        city: dto.city,
         wilayaId: dto.wilayaId,
         avatarUrl: dto.avatarUrl,
         ...(dto.latitude !== undefined && { latitude: dto.latitude }),

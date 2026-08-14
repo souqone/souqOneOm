@@ -1,16 +1,14 @@
 import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, MaxLength, MinLength, } from 'class-validator';
+  IsBoolean, Min, MaxLength, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ServiceType, ProviderType } from '@prisma/client';
 
 export class CreateServiceDto {
   @IsString()
-  @MinLength(3)
   @MaxLength(200)
   title!: string;
 
   @IsString()
-  @MinLength(10)
   description!: string;
 
   @IsEnum(ServiceType)
@@ -20,6 +18,7 @@ export class CreateServiceDto {
   providerType!: ProviderType;
 
   @IsString()
+  @MaxLength(100)
   providerName!: string;
 
   @IsOptional()
@@ -60,20 +59,13 @@ export class CreateServiceDto {
   @IsString({ each: true })
   workingDays?: string[];
 
-  @IsString()
-  governorate!: string;
-
-  @IsOptional()
   @IsInt()
-  governorateId?: number;
+  @IsPositive()
+  governorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
-  wilayaId?: number;
+  @IsPositive()
+  wilayaId!: number;
 
   @IsOptional()
   @IsString()

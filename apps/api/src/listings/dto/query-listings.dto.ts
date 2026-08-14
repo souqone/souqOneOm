@@ -1,6 +1,5 @@
-import { IsOptional, IsString, IsEnum, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsIn, IsInt, Min, Max, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsInt, Min, Max } from 'class-validator';
 import { Transmission, ItemCondition, ListingStatus, ListingType } from '@prisma/client';
 
 export class QueryListingsDto {
@@ -80,12 +79,16 @@ export class QueryListingsDto {
   bodyType?: string;
 
   @IsOptional()
-  @IsString()
-  governorate?: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  governorateId?: number;
 
   @IsOptional()
-  @IsString()
-  city?: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  wilayaId?: number;
 
   @IsOptional()
   @IsEnum(ListingStatus)

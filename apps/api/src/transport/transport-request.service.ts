@@ -53,14 +53,11 @@ export class TransportRequestService {
   async create(userId: string, dto: CreateTransportRequestDto) {
     const fromGovId = dto.fromGovernorateId ?? dto.pickupGovId;
     const fromWilayaId = dto.fromWilayaId ?? dto.pickupWilayaId;
-    if (fromGovId && fromWilayaId) {
-      await this.geoService.validateLocationPair(fromGovId, fromWilayaId);
-    }
+    await this.geoService.validateLocationPair(fromGovId, fromWilayaId);
+
     const toGovId = dto.toGovernorateId ?? dto.dropoffGovId;
     const toWilayaId = dto.toWilayaId ?? dto.dropoffWilayaId;
-    if (toGovId && toWilayaId) {
-      await this.geoService.validateLocationPair(toGovId, toWilayaId);
-    }
+    await this.geoService.validateLocationPair(toGovId, toWilayaId);
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
@@ -69,15 +66,11 @@ export class TransportRequestService {
       data: {
         userId,
         serviceType: dto.serviceType,
-        fromGovernorate: dto.fromGovernorate,
-        fromCity: dto.fromCity,
         fromAddress: dto.fromAddress,
         fromLat: dto.fromLat,
         fromLng: dto.fromLng,
         fromGovernorateId: fromGovId,
         fromWilayaId: fromWilayaId,
-        toGovernorate: dto.toGovernorate,
-        toCity: dto.toCity,
         toAddress: dto.toAddress,
         toLat: dto.toLat,
         toLng: dto.toLng,
@@ -93,7 +86,13 @@ export class TransportRequestService {
         budgetMax: dto.budgetMax ? new Prisma.Decimal(dto.budgetMax) : undefined,
         expiresAt,
       },
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        fromGovernorateRef: true,
+        fromWilayaRef: true,
+        toGovernorateRef: true,
+        toWilayaRef: true,
+      },
     });
 
     if (dto.fromLat && dto.fromLng) {
@@ -124,12 +123,16 @@ export class TransportRequestService {
   private async notifyMatchingCarriers(request: {
     id: string;
     serviceType: string;
-    fromGovernorate: string;
-    toGovernorate: string;
+    fromGovernorateId?: number | null;
+    toGovernorateId?: number | null;
+    fromGovernorateRef?: { nameAr: string } | null;
+    toGovernorateRef?: { nameAr: string } | null;
   }) {
+    if (!request.fromGovernorateId) return;
+
     const carriers = await this.prisma.carrierProfile.findMany({
       where: {
-        governorate: request.fromGovernorate,
+        governorateId: request.fromGovernorateId,
         serviceTypes: { has: request.serviceType as any },
         isAvailable: true,
       },
@@ -140,6 +143,10 @@ export class TransportRequestService {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const DAILY_LIMIT = 5;
 
+    const fromLabel = request.fromGovernorateRef?.nameAr || '';
+    const toLabel = request.toGovernorateRef?.nameAr || '';
+    const locationText = fromLabel && toLabel ? ` من ${fromLabel} إلى ${toLabel}` : '';
+
     const notifications = carriers.map(async (c) => {
       // Rate-limit: skip if this carrier already received ≥ DAILY_LIMIT nearby-request alerts today
       const key = `carrier:newreq:notify:${c.userId}:${today}`;
@@ -149,7 +156,7 @@ export class TransportRequestService {
       return this.notifications.create({
         type: 'TRANSPORT_REQUEST_NEW',
         title: 'طلب نقل جديد قريب منك',
-        body: `${SERVICE_TYPE_AR[request.serviceType] ?? request.serviceType} من ${request.fromGovernorate} إلى ${request.toGovernorate}`,
+        body: `${SERVICE_TYPE_AR[request.serviceType] ?? request.serviceType}${locationText}`,
         userId: c.userId,
         data: { requestId: request.id },
       });
@@ -186,12 +193,10 @@ export class TransportRequestService {
 
       where.status = (query.status as any) || 'OPEN';
       if (query.serviceType) where.serviceType = query.serviceType as any;
-      if (query.fromGovernorate) where.fromGovernorate = query.fromGovernorate;
-      if (query.fromCity) where.fromCity = query.fromCity;
-      if (query.fromWilayat) where.fromCity = query.fromWilayat;
-      if (query.toGovernorate) where.toGovernorate = query.toGovernorate;
-      if (query.toCity) where.toCity = query.toCity;
-      if (query.toWilayat) where.toCity = query.toWilayat;
+      if (query.fromGovernorateId) where.fromGovernorateId = parseInt(query.fromGovernorateId);
+      if (query.fromWilayaId) where.fromWilayaId = parseInt(query.fromWilayaId);
+      if (query.toGovernorateId) where.toGovernorateId = parseInt(query.toGovernorateId);
+      if (query.toWilayaId) where.toWilayaId = parseInt(query.toWilayaId);
       if (query.userId) where.userId = query.userId;
 
       const orderBy: Prisma.TransportRequestOrderByWithRelationInput = {};
@@ -209,6 +214,10 @@ export class TransportRequestService {
           orderBy,
           include: {
             user: { select: USER_SELECT },
+            fromGovernorateRef: true,
+            fromWilayaRef: true,
+            toGovernorateRef: true,
+            toWilayaRef: true,
             _count: { select: { quotes: true } },
           },
         }),
@@ -250,6 +259,10 @@ export class TransportRequestService {
           where: { id },
           include: {
             user: { select: USER_SELECT },
+            fromGovernorateRef: true,
+            fromWilayaRef: true,
+            toGovernorateRef: true,
+            toWilayaRef: true,
             _count: { select: { quotes: true } },
             ...(userId ? { booking: true } : {}),
           },
@@ -338,6 +351,10 @@ export class TransportRequestService {
           _count: { select: { quotes: true } },
           booking: true,
           user: { select: USER_SELECT },
+          fromGovernorateRef: true,
+          fromWilayaRef: true,
+          toGovernorateRef: true,
+          toWilayaRef: true,
         },
       }),
       this.prisma.transportRequest.count({ where }),
@@ -358,6 +375,18 @@ export class TransportRequestService {
       throw new BadRequestException('لا يمكن تعديل هذا الطلب في حالته الحالية');
     }
 
+    const nextFromGovId = dto.fromGovernorateId ?? dto.pickupGovId ?? request.fromGovernorateId;
+    const nextFromWilayaId = dto.fromWilayaId ?? dto.pickupWilayaId ?? request.fromWilayaId;
+    if (nextFromGovId && nextFromWilayaId) {
+      await this.geoService.validateLocationPair(nextFromGovId, nextFromWilayaId);
+    }
+
+    const nextToGovId = dto.toGovernorateId ?? dto.dropoffGovId ?? request.toGovernorateId;
+    const nextToWilayaId = dto.toWilayaId ?? dto.dropoffWilayaId ?? request.toWilayaId;
+    if (nextToGovId && nextToWilayaId) {
+      await this.geoService.validateLocationPair(nextToGovId, nextToWilayaId);
+    }
+
     // Fetch carriers with PENDING quotes BEFORE updating — so we know who to notify
     const pendingQuotes = await this.prisma.transportQuote.findMany({
       where: { requestId: id, status: 'PENDING' },
@@ -368,13 +397,13 @@ export class TransportRequestService {
       where: { id },
       data: {
         ...(dto.serviceType && { serviceType: dto.serviceType }),
-        ...(dto.fromGovernorate && { fromGovernorate: dto.fromGovernorate }),
-        ...(dto.fromCity && { fromCity: dto.fromCity }),
+        ...(nextFromGovId !== undefined && { fromGovernorateId: nextFromGovId }),
+        ...(nextFromWilayaId !== undefined && { fromWilayaId: nextFromWilayaId }),
         ...(dto.fromAddress && { fromAddress: dto.fromAddress }),
         ...(dto.fromLat !== undefined && { fromLat: dto.fromLat }),
         ...(dto.fromLng !== undefined && { fromLng: dto.fromLng }),
-        ...(dto.toGovernorate && { toGovernorate: dto.toGovernorate }),
-        ...(dto.toCity && { toCity: dto.toCity }),
+        ...(nextToGovId !== undefined && { toGovernorateId: nextToGovId }),
+        ...(nextToWilayaId !== undefined && { toWilayaId: nextToWilayaId }),
         ...(dto.toAddress && { toAddress: dto.toAddress }),
         ...(dto.toLat !== undefined && { toLat: dto.toLat }),
         ...(dto.toLng !== undefined && { toLng: dto.toLng }),
@@ -386,6 +415,13 @@ export class TransportRequestService {
         ...(dto.isFlexible !== undefined && { isFlexible: dto.isFlexible }),
         ...(dto.budgetMin !== undefined && { budgetMin: new Prisma.Decimal(dto.budgetMin) }),
         ...(dto.budgetMax !== undefined && { budgetMax: new Prisma.Decimal(dto.budgetMax) }),
+      },
+      include: {
+        user: { select: USER_SELECT },
+        fromGovernorateRef: true,
+        fromWilayaRef: true,
+        toGovernorateRef: true,
+        toWilayaRef: true,
       },
     });
 
@@ -444,6 +480,10 @@ export class TransportRequestService {
         status: 'OPEN',
         expiresAt,
       },
+      include: {
+        fromGovernorateRef: true,
+        toGovernorateRef: true,
+      },
     });
 
     await this.redis.delPattern('transport:list:*');
@@ -454,8 +494,10 @@ export class TransportRequestService {
     this.notifyMatchingCarriers({
       id,
       serviceType: updated.serviceType,
-      fromGovernorate: updated.fromGovernorate,
-      toGovernorate: updated.toGovernorate,
+      fromGovernorateId: updated.fromGovernorateId,
+      toGovernorateId: updated.toGovernorateId,
+      fromGovernorateRef: updated.fromGovernorateRef,
+      toGovernorateRef: updated.toGovernorateRef,
     }).catch((err) => this.logger.error(`فشل إرسال الإشعارات عند إعادة النشر: ${err.message}`));
 
     return updated;

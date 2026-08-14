@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum, IsInt, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsInt, IsNumber, Min, Max, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryEquipmentListingsDto {
@@ -8,8 +8,11 @@ export class QueryEquipmentListingsDto {
   @IsOptional() @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT', 'EQUIPMENT_WANTED'])
   listingType?: string;
 
-  @IsOptional() @IsString()
-  governorate?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @IsPositive()
+  governorateId?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @IsPositive()
+  wilayaId?: number;
 
   @IsOptional() @IsString()
   search?: string;

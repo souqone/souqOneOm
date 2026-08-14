@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsEnum, IsInt, IsBoolean,
-  IsNumber, IsArray, Min, MinLength,
+  IsNumber, IsArray, Min, MinLength, IsPositive,
 } from 'class-validator';
 
 export class CreateOperatorListingDto {
@@ -37,17 +37,13 @@ export class CreateOperatorListingDto {
   @IsOptional() @IsBoolean()
   isPriceNegotiable?: boolean;
 
-  @IsOptional() @IsString()
-  governorate?: string;
+  @IsInt()
+  @IsPositive()
+  governorateId!: number;
 
-  @IsOptional() @IsInt()
-  governorateId?: number;
-
-  @IsOptional() @IsString()
-  city?: string;
-
-  @IsOptional() @IsInt()
-  wilayaId?: number;
+  @IsInt()
+  @IsPositive()
+  wilayaId!: number;
 
   @IsOptional() @IsNumber()
   latitude?: number;

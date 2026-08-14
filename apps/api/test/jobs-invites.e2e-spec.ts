@@ -9,13 +9,15 @@ const validJob = {
   description: 'مطلوب سائق نقل ثقيل بخبرة لا تقل عن 3 سنوات',
   jobType: 'HIRING',
   employmentType: 'FULL_TIME',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   licenseTypes: ['HEAVY'],
 };
 
 const validDriverProfile = {
   licenseTypes: ['HEAVY'],
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   bio: 'سائق محترف بخبرة طويلة في النقل',
 };
 

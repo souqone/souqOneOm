@@ -1,5 +1,4 @@
-import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, MaxLength, MinLength, } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, MaxLength, MinLength, IsInt, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PartCategory, PartCondition } from '@prisma/client';
 
@@ -62,21 +61,13 @@ export class CreatePartDto {
   @IsBoolean()
   isPriceNegotiable?: boolean;
 
-  @IsOptional()
-  @IsString()
-  governorate?: string;
-
-  @IsOptional()
   @IsInt()
-  governorateId?: number;
+  @IsPositive()
+  governorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
-  wilayaId?: number;
+  @IsPositive()
+  wilayaId!: number;
 
   @IsOptional()
   @IsNumber()

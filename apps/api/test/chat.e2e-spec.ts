@@ -11,7 +11,8 @@ const validListing = {
   model: 'Camry',
   year: 2022,
   price: 8000,
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 /** Helper: create a listing as seller, return { listingId, seller, buyer } */

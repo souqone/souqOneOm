@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GeoService } from '../locations/geo.service';
 import { CreateCarrierProfileDto } from './dto/create-carrier-profile.dto';
 import { UpdateCarrierProfileDto } from './dto/update-carrier-profile.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
@@ -15,7 +16,6 @@ const USER_SELECT = {
   displayName: true,
   avatarUrl: true,
   phone: true,
-  governorate: true,
   isVerified: true,
   createdAt: true,
 };
@@ -23,17 +23,18 @@ const USER_SELECT = {
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 
-
-
 @Injectable()
 export class CarrierProfileService {
   constructor(
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly geoService: GeoService,
   ) {}
 
   async create(userId: string, dto: CreateCarrierProfileDto) {
     const existing = await this.prisma.carrierProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك ملف تعريف ناقل بالفعل');
+
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     return this.prisma.carrierProfile.create({
       data: {
@@ -42,19 +43,27 @@ export class CarrierProfileService {
         bio: dto.bio,
         vehicleTypes: dto.vehicleTypes,
         serviceTypes: dto.serviceTypes,
-        governorate: dto.governorate,
-        city: dto.city,
+        governorateId: dto.governorateId,
+        wilayaId: dto.wilayaId,
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
   async getMyProfile(userId: string) {
     const profile = await this.prisma.carrierProfile.findUnique({
       where: { userId },
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!profile) throw new NotFoundException('لم يتم العثور على ملف الناقل');
     return profile;
@@ -64,17 +73,31 @@ export class CarrierProfileService {
     const profile = await this.prisma.carrierProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('لم يتم العثور على ملف الناقل');
 
+    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : profile.governorateId;
+    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : profile.wilayaId;
+    if (nextGovId || nextWilayaId) {
+      await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
+    }
+
     return this.prisma.carrierProfile.update({
       where: { userId },
       data: dto,
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
   async findOne(id: string) {
     const profile = await this.prisma.carrierProfile.findUnique({
       where: { id },
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!profile) throw new NotFoundException('الناقل غير موجود');
     return profile;
@@ -87,7 +110,8 @@ export class CarrierProfileService {
 
     const where: Prisma.CarrierProfileWhereInput = {};
 
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.isAvailable !== undefined) where.isAvailable = query.isAvailable;
     if (query.isVerified !== undefined) where.isVerified = query.isVerified;
     if (query.vehicleType) where.vehicleTypes = { has: query.vehicleType };
@@ -105,7 +129,11 @@ export class CarrierProfileService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { user: { select: USER_SELECT } },
+        include: {
+          user: { select: USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
       }),
       this.prisma.carrierProfile.count({ where }),
     ]);
@@ -132,7 +160,11 @@ export class CarrierProfileService {
     return this.prisma.carrierProfile.update({
       where: { userId },
       data: { isAvailable },
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 }

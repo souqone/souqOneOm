@@ -27,15 +27,17 @@ export class SearchQueryDto {
   @IsString()
   category?: string;
 
-  /** City filter */
-  @IsOptional()
-  @IsString()
-  city?: string;
-
   /** Governorate filter */
   @IsOptional()
-  @IsString()
-  governorate?: string;
+  @Type(() => Number)
+  @IsInt()
+  governorateId?: number;
+
+  /** Wilaya filter */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  wilayaId?: number;
 
   /** Make filter (for listings/parts) */
   @IsOptional()

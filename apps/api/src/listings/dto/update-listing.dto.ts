@@ -1,4 +1,4 @@
-import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength } from 'class-validator';
+import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength, IsPositive } from 'class-validator';
 import { FuelType, Transmission, ItemCondition, ListingStatus, ListingType } from '@prisma/client';
 
 export class UpdateListingDto {
@@ -150,19 +150,13 @@ export class UpdateListingDto {
   insuranceIncluded?: boolean;
 
   @IsOptional()
-  @IsString()
-  governorate?: string;
-
-  @IsOptional()
   @IsInt()
+  @IsPositive()
   governorateId?: number;
 
   @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
+  @IsPositive()
   wilayaId?: number;
 
   @IsOptional()

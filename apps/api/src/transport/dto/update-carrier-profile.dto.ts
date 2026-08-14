@@ -24,14 +24,6 @@ export class UpdateCarrierProfileDto {
 
   @IsOptional()
   @IsString()
-  governorate?: string;
-
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
-  @IsString()
   contactPhone?: string;
 
   @IsOptional()

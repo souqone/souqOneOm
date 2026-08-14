@@ -14,7 +14,6 @@ const PUBLIC_USER_SELECT = {
   username: true,
   displayName: true,
   avatarUrl: true,
-  governorate: true,
   createdAt: true,
 };
 
@@ -45,14 +44,16 @@ export class EmployerProfileService {
         companySize: dto.companySize,
         industry: dto.industry,
         bio: dto.bio,
-        governorate: dto.governorate,
-        city: dto.city,
         governorateId: dto.governorateId,
         wilayaId: dto.wilayaId,
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },
-      include: { user: { select: PRIVATE_USER_SELECT } },
+      include: {
+        user: { select: PRIVATE_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
@@ -60,7 +61,11 @@ export class EmployerProfileService {
   async getMyProfile(userId: string) {
     const profile = await this.prisma.employerProfile.findUnique({
       where: { userId },
-      include: { user: { select: PRIVATE_USER_SELECT } },
+      include: {
+        user: { select: PRIVATE_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل صاحب عمل');
     return profile;
@@ -85,7 +90,11 @@ export class EmployerProfileService {
     return this.prisma.employerProfile.update({
       where: { userId },
       data,
-      include: { user: { select: PRIVATE_USER_SELECT } },
+      include: {
+        user: { select: PRIVATE_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
@@ -93,7 +102,11 @@ export class EmployerProfileService {
   async findOne(id: string) {
     const profile = await this.prisma.employerProfile.findUnique({
       where: { id },
-      include: { user: { select: PUBLIC_USER_SELECT } },
+      include: {
+        user: { select: PUBLIC_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!profile) throw new NotFoundException('بروفايل صاحب العمل غير موجود');
     return profile;

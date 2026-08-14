@@ -16,19 +16,7 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 
-const GOVERNORATE_ALIASES: Record<string, string[]> = {
-  OM_MUS: ['OM_MUS', 'مسقط', 'Muscat'],
-  OM_DHO: ['OM_DHO', 'ظفار', 'Dhofar'],
-  OM_MSM: ['OM_MSM', 'مسندم', 'Musandam'],
-  OM_BUR: ['OM_BUR', 'البريمي', 'Al Buraymi'],
-  OM_DAX: ['OM_DAX', 'الداخلية', 'Ad Dakhiliyah'],
-  OM_BAT: ['OM_BAT', 'شمال الباطنة', 'North Al Batinah'],
-  OM_BAS: ['OM_BAS', 'جنوب الباطنة', 'South Al Batinah'],
-  OM_SHS: ['OM_SHS', 'جنوب الشرقية', 'South Ash Sharqiyah'],
-  OM_SHN: ['OM_SHN', 'شمال الشرقية', 'North Ash Sharqiyah'],
-  OM_ZAH: ['OM_ZAH', 'الظاهرة', 'Ad Dhahirah'],
-  OM_WUS: ['OM_WUS', 'الوسطى', 'Al Wusta'],
-};
+
 
 @Injectable()
 export class ListingsService {
@@ -121,10 +109,8 @@ export class ListingsService {
         dailyPrice: dto.dailyPrice ? new Prisma.Decimal(dto.dailyPrice) : undefined,
         monthlyPrice: dto.monthlyPrice ? new Prisma.Decimal(dto.monthlyPrice) : undefined,
         withDriver: dto.withDriver ?? false,
-        governorate: dto.governorate,
-        city: dto.city,
-        governorateRef: dto.governorateId ? { connect: { id: dto.governorateId } } : undefined,
-        wilayaRef: dto.wilayaId ? { connect: { id: dto.wilayaId } } : undefined,
+        governorateRef: { connect: { id: dto.governorateId } },
+        wilayaRef: { connect: { id: dto.wilayaId } },
         latitude: dto.latitude,
         longitude: dto.longitude,
         ...(dto.brandId    && { brand:    { connect: { id: dto.brandId    } } }),
@@ -166,8 +152,8 @@ export class ListingsService {
       transmission: listing.transmission,
       condition: listing.condition,
       listingType: listing.listingType,
-      governorate: listing.governorate,
-      city: listing.city,
+      governorateId: listing.governorateId,
+      wilayaId: listing.wilayaId,
       isPremium: listing.isPremium,
       status: listing.status,
       viewCount: listing.viewCount,
@@ -219,15 +205,8 @@ export class ListingsService {
     if (query.transmission) where.transmission = query.transmission;
     if (query.condition) where.condition = query.condition;
     if (query.bodyType) where.bodyType = query.bodyType;
-    if (query.governorate) {
-      const aliases = GOVERNORATE_ALIASES[query.governorate];
-      if (aliases) {
-        where.governorate = { in: aliases };
-      } else {
-        where.governorate = query.governorate;
-      }
-    }
-    if (query.city) where.city = query.city;
+    if (query.governorateId) where.governorateId = query.governorateId;
+    if (query.wilayaId) where.wilayaId = query.wilayaId;
     if (query.sellerId) where.sellerId = query.sellerId;
     if (query.listingType) where.listingType = query.listingType;
     where.status = query.status ?? 'ACTIVE';
@@ -365,12 +344,10 @@ export class ListingsService {
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
     if (dto.condition !== undefined) data.condition = dto.condition;
     if (dto.status !== undefined) data.status = dto.status;
-    if (dto.governorate !== undefined) data.governorate = dto.governorate;
     if (dto.governorateId !== undefined) {
       if (dto.governorateId) data.governorateRef = { connect: { id: dto.governorateId } };
       else data.governorateRef = { disconnect: true };
     }
-    if (dto.city !== undefined) data.city = dto.city;
     if (dto.wilayaId !== undefined) {
       if (dto.wilayaId) data.wilayaRef = { connect: { id: dto.wilayaId } };
       else data.wilayaRef = { disconnect: true };
@@ -419,8 +396,8 @@ export class ListingsService {
       transmission: updated.transmission,
       condition: updated.condition,
       listingType: updated.listingType,
-      governorate: updated.governorate,
-      city: updated.city,
+      governorateId: updated.governorateId,
+      wilayaId: updated.wilayaId,
       isPremium: updated.isPremium,
       status: updated.status,
       viewCount: updated.viewCount,

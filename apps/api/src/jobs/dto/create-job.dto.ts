@@ -1,5 +1,5 @@
 import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, Max, MinLength, } from 'class-validator';
+  IsBoolean, Min, Max, MinLength, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   JobType, EmploymentType, SalaryPeriod, LicenseType,
@@ -76,20 +76,15 @@ export class CreateJobDto {
   @IsBoolean()
   hasOwnVehicle?: boolean;
 
-  @IsString()
-  governorate!: string;
-
-  @IsOptional()
   @IsInt()
-  governorateId?: number;
+  @IsPositive()
+  @Type(() => Number)
+  governorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
-  wilayaId?: number;
+  @IsPositive()
+  @Type(() => Number)
+  wilayaId!: number;
 
   @IsOptional()
   @IsString()
