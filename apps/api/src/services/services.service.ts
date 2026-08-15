@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,7 +16,7 @@ export class ServicesService extends BaseListingService {
     modelName: 'carService',
     meiliIndex: INDEXES.SERVICES,
     entityType: 'CAR_SERVICE',
-    notFoundMsg: 'الخدمة غير موجودة',
+    notFoundMsg: 'Ø§Ù„Ø®Ø¯Ù…Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©',
     decimalFields: ['priceFrom', 'priceTo'],
   };
 
@@ -44,6 +44,8 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
       workingDays: dto.workingDays ?? [],
       governorateId: dto.governorateId,
       wilayaId: dto.wilayaId,
+      governorate: (dto as any).governorate,
+      city: (dto as any).city,
       address: dto.address,
       latitude: dto.latitude,
       longitude: dto.longitude,
@@ -56,6 +58,10 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
 
   async create(dto: CreateServiceDto, userId: string) {
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
+    const locs = await this.geoService.getLocationNames(dto.governorateId, dto.wilayaId);
+    (dto as any).governorate = locs.governorateName;
+    (dto as any).city = locs.wilayaName;
 
     const item = await super.create(dto, userId);
     if (dto.latitude && dto.longitude) {
@@ -72,6 +78,14 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
       if (nextGovId || nextWilayaId) {
         await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
       }
+    }
+
+    if (dto.governorateId !== undefined || dto.wilayaId !== undefined) {
+      const nextGovId = dto.governorateId !== undefined ? dto.governorateId : existing?.governorateId;
+      const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : existing?.wilayaId;
+      const locs = await this.geoService.getLocationNames(nextGovId, nextWilayaId);
+      if (locs.governorateName) (dto as any).governorate = locs.governorateName;
+      if (locs.wilayaName) (dto as any).city = locs.wilayaName;
     }
 
     const item = await super.update(id, userId, dto);
@@ -176,7 +190,7 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
     if (query.isOpenNow) {
       const omanTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Muscat" }));
       const dayIndex = omanTime.getDay();
-      const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+      const days = ['Ø§Ù„Ø£Ø­Ø¯', 'Ø§Ù„Ø§Ø«Ù†ÙŠÙ†', 'Ø§Ù„Ø«Ù„Ø§Ø«Ø§Ø¡', 'Ø§Ù„Ø£Ø±Ø¨Ø¹Ø§Ø¡', 'Ø§Ù„Ø®Ù…ÙŠØ³', 'Ø§Ù„Ø¬Ù…Ø¹Ø©', 'Ø§Ù„Ø³Ø¨Øª'];
       const currentDay = days[dayIndex];
       const currentHour = omanTime.getHours().toString().padStart(2, '0');
       const currentMinute = omanTime.getMinutes().toString().padStart(2, '0');
@@ -190,3 +204,4 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
     return where;
   }
 }
+
