@@ -53,6 +53,15 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
       whatsapp: dto.whatsapp,
       website: dto.website,
       userId,
+      ...(dto.images && dto.images.length > 0 && {
+        images: {
+          create: dto.images.map((url, i) => ({
+            url,
+            order: i,
+            isPrimary: i === 0,
+          })),
+        },
+      }),
     };
   }
 
@@ -71,6 +80,7 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
   }
 
   async update(id: string, userId: string, dto: Partial<CreateServiceDto>) {
+    if (dto.images) delete dto.images;
     const existing = await this.prisma.carService.findUnique({ where: { id } });
     if (existing) {
       const nextGovId = dto.governorateId !== undefined ? dto.governorateId : existing.governorateId;
