@@ -18,7 +18,8 @@ const validBus = {
   transmission: 'AUTOMATIC',
   condition: 'USED',
   price: 12000,
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899112233',
 };
 

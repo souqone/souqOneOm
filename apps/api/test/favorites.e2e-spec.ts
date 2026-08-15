@@ -11,7 +11,9 @@ const validListing = {
   model: 'Civic',
   year: 2021,
   price: 7000,
-  governorate: 'Muscat',
+  condition: 'USED',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 describe('Favorites API (e2e)', () => {

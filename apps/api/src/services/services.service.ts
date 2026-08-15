@@ -42,10 +42,8 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
       workingHoursOpen: dto.workingHoursOpen,
       workingHoursClose: dto.workingHoursClose,
       workingDays: dto.workingDays ?? [],
-      governorate: dto.governorate,
-        governorateId: dto.governorateId,
-      city: dto.city,
-        wilayaId: dto.wilayaId,
+      governorateId: dto.governorateId,
+      wilayaId: dto.wilayaId,
       address: dto.address,
       latitude: dto.latitude,
       longitude: dto.longitude,
@@ -150,7 +148,7 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
       id: item.id, title: item.title, slug: item.slug, description: item.description,
       serviceType: item.serviceType, providerName: item.providerName, providerType: item.providerType,
       priceFrom: item.priceFrom ? Number(item.priceFrom) : null, currency: item.currency,
-      governorate: item.governorate, city: item.city, isHomeService: item.isHomeService,
+      governorateId: item.governorateId, wilayaId: item.wilayaId, isHomeService: item.isHomeService,
       status: item.status, imageUrl: item.images?.[0]?.url || null, createdAt: item.createdAt,
     };
   }
@@ -166,7 +164,8 @@ prisma: PrismaService, searchService: SearchService, redis: RedisService, eventE
     }
     if (query.serviceType) where.serviceType = query.serviceType;
     if (query.providerType) where.providerType = query.providerType;
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.isHomeService !== undefined) where.isHomeService = query.isHomeService;
     if (query.userId) where.userId = query.userId;
 

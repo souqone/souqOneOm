@@ -27,7 +27,10 @@ export class AdminTransportController {
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.serviceType) where.serviceType = query.serviceType;
-    if (query.fromGovernorate) where.fromGovernorate = query.fromGovernorate;
+    if (query.fromGovernorateId) where.fromGovernorateId = parseInt(query.fromGovernorateId);
+    if (query.fromWilayaId) where.fromWilayaId = parseInt(query.fromWilayaId);
+    if (query.toGovernorateId) where.toGovernorateId = parseInt(query.toGovernorateId);
+    if (query.toWilayaId) where.toWilayaId = parseInt(query.toWilayaId);
     if (query.userId) where.userId = query.userId;
 
     const [items, total] = await this.prisma.$transaction([
@@ -38,6 +41,10 @@ export class AdminTransportController {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, username: true, displayName: true } },
+          fromGovernorateRef: true,
+          fromWilayaRef: true,
+          toGovernorateRef: true,
+          toWilayaRef: true,
           _count: { select: { quotes: true } },
         },
       }),
@@ -54,7 +61,8 @@ export class AdminTransportController {
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.isAvailable !== undefined) where.isAvailable = query.isAvailable;
 
     const [items, total] = await this.prisma.$transaction([
@@ -63,7 +71,11 @@ export class AdminTransportController {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { user: { select: { id: true, username: true, displayName: true } } },
+        include: {
+          user: { select: { id: true, username: true, displayName: true } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
       }),
       this.prisma.carrierProfile.count({ where }),
     ]);

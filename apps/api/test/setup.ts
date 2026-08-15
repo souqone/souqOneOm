@@ -73,6 +73,12 @@ class MockRedisService {
   async getTTL(key: string): Promise<number> {
     return this.ttls.get(key) ?? -1;
   }
+  async setNX(key: string, value: any, ttl?: number): Promise<boolean> {
+    if (this.store.has(key)) return false;
+    this.store.set(key, JSON.stringify(value));
+    if (ttl) this.ttls.set(key, ttl);
+    return true;
+  }
   async publish(_channel: string, _message: any) {}
   async subscribe(_channel: string, _callback: any) {}
   async unsubscribe(_channel: string) {}
@@ -231,11 +237,11 @@ export async function createRentalListing(accessToken: string): Promise<string> 
       price: 5000,
       listingType: 'RENTAL',
       dailyPrice: 15,
-      weeklyPrice: 90,
       monthlyPrice: 350,
       minRentalDays: 1,
       condition: 'USED',
-      governorate: 'Muscat',
+      governorateId: 1,
+      wilayaId: 1,
     })
     .expect(201);
   return res.body.id;

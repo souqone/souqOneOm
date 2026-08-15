@@ -15,7 +15,8 @@ const validListing = {
   fuelType: 'PETROL',
   transmission: 'AUTOMATIC',
   condition: 'USED',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 describe('Listings API (e2e)', () => {

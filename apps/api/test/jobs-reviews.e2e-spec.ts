@@ -6,21 +6,37 @@ afterAll(async () => { await closeTestApp(); });
 
 const validJob = {
   title: 'وظيفة اختبار تقييمات',
-  description: 'وظيفة للاختبار',
+  description: 'وظيفة للاختبار في مسقط عمان',
   jobType: 'HIRING',
   employmentType: 'FULL_TIME',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   licenseTypes: ['HEAVY'],
 };
 
 const validDriverProfile = {
   licenseTypes: ['HEAVY'],
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
 };
+
+async function registerEmployer() {
+  const user = await registerUser();
+  await request(getApp().getHttpServer())
+    .post('/api/jobs/employer-profile')
+    .set('Authorization', `Bearer ${user.accessToken}`)
+    .send({
+      companyName: 'Test Employer Company',
+      companySize: 'MEDIUM',
+      governorateId: 1,
+      wilayaId: 1,
+    });
+  return user;
+}
 
 describe('Jobs Reviews API (e2e)', () => {
   it('should reject review without ACCEPTED application', async () => {
-    const employer = await registerUser();
+    const employer = await registerEmployer();
     const driver = await registerUser();
 
     // Create driver profile
@@ -45,7 +61,7 @@ describe('Jobs Reviews API (e2e)', () => {
   });
 
   it('should allow review after ACCEPTED application', async () => {
-    const employer = await registerUser();
+    const employer = await registerEmployer();
     const driver = await registerUser();
 
     // Create job
@@ -66,7 +82,7 @@ describe('Jobs Reviews API (e2e)', () => {
     const appRes = await request(getApp().getHttpServer())
       .post(`/api/jobs/${jobRes.body.id}/apply`)
       .set('Authorization', `Bearer ${driver.accessToken}`)
-      .send({ coverLetter: 'أريد العمل' })
+      .send({ message: 'أريد العمل' })
       .expect(201);
 
     // Employer accepts
@@ -94,7 +110,7 @@ describe('Jobs Reviews API (e2e)', () => {
   });
 
   it('should get driver reviews', async () => {
-    const employer = await registerUser();
+    const employer = await registerEmployer();
     const driver = await registerUser();
 
     // Setup: job + profile + apply + accept + review
@@ -113,7 +129,7 @@ describe('Jobs Reviews API (e2e)', () => {
     const appRes = await request(getApp().getHttpServer())
       .post(`/api/jobs/${jobRes.body.id}/apply`)
       .set('Authorization', `Bearer ${driver.accessToken}`)
-      .send({ coverLetter: 'test' })
+      .send({ message: 'test' })
       .expect(201);
 
     await request(getApp().getHttpServer())
@@ -145,7 +161,7 @@ describe('Jobs Reviews API (e2e)', () => {
   });
 
   it('should update averageRating on DriverProfile after review', async () => {
-    const employer = await registerUser();
+    const employer = await registerEmployer();
     const driver = await registerUser();
 
     const jobRes = await request(getApp().getHttpServer())
@@ -163,7 +179,7 @@ describe('Jobs Reviews API (e2e)', () => {
     const appRes = await request(getApp().getHttpServer())
       .post(`/api/jobs/${jobRes.body.id}/apply`)
       .set('Authorization', `Bearer ${driver.accessToken}`)
-      .send({ coverLetter: 'test' })
+      .send({ message: 'test' })
       .expect(201);
 
     await request(getApp().getHttpServer())

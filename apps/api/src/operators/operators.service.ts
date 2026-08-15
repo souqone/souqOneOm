@@ -19,9 +19,7 @@ export class OperatorsService {
 private readonly prisma: PrismaService) {}
 
   async create(dto: CreateOperatorListingDto, userId: string) {
-    if (dto.governorateId && dto.wilayaId) {
-      await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
-    }
+    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     const item = await this.prisma.operatorListing.create({
       data: {
@@ -37,9 +35,7 @@ private readonly prisma: PrismaService) {}
         hourlyRate: dto.hourlyRate != null ? new Prisma.Decimal(dto.hourlyRate) : null,
         currency: dto.currency ?? 'OMR',
         isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        governorate: dto.governorate,
         governorateId: dto.governorateId,
-        city: dto.city,
         wilayaId: dto.wilayaId,
         latitude: dto.latitude,
         longitude: dto.longitude,
@@ -47,7 +43,11 @@ private readonly prisma: PrismaService) {}
         whatsapp: dto.whatsapp,
         userId,
       },
-      include: { user: { select: USER_SELECT } },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
 
     if (dto.latitude && dto.longitude) {
@@ -62,7 +62,8 @@ private readonly prisma: PrismaService) {}
     const limit = Math.min(q.limit ?? 20, 50);
     const where: Prisma.OperatorListingWhereInput = { status: 'ACTIVE' };
     if (q.operatorType) where.operatorType = q.operatorType as OperatorType;
-    if (q.governorate) where.governorate = q.governorate;
+    if (q.governorateId) where.governorateId = q.governorateId;
+    if (q.wilayaId) where.wilayaId = q.wilayaId;
     if (q.search) {
       where.OR = [
         { title: { contains: q.search, mode: 'insensitive' } },
@@ -75,7 +76,11 @@ private readonly prisma: PrismaService) {}
     const [items, total] = await this.prisma.$transaction([
       this.prisma.operatorListing.findMany({
         where, orderBy, skip: (page - 1) * limit, take: limit,
-        include: { user: { select: USER_SELECT } },
+        include: {
+          user: { select: USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
       }),
       this.prisma.operatorListing.count({ where }),
     ]);
@@ -84,7 +89,12 @@ private readonly prisma: PrismaService) {}
 
   async findOne(id: string) {
     const item = await this.prisma.operatorListing.findUnique({
-      where: { id }, include: { user: { select: USER_SELECT } },
+      where: { id },
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     // TODO: migrate viewCount to Redis INCR + periodic sync for high traffic
@@ -93,7 +103,14 @@ private readonly prisma: PrismaService) {}
   }
 
   async my(userId: string) {
-    return this.prisma.operatorListing.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
+    return this.prisma.operatorListing.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        governorateRef: true,
+        wilayaRef: true,
+      },
+    });
   }
 
   async update(id: string, userId: string, dto: UpdateOperatorListingDto) {
@@ -120,16 +137,22 @@ private readonly prisma: PrismaService) {}
     if (dto.hourlyRate !== undefined) data.hourlyRate = new Prisma.Decimal(dto.hourlyRate);
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
-    if (dto.governorate !== undefined) data.governorate = dto.governorate;
     if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
-    if (dto.city !== undefined) data.city = dto.city;
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.operatorListing.update({ where: { id }, data, include: { user: { select: USER_SELECT } } });
+    const updated = await this.prisma.operatorListing.update({
+      where: { id },
+      data,
+      include: {
+        user: { select: USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
+    });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {

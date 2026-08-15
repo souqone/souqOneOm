@@ -13,7 +13,8 @@ const validInsurance = {
   priceFrom: 150,
   features: ['Roadside Assistance', 'Agency Repair', 'Replacement Car'],
   contactPhone: '+96899445566',
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 describe('Insurance API (e2e)', () => {

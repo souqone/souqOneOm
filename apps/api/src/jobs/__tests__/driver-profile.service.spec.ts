@@ -40,12 +40,14 @@ describe('DriverProfileService', () => {
         id: 'dp1',
         userId: 'user1',
         licenseTypes: ['HEAVY'],
-        governorate: 'Muscat',
+        governorateId: 1,
+        wilayaId: 101,
       });
 
       const result = await service.create('user1', {
         licenseTypes: ['HEAVY'] as any,
-        governorate: 'Muscat',
+        governorateId: 1,
+        wilayaId: 101,
       } as any);
 
       expect(result.id).toBe('dp1');
@@ -56,7 +58,7 @@ describe('DriverProfileService', () => {
       mockPrisma.driverProfile.findUnique.mockResolvedValue({ id: 'existing' });
 
       await expect(
-        service.create('user1', { licenseTypes: ['HEAVY'], governorate: 'Muscat' } as any),
+        service.create('user1', { licenseTypes: ['HEAVY'], governorateId: 1, wilayaId: 101 } as any),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -138,15 +140,15 @@ describe('DriverProfileService', () => {
       expect(result.meta.total).toBe(1);
     });
 
-    it('should filter by governorate', async () => {
+    it('should filter by governorateId', async () => {
       mockPrisma.driverProfile.findMany.mockResolvedValue([]);
       mockPrisma.driverProfile.count.mockResolvedValue(0);
 
-      await service.findAll({ governorate: 'Muscat' } as any);
+      await service.findAll({ governorateId: '1' } as any);
 
       expect(mockPrisma.driverProfile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ governorate: 'Muscat' }),
+          where: expect.objectContaining({ governorateId: 1 }),
         }),
       );
     });

@@ -16,7 +16,6 @@ const PUBLIC_USER_SELECT = {
   username: true,
   displayName: true,
   avatarUrl: true,
-  governorate: true,
   createdAt: true,
 };
 
@@ -50,14 +49,16 @@ export class DriverProfileService {
         vehicleTypes: dto.vehicleTypes ?? [],
         hasOwnVehicle: dto.hasOwnVehicle ?? false,
         bio: dto.bio,
-        governorate: dto.governorate,
-        city: dto.city,
         governorateId: dto.governorateId,
         wilayaId: dto.wilayaId,
         contactPhone: dto.contactPhone,
         whatsapp: dto.whatsapp,
       },
-      include: { user: { select: PRIVATE_USER_SELECT } },
+      include: {
+        user: { select: PRIVATE_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
@@ -65,7 +66,11 @@ export class DriverProfileService {
   async getMyProfile(userId: string) {
     const profile = await this.prisma.driverProfile.findUnique({
       where: { userId },
-      include: { user: { select: PRIVATE_USER_SELECT } },
+      include: {
+        user: { select: PRIVATE_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل سائق');
     return profile;
@@ -90,7 +95,11 @@ export class DriverProfileService {
     return this.prisma.driverProfile.update({
       where: { userId },
       data,
-      include: { user: { select: PRIVATE_USER_SELECT } },
+      include: {
+        user: { select: PRIVATE_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
   }
 
@@ -98,7 +107,11 @@ export class DriverProfileService {
   async findOne(id: string) {
     const profile = await this.prisma.driverProfile.findUnique({
       where: { id },
-      include: { user: { select: PUBLIC_USER_SELECT } },
+      include: {
+        user: { select: PUBLIC_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
     if (!profile) throw new NotFoundException('بروفايل السائق غير موجود');
     return profile;
@@ -112,7 +125,8 @@ export class DriverProfileService {
 
     const where: Prisma.DriverProfileWhereInput = {};
 
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.isAvailable !== undefined) where.isAvailable = query.isAvailable;
     if (query.isVerified !== undefined) where.isVerified = query.isVerified;
     if (query.licenseType) where.licenseTypes = { has: query.licenseType };
@@ -131,7 +145,11 @@ export class DriverProfileService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { user: { select: PUBLIC_USER_SELECT } },
+        include: {
+          user: { select: PUBLIC_USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
       }),
       this.prisma.driverProfile.count({ where }),
     ]);

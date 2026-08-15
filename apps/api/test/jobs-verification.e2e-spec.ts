@@ -6,7 +6,8 @@ afterAll(async () => { await closeTestApp(); });
 
 const validDriverProfile = {
   licenseTypes: ['HEAVY'],
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 const submitData = {

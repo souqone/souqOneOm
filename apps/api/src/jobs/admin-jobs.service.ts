@@ -18,14 +18,15 @@ export class AdminJobsService {
   ) {}
 
   /* ───── LIST JOBS ───── */
-  async listJobs(query: { page?: string; limit?: string; status?: string; governorate?: string; search?: string }) {
+  async listJobs(query: { page?: string; limit?: string; status?: string; governorateId?: string; wilayaId?: string; search?: string }) {
     const page = Math.max(1, parseInt(query.page || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt(query.limit || '20', 10)));
     const skip = (page - 1) * limit;
 
     const where: Prisma.DriverJobWhereInput = {};
     if (query.status) where.status = query.status as any;
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.search) {
       where.OR = [
         { title: { contains: query.search, mode: 'insensitive' } },
@@ -41,6 +42,8 @@ export class AdminJobsService {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, username: true, displayName: true, email: true } },
+          governorateRef: true,
+          wilayaRef: true,
           _count: { select: { applications: true } },
         },
       }),

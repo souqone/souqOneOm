@@ -13,7 +13,11 @@ export class QueryDriversDto {
 
   @IsOptional()
   @IsString()
-  governorate?: string;
+  governorateId?: string;
+
+  @IsOptional()
+  @IsString()
+  wilayaId?: string;
 
   @IsOptional()
   @IsEnum(LicenseType)

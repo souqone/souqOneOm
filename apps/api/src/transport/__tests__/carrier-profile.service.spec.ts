@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CarrierProfileService } from '../carrier-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GeoService } from '../../locations/geo.service';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
 const mockPrisma = {
@@ -14,6 +15,10 @@ const mockPrisma = {
   $transaction: jest.fn(),
 };
 
+const mockGeoService = {
+  validateLocationPair: jest.fn().mockResolvedValue(true),
+};
+
 describe('CarrierProfileService', () => {
   let service: CarrierProfileService;
 
@@ -22,6 +27,7 @@ describe('CarrierProfileService', () => {
       providers: [
         CarrierProfileService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: GeoService, useValue: mockGeoService },
       ],
     }).compile();
 
@@ -33,7 +39,7 @@ describe('CarrierProfileService', () => {
     it('should throw ConflictException if profile already exists', async () => {
       mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: 'existing' });
       await expect(
-        service.create('user1', { vehicleTypes: [], serviceTypes: [], governorate: 'مسقط' } as any),
+        service.create('user1', { vehicleTypes: [], serviceTypes: [], governorateId: 1, wilayaId: 101 } as any),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -43,9 +49,11 @@ describe('CarrierProfileService', () => {
       const result = await service.create('user1', {
         vehicleTypes: ['PICKUP'],
         serviceTypes: ['GOODS'],
-        governorate: 'مسقط',
+        governorateId: 1,
+        wilayaId: 101,
       } as any);
       expect(result).toEqual({ id: 'new', userId: 'user1' });
+      expect(mockGeoService.validateLocationPair).toHaveBeenCalledWith(1, 101);
       expect(mockPrisma.carrierProfile.create).toHaveBeenCalled();
     });
   });
@@ -81,7 +89,7 @@ describe('CarrierProfileService', () => {
     it('should return paginated carriers with filters', async () => {
       const items = [{ id: 'p1' }];
       mockPrisma.$transaction.mockResolvedValue([items, 1]);
-      const result = await service.findAll({ governorate: 'مسقط' });
+      const result = await service.findAll({ governorateId: '1' } as any);
       expect(result.items).toEqual(items);
       expect(result.meta.total).toBe(1);
     });

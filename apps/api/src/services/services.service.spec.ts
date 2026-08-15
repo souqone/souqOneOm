@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -54,7 +54,10 @@ const mockItem = {
   providerName: 'ورشة الأمان',
   priceFrom: { toNumber: () => 5 },
   currency: 'OMR',
-  governorate: 'مسقط',
+  governorateId: 1,
+  wilayaId: 101,
+  governorateRef: { id: 1, nameAr: 'مسقط', nameEn: 'Muscat' },
+  wilayaRef: { id: 101, nameAr: 'بوشر', nameEn: 'Bawshar' },
   status: 'ACTIVE',
   userId: 'user-1',
   viewCount: 0,
@@ -96,7 +99,8 @@ describe('ServicesService', () => {
         serviceType: 'MAINTENANCE',
         providerType: 'WORKSHOP',
         providerName: 'ورشة الأمان',
-        governorate: 'مسقط',
+        governorateId: 1,
+        wilayaId: 101,
       };
 
       const result = await service.create(dto as any, 'user-1');
@@ -108,9 +112,10 @@ describe('ServicesService', () => {
     });
 
     it('should fail on create if wilaya mismatch (RED)', async () => {
-      mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
-      const dto = { title: 'Service', governorateId: 1, wilayaId: 10 } as any;
-      await expect(service.create(dto, 'user-1')).rejects.toThrow('Mismatch');
+      mockGeoService.validateLocationPair.mockRejectedValueOnce(new BadRequestException('Invalid location pair'));
+      await expect(
+        service.create({ governorateId: 1, wilayaId: 999 } as any, 'user-1'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -131,12 +136,11 @@ describe('ServicesService', () => {
       expect(mockRedis.set).toHaveBeenCalled();
     });
 
-    it('should return cached results when available', async () => {
-      const cached = { items: [mockItem], meta: { total: 1, page: 1, limit: 20, totalPages: 1 } };
+    it('should return cached result if available', async () => {
+      const cached = { items: [mockItem], meta: { total: 1 } };
       mockRedis.get.mockResolvedValue(cached);
 
-      const result = await service.findAll({ page: '1', limit: '20' });
-
+      const result = await service.findAll({});
       expect(result).toEqual(cached);
       expect(mockPrisma.carService.findMany).not.toHaveBeenCalled();
     });
@@ -149,7 +153,7 @@ describe('ServicesService', () => {
       await service.findAll({
         search: 'زيت',
         serviceType: 'MAINTENANCE' as any,
-        governorate: 'مسقط',
+        governorateId: 1,
         page: '1',
         limit: '20',
       });
@@ -157,7 +161,7 @@ describe('ServicesService', () => {
       const callArgs = mockPrisma.carService.findMany.mock.calls[0][0];
       expect(callArgs.where.OR).toBeDefined();
       expect(callArgs.where.serviceType).toBe('MAINTENANCE');
-      expect(callArgs.where.governorate).toBe('مسقط');
+      expect(callArgs.where.governorateId).toBe(1);
     });
   });
 

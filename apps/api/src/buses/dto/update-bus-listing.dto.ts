@@ -1,5 +1,5 @@
 import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, MaxLength, MinLength, IsDateString, } from 'class-validator';
+  IsBoolean, Min, MaxLength, MinLength, IsDateString, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   BusListingType, BusType, ContractType,
@@ -132,19 +132,13 @@ export class UpdateBusListingDto {
 
   // ── Location ──
   @IsOptional()
-  @IsString()
-  governorate?: string;
-
-  @IsOptional()
   @IsInt()
+  @IsPositive()
   governorateId?: number;
 
   @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
+  @IsPositive()
   wilayaId?: number;
 
   @IsOptional()

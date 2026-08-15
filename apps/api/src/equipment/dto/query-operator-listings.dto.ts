@@ -1,12 +1,15 @@
-import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsInt, Min, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryOperatorListingsDto {
   @IsOptional() @IsEnum(['DRIVER', 'OPERATOR', 'TECHNICIAN', 'MAINTENANCE'])
   operatorType?: string;
 
-  @IsOptional() @IsString()
-  governorate?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @IsPositive()
+  governorateId?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @IsPositive()
+  wilayaId?: number;
 
   @IsOptional() @IsString()
   search?: string;

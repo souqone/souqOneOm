@@ -34,14 +34,6 @@ export class UpdateTransportRequestDto {
 
   @IsOptional()
   @IsString()
-  fromGovernorate?: string;
-
-  @IsOptional()
-  @IsString()
-  fromCity?: string;
-
-  @IsOptional()
-  @IsString()
   @MinLength(5)
   fromAddress?: string;
 
@@ -79,14 +71,6 @@ export class UpdateTransportRequestDto {
   @IsPositive()
   @Type(() => Number)
   pickupWilayaId?: number;
-
-  @IsOptional()
-  @IsString()
-  toGovernorate?: string;
-
-  @IsOptional()
-  @IsString()
-  toCity?: string;
 
   @IsOptional()
   @IsString()

@@ -20,12 +20,15 @@ export class CreateCarrierProfileDto {
   @IsEnum(TransportServiceType, { each: true })
   serviceTypes!: TransportServiceType[];
 
-  @IsString()
-  governorate!: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  governorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  city?: string;
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  wilayaId!: number;
 
   @IsOptional()
   @IsString()
@@ -34,16 +37,4 @@ export class CreateCarrierProfileDto {
   @IsOptional()
   @IsString()
   whatsapp?: string;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  governorateId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  @Type(() => Number)
-  wilayaId?: number;
 }

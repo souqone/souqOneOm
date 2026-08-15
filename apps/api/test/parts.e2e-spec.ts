@@ -12,7 +12,8 @@ const validPart = {
   price: 5,
   isOriginal: true,
   compatibleMakes: ['Toyota'],
-  governorate: 'Muscat',
+  governorateId: 1,
+  wilayaId: 1,
   contactPhone: '+96899001122',
 };
 

@@ -74,13 +74,17 @@ export class GeoService {
 
   /**
    * Validates that the provided wilaya actually belongs to the provided governorate.
-   * Throws BadRequestException if they don't match or if only one is provided.
+   * Throws BadRequestException if they don't match or if required and missing.
    */
-  async validateLocationPair(governorateId?: number, wilayaId?: number): Promise<void> {
-    if (!governorateId && !wilayaId) return;
-
-    if ((governorateId && !wilayaId) || (!governorateId && wilayaId)) {
-      throw new BadRequestException('يجب توفير كل من المحافظة والولاية معاً أو تركهما فارغين');
+  async validateLocationPair(governorateId?: number, wilayaId?: number, required = true): Promise<void> {
+    if (!governorateId || !wilayaId) {
+      if (required) {
+        throw new BadRequestException('المحافظة والولاية مطلوبتان');
+      }
+      if (governorateId || wilayaId) {
+        throw new BadRequestException('يجب توفير كل من المحافظة والولاية معاً');
+      }
+      return;
     }
 
     const wilaya = await this.prisma.wilaya.findUnique({

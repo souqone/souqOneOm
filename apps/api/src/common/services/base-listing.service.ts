@@ -80,6 +80,8 @@ export abstract class BaseListingService {
     return {
       user: { select: USER_SELECT_PUBLIC },
       images: { orderBy: { order: 'asc' }, take: 1 },
+      governorateRef: true,
+      wilayaRef: true,
     };
   }
 
@@ -87,6 +89,8 @@ export abstract class BaseListingService {
     return {
       user: { select: USER_SELECT_DETAIL },
       images: { orderBy: { order: 'asc' } },
+      governorateRef: true,
+      wilayaRef: true,
     };
   }
 
@@ -94,6 +98,8 @@ export abstract class BaseListingService {
     return {
       user: { select: USER_SELECT_PUBLIC },
       images: true,
+      governorateRef: true,
+      wilayaRef: true,
     };
   }
 

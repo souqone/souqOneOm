@@ -11,7 +11,9 @@ const validListing = {
   model: 'Camry',
   year: 2022,
   price: 8000,
-  governorate: 'Muscat',
+  condition: 'USED',
+  governorateId: 1,
+  wilayaId: 1,
 };
 
 /** Helper: create a listing as seller, return { listingId, seller, buyer } */
@@ -36,7 +38,7 @@ describe('Chat API (e2e)', () => {
       const res = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId })
+        .send({ entityType: 'LISTING', entityId: listingId })
         .expect(201);
 
       expect(res.body.id).toBeDefined();
@@ -48,12 +50,12 @@ describe('Chat API (e2e)', () => {
       const first = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       const second = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       expect(first.body.id).toBe(second.body.id);
     });
@@ -61,7 +63,7 @@ describe('Chat API (e2e)', () => {
     it('should reject without auth', async () => {
       await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
-        .send({ listingId: 'some-id' })
+        .send({ entityType: 'LISTING', entityId: 'some-id' })
         .expect(401);
     });
   });
@@ -89,7 +91,7 @@ describe('Chat API (e2e)', () => {
       await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       const res = await request(getApp().getHttpServer())
         .get('/api/chat/conversations')
@@ -107,7 +109,7 @@ describe('Chat API (e2e)', () => {
       const conv = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       const res = await request(getApp().getHttpServer())
         .post(`/api/chat/conversations/${conv.body.id}/messages`)
@@ -124,7 +126,7 @@ describe('Chat API (e2e)', () => {
       const conv = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       await request(getApp().getHttpServer())
         .post(`/api/chat/conversations/${conv.body.id}/messages`)
@@ -148,7 +150,7 @@ describe('Chat API (e2e)', () => {
       const conv = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       // buyer sends message, seller marks read
       await request(getApp().getHttpServer())
@@ -177,7 +179,7 @@ describe('Chat API (e2e)', () => {
       const conv = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ listingId });
+        .send({ entityType: 'LISTING', entityId: listingId });
 
       const res = await request(getApp().getHttpServer())
         .patch(`/api/chat/conversations/${conv.body.id}/read`)

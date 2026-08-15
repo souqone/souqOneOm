@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsEnum, IsInt, IsBoolean,
-  IsNumber, IsArray, Min, Max, MinLength, IsDateString,
+  IsNumber, IsArray, Min, Max, MinLength, IsDateString, IsPositive,
 } from 'class-validator';
 
 const EQUIPMENT_TYPES = [
@@ -92,18 +92,14 @@ export class UpdateEquipmentListingDto {
   @IsOptional() @IsString()
   siteDetails?: string;
 
-  @IsOptional() @IsString()
-  governorate?: string;
-
   @IsOptional()
   @IsInt()
+  @IsPositive()
   governorateId?: number;
 
-  @IsOptional() @IsString()
-  city?: string;
-
   @IsOptional()
   @IsInt()
+  @IsPositive()
   wilayaId?: number;
 
   @IsOptional() @IsNumber()

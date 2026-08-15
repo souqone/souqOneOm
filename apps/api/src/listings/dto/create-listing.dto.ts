@@ -1,4 +1,4 @@
-import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength } from 'class-validator';
+import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength, IsPositive } from 'class-validator';
 import { FuelType, Transmission, ItemCondition, ListingType } from '@prisma/client';
 
 export class CreateListingDto {
@@ -139,21 +139,13 @@ export class CreateListingDto {
   @IsBoolean()
   insuranceIncluded?: boolean;
 
-  @IsOptional()
-  @IsString()
-  governorate?: string;
-
-  @IsOptional()
   @IsInt()
-  governorateId?: number;
+  @IsPositive()
+  governorateId!: number;
 
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
-  wilayaId?: number;
+  @IsPositive()
+  wilayaId!: number;
 
   @IsOptional()
   @IsNumber()

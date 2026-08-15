@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsInt, IsBoolean,
-  IsNumber, IsArray, Min, MinLength,
+  IsNumber, IsArray, Min, MinLength, IsPositive,
 } from 'class-validator';
 
 /**
@@ -37,16 +37,14 @@ export class UpdateOperatorListingDto {
   @IsOptional() @IsBoolean()
   isPriceNegotiable?: boolean;
 
-  @IsOptional() @IsString()
-  governorate?: string;
-
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
   governorateId?: number;
 
-  @IsOptional() @IsString()
-  city?: string;
-
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
   wilayaId?: number;
 
   @IsOptional() @IsNumber()

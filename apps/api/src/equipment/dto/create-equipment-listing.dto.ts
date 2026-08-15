@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsEnum, IsInt, IsBoolean,
-  IsNumber, IsArray, Min, Max, MinLength, IsDateString,
+  IsNumber, IsArray, Min, Max, MinLength, IsDateString, IsPositive,
 } from 'class-validator';
 
 const EQUIPMENT_TYPES = [
@@ -95,19 +95,13 @@ export class CreateEquipmentListingDto {
   siteDetails?: string;
 
   // ── الموقع ──
-  @IsOptional() @IsString()
-  governorate?: string;
-
-  @IsOptional()
   @IsInt()
-  governorateId?: number;
+  @IsPositive()
+  governorateId!: number;
 
-  @IsOptional() @IsString()
-  city?: string;
-
-  @IsOptional()
   @IsInt()
-  wilayaId?: number;
+  @IsPositive()
+  wilayaId!: number;
 
   @IsOptional() @IsNumber()
   latitude?: number;

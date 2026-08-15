@@ -73,7 +73,8 @@ export class BusesService {
       monthlyPrice: bus.monthlyPrice ? Number(bus.monthlyPrice) : null,
       contractMonthly: bus.contractMonthly ? Number(bus.contractMonthly) : null,
       capacity: bus.capacity,
-      governorate: bus.governorate,
+      governorateId: bus.governorateId,
+      wilayaId: bus.wilayaId,
       status: bus.status,
       isPremium: bus.isPremium,
       viewCount: bus.viewCount,
@@ -118,9 +119,7 @@ export class BusesService {
         dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
         monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
         withDriver: dto.withDriver ?? false,
-        governorate: dto.governorate,
         governorateId: dto.governorateId,
-        city: dto.city,
         wilayaId: dto.wilayaId,
         latitude: dto.latitude,
         longitude: dto.longitude,
@@ -131,6 +130,8 @@ export class BusesService {
       include: {
         user: { select: USER_SELECT },
         images: true,
+        governorateRef: true,
+        wilayaRef: true,
       },
     });
 
@@ -179,7 +180,8 @@ export class BusesService {
     if (query.busListingType) where.busListingType = query.busListingType;
     if (query.busType) where.busType = query.busType;
     if (query.make) where.make = { contains: query.make, mode: 'insensitive' };
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.userId) where.userId = query.userId;
 
     if (query.minPrice || query.maxPrice) {
@@ -215,6 +217,8 @@ export class BusesService {
         include: {
           user: { select: USER_SELECT },
           images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
         },
       }),
       this.prisma.busListing.count({ where }),
@@ -238,6 +242,8 @@ export class BusesService {
       include: {
         user: { select: USER_SELECT },
         images: { orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
       },
     });
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
@@ -260,6 +266,8 @@ export class BusesService {
       include: {
         user: { select: USER_SELECT },
         images: { orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
       },
     });
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
@@ -296,7 +304,11 @@ export class BusesService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { images: { orderBy: { order: 'asc' }, take: 1 } },
+        include: {
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
       }),
       this.prisma.busListing.count({ where }),
     ]);
@@ -349,6 +361,8 @@ export class BusesService {
       include: {
         user: { select: USER_SELECT },
         images: { orderBy: { order: 'asc' } },
+        governorateRef: true,
+        wilayaRef: true,
       },
     });
 

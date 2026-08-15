@@ -16,6 +16,8 @@ const SELLER_SELECT = {
 const DEFAULT_INCLUDE = {
   seller: { select: SELLER_SELECT },
   images: true,
+  governorateRef: true,
+  wilayaRef: true,
 } as const;
 
 @Injectable()

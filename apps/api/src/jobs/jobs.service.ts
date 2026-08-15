@@ -70,8 +70,8 @@ export class JobsService {
       jobType: job.jobType,
       employmentType: job.employmentType,
       salary: job.salary ? Number(job.salary) : null,
-      governorate: job.governorate,
-      city: job.city,
+      governorateId: job.governorateId,
+      wilayaId: job.wilayaId,
       status: job.status,
       viewCount: job.viewCount,
       experienceYears: job.experienceYears,
@@ -114,10 +114,8 @@ export class JobsService {
       nationality: dto.nationality,
       vehicleTypes: dto.vehicleTypes ?? [],
       hasOwnVehicle: dto.hasOwnVehicle ?? false,
-      governorate: dto.governorate,
-        governorateId: dto.governorateId,
-      city: dto.city,
-        wilayaId: dto.wilayaId,
+      governorateId: dto.governorateId,
+      wilayaId: dto.wilayaId,
       contactPhone: dto.contactPhone,
       contactEmail: dto.contactEmail,
       whatsapp: dto.whatsapp,
@@ -126,6 +124,8 @@ export class JobsService {
 
     const include = {
       user: { select: PUBLIC_USER_SELECT },
+      governorateRef: true,
+      wilayaRef: true,
     };
 
     // BL-2: retry on slug collision (unique constraint)
@@ -171,7 +171,8 @@ export class JobsService {
 
     if (query.jobType) where.jobType = query.jobType;
     if (query.employmentType) where.employmentType = query.employmentType;
-    if (query.governorate) where.governorate = query.governorate;
+    if (query.governorateId) where.governorateId = parseInt(query.governorateId);
+    if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.userId) where.userId = query.userId;
 
     if (query.licenseType) {
@@ -207,6 +208,8 @@ export class JobsService {
         orderBy,
         include: {
           user: { select: PUBLIC_USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
           _count: { select: { applications: true } },
         },
       }),
@@ -230,7 +233,9 @@ export class JobsService {
     const job = cached ?? await this.prisma.driverJob.findFirst({
       where: { OR: [{ id }, { slug: id }] },
       include: {
-        user: { select: { ...PUBLIC_USER_SELECT, governorate: true } },
+        user: { select: PUBLIC_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
         _count: { select: { applications: true } },
       },
     });
@@ -294,7 +299,11 @@ export class JobsService {
     const updated = await this.prisma.driverJob.update({
       where: { id },
       data,
-      include: { user: { select: PUBLIC_USER_SELECT } },
+      include: {
+        user: { select: PUBLIC_USER_SELECT },
+        governorateRef: true,
+        wilayaRef: true,
+      },
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -407,6 +416,8 @@ export class JobsService {
         skip,
         take,
         include: {
+          governorateRef: true,
+          wilayaRef: true,
           _count: { select: { applications: true } },
         },
       }),

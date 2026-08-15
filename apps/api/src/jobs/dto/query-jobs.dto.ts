@@ -27,8 +27,12 @@ export class QueryJobsDto {
   licenseType?: string;
 
   @IsOptional()
-  @IsString()
-  governorate?: string;
+  @IsNumberString()
+  governorateId?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  wilayaId?: string;
 
   @IsOptional()
   @IsEnum(JobStatus)
