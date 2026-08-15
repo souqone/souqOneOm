@@ -1,7 +1,7 @@
-﻿import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-// â”€â”€ Security: Whitelisted tables and columns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Security: Whitelisted tables and columns ──────────────────────────────
 // Defined ONCE here so adding a new module requires updating ONE place only.
 // Both syncLocation() and clearLocation() validate against these lists.
 
@@ -16,7 +16,7 @@ const ALLOWED_COLUMNS = [
   'location', 'fromLocation', 'toLocation',
 ] as const;
 
-// â”€â”€ GeoService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── GeoService ────────────────────────────────────────────────────────────
 
 @Injectable()
 export class GeoService {
@@ -28,8 +28,8 @@ export class GeoService {
    * Syncs the latitude and longitude to the PostGIS Geography column.
    * @param tableName  The mapped PostgreSQL table name (must be in ALLOWED_TABLES)
    * @param recordId   The UUID/string ID of the record
-   * @param lat        Latitude  (-90 â€¦ 90)
-   * @param lng        Longitude (-180 â€¦ 180)
+   * @param lat        Latitude  (-90 … 90)
+   * @param lng        Longitude (-180 … 180)
    * @param idColumnName      Optional, defaults to 'id'
    * @param locationColumnName Optional, must be in ALLOWED_COLUMNS, defaults to 'location'
    */
@@ -42,14 +42,14 @@ export class GeoService {
     locationColumnName: string = 'location',
   ): Promise<boolean> {
     try {
-      // â”€â”€ Coordinate validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Coordinate validation ──────────────────────────────────────────
       // IMPORTANT: 0 is a valid coordinate (equator / prime meridian).
-      // The old `if (!lat || !lng)` was a bug â€” it rejected lat=0 or lng=0.
+      // The old `if (!lat || !lng)` was a bug — it rejected lat=0 or lng=0.
       if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return false;
       if (lat < -90 || lat > 90) return false;
       if (lng < -180 || lng > 180) return false;
 
-      // â”€â”€ Table / column whitelist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Table / column whitelist ───────────────────────────────────────
       if (!(ALLOWED_TABLES as readonly string[]).includes(tableName)) {
         throw new Error(`Invalid table name for Geo sync: ${tableName}`);
       }
@@ -79,10 +79,10 @@ export class GeoService {
   async validateLocationPair(governorateId?: number, wilayaId?: number, required = true): Promise<void> {
     if (!governorateId || !wilayaId) {
       if (required) {
-        throw new BadRequestException('Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© ÙˆØ§Ù„ÙˆÙ„Ø§ÙŠØ© Ù…Ø·Ù„ÙˆØ¨ØªØ§Ù†');
+        throw new BadRequestException('المحافظة والولاية مطلوبتان');
       }
       if (governorateId || wilayaId) {
-        throw new BadRequestException('ÙŠØ¬Ø¨ ØªÙˆÙÙŠØ± ÙƒÙ„ Ù…Ù† Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© ÙˆØ§Ù„ÙˆÙ„Ø§ÙŠØ© Ù…Ø¹Ø§Ù‹');
+        throw new BadRequestException('يجب توفير كل من المحافظة والولاية معاً');
       }
       return;
     }
@@ -93,7 +93,7 @@ export class GeoService {
     });
 
     if (!wilaya || wilaya.governorateId !== governorateId) {
-      throw new BadRequestException('Ø§Ù„ÙˆÙ„Ø§ÙŠØ© Ù„Ø§ ØªØªØ¨Ø¹ Ù„Ù„Ù…Ø­Ø§ÙØ¸Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©');
+      throw new BadRequestException('الولاية لا تتبع للمحافظة المحددة');
     }
   }
 
@@ -104,23 +104,6 @@ export class GeoService {
    * @param idColumnName       Optional, defaults to 'id'
    * @param locationColumnName Optional, must be in ALLOWED_COLUMNS, defaults to 'location'
    */
-    /**
-   * Helper to fetch Arabic location names (e.g. for backwards compatibility in old columns)
-   */
-  async getLocationNames(governorateId?: number | null, wilayaId?: number | null) {
-    let governorateName = null;
-    let wilayaName = null;
-    if (governorateId) {
-      const gov = await this.prisma.governorate.findUnique({ where: { id: governorateId } });
-      if (gov) governorateName = gov.nameAr;
-    }
-    if (wilayaId) {
-      const wilaya = await this.prisma.wilaya.findUnique({ where: { id: wilayaId } });
-      if (wilaya) wilayaName = wilaya.nameAr;
-    }
-    return { governorateName, wilayaName };
-  }
-
   async clearLocation(
     tableName: string,
     recordId: string,
@@ -128,7 +111,7 @@ export class GeoService {
     locationColumnName: string = 'location',
   ): Promise<boolean> {
     try {
-      // â”€â”€ Table / column whitelist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Table / column whitelist ───────────────────────────────────────
       if (!(ALLOWED_TABLES as readonly string[]).includes(tableName)) {
         throw new Error(`Invalid table name for Geo clear: ${tableName}`);
       }
@@ -150,6 +133,4 @@ export class GeoService {
     }
   }
 }
-
-
 

@@ -34,7 +34,7 @@ export class FavoritesService {
     });
 
     if (existing) {
-      await this.prisma.favorite.deleteMany({ where: { id: existing.id } });
+      await this.prisma.favorite.delete({ where: { id: existing.id } });
       return { favorited: false };
     }
 

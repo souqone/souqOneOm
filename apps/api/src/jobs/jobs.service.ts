@@ -549,20 +549,23 @@ export class JobsService {
 
     // C-1: atomic CAS — only update if the status we read is still the current status.
     // Prevents last-writer-wins when two tabs race to accept/reject simultaneously.
-    const { count } = await this.prisma.jobApplication.updateMany({
-      where: { id: applicationId, status: application.status },
-      data: { status },
+    const casResult = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.jobApplication.updateMany({
+        where: { id: applicationId, status: application.status },
+        data: { status },
+      });
+      if (count === 0) return null; // another write won the race
+      return tx.jobApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
+        },
+      });
     });
-    if (count === 0) {
+
+    if (!casResult) {
       throw new ConflictException('حالة الطلب تغيرت بالفعل، يرجى تحديث الصفحة والمحاولة مرة أخرى');
     }
-
-    const casResult = await this.prisma.jobApplication.findUnique({
-      where: { id: applicationId },
-      include: {
-        applicant: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
-      },
-    });
 
     // NOTIF-4: correct notification types — only ACCEPTED or REJECTED reach here
     const notifType = status === 'ACCEPTED'
