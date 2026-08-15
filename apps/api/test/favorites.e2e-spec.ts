@@ -11,6 +11,7 @@ const validListing = {
   model: 'Civic',
   year: 2021,
   price: 7000,
+  condition: 'USED',
   governorateId: 1,
   wilayaId: 1,
 };

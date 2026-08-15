@@ -422,9 +422,9 @@ describe('Jobs API (e2e)', () => {
         .set('Authorization', `Bearer ${owner.accessToken}`)
         .expect(200);
 
-      expect(res.body).toBeInstanceOf(Array);
-      expect(res.body.length).toBe(1);
-      expect(res.body[0].applicant).toBeDefined();
+      expect(res.body.items).toBeInstanceOf(Array);
+      expect(res.body.items.length).toBe(1);
+      expect(res.body.items[0].applicant).toBeDefined();
     });
 
     it('should reject getting applications by non-owner', async () => {
@@ -440,7 +440,7 @@ describe('Jobs API (e2e)', () => {
       await request(getApp().getHttpServer())
         .get(`/api/jobs/${job.body.id}/applications`)
         .set('Authorization', `Bearer ${other.accessToken}`)
-        .expect(403);
+        .expect(404);
     });
   });
 });

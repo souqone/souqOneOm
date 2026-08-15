@@ -237,7 +237,6 @@ export async function createRentalListing(accessToken: string): Promise<string> 
       price: 5000,
       listingType: 'RENTAL',
       dailyPrice: 15,
-      weeklyPrice: 90,
       monthlyPrice: 350,
       minRentalDays: 1,
       condition: 'USED',
