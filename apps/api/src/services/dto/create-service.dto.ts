@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
+﻿import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
   IsBoolean, Min, MaxLength, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ServiceType, ProviderType } from '@prisma/client';
@@ -92,4 +92,10 @@ export class CreateServiceDto {
   @IsOptional()
   @IsString()
   website?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
 }
+
