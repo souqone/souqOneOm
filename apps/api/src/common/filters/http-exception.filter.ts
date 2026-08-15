@@ -13,6 +13,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
+    if (!(exception instanceof HttpException)) { console.error('Unhandled Exception:', exception); }
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'خطأ داخلي في الخادم';
     let error = 'Internal Server Error';
