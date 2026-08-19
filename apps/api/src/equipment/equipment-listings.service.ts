@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -27,6 +28,27 @@ export class EquipmentListingsService {
   ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
+    if (dto.listingType === 'EQUIPMENT_WANTED') {
+      dto.price = undefined;
+      dto.dailyPrice = undefined;
+      dto.monthlyPrice = undefined;
+      dto.make = undefined;
+      dto.model = undefined;
+      dto.year = undefined;
+      dto.condition = undefined;
+    } else if (dto.listingType === 'EQUIPMENT_SALE') {
+      dto.dailyPrice = undefined;
+      dto.monthlyPrice = undefined;
+      dto.budgetMin = undefined;
+      dto.budgetMax = undefined;
+      dto.quantity = undefined;
+    } else if (dto.listingType === 'EQUIPMENT_RENT') {
+      dto.price = undefined;
+      dto.budgetMin = undefined;
+      dto.budgetMax = undefined;
+      dto.quantity = undefined;
+    }
+    
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     const item = await this.prisma.equipmentListing.create({
@@ -225,6 +247,23 @@ export class EquipmentListingsService {
     }
 
     const data: Record<string, unknown> = {};
+    
+    const effectiveListingType = dto.listingType ?? item.listingType;
+    if (effectiveListingType === 'EQUIPMENT_WANTED') {
+      dto.price = undefined; dto.dailyPrice = undefined; dto.monthlyPrice = undefined;
+      dto.make = undefined; dto.model = undefined; dto.year = undefined; dto.condition = undefined;
+      data.price = null; data.dailyPrice = null; data.monthlyPrice = null;
+      data.make = null; data.model = null; data.year = null; data.condition = null;
+    } else if (effectiveListingType === 'EQUIPMENT_SALE') {
+      dto.dailyPrice = undefined; dto.monthlyPrice = undefined;
+      dto.budgetMin = undefined; dto.budgetMax = undefined; dto.quantity = undefined;
+      data.dailyPrice = null; data.monthlyPrice = null;
+      data.budgetMin = null; data.budgetMax = null; data.quantity = null;
+    } else if (effectiveListingType === 'EQUIPMENT_RENT') {
+      dto.price = undefined; dto.budgetMin = undefined; dto.budgetMax = undefined; dto.quantity = undefined;
+      data.price = null; data.budgetMin = null; data.budgetMax = null; data.quantity = null;
+    }
+
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.equipmentType !== undefined) data.equipmentType = dto.equipmentType as EquipmentType;
@@ -308,21 +347,40 @@ export class EquipmentListingsService {
 
     const max = await this.prisma.equipmentListingImage.aggregate({ where: { equipmentListingId: id }, _max: { order: true } });
     let order = (max._max.order ?? -1) + 1;
-    const images = await Promise.all(
-      urls.map((url, i) =>
+    
+    try {
+      const queries = urls.map((url, i) =>
         this.prisma.equipmentListingImage.create({
           data: { url, order: order + i, isPrimary: count === 0 && i === 0, equipmentListingId: id },
-        }),
-      ),
-    );
-    return images;
+        })
+      );
+      const images = await this.prisma.$transaction(queries);
+      return images;
+    } catch (error) {
+      throw new InternalServerErrorException('فشل في حفظ الصور');
+    }
   }
 
   async removeImage(imageId: string, userId: string) {
     const img = await this.prisma.equipmentListingImage.findUnique({ where: { id: imageId }, include: { equipmentListing: true } });
     if (!img) throw new NotFoundException('الصورة غير موجودة');
     if (img.equipmentListing.userId !== userId) throw new ForbiddenException('لا يمكنك حذف صورة غيرك');
+    
     await this.prisma.equipmentListingImage.delete({ where: { id: imageId } });
+
+    if (img.isPrimary) {
+      const nextImage = await this.prisma.equipmentListingImage.findFirst({
+        where: { equipmentListingId: img.equipmentListingId },
+        orderBy: { order: 'asc' },
+      });
+      if (nextImage) {
+        await this.prisma.equipmentListingImage.update({
+          where: { id: nextImage.id },
+          data: { isPrimary: true },
+        });
+      }
+    }
+
     return { deleted: true };
   }
 
