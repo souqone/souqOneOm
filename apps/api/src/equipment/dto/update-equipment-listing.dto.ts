@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsEnum, IsInt, IsBoolean,
-  IsNumber, IsArray, Min, Max, MinLength, IsDateString, IsPositive,
+  IsNumber, IsArray, Min, Max, MinLength, MaxLength, IsDateString, IsPositive
 } from 'class-validator';
 
 const EQUIPMENT_TYPES = [
@@ -10,37 +10,55 @@ const EQUIPMENT_TYPES = [
 ];
 
 export class UpdateEquipmentListingDto {
-  @IsOptional() @IsString() @MinLength(5)
+  @IsOptional() 
+  @IsString() 
+  @MinLength(5)
+  @MaxLength(100)
   title?: string;
 
-  @IsOptional() @IsString() @MinLength(10)
+  @IsOptional() 
+  @IsString() 
+  @MinLength(10)
+  @MaxLength(2000)
   description?: string;
 
-  @IsOptional() @IsEnum(EQUIPMENT_TYPES, { message: 'نوع المعدة غير صالح' })
+  @IsOptional() 
+  @IsEnum(EQUIPMENT_TYPES, { message: 'نوع المعدة غير صالح' })
   equipmentType?: string;
 
-  @IsOptional() @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT', 'EQUIPMENT_WANTED'])
+  @IsOptional() 
+  @IsEnum(['EQUIPMENT_SALE', 'EQUIPMENT_RENT', 'EQUIPMENT_WANTED'])
   listingType?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString() 
+  @MinLength(2) 
+  @MaxLength(50)
   make?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString() 
+  @MinLength(2) 
+  @MaxLength(50)
   model?: string;
 
-  @IsOptional() @IsInt() @Min(1950) @Max(2030)
+  @IsOptional()
+  @IsInt() 
+  @Min(1970) 
+  @Max(new Date().getFullYear() + 1)
   year?: number;
 
-  @IsOptional() @IsEnum(['NEW','USED','LIKE_NEW','GOOD','FAIR','POOR'])
+  @IsOptional()
+  @IsEnum(['NEW','USED','LIKE_NEW','GOOD','FAIR','POOR'])
   condition?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(50)
   capacity?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(50)
   power?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(50)
   weight?: string;
 
   @IsOptional() @IsInt() @Min(0)
@@ -49,13 +67,19 @@ export class UpdateEquipmentListingDto {
   @IsOptional() @IsArray() @IsString({ each: true })
   features?: string[];
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() 
+  @Min(1)
   price?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() 
+  @Min(1)
   dailyPrice?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() 
+  @Min(1)
   monthlyPrice?: number;
 
   @IsOptional() @IsString()
@@ -71,13 +95,17 @@ export class UpdateEquipmentListingDto {
   deliveryAvailable?: boolean;
 
   // ── حقول EQUIPMENT_WANTED ──
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() 
+  @Min(1)
   budgetMin?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() 
+  @Min(1)
   budgetMax?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(50)
   rentalDuration?: string;
 
   @IsOptional() @IsDateString()
@@ -86,7 +114,9 @@ export class UpdateEquipmentListingDto {
   @IsOptional() @IsDateString()
   endDate?: string;
 
-  @IsOptional() @IsInt() @Min(1)
+  @IsOptional()
+  @IsInt() 
+  @Min(1)
   quantity?: number;
 
   @IsOptional() @IsString()

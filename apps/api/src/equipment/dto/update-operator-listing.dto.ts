@@ -1,34 +1,50 @@
 import {
-  IsString, IsOptional, IsInt, IsBoolean,
-  IsNumber, IsArray, Min, MinLength, IsPositive,
+  IsString, IsOptional, IsEnum, IsInt, IsBoolean,
+  IsNumber, IsArray, Min, MinLength, MaxLength, IsPositive, ArrayMinSize
 } from 'class-validator';
 
-/**
- * Whitelist of updatable fields — excludes userId, status, slug, viewCount.
- */
 export class UpdateOperatorListingDto {
-  @IsOptional() @IsString() @MinLength(5, { message: 'العنوان يجب أن يكون 5 أحرف على الأقل' })
+  @IsOptional()
+  @IsString() 
+  @MinLength(5)
+  @MaxLength(100)
   title?: string;
 
-  @IsOptional() @IsString() @MinLength(10, { message: 'الوصف يجب أن يكون 10 أحرف على الأقل' })
+  @IsOptional()
+  @IsString() 
+  @MinLength(10)
+  @MaxLength(2000)
   description?: string;
+
+  @IsOptional()
+  @IsEnum(['DRIVER', 'OPERATOR', 'TECHNICIAN', 'MAINTENANCE'])
+  operatorType?: string;
 
   @IsOptional() @IsArray() @IsString({ each: true })
   specializations?: string[];
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt() @Min(0)
   experienceYears?: number;
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray() 
+  @ArrayMinSize(1) 
+  @IsString({ each: true })
   equipmentTypes?: string[];
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray() 
+  @ArrayMinSize(1) 
+  @IsString({ each: true })
   certifications?: string[];
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() @Min(1)
   dailyRate?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber() @Min(1)
   hourlyRate?: number;
 
   @IsOptional() @IsString()
@@ -53,9 +69,11 @@ export class UpdateOperatorListingDto {
   @IsOptional() @IsNumber()
   longitude?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString() @MinLength(8)
   contactPhone?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString() @MinLength(8)
   whatsapp?: string;
 }

@@ -153,9 +153,9 @@ describe('ServicesService', () => {
       await service.findAll({
         search: 'زيت',
         serviceType: 'MAINTENANCE' as any,
-        governorateId: 1,
-        page: '1',
-        limit: '20',
+        governorateId: '1' as any,
+        page: 1 as any,
+        limit: 20 as any,
       });
 
       const callArgs = mockPrisma.carService.findMany.mock.calls[0][0];
