@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-const SELLER_SELECT = {
+const PUBLIC_SELLER_SELECT = {
   id: true,
   username: true,
   displayName: true,
@@ -10,11 +10,11 @@ const SELLER_SELECT = {
   governorate: true,
   isVerified: true,
   createdAt: true,
-  phone: true,
+  // phone is intentionally excluded for privacy
 };
 
-const DEFAULT_INCLUDE = {
-  seller: { select: SELLER_SELECT },
+const PUBLIC_LISTING_INCLUDE = {
+  seller: { select: PUBLIC_SELLER_SELECT },
   images: true,
   governorateRef: true,
   wilayaRef: true,
@@ -25,10 +25,23 @@ export class ListingsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: Prisma.ListingCreateInput) {
-    return this.prisma.listing.create({
-      data,
-      include: DEFAULT_INCLUDE,
-    });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const listing = await tx.listing.create({
+          data,
+          include: PUBLIC_LISTING_INCLUDE,
+        });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: 'LISTING',
+            entityId: listing.id,
+            action: 'UPSERT',
+          },
+        });
+        return listing;
+      },
+      { maxWait: 15000, timeout: 20000 },
+    );
   }
 
   async findMany(
@@ -40,7 +53,7 @@ export class ListingsRepository {
     return this.prisma.$transaction([
       this.prisma.listing.findMany({
         where, skip, take, orderBy,
-        include: DEFAULT_INCLUDE,
+        include: PUBLIC_LISTING_INCLUDE,
       }),
       this.prisma.listing.count({ where }),
     ]);
@@ -49,27 +62,53 @@ export class ListingsRepository {
   async findById(id: string) {
     return this.prisma.listing.findUnique({
       where: { id },
-      include: DEFAULT_INCLUDE,
+      include: PUBLIC_LISTING_INCLUDE,
     });
   }
 
   async findBySlug(slug: string) {
     return this.prisma.listing.findUnique({
       where: { slug },
-      include: DEFAULT_INCLUDE,
+      include: PUBLIC_LISTING_INCLUDE,
     });
   }
 
-  async update(id: string, data: Prisma.ListingUpdateInput) {
-    return this.prisma.listing.update({
-      where: { id },
-      data,
-      include: DEFAULT_INCLUDE,
-    });
+  async update(id: string, data: Prisma.ListingUpdateInput, expectedVersion: number) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const listing = await tx.listing.update({
+          where: { id, version: expectedVersion },
+          data: { ...data, version: { increment: 1 } },
+          include: PUBLIC_LISTING_INCLUDE,
+        });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: 'LISTING',
+            entityId: listing.id,
+            action: 'UPSERT',
+          },
+        });
+        return listing;
+      },
+      { maxWait: 15000, timeout: 20000 },
+    );
   }
 
   async delete(id: string) {
-    return this.prisma.listing.delete({ where: { id } });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const listing = await tx.listing.delete({ where: { id } });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: 'LISTING',
+            entityId: id,
+            action: 'DELETE',
+          },
+        });
+        return listing;
+      },
+      { maxWait: 15000, timeout: 20000 },
+    );
   }
 
   async incrementViewCount(id: string) {

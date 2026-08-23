@@ -260,6 +260,7 @@ model Listing {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  version   Int      @default(1)
 
   // New Location Fields
   governorateId  Int?
@@ -1822,4 +1823,20 @@ model TransportBooking {
   updatedAt DateTime @updatedAt
 
   @@map("transport_bookings")
+}
+
+model OutboxEvent {
+  id          String    @id @default(cuid())
+  entityType  String
+  entityId    String
+  action      String // UPSERT | DELETE
+  status      String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now())
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, availableAt])
+  @@index([entityId])
+  @@map("outbox_events")
 }

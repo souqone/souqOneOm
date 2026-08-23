@@ -16,6 +16,10 @@ const ALLOWED_COLUMNS = [
   'location', 'fromLocation', 'toLocation',
 ] as const;
 
+const ALLOWED_ID_COLUMNS = [
+  'id',
+] as const;
+
 // ── GeoService ────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -56,12 +60,15 @@ export class GeoService {
       if (!(ALLOWED_COLUMNS as readonly string[]).includes(locationColumnName)) {
         throw new Error(`Invalid location column for Geo sync: ${locationColumnName}`);
       }
+      if (!(ALLOWED_ID_COLUMNS as readonly string[]).includes(idColumnName)) {
+        throw new Error(`Invalid id column for Geo sync: ${idColumnName}`);
+      }
 
       await this.prisma.$executeRawUnsafe(`
         UPDATE "${tableName}" 
-        SET "${locationColumnName}" = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326) 
-        WHERE "${idColumnName}" = '${recordId}';
-      `);
+        SET "${locationColumnName}" = ST_SetSRID(ST_MakePoint($1, $2), 4326) 
+        WHERE "${idColumnName}" = $3;
+      `, lng, lat, recordId);
 
       return true;
     } catch (error: any) {
@@ -118,12 +125,15 @@ export class GeoService {
       if (!(ALLOWED_COLUMNS as readonly string[]).includes(locationColumnName)) {
         throw new Error(`Invalid location column for Geo clear: ${locationColumnName}`);
       }
+      if (!(ALLOWED_ID_COLUMNS as readonly string[]).includes(idColumnName)) {
+        throw new Error(`Invalid id column for Geo clear: ${idColumnName}`);
+      }
 
       await this.prisma.$executeRawUnsafe(`
         UPDATE "${tableName}" 
         SET "${locationColumnName}" = NULL 
-        WHERE "${idColumnName}" = '${recordId}';
-      `);
+        WHERE "${idColumnName}" = $1;
+      `, recordId);
       return true;
     } catch (error: any) {
       this.logger.error(

@@ -25,13 +25,22 @@ const mockListing = {
 const mockPrisma = {
   listing: {
     findUnique: jest.fn(),
+    findFirst: jest.fn().mockResolvedValue(null),
     findMany: jest.fn().mockResolvedValue([mockListing]),
     count: jest.fn().mockResolvedValue(1),
     update: jest.fn(),
     delete: jest.fn(),
   },
+  brand: { findUnique: jest.fn().mockResolvedValue({ id: 'brand-1', name: 'Toyota' }) },
+  carModel: { findUnique: jest.fn().mockResolvedValue({ id: 'model-1', brandId: 'brand-1', name: 'Camry' }) },
+  carTrim: { findUnique: jest.fn().mockResolvedValue({ id: 'trim-1', modelId: 'model-1', name: 'SE' }) },
   cleanupPolymorphicOrphans: jest.fn().mockResolvedValue(undefined),
-  $transaction: jest.fn().mockImplementation((args) => Promise.all(args)),
+  $transaction: jest.fn().mockImplementation(async (args) => {
+    if (typeof args === 'function') {
+      return await args(mockPrisma); // Return same mock structure for `tx` callback
+    }
+    return Promise.all(args);
+  }),
   wilaya: {
     findUnique: jest.fn(),
   },
@@ -93,8 +102,8 @@ describe('ListingsService', () => {
         {
           title: 'تويوتا كامري 2024',
           description: 'سيارة ممتازة',
-          make: 'Toyota',
-          model: 'Camry',
+          brandId: 'brand-1',
+          carModelId: 'model-1',
           year: 2024,
           price: 12000,
         } as any,

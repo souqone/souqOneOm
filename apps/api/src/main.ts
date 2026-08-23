@@ -1,7 +1,9 @@
 import 'dotenv/config';
+import { json, urlencoded } from 'express';
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SanitizeInterceptor } from './common/interceptors/sanitize.interceptor';
@@ -21,9 +23,23 @@ async function bootstrap() {
   // M-8: trust the first proxy hop so req.ip / X-Forwarded-For reflects the real client IP
   app.set('trust proxy', 1);
 
-  // تفعيل CORS للسماح بالاتصال من واجهة Next.js
+  // Set JSON payload limits to prevent unbounded memory exhaustion
+  app.use(json({ limit: '2mb' }));
+  app.use(urlencoded({ extended: true, limit: '2mb' }));
+
+  // Strict CORS Allowlist
+  const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
+    .split(',')
+    .map((o) => o.trim());
+
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   });
 
@@ -49,6 +65,15 @@ async function bootstrap() {
 
   // بادئة API مع إصدار
   app.setGlobalPrefix('api/v1');
+
+  const config = new DocumentBuilder()
+    .setTitle('CarOne API')
+    .setDescription('The CarOne API description')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app as any, config);
+  SwaggerModule.setup('api/docs', app as any, document);
 
   const port = process.env.PORT || process.env.API_PORT || 4000;
   await app.listen(port);

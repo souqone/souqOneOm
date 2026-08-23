@@ -1,4 +1,4 @@
-import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength, IsPositive } from 'class-validator';
+import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength, IsPositive, ArrayMaxSize, IsNotEmpty, IsLatitude, IsLongitude } from 'class-validator';
 import { FuelType, Transmission, ItemCondition, ListingType } from '@prisma/client';
 
 export class CreateListingDto {
@@ -8,19 +8,6 @@ export class CreateListingDto {
 
   @IsString()
   description!: string;
-
-  @IsString()
-  @MaxLength(50)
-  make!: string;
-
-  @IsString()
-  @MaxLength(50)
-  model!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  trim?: string;
 
   @IsInt()
   @Min(1900)
@@ -148,20 +135,20 @@ export class CreateListingDto {
   wilayaId!: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsLatitude()
   latitude?: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsLongitude()
   longitude?: number;
 
-  @IsOptional()
   @IsString()
-  brandId?: string;
+  @IsNotEmpty()
+  brandId!: string;
 
-  @IsOptional()
   @IsString()
-  carModelId?: string;
+  @IsNotEmpty()
+  carModelId!: string;
 
   @IsOptional()
   @IsString()
@@ -170,5 +157,6 @@ export class CreateListingDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @ArrayMaxSize(20, { message: 'لا يمكن تجاوز 20 صورة' })
   images?: string[];
 }

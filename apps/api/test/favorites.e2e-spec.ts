@@ -1,25 +1,14 @@
 import request from 'supertest';
-import { createTestApp, closeTestApp, getApp, registerUser } from './setup';
+import { createTestApp, closeTestApp, getApp, registerUser, getValidListingPayload } from './setup';
 
 beforeAll(async () => { await createTestApp(); });
 afterAll(async () => { await closeTestApp(); });
-
-const validListing = {
-  title: 'Fav Test Car Listing',
-  description: 'A car listing to test favorites functionality',
-  make: 'Honda',
-  model: 'Civic',
-  year: 2021,
-  price: 7000,
-  condition: 'USED',
-  governorateId: 1,
-  wilayaId: 1,
-};
 
 describe('Favorites API (e2e)', () => {
   describe('POST /api/favorites/:listingId', () => {
     it('should toggle favorite on', async () => {
       const { accessToken } = await registerUser();
+      const validListing = await getValidListingPayload();
 
       // Create a listing first
       const listing = await request(getApp().getHttpServer())
@@ -37,6 +26,7 @@ describe('Favorites API (e2e)', () => {
 
     it('should toggle favorite off', async () => {
       const { accessToken } = await registerUser();
+      const validListing = await getValidListingPayload();
       const listing = await request(getApp().getHttpServer())
         .post('/api/listings')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -77,6 +67,7 @@ describe('Favorites API (e2e)', () => {
 
     it('should include favorited listings', async () => {
       const { accessToken } = await registerUser();
+      const validListing = await getValidListingPayload();
       const listing = await request(getApp().getHttpServer())
         .post('/api/listings')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -104,6 +95,7 @@ describe('Favorites API (e2e)', () => {
   describe('GET /api/favorites/check/:listingId', () => {
     it('should return true for favorited listing', async () => {
       const { accessToken } = await registerUser();
+      const validListing = await getValidListingPayload();
       const listing = await request(getApp().getHttpServer())
         .post('/api/listings')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -123,6 +115,7 @@ describe('Favorites API (e2e)', () => {
 
     it('should return false for non-favorited listing', async () => {
       const { accessToken } = await registerUser();
+      const validListing = await getValidListingPayload();
       const listing = await request(getApp().getHttpServer())
         .post('/api/listings')
         .set('Authorization', `Bearer ${accessToken}`)

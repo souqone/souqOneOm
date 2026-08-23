@@ -8,6 +8,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from '../src/prisma/prisma.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -50,7 +52,7 @@ class MockRedisService {
   getClient() { return null; }
   getPublisher() { return null; }
   getSubscriber() { return null; }
-  isReady() { return false; }
+  isReady() { return true; }
   async get<T>(key: string): Promise<T | null> {
     const v = this.store.get(key);
     return v ? JSON.parse(v) : null;
@@ -100,11 +102,21 @@ class NoopThrottlerGuard extends ThrottlerGuard {
 let app: INestApplication;
 let prisma: PrismaService;
 
+class TestThrottlerGuard extends ThrottlerGuard {
+  protected async handleRequest(requestProps: any): Promise<boolean> {
+    const req = requestProps.context.switchToHttp().getRequest();
+    if (req.headers['x-rate-limit-test'] === 'true') {
+      return super.handleRequest(requestProps);
+    }
+    return true;
+  }
+}
+
 export async function createTestApp(): Promise<INestApplication> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [
       EventEmitterModule.forRoot(),
-      ThrottlerModule.forRoot([{ ttl: 60000, limit: 999999 }]),
+      ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]), // Set a default low limit for tests
       PrismaModule,
       RedisModule,
       AuthModule,
@@ -128,11 +140,13 @@ export async function createTestApp(): Promise<INestApplication> {
       ReviewsModule,
       PaymentsModule,
       LocationsModule,
+      TerminusModule,
+      HttpModule,
     ],
     controllers: [AppController],
     providers: [
       AppService,
-      { provide: APP_GUARD, useClass: NoopThrottlerGuard },
+      { provide: APP_GUARD, useClass: TestThrottlerGuard },
     ],
   })
     .overrideProvider(RedisService)
@@ -145,6 +159,22 @@ export async function createTestApp(): Promise<INestApplication> {
 
   app = moduleFixture.createNestApplication();
 
+  // Strict CORS Allowlist (mirrors main.ts)
+  const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
+    .split(',')
+    .map((o) => o.trim());
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -152,7 +182,9 @@ export async function createTestApp(): Promise<INestApplication> {
       forbidNonWhitelisted: true,
     }),
   );
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: ['health/(.*)', ''],
+  });
 
   await app.init();
   prisma = app.get(PrismaService);
@@ -223,16 +255,58 @@ export async function registerUser(overrides?: {
   };
 }
 
+/** Helper to get or create a test Brand + CarModel for E2E tests */
+export async function getTestBrandAndModel(): Promise<{ brandId: string; carModelId: string }> {
+  let brand = await prisma.brand.findFirst({ where: { name: 'Toyota' }, include: { models: true } });
+  if (!brand) {
+    brand = await prisma.brand.create({
+      data: {
+        name: 'Toyota',
+        slug: `toyota-${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        models: {
+          create: [{ name: 'Camry', slug: `camry-${Date.now()}_${Math.random().toString(36).slice(2, 6)}` }],
+        },
+      },
+      include: { models: true },
+    });
+  } else if (!brand.models || brand.models.length === 0) {
+    const model = await prisma.carModel.create({
+      data: { name: 'Camry', slug: `camry-${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, brandId: brand.id },
+    });
+    brand.models = [model];
+  }
+  return { brandId: brand.id, carModelId: brand.models[0].id };
+}
+
+/** Helper to generate valid listing payload with canonical IDs */
+export async function getValidListingPayload(overrides?: any) {
+  const { brandId, carModelId } = await getTestBrandAndModel();
+  return {
+    title: 'Toyota Camry 2022 for sale',
+    description: 'Excellent condition, low mileage Toyota Camry',
+    year: 2022,
+    price: 8500,
+    mileage: 25000,
+    fuelType: 'PETROL',
+    transmission: 'AUTOMATIC',
+    condition: 'USED',
+    governorateId: 1,
+    wilayaId: 1,
+    brandId,
+    carModelId,
+    ...overrides,
+  };
+}
+
 /** Create a rental listing and return its ID (for booking tests) */
 export async function createRentalListing(accessToken: string): Promise<string> {
+  const { brandId, carModelId } = await getTestBrandAndModel();
   const res = await request(app.getHttpServer())
     .post('/api/listings')
     .set('Authorization', `Bearer ${accessToken}`)
     .send({
       title: 'Rental Car for E2E Test',
       description: 'Test rental listing for booking E2E tests',
-      make: 'Toyota',
-      model: 'Camry',
       year: 2023,
       price: 5000,
       listingType: 'RENTAL',
@@ -242,6 +316,8 @@ export async function createRentalListing(accessToken: string): Promise<string> 
       condition: 'USED',
       governorateId: 1,
       wilayaId: 1,
+      brandId,
+      carModelId,
     })
     .expect(201);
   return res.body.id;

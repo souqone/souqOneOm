@@ -1,7 +1,10 @@
-import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength, IsPositive } from 'class-validator';
-import { FuelType, Transmission, ItemCondition, ListingStatus, ListingType } from '@prisma/client';
+import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min, Max, MaxLength, IsPositive, IsLatitude, IsLongitude } from 'class-validator';
+import { FuelType, Transmission, ItemCondition, ListingType } from '@prisma/client';
 
 export class UpdateListingDto {
+  @IsInt()
+  version!: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -10,21 +13,6 @@ export class UpdateListingDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  make?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  model?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  trim?: string;
 
   @IsOptional()
   @IsInt()
@@ -100,10 +88,6 @@ export class UpdateListingDto {
   condition?: ItemCondition;
 
   @IsOptional()
-  @IsEnum(ListingStatus)
-  status?: ListingStatus;
-
-  @IsOptional()
   @IsEnum(ListingType)
   listingType?: ListingType;
 
@@ -160,11 +144,11 @@ export class UpdateListingDto {
   wilayaId?: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsLatitude()
   latitude?: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsLongitude()
   longitude?: number;
 
   @IsOptional()
