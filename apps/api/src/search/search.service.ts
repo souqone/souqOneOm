@@ -212,22 +212,27 @@ export class SearchService implements OnModuleInit {
     page: number,
     limit: number,
   ) {
-    const index = this.meili.index(indexName);
-    const result = await index.search(q, params);
+    try {
+      const index = this.meili.index(indexName);
+      const result = await index.search(q, params);
 
-    return {
-      items: (result.hits as any[]).map((hit: any) => ({
-        ...hit,
-        _entityType: indexName,
-      })),
-      meta: {
-        total: result.estimatedTotalHits ?? 0,
-        page,
-        limit,
-        totalPages: Math.ceil((result.estimatedTotalHits ?? 0) / limit),
-        processingTimeMs: result.processingTimeMs,
-      },
-    };
+      return {
+        items: (result.hits as any[]).map((hit: any) => ({
+          ...hit,
+          _entityType: indexName,
+        })),
+        meta: {
+          total: result.estimatedTotalHits ?? 0,
+          page,
+          limit,
+          totalPages: Math.ceil((result.estimatedTotalHits ?? 0) / limit),
+          processingTimeMs: result.processingTimeMs,
+        },
+      };
+    } catch (err) {
+      this.logger.warn(`Meilisearch failed for single index, falling back to PostgreSQL: ${(err as Error).message}`);
+      return this.fallbackSearch(indexName, q, page, limit);
+    }
   }
 
   private async searchMultiIndex(
@@ -237,44 +242,115 @@ export class SearchService implements OnModuleInit {
     page: number,
     limit: number,
   ) {
-    // Use Meilisearch multi-search API
-    const queries = indexNames.map(indexUid => ({
-      indexUid,
-      q,
-      ...params,
-    }));
-
-    const multiResult = await this.meili.multiSearch({ queries });
-
-    // Merge results
-    let allHits: any[] = [];
-    let totalEstimate = 0;
-    let maxProcessingTime = 0;
-
-    for (const result of multiResult.results) {
-      const hits = (result.hits as any[]).map((hit: any) => ({
-        ...hit,
-        _entityType: result.indexUid,
+    try {
+      // Use Meilisearch multi-search API
+      const queries = indexNames.map(indexUid => ({
+        indexUid,
+        q,
+        ...params,
       }));
-      allHits = allHits.concat(hits);
-      totalEstimate += result.estimatedTotalHits ?? 0;
-      maxProcessingTime = Math.max(maxProcessingTime, result.processingTimeMs ?? 0);
+
+      const multiResult = await this.meili.multiSearch({ queries });
+
+      // Merge results
+      let allHits: any[] = [];
+      let totalEstimate = 0;
+      let maxProcessingTime = 0;
+
+      for (const result of multiResult.results) {
+        const hits = (result.hits as any[]).map((hit: any) => ({
+          ...hit,
+          _entityType: result.indexUid,
+        }));
+        allHits = allHits.concat(hits);
+        totalEstimate += result.estimatedTotalHits ?? 0;
+        maxProcessingTime = Math.max(maxProcessingTime, result.processingTimeMs ?? 0);
+      }
+
+      // Sort merged results by relevance (already sorted per-index by Meilisearch)
+      // For multi-index, we interleave fairly but keep within-index order
+      // Limit to requested page size
+      allHits = allHits.slice(0, limit);
+
+      return {
+        items: allHits,
+        meta: {
+          total: totalEstimate,
+          page,
+          limit,
+          totalPages: Math.ceil(totalEstimate / limit),
+          processingTimeMs: maxProcessingTime,
+        },
+      };
+    } catch (err) {
+      this.logger.warn(`Meilisearch failed for multi index, falling back to PostgreSQL: ${(err as Error).message}`);
+      let allItems: any[] = [];
+      let total = 0;
+      for (const indexName of indexNames) {
+        const fb = await this.fallbackSearch(indexName, q, page, limit);
+        allItems = allItems.concat(fb.items);
+        total += fb.meta.total;
+      }
+      return {
+        items: allItems.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, limit),
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          processingTimeMs: 0,
+        },
+      };
     }
+  }
 
-    // Sort merged results by relevance (already sorted per-index by Meilisearch)
-    // For multi-index, we interleave fairly but keep within-index order
-    // Limit to requested page size
-    allHits = allHits.slice(0, limit);
-
+  private async fallbackSearch(indexName: string, q: string, page: number, limit: number) {
+    const offset = (page - 1) * limit;
+    let items = [];
+    let total = 0;
+    
+    // Map index name to Prisma model
+    const modelMap: Record<string, any> = {
+      listings: this.prisma.listing,
+      parts: this.prisma.sparePart,
+      services: this.prisma.carService,
+      jobs: this.prisma.driverJob,
+      buses: this.prisma.busListing,
+      equipment: this.prisma.equipmentListing,
+      operators: this.prisma.operatorListing,
+    };
+    
+    const model = modelMap[indexName];
+    if (model) {
+      const where = q ? {
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } }
+        ],
+        status: 'ACTIVE'
+      } : { status: 'ACTIVE' };
+      
+      try {
+        const [data, count] = await Promise.all([
+          model.findMany({ where, take: limit, skip: offset, orderBy: { createdAt: 'desc' } }),
+          model.count({ where })
+        ]);
+        items = data.map((d: any) => ({ ...d, _entityType: indexName }));
+        total = count;
+      } catch (err) {
+        this.logger.error(`Fallback search failed for ${indexName}: ${(err as Error).message}`);
+      }
+    }
+    
     return {
-      items: allHits,
+      items,
       meta: {
-        total: totalEstimate,
+        total,
         page,
         limit,
-        totalPages: Math.ceil(totalEstimate / limit),
-        processingTimeMs: maxProcessingTime,
-      },
+        totalPages: Math.ceil(total / limit),
+        processingTimeMs: 0,
+      }
     };
   }
 

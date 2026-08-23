@@ -1,25 +1,18 @@
 import request from 'supertest';
-import { createTestApp, closeTestApp, getApp, registerUser } from './setup';
+import { createTestApp, closeTestApp, getApp, registerUser, getValidListingPayload } from './setup';
 
 beforeAll(async () => { await createTestApp(); });
 afterAll(async () => { await closeTestApp(); });
-
-const validListing = {
-  title: 'Chat Test Car Listing',
-  description: 'A car listing to create chat conversations about',
-  make: 'Toyota',
-  model: 'Camry',
-  year: 2022,
-  price: 8000,
-  condition: 'USED',
-  governorateId: 1,
-  wilayaId: 1,
-};
 
 /** Helper: create a listing as seller, return { listingId, seller, buyer } */
 async function createListingAndBuyer() {
   const seller = await registerUser();
   const buyer = await registerUser();
+  const validListing = await getValidListingPayload({
+    title: 'Chat Test Car Listing',
+    description: 'A car listing to create chat conversations about',
+    price: 8000,
+  });
 
   const listing = await request(getApp().getHttpServer())
     .post('/api/listings')

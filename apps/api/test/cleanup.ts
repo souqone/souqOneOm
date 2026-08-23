@@ -65,5 +65,33 @@ const TABLES_TO_TRUNCATE = [
  */
 export async function cleanDatabase(prisma: PrismaService): Promise<void> {
   const tableNames = TABLES_TO_TRUNCATE.map((t) => `"${t}"`).join(', ');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableNames} CASCADE;`);
+  
+  // Set lock timeout to 5 seconds to prevent indefinite deadlocks,
+  // then attempt TRUNCATE with retries to handle lingering background connections
+  const maxRetries = 3;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await prisma.$executeRawUnsafe(`SET LOCAL lock_timeout = '5s';`);
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableNames} CASCADE;`);
+      break; // Success
+    } catch (err: any) {
+      if (i === maxRetries - 1) throw err;
+      console.warn(`\n   ⚠ TRUNCATE lock timeout or deadlock (attempt ${i + 1}/${maxRetries}), retrying in 2s...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+
+  const gov = await prisma.governorate.findUnique({ where: { id: 1 } });
+  if (!gov) {
+    await prisma.governorate.create({
+      data: {
+        id: 1,
+        nameAr: 'مسقط',
+        nameEn: 'Muscat',
+        wilayas: {
+          create: [{ id: 1, nameAr: 'السيب', nameEn: 'Seeb' }],
+        },
+      },
+    });
+  }
 }

@@ -2,6 +2,8 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  BadRequestException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -9,7 +11,6 @@ import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.ev
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
 import { GeoService } from '../locations/geo.service';
 import { ListingsRepository } from './listings.repository';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -25,7 +26,6 @@ export class ListingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly searchService: SearchService,
     private readonly geoService: GeoService,
     private readonly repo: ListingsRepository,
     private readonly eventEmitter: EventEmitter2,
@@ -78,16 +78,74 @@ export class ListingsService {
   }
 
   async create(dto: CreateListingDto, sellerId: string) {
+    if (dto.images && dto.images.length > 20) {
+      throw new BadRequestException('لا يمكن تجاوز 20 صورة');
+    }
+
+    // ── Duplicate Detection (Business Rule Judgment Call) ──
+    // A 5-minute block on exact same title/description could legitimately hit a seller posting two similar parts.
+    // To mitigate false positives, we also require exact match on price and brandId.
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const duplicate = await this.prisma.listing.findFirst({
+      where: {
+        sellerId,
+        title: dto.title,
+        description: dto.description,
+        price: dto.price ? new Prisma.Decimal(dto.price) : undefined,
+        brandId: dto.brandId,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+    });
+
+    if (duplicate) {
+      throw new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.');
+    }
+
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
-    const slug = this.generateSlug(`${dto.make}-${dto.model}-${dto.year}-${dto.title}`);
+    // Canonical Identity Validation
+    const brand = await this.prisma.brand.findUnique({ where: { id: dto.brandId } });
+    if (!brand) throw new BadRequestException('الماركة غير موجودة');
+    
+    const carModel = await this.prisma.carModel.findUnique({ where: { id: dto.carModelId } });
+    if (!carModel) throw new BadRequestException('الموديل غير موجود');
+    
+    if (carModel.brandId !== dto.brandId) {
+      throw new BadRequestException('الموديل لا يتبع للماركة المحددة');
+    }
+
+    let trimName: string | null = null;
+    if (dto.carTrimId) {
+      const carTrim = await this.prisma.carTrim.findUnique({ where: { id: dto.carTrimId } });
+      if (!carTrim || carTrim.modelId !== dto.carModelId) {
+        throw new BadRequestException('الفئة لا تتبع للموديل المحدد');
+      }
+      trimName = carTrim.name;
+    }
+
+    // Rental / Sale Validation
+    if (dto.listingType === 'RENTAL') {
+      if (!dto.dailyPrice || dto.dailyPrice <= 0) {
+        throw new BadRequestException('سعر الإيجار اليومي مطلوب لإعلانات الإيجار');
+      }
+    } else {
+      dto.dailyPrice = undefined;
+      dto.monthlyPrice = undefined;
+      dto.withDriver = undefined;
+      dto.depositAmount = undefined;
+      dto.minRentalDays = undefined;
+      dto.kmLimitPerDay = undefined;
+    }
+
+    const slug = this.generateSlug(`${brand.name}-${carModel.name}-${dto.year}-${dto.title}`);
 
     const listing = await this.repo.create({
         title: dto.title,
         slug,
         description: dto.description,
-        make: dto.make,
-        model: dto.model,
+        make: brand.name,
+        model: carModel.name,
+        trim: trimName,
         year: dto.year,
         price: new Prisma.Decimal(dto.price),
         mileage: dto.mileage,
@@ -135,31 +193,6 @@ export class ListingsService {
 
     // Invalidate listings cache
     await this.redis.delPattern('listings:*');
-
-    // Sync to Meilisearch (fire-and-forget)
-    this.searchService.indexDocument(INDEXES.LISTINGS, {
-      id: listing.id,
-      title: listing.title,
-      slug: listing.slug,
-      description: listing.description,
-      make: listing.make,
-      model: listing.model,
-      year: listing.year,
-      price: Number(listing.price),
-      currency: listing.currency,
-      mileage: listing.mileage,
-      fuelType: listing.fuelType,
-      transmission: listing.transmission,
-      condition: listing.condition,
-      listingType: listing.listingType,
-      governorateId: listing.governorateId,
-      wilayaId: listing.wilayaId,
-      isPremium: listing.isPremium,
-      status: listing.status,
-      viewCount: listing.viewCount,
-      imageUrl: listing.images?.[0]?.url || null,
-      createdAt: listing.createdAt,
-    }).catch(() => {});
 
     this.emitListingEvent(LISTING_EVENTS.CREATED, listing);
 
@@ -315,6 +348,10 @@ export class ListingsService {
       throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
     }
 
+    if (listing.status === 'SUSPENDED' || listing.status === 'SOLD') {
+      throw new ForbiddenException('لا يمكن تعديل إعلان موقوف أو مباع');
+    }
+
     const nextGovId = dto.governorateId !== undefined ? dto.governorateId : listing.governorateId;
     const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : listing.wilayaId;
     if (nextGovId || nextWilayaId) {
@@ -322,10 +359,64 @@ export class ListingsService {
     }
 
     const data: Prisma.ListingUpdateInput = {};
+
+    // Merged state validation
+    const hasRentalFieldChange =
+      dto.listingType !== undefined ||
+      dto.dailyPrice !== undefined ||
+      dto.monthlyPrice !== undefined ||
+      dto.withDriver !== undefined ||
+      dto.depositAmount !== undefined ||
+      dto.minRentalDays !== undefined ||
+      dto.kmLimitPerDay !== undefined;
+
+    if (hasRentalFieldChange) {
+      const effectiveListingType = dto.listingType !== undefined ? dto.listingType : listing.listingType;
+      const effectiveDailyPrice = dto.dailyPrice !== undefined ? dto.dailyPrice : Number(listing.dailyPrice);
+
+      if (effectiveListingType === 'RENTAL') {
+        if (!effectiveDailyPrice || effectiveDailyPrice <= 0) {
+          throw new BadRequestException('سعر الإيجار اليومي مطلوب لإعلانات الإيجار');
+        }
+      } else {
+        data.dailyPrice = null;
+        data.monthlyPrice = null;
+        data.withDriver = false;
+        data.depositAmount = null;
+        data.minRentalDays = null;
+        data.kmLimitPerDay = null;
+      }
+    }
+
+    // Canonical Identity Update
+    if (dto.brandId || dto.carModelId || dto.carTrimId !== undefined) {
+      const targetBrandId = dto.brandId ?? listing.brandId;
+      const targetModelId = dto.carModelId ?? listing.carModelId;
+      const targetTrimId = dto.carTrimId !== undefined ? dto.carTrimId : listing.carTrimId;
+      
+      if (!targetBrandId || !targetModelId) {
+        throw new BadRequestException('البيانات الأساسية للمركبة مفقودة');
+      }
+      
+      const brand = await this.prisma.brand.findUnique({ where: { id: targetBrandId } });
+      const carModel = await this.prisma.carModel.findUnique({ where: { id: targetModelId } });
+      if (!brand || !carModel) throw new BadRequestException('الماركة أو الموديل غير موجود');
+      if (carModel.brandId !== targetBrandId) throw new BadRequestException('الموديل لا يتبع للماركة');
+      
+      data.make = brand.name;
+      data.model = carModel.name;
+      
+      if (targetTrimId) {
+        const carTrim = await this.prisma.carTrim.findUnique({ where: { id: targetTrimId } });
+        if (!carTrim || carTrim.modelId !== targetModelId) throw new BadRequestException('الفئة لا تتبع للموديل');
+        data.trim = carTrim.name;
+      } else {
+        data.trim = null;
+      }
+    }
+
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.make !== undefined) data.make = dto.make;
-    if (dto.model !== undefined) data.model = dto.model;
     if (dto.year !== undefined) data.year = dto.year;
     if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);
     if (dto.mileage !== undefined) data.mileage = dto.mileage;
@@ -343,7 +434,6 @@ export class ListingsService {
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
     if (dto.condition !== undefined) data.condition = dto.condition;
-    if (dto.status !== undefined) data.status = dto.status;
     if (dto.governorateId !== undefined) {
       if (dto.governorateId) data.governorateRef = { connect: { id: dto.governorateId } };
       else data.governorateRef = { disconnect: true };
@@ -368,7 +458,15 @@ export class ListingsService {
     if (dto.carModelId !== undefined) data.carModel = dto.carModelId ? { connect: { id: dto.carModelId } } : { disconnect: true };
     if (dto.carTrimId !== undefined)  data.carTrim  = dto.carTrimId  ? { connect: { id: dto.carTrimId  } } : { disconnect: true };
 
-    const updated = await this.repo.update(id, data);
+    let updated;
+    try {
+      updated = await this.repo.update(id, data, dto.version);
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
 
     if (updated.latitude && updated.longitude) {
       await this.geoService.syncLocation('listings', updated.id, updated.latitude, updated.longitude);
@@ -380,37 +478,70 @@ export class ListingsService {
     await this.redis.delPattern('listings:*');
     await this.redis.del(`listing:${id}`);
 
-    // Sync to Meilisearch
-    this.searchService.indexDocument(INDEXES.LISTINGS, {
-      id: updated.id,
-      title: updated.title,
-      slug: updated.slug,
-      description: updated.description,
-      make: updated.make,
-      model: updated.model,
-      year: updated.year,
-      price: Number(updated.price),
-      currency: updated.currency,
-      mileage: updated.mileage,
-      fuelType: updated.fuelType,
-      transmission: updated.transmission,
-      condition: updated.condition,
-      listingType: updated.listingType,
-      governorateId: updated.governorateId,
-      wilayaId: updated.wilayaId,
-      isPremium: updated.isPremium,
-      status: updated.status,
-      viewCount: updated.viewCount,
-      imageUrl: updated.images?.[0]?.url || null,
-      createdAt: updated.createdAt,
-    }).catch(() => {});
-
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
-    if (dto.status !== undefined) {
-      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
-    }
 
     return updated;
+  }
+
+  // ─── Status Commands & Transitions ───
+
+  private canTransition(currentStatus: string, targetStatus: string, actorRole: 'OWNER' | 'ADMIN'): boolean {
+    if (actorRole === 'ADMIN') return true;
+
+    if (currentStatus === 'SUSPENDED') return false; // Only admin can lift suspension
+
+    const validTransitions: Record<string, string[]> = {
+      'DRAFT': ['PENDING_REVIEW', 'ACTIVE'], // Depends on moderation policy
+      'ACTIVE': ['SOLD', 'ARCHIVED'],
+      'PENDING_REVIEW': [],
+      'ARCHIVED': ['ACTIVE'], // Restore
+      'SOLD': [], // Cannot unsell easily, or needs admin
+    };
+
+    return validTransitions[currentStatus]?.includes(targetStatus) ?? false;
+  }
+
+  private async executeStatusTransition(id: string, userId: string, targetStatus: any, expectedVersion: number) {
+    const listing = await this.repo.findById(id);
+    if (!listing) throw new NotFoundException('الإعلان غير موجود');
+    if (listing.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+
+    if (!this.canTransition(listing.status, targetStatus, 'OWNER')) {
+      throw new ForbiddenException(`لا يمكنك تغيير حالة الإعلان من ${listing.status} إلى ${targetStatus}`);
+    }
+
+    let updated;
+    try {
+      updated = await this.repo.update(id, { status: targetStatus }, expectedVersion);
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
+    
+    // Invalidate cache
+    await this.redis.delPattern('listings:*');
+    await this.redis.del(`listing:${id}`);
+    
+    this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
+    return updated;
+  }
+
+  async submitListing(id: string, userId: string, expectedVersion: number) {
+    return this.executeStatusTransition(id, userId, 'ACTIVE', expectedVersion); // Or PENDING_REVIEW based on policy
+  }
+
+  async markListingSold(id: string, userId: string, expectedVersion: number) {
+    return this.executeStatusTransition(id, userId, 'SOLD', expectedVersion);
+  }
+
+  async archiveListing(id: string, userId: string, expectedVersion: number) {
+    return this.executeStatusTransition(id, userId, 'ARCHIVED', expectedVersion);
+  }
+
+  async restoreListing(id: string, userId: string, expectedVersion: number) {
+    return this.executeStatusTransition(id, userId, 'ACTIVE', expectedVersion);
   }
 
   async remove(id: string, userId: string) {
@@ -431,9 +562,6 @@ export class ListingsService {
     // Invalidate cache
     await this.redis.delPattern('listings:*');
     await this.redis.del(`listing:${id}`);
-
-    // Remove from Meilisearch
-    this.searchService.removeDocument(INDEXES.LISTINGS, id).catch(() => {});
 
     this.emitListingEvent(LISTING_EVENTS.DELETED, listing);
 

@@ -19,7 +19,13 @@ const mockPrisma = {
     update: jest.fn(),
     updateMany: jest.fn(),
   },
-  $transaction: jest.fn(),
+  $executeRaw: jest.fn().mockResolvedValue(1),
+  $transaction: jest.fn().mockImplementation(async (args) => {
+    if (typeof args === 'function') {
+      return await args(mockPrisma);
+    }
+    return Promise.all(args);
+  }),
 };
 
 const mockCloudinary = {

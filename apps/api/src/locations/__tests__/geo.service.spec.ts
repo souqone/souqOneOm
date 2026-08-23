@@ -137,6 +137,35 @@ describe('GeoService', () => {
   });
 
   // ══════════════════════════════════════════════
+  // Spec 2.3b — idColumnName Whitelist on syncLocation()
+  // ══════════════════════════════════════════════
+
+  describe('syncLocation() — idColumnName whitelist', () => {
+    it('should accept valid id column: id', async () => {
+      const result = await service.syncLocation(
+        'users', 'record-1', 23.5, 58.4, 'id', 'location',
+      );
+
+      expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
+    });
+
+    it.each([
+      'id; DROP TABLE users--',
+      '',
+      'ID', // case-sensitive
+      'userId', // Not in whitelist currently
+    ])('should reject invalid id column: "%s"', async (col) => {
+      const result = await service.syncLocation(
+        'users', 'record-1', 23.5, 58.4, col, 'location',
+      );
+
+      expect(mockPrisma.$executeRawUnsafe).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+  });
+
+  // ══════════════════════════════════════════════
   // Spec 2.2b / 2.3b — clearLocation() whitelist
   // (Regression test — Red was proved before refactor)
   // ══════════════════════════════════════════════
@@ -184,18 +213,20 @@ describe('GeoService', () => {
   // ══════════════════════════════════════════════
 
   describe('syncLocation() — recordId SQL injection (unit: string assertion)', () => {
-    it('should embed recordId verbatim in the SQL string (documents absence of parameterization)', async () => {
-      // This test documents a KNOWN limitation: recordId is NOT parameterized.
-      // It is included to make the risk visible. The table + column whitelists
-      // prevent the most dangerous injections. Full parameterization via
-      // $executeRaw tagged template is a future hardening task.
+    it('should NOT embed recordId verbatim, but parameterize it', async () => {
       const maliciousId = "' OR '1'='1";
 
       await service.syncLocation('users', maliciousId, 23.5, 58.4);
 
       const calledSql: string = mockPrisma.$executeRawUnsafe.mock.calls[0][0];
-      // The recordId IS present in the SQL — confirms it is not parameterized.
-      expect(calledSql).toContain(maliciousId);
+      const calledArgs = mockPrisma.$executeRawUnsafe.mock.calls[0].slice(1);
+      
+      // The SQL should contain $3 (parameter) instead of the raw id
+      expect(calledSql).toContain('$3');
+      expect(calledSql).not.toContain(maliciousId);
+      
+      // The malicious ID is passed safely as an argument
+      expect(calledArgs).toEqual([58.4, 23.5, maliciousId]);
     });
   });
 

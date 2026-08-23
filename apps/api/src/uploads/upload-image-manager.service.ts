@@ -24,24 +24,33 @@ export class UploadImageManagerService {
     if (!listing) throw new NotFoundException('الإعلان غير موجود');
     if (listing.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
-    const maxOrder = await this.prisma.listingImage.aggregate({
-      where: { listingId },
-      _max: { order: true },
-    });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Acquire row lock on the listing to serialize concurrent uploads
+      await tx.$executeRaw`SELECT id FROM "listings" WHERE id = ${listingId} FOR UPDATE`;
 
-    if (isPrimary) {
-      await this.prisma.listingImage.updateMany({
+      const maxOrder = await tx.listingImage.aggregate({
         where: { listingId },
-        data: { isPrimary: false },
+        _max: { order: true },
       });
-    }
+      const nextOrder = (maxOrder._max.order ?? -1) + 1;
 
-    const imageCount = await this.prisma.listingImage.count({ where: { listingId } });
-    const shouldBePrimary = isPrimary || imageCount === 0;
+      const imageCount = await tx.listingImage.count({ where: { listingId } });
+      if (imageCount >= 20) {
+        throw new BadRequestException('لا يمكن إضافة أكثر من 20 صورة');
+      }
 
-    return this.prisma.listingImage.create({
-      data: { url, order: nextOrder, isPrimary: shouldBePrimary, listingId },
+      const shouldBePrimary = isPrimary || imageCount === 0;
+
+      if (shouldBePrimary && imageCount > 0) {
+        await tx.listingImage.updateMany({
+          where: { listingId },
+          data: { isPrimary: false },
+        });
+      }
+
+      return tx.listingImage.create({
+        data: { url, order: nextOrder, isPrimary: shouldBePrimary, listingId },
+      });
     });
   }
 
@@ -73,6 +82,20 @@ export class UploadImageManagerService {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing) throw new NotFoundException('الإعلان غير موجود');
     if (listing.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+
+    const images = await this.prisma.listingImage.findMany({
+      where: { id: { in: imageIds } },
+      select: { listingId: true },
+    });
+
+    if (images.length !== imageIds.length) {
+      throw new BadRequestException('بعض الصور غير موجودة');
+    }
+
+    const invalidImage = images.find(img => img.listingId !== listingId);
+    if (invalidImage) {
+      throw new ForbiddenException('لا يمكنك ترتيب صور لا تنتمي لهذا الإعلان');
+    }
 
     await this.prisma.$transaction(
       imageIds.map((id, index) =>

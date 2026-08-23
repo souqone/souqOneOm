@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UploadedFiles,
   Get,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   FileInterceptor,
@@ -78,6 +79,9 @@ export class UploadsController {
     @Body() body: { url: string; isPrimary?: boolean },
     @CurrentUser() user: JwtPayload,
   ) {
+    if (!body.url.includes('cloudinary.com') && !body.url.includes('localhost')) {
+      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
+    }
     return this.uploadsService.addImageToListing(
       listingId,
       user.sub,

@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -27,6 +29,8 @@ import { OperatorsModule } from './operators/operators.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { PaymentsModule } from './payments/payments.module';
 import { TransportModule } from './transport/transport.module';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
 import { LocationsModule } from './locations/locations.module';
 import { ListingNotificationListener } from './common/listeners/listing-notification.listener';
 
@@ -34,7 +38,12 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
   imports: [
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
+    BullModule.forRoot({
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+    }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    TerminusModule,
+    HttpModule,
     PrismaModule,
     RedisModule,
     AuthModule,
@@ -63,7 +72,7 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
   providers: [
     AppService,
     ListingNotificationListener,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: CustomThrottlerGuard },
   ],
 })
 export class AppModule {}

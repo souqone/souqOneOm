@@ -28,6 +28,8 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.92.0"
+    "@anthropic-ai/sdk": "^0.92.0",
+    "@nestjs/platform-express": "^10.4.22",
+    "@nestjs/swagger": "^7.4.2"
   }
 }
