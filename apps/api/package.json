@@ -7,7 +7,7 @@
     "dev": "nest start --watch",
     "start": "node dist/main",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "prisma migrate deploy || echo \"Prisma migration failed, starting app anyway\" && node dist/main",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config jest-e2e.config.js --runInBand --forceExit",
