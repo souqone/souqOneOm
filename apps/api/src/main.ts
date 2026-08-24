@@ -13,6 +13,7 @@ import * as path from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  logger.log('[DIAG-BUILD-CHECK-20260824T214045Z-65e02d84] bootstrap starting');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Redis Socket.IO Adapter for horizontal scaling
