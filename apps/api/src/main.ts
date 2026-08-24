@@ -18,6 +18,7 @@ async function bootstrap() {
   // Redis Socket.IO Adapter for horizontal scaling
   const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
+  logger.log('[DIAG] connectToRedis() resolved, about to call useWebSocketAdapter');
   app.useWebSocketAdapter(redisIoAdapter);
 
   // M-8: trust the first proxy hop so req.ip / X-Forwarded-For reflects the real client IP
@@ -76,7 +77,9 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app as any, document);
 
   const port = process.env.PORT || process.env.API_PORT || 4000;
+  logger.log('[DIAG] About to call app.listen()');
   await app.listen(port);
+  logger.log('[DIAG] app.listen() resolved, server listening');
 
   logger.log(`كار وان API يعمل على: http://localhost:${port}/api/v1`);
 }
