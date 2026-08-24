@@ -14,7 +14,10 @@ export class AppController {
 
   @Get('health/live')
   checkLiveness() {
-    return { status: 'up' };
+    return { 
+      status: 'up',
+      commit: process.env.RAILWAY_GIT_COMMIT_SHA || 'unknown'
+    };
   }
 
   @Get('health/ready')
