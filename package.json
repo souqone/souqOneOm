@@ -30,7 +30,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
     "@nestjs/platform-express": "^10.4.22",
-    "@nestjs/swagger": "^7.4.2"
+    "@nestjs/platform-socket.io": "^10.4.22",
+    "@nestjs/swagger": "^7.4.2",
+    "@nestjs/websockets": "^10.4.22"
   },
   "overrides": {
     "socket.io": "4.8.3"
