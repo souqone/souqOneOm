@@ -42,7 +42,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private readonly chatService: ChatService,
     private readonly redis: RedisService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    this.logger.log('[DIAG] ChatGateway instantiated');
+  }
 
   async afterInit() {
     this.logger.log('ChatGateway initialized');
