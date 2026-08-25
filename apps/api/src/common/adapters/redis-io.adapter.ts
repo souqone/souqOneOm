@@ -9,7 +9,6 @@ export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter> | null = null;
 
   async connectToRedis(): Promise<void> {
-    this.logger.log('[DIAG] connectToRedis() started');
     const redisUrl = process.env.REDIS_URL;
     this.logger.log(`REDIS_URL configured: ${!!redisUrl}`);
 
@@ -62,9 +61,7 @@ export class RedisIoAdapter extends IoAdapter {
   }
 
   createIOServer(port: number, options?: ServerOptions): any {
-    this.logger.log('[DIAG] createIOServer() called');
     const server = super.createIOServer(port, options);
-    this.logger.log(`[DIAG] super.createIOServer() returned, server object exists: ${!!server}`);
     if (this.adapterConstructor) {
       server.adapter(this.adapterConstructor);
     }

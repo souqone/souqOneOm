@@ -33,7 +33,6 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
 import { LocationsModule } from './locations/locations.module';
 import { ListingNotificationListener } from './common/listeners/listing-notification.listener';
-import { DiagModule } from './diag/diag.module'; // [DIAG]
 
 @Module({
   imports: [
@@ -68,7 +67,6 @@ import { DiagModule } from './diag/diag.module'; // [DIAG]
     PaymentsModule,
     TransportModule,
     LocationsModule,
-    DiagModule, // [DIAG]
   ],
   controllers: [AppController],
   providers: [
