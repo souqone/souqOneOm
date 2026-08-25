@@ -13,6 +13,8 @@ import * as path from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  const socketIoVersion = require('socket.io/package.json').version;
+  logger.log(`[DIAG-VERSION] socket.io runtime version: ${socketIoVersion}`);
   logger.log('[DIAG-BUILD-CHECK-20260824T214045Z-65e02d84] bootstrap starting');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
