@@ -24,7 +24,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     return `ip-${req.ip || req.connection?.remoteAddress}`;
   }
 
-  protected generateKey(context: ExecutionContext, suffix: string, name: string): string {
+  protected generateKey(context: ExecutionContext, _suffix: string, name: string): string {
     const req = context.switchToHttp().getRequest();
     // We override generateKey to ensure our custom logic from getTracker is used
     // if getTracker is deprecated in newer versions. Let's just do it here:
@@ -38,6 +38,6 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
     
     const finalTracker = userId ? `user-${userId}` : `ip-${req.ip}`;
-    return `${name}-${finalTracker}-${suffix}`;
+    return `${name}:${finalTracker}:${context.getClass().name}-${context.getHandler().name}`;
   }
 }
