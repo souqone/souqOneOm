@@ -40,6 +40,10 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     ScheduleModule.forRoot(),
     BullModule.forRoot({
       url: process.env.REDIS_URL || 'redis://localhost:6379',
+      redis: {
+        maxRetriesPerRequest: 3,
+        retryStrategy: (times: number) => (times > 5 ? null : Math.min(times * 200, 2000)),
+      },
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     TerminusModule,
