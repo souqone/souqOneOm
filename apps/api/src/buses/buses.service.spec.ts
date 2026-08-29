@@ -35,7 +35,11 @@ const mockPrisma = {
   busListingPriceHistory: {
     create: jest.fn(),
   },
-  $transaction: jest.fn(),
+  outboxEvent: { create: jest.fn() },
+  $transaction: jest.fn(async (cb) => {
+    if (typeof cb === 'function') return cb(mockPrisma);
+    if (Array.isArray(cb)) return Promise.all(cb);
+  }),
   cleanupPolymorphicOrphans: jest.fn(),
 };
 
@@ -298,7 +302,7 @@ describe('BusesService', () => {
     it('should use $transaction for batch image creation', async () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
       mockPrisma.busListingImage.count.mockResolvedValue(0);
-      mockPrisma.$transaction.mockResolvedValue([
+      mockPrisma.$transaction.mockResolvedValueOnce([
         { id: 'img-1', url: '/a.jpg', order: 0, isPrimary: true },
         { id: 'img-2', url: '/b.jpg', order: 1, isPrimary: false },
       ]);
@@ -312,7 +316,7 @@ describe('BusesService', () => {
     it('should set first image as primary when no existing images', async () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
       mockPrisma.busListingImage.count.mockResolvedValue(0);
-      mockPrisma.$transaction.mockResolvedValue([{ id: 'img-1' }]);
+      mockPrisma.$transaction.mockResolvedValueOnce([{ id: 'img-1' }]);
 
       await service.addImages('bus-1', 'user-1', ['/a.jpg']);
 
@@ -342,7 +346,7 @@ describe('BusesService', () => {
         { id: 'img-2', order: 2, busListingId: 'bus-1' },
         { id: 'img-3', order: 3, busListingId: 'bus-1' },
       ]);
-      mockPrisma.$transaction.mockResolvedValue([]);
+      mockPrisma.$transaction.mockResolvedValueOnce([]);
 
       await service.removeImage('img-1', 'user-1');
 
@@ -519,36 +523,6 @@ describe('BusesService', () => {
       } as any, 'user-1');
 
       expect(mockRedis.delPattern).toHaveBeenCalledWith('busListing:list:*');
-    });
-  });
-
-  describe('Meilisearch sync', () => {
-    it('should index document on create', async () => {
-      mockPrisma.busListing.create.mockResolvedValue(mockBus);
-      mockRedis.get.mockResolvedValue(null);
-
-      await service.create({
-        title: 'حافلة جديدة',
-        description: 'وصف',
-        busListingType: 'BUS_SALE' as any,
-        busType: 'COASTER' as any,
-        governorate: 'مسقط',
-      } as any, 'user-1');
-
-      expect(mockSearch.indexDocument).toHaveBeenCalledWith(
-        'buses',
-        expect.objectContaining({ id: 'bus-1' }),
-      );
-    });
-
-    it('should remove document on delete', async () => {
-      mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
-      mockPrisma.busListing.update.mockResolvedValue({ ...mockBus, deletedAt: new Date() });
-      mockRedis.get.mockResolvedValue(null);
-
-      await service.remove('bus-1', 'user-1');
-
-      expect(mockSearch.removeDocument).toHaveBeenCalledWith('buses', 'bus-1');
     });
   });
 
