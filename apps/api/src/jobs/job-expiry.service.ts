@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
 import { NotificationsService } from '../notifications/notifications.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 const JOB_EXPIRY_DAYS = 30;
 
@@ -52,6 +53,19 @@ export class JobExpiryService {
       where: { id: { in: toExpire.map((j) => j.id) } },
       data: { status: 'EXPIRED' },
     });
+
+    const expiredIds = toExpire.map(j => j.id);
+    await this.prisma.$transaction(
+      expiredIds.map(id =>
+        this.prisma.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.JOB,
+            entityId: id,
+            action: 'UPSERT',
+          },
+        })
+      )
+    );
 
     // CACHE-2: flush list caches so expired jobs stop appearing in browse
     await this.redis.delPattern('jobs:list:*');
