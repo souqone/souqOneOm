@@ -52,59 +52,71 @@ export class EquipmentListingsService {
     
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
-    const item = await this.prisma.equipmentListing.create({
-      data: {
-        title: dto.title,
-        slug: generateSlug(dto.title),
-        description: dto.description,
-        equipmentType: dto.equipmentType as EquipmentType,
-        listingType: dto.listingType as EquipmentListingType,
-        make: dto.make,
-        model: dto.model,
-        year: dto.year,
-        condition: (dto.condition as ItemCondition) ?? 'USED',
-        capacity: dto.capacity,
-        power: dto.power,
-        weight: dto.weight,
-        hoursUsed: dto.hoursUsed,
-        features: dto.features ?? [],
-        price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
-        dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
-        monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        withOperator: dto.withOperator ?? false,
-        deliveryAvailable: dto.deliveryAvailable ?? false,
-        budgetMin: dto.budgetMin != null ? new Prisma.Decimal(dto.budgetMin) : null,
-        budgetMax: dto.budgetMax != null ? new Prisma.Decimal(dto.budgetMax) : null,
-        rentalDuration: dto.rentalDuration,
-        startDate: dto.startDate ? new Date(dto.startDate) : null,
-        endDate: dto.endDate ? new Date(dto.endDate) : null,
-        quantity: dto.quantity,
-        siteDetails: dto.siteDetails,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
-        userId,
-        ...(dto.images && dto.images.length > 0 && {
-          images: {
-            create: dto.images.map((url, i) => ({
-              url,
-              order: i,
-              isPrimary: i === 0,
-            })),
-          },
-        }),
-      },
-      include: {
-        user: { select: USER_SELECT },
-        images: true,
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const item = await this.prisma.$transaction(async (tx) => {
+      const createdItem = await tx.equipmentListing.create({
+        data: {
+          title: dto.title,
+          slug: generateSlug(dto.title),
+          description: dto.description,
+          equipmentType: dto.equipmentType as EquipmentType,
+          listingType: dto.listingType as EquipmentListingType,
+          make: dto.make,
+          model: dto.model,
+          year: dto.year,
+          condition: (dto.condition as ItemCondition) ?? 'USED',
+          capacity: dto.capacity,
+          power: dto.power,
+          weight: dto.weight,
+          hoursUsed: dto.hoursUsed,
+          features: dto.features ?? [],
+          price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
+          dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
+          monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
+          currency: dto.currency ?? 'OMR',
+          isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          withOperator: dto.withOperator ?? false,
+          deliveryAvailable: dto.deliveryAvailable ?? false,
+          budgetMin: dto.budgetMin != null ? new Prisma.Decimal(dto.budgetMin) : null,
+          budgetMax: dto.budgetMax != null ? new Prisma.Decimal(dto.budgetMax) : null,
+          rentalDuration: dto.rentalDuration,
+          startDate: dto.startDate ? new Date(dto.startDate) : null,
+          endDate: dto.endDate ? new Date(dto.endDate) : null,
+          quantity: dto.quantity,
+          siteDetails: dto.siteDetails,
+          governorateId: dto.governorateId,
+          wilayaId: dto.wilayaId,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          contactPhone: dto.contactPhone,
+          whatsapp: dto.whatsapp,
+          userId,
+          ...(dto.images && dto.images.length > 0 && {
+            images: {
+              create: dto.images.map((url, i) => ({
+                url,
+                order: i,
+                isPrimary: i === 0,
+              })),
+            },
+          }),
+        },
+        include: {
+          user: { select: USER_SELECT },
+          images: true,
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
+          entityId: createdItem.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdItem;
     });
 
     if (dto.latitude && dto.longitude) {
@@ -299,15 +311,27 @@ export class EquipmentListingsService {
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.equipmentListing.update({
-      where: { id },
-      data,
-      include: {
-        user: { select: USER_SELECT },
-        images: true,
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.equipmentListing.update({
+        where: { id },
+        data,
+        include: {
+          user: { select: USER_SELECT },
+          images: true,
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -326,7 +350,16 @@ export class EquipmentListingsService {
     const item = await this.prisma.equipmentListing.findUnique({ where: { id } });
     if (!item) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك حذف إعلان غيرك');
-    await this.prisma.equipmentListing.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.equipmentListing.delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('EQUIPMENT_LISTING', id);

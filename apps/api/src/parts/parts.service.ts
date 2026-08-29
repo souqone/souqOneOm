@@ -44,45 +44,57 @@ export class PartsService {
 
     const slug = this.generateSlug(dto.title);
 
-    const part = await this.prisma.sparePart.create({
-      data: {
-        title: dto.title,
-        slug,
-        description: dto.description,
-        partCategory: dto.partCategory,
-        condition: dto.condition ?? 'USED',
-        partNumber: dto.partNumber,
-        compatibleMakes: dto.compatibleMakes ?? [],
-        compatibleModels: dto.compatibleModels ?? [],
-        yearFrom: dto.yearFrom,
-        yearTo: dto.yearTo,
-        isOriginal: dto.isOriginal ?? false,
-        price: new Prisma.Decimal(dto.price),
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
-        sellerId,
-        ...(dto.images && dto.images.length > 0 && {
-          images: {
-            create: dto.images.map((url, i) => ({
-              url,
-              order: i,
-              isPrimary: i === 0,
-            })),
-          },
-        }),
-      },
-      include: {
-        seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true } },
-        images: true,
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const part = await this.prisma.$transaction(async (tx) => {
+      const createdPart = await tx.sparePart.create({
+        data: {
+          title: dto.title,
+          slug,
+          description: dto.description,
+          partCategory: dto.partCategory,
+          condition: dto.condition ?? 'USED',
+          partNumber: dto.partNumber,
+          compatibleMakes: dto.compatibleMakes ?? [],
+          compatibleModels: dto.compatibleModels ?? [],
+          yearFrom: dto.yearFrom,
+          yearTo: dto.yearTo,
+          isOriginal: dto.isOriginal ?? false,
+          price: new Prisma.Decimal(dto.price),
+          currency: dto.currency ?? 'OMR',
+          isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          governorateId: dto.governorateId,
+          wilayaId: dto.wilayaId,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          contactPhone: dto.contactPhone,
+          whatsapp: dto.whatsapp,
+          sellerId,
+          ...(dto.images && dto.images.length > 0 && {
+            images: {
+              create: dto.images.map((url, i) => ({
+                url,
+                order: i,
+                isPrimary: i === 0,
+              })),
+            },
+          }),
+        },
+        include: {
+          seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true } },
+          images: true,
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.SPARE_PART,
+          entityId: createdPart.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdPart;
     });
 
     if (dto.latitude && dto.longitude) {
@@ -218,14 +230,26 @@ export class PartsService {
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.sparePart.update({
-      where: { id },
-      data,
-      include: {
-        images: { take: 1, orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.sparePart.update({
+        where: { id },
+        data,
+        include: {
+          images: { take: 1, orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.SPARE_PART,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -255,7 +279,16 @@ export class PartsService {
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.sparePart.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.sparePart.delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.SPARE_PART,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);

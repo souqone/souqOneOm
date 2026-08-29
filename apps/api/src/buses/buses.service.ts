@@ -90,50 +90,62 @@ export class BusesService {
 
     const slug = generateSlug(dto.title);
 
-    const bus = await this.prisma.busListing.create({
-      data: {
-        title: dto.title,
-        slug,
-        description: dto.description,
-        busListingType: dto.busListingType,
-        busType: dto.busType,
-        make: dto.make,
-        model: dto.model,
-        manufacturerId: dto.manufacturerId,
-        modelId: dto.modelId,
-        year: dto.year,
-        capacity: dto.capacity,
-        mileage: dto.mileage,
-        fuelType: dto.fuelType,
-        transmission: dto.transmission,
-        condition: dto.condition ?? 'USED',
-        features: dto.features ?? [],
-        plateNumber: dto.plateNumber,
-        price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        contractType: dto.contractType,
-        contractClient: dto.contractClient,
-        contractMonthly: dto.contractMonthly != null ? new Prisma.Decimal(dto.contractMonthly) : null,
-        contractDuration: dto.contractDuration,
-        contractExpiry: dto.contractExpiry ? new Date(dto.contractExpiry) : null,
-        dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
-        monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
-        withDriver: dto.withDriver ?? false,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
-        userId,
-      },
-      include: {
-        user: { select: USER_SELECT },
-        images: true,
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const bus = await this.prisma.$transaction(async (tx) => {
+      const createdBus = await tx.busListing.create({
+        data: {
+          title: dto.title,
+          slug,
+          description: dto.description,
+          busListingType: dto.busListingType,
+          busType: dto.busType,
+          make: dto.make,
+          model: dto.model,
+          manufacturerId: dto.manufacturerId,
+          modelId: dto.modelId,
+          year: dto.year,
+          capacity: dto.capacity,
+          mileage: dto.mileage,
+          fuelType: dto.fuelType,
+          transmission: dto.transmission,
+          condition: dto.condition ?? 'USED',
+          features: dto.features ?? [],
+          plateNumber: dto.plateNumber,
+          price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
+          currency: dto.currency ?? 'OMR',
+          isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          contractType: dto.contractType,
+          contractClient: dto.contractClient,
+          contractMonthly: dto.contractMonthly != null ? new Prisma.Decimal(dto.contractMonthly) : null,
+          contractDuration: dto.contractDuration,
+          contractExpiry: dto.contractExpiry ? new Date(dto.contractExpiry) : null,
+          dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
+          monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
+          withDriver: dto.withDriver ?? false,
+          governorateId: dto.governorateId,
+          wilayaId: dto.wilayaId,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          contactPhone: dto.contactPhone,
+          whatsapp: dto.whatsapp,
+          userId,
+        },
+        include: {
+          user: { select: USER_SELECT },
+          images: true,
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.BUS_LISTING,
+          entityId: createdBus.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdBus;
     });
 
     if (dto.latitude && dto.longitude) {
@@ -356,15 +368,27 @@ export class BusesService {
       }
     }
 
-    const updated = await this.prisma.busListing.update({
-      where: { id },
-      data,
-      include: {
-        user: { select: USER_SELECT },
-        images: { orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.busListing.update({
+        where: { id },
+        data,
+        include: {
+          user: { select: USER_SELECT },
+          images: { orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.BUS_LISTING,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -414,7 +438,16 @@ export class BusesService {
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (bus.userId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.busListing.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.busListing.update({ where: { id }, data: { deletedAt: new Date() } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.BUS_LISTING,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
     await this.invalidateCache(id);
     this.search.removeDocument(INDEXES.BUSES, id).catch(() => {});
 

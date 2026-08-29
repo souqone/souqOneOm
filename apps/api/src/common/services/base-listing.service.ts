@@ -110,9 +110,21 @@ export abstract class BaseListingService {
     const slug = generateSlug(dto.title);
     const data = this.buildCreateData(dto, slug, userId);
 
-    const item = await this.model.create({
-      data,
-      include: this.getCreateInclude(),
+    const item = await this.prisma.$transaction(async (tx) => {
+      const createdItem = await (tx as any)[this.config.modelName].create({
+        data,
+        include: this.getCreateInclude(),
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: this.config.entityType,
+          entityId: createdItem.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdItem;
     });
 
     this.searchService
@@ -256,10 +268,22 @@ export abstract class BaseListingService {
       }
     }
 
-    const updated = await this.model.update({
-      where: { id },
-      data,
-      include: this.getListInclude(),
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await (tx as any)[this.config.modelName].update({
+        where: { id },
+        data,
+        include: this.getListInclude(),
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: this.config.entityType,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     // Sync to Meilisearch
@@ -286,7 +310,16 @@ export abstract class BaseListingService {
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.model.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await (tx as any)[this.config.modelName].delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: this.config.entityType,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
     this.searchService.removeDocument(this.config.meiliIndex as any, id)
       .catch((err) => this.logger.warn(`Failed to remove ${this.config.entityType} ${id} from search: ${(err as Error).message}`));
@@ -311,9 +344,21 @@ export abstract class BaseListingService {
       throw new ForbiddenException('غير مصرح لك بتعديل حالة هذا الإعلان');
 
     const newStatus = existing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    const updated = await this.model.update({
-      where: { id },
-      data: { status: newStatus },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await (tx as any)[this.config.modelName].update({
+        where: { id },
+        data: { status: newStatus },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: this.config.entityType,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     // Sync to Meilisearch

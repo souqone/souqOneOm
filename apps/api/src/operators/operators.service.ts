@@ -11,6 +11,7 @@ import { QueryOperatorListingsDto } from './dto/query-operator-listings.dto';
 import { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class OperatorsService {
@@ -21,33 +22,45 @@ private readonly prisma: PrismaService) {}
   async create(dto: CreateOperatorListingDto, userId: string) {
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
-    const item = await this.prisma.operatorListing.create({
-      data: {
-        title: dto.title,
-        slug: generateSlug(dto.title),
-        description: dto.description,
-        operatorType: dto.operatorType as OperatorType,
-        specializations: dto.specializations ?? [],
-        experienceYears: dto.experienceYears,
-        equipmentTypes: (dto.equipmentTypes ?? []) as EquipmentType[],
-        certifications: dto.certifications ?? [],
-        dailyRate: dto.dailyRate != null ? new Prisma.Decimal(dto.dailyRate) : null,
-        hourlyRate: dto.hourlyRate != null ? new Prisma.Decimal(dto.hourlyRate) : null,
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
-        userId,
-      },
-      include: {
-        user: { select: USER_SELECT },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const item = await this.prisma.$transaction(async (tx) => {
+      const createdItem = await tx.operatorListing.create({
+        data: {
+          title: dto.title,
+          slug: generateSlug(dto.title),
+          description: dto.description,
+          operatorType: dto.operatorType as OperatorType,
+          specializations: dto.specializations ?? [],
+          experienceYears: dto.experienceYears,
+          equipmentTypes: (dto.equipmentTypes ?? []) as EquipmentType[],
+          certifications: dto.certifications ?? [],
+          dailyRate: dto.dailyRate != null ? new Prisma.Decimal(dto.dailyRate) : null,
+          hourlyRate: dto.hourlyRate != null ? new Prisma.Decimal(dto.hourlyRate) : null,
+          currency: dto.currency ?? 'OMR',
+          isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          governorateId: dto.governorateId,
+          wilayaId: dto.wilayaId,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          contactPhone: dto.contactPhone,
+          whatsapp: dto.whatsapp,
+          userId,
+        },
+        include: {
+          user: { select: USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.OPERATOR_LISTING,
+          entityId: createdItem.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdItem;
     });
 
     if (dto.latitude && dto.longitude) {
@@ -144,14 +157,26 @@ private readonly prisma: PrismaService) {}
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.operatorListing.update({
-      where: { id },
-      data,
-      include: {
-        user: { select: USER_SELECT },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.operatorListing.update({
+        where: { id },
+        data,
+        include: {
+          user: { select: USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.OPERATOR_LISTING,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -169,7 +194,16 @@ private readonly prisma: PrismaService) {}
     const item = await this.prisma.operatorListing.findUnique({ where: { id } });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك حذف إعلان غيرك');
-    await this.prisma.operatorListing.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.operatorListing.delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.OPERATOR_LISTING,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
     return { deleted: true };
   }
 }

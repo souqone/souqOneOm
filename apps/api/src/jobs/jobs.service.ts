@@ -47,6 +47,7 @@ const PUBLIC_USER_SELECT = {
 };
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class JobsService {
@@ -132,9 +133,21 @@ export class JobsService {
     let slug = baseSlug;
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        const job = await this.prisma.driverJob.create({
-          data: { ...createData, slug },
-          include,
+        const job = await this.prisma.$transaction(async (tx) => {
+          const createdJob = await tx.driverJob.create({
+            data: { ...createData, slug },
+            include,
+          });
+
+          await tx.outboxEvent.create({
+            data: {
+              entityType: ENTITY_TYPES.JOB,
+              entityId: createdJob.id,
+              action: 'UPSERT',
+            },
+          });
+
+          return createdJob;
         });
 
         if (dto.latitude && dto.longitude) {
@@ -296,14 +309,26 @@ export class JobsService {
       data[key] = DECIMAL_FIELDS.has(key) ? new Prisma.Decimal(val as number) : val;
     }
 
-    const updated = await this.prisma.driverJob.update({
-      where: { id },
-      data,
-      include: {
-        user: { select: PUBLIC_USER_SELECT },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.driverJob.update({
+        where: { id },
+        data,
+        include: {
+          user: { select: PUBLIC_USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.JOB,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -386,7 +411,16 @@ export class JobsService {
         this.logger.warn(`Delete notification failed for applicant ${affectedApps[i].applicantId}`, r.reason);
     });
 
-    await this.prisma.driverJob.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.driverJob.delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.JOB,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
     await this.prisma.cleanupPolymorphicOrphans('JOB', id);
 
     this.searchService.removeDocument(INDEXES.JOBS, id)
