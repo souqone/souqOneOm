@@ -13,12 +13,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [
     PrismaModule,
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      },
-    }),
     BullModule.registerQueue({ name: PAYMENT_WEBHOOK_QUEUE }),
     BullModule.registerQueue({ name: PAYMENT_DLQ }),
     NotificationsModule,
