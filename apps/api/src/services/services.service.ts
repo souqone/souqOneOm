@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+import { INDEXES } from '../search/search.service';
 import { BaseListingService, ListingConfig } from '../common/services/base-listing.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { QueryServicesDto } from './dto/query-services.dto';
@@ -23,8 +23,8 @@ export class ServicesService extends BaseListingService {
 
   constructor(
     private readonly geoService: GeoService,
-prisma: PrismaService, searchService: SearchService, redis: RedisService, eventEmitter: EventEmitter2) {
-    super(prisma, searchService, redis, eventEmitter);
+prisma: PrismaService, redis: RedisService, eventEmitter: EventEmitter2) {
+    super(prisma, redis, eventEmitter);
   }
 
   protected buildCreateData(dto: CreateServiceDto, slug: string, userId: string) {

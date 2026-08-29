@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+
 import { NotificationsService } from '../notifications/notifications.service';
 
 const JOB_EXPIRY_DAYS = 30;
@@ -14,7 +14,6 @@ export class JobExpiryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly searchService: SearchService,
     private readonly notifications: NotificationsService,
   ) {}
 
@@ -71,11 +70,6 @@ export class JobExpiryService {
       data: { status: 'REJECTED' },
     });
 
-    // SEARCH-1: remove expired jobs from Meilisearch
-    for (const job of toExpire) {
-      this.searchService.removeDocument(INDEXES.JOBS, job.id)
-        .catch(err => this.logger.warn(`Search removal failed for expired job ${job.id}`, err?.message));
-    }
 
     // NOTIF-1: notify each job owner so they know to re-post if needed
     const ownerResults = await Promise.allSettled(

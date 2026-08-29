@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
-import { SearchService } from '../../search/search.service';
+
 import { generateSlug } from '../utils/entity.utils';
 import { incrementViewCount } from '../utils/view-count.helper';
 import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
@@ -49,7 +49,6 @@ export abstract class BaseListingService {
 
   constructor(
     protected readonly prisma: PrismaService,
-    protected readonly searchService: SearchService,
     protected readonly redis: RedisService,
     protected readonly eventEmitter: EventEmitter2,
   ) {
@@ -127,9 +126,6 @@ export abstract class BaseListingService {
       return createdItem;
     });
 
-    this.searchService
-      .indexDocument(this.config.meiliIndex as any, this.buildMeiliDoc(item))
-      .catch((err) => this.logger.warn(`Failed to index ${this.config.entityType} ${item.id}: ${(err as Error).message}`));
 
     // Invalidate list cache
     await this.redis.delPattern(this.cacheKey('list:*'));
@@ -286,10 +282,7 @@ export abstract class BaseListingService {
       return res;
     });
 
-    // Sync to Meilisearch
-    this.searchService
-      .indexDocument(this.config.meiliIndex as any, this.buildMeiliDoc(updated))
-      .catch((err) => this.logger.warn(`Failed to index updated ${this.config.entityType} ${updated.id}: ${(err as Error).message}`));
+
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -321,8 +314,7 @@ export abstract class BaseListingService {
       });
     });
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
-    this.searchService.removeDocument(this.config.meiliIndex as any, id)
-      .catch((err) => this.logger.warn(`Failed to remove ${this.config.entityType} ${id} from search: ${(err as Error).message}`));
+
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -361,10 +353,7 @@ export abstract class BaseListingService {
       return res;
     });
 
-    // Sync to Meilisearch
-    this.searchService
-      .indexDocument(this.config.meiliIndex as any, this.buildMeiliDoc(updated))
-      .catch((err) => this.logger.warn(`Failed to index status change for ${this.config.entityType} ${updated.id}: ${(err as Error).message}`));
+
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));

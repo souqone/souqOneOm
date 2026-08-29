@@ -8,7 +8,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { SearchService, INDEXES } from '../search/search.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
 import { USER_SELECT } from '../common/utils/entity.utils';
@@ -23,7 +22,6 @@ export class PartsService {
   constructor(
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
-    private readonly searchService: SearchService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -101,14 +99,7 @@ export class PartsService {
       await this.geoService.syncLocation('spare_parts', part.id, dto.latitude, dto.longitude);
     }
 
-    // Sync to Meilisearch
-    this.searchService.indexDocument(INDEXES.PARTS, {
-      id: part.id, title: part.title, slug: part.slug, description: part.description,
-      partCategory: part.partCategory, condition: part.condition, partNumber: part.partNumber,
-      compatibleMakes: part.compatibleMakes, price: Number(part.price), currency: part.currency,
-      isOriginal: part.isOriginal, governorateId: part.governorateId, wilayaId: part.wilayaId,
-      status: part.status, imageUrl: part.images?.[0]?.url || null, createdAt: part.createdAt,
-    }).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.CREATED, part);
 
@@ -260,14 +251,7 @@ export class PartsService {
       }
     }
 
-    // Sync to Meilisearch
-    this.searchService.indexDocument(INDEXES.PARTS, {
-      id: updated.id, title: updated.title, slug: updated.slug, description: updated.description,
-      partCategory: updated.partCategory, condition: updated.condition, partNumber: updated.partNumber,
-      compatibleMakes: updated.compatibleMakes, price: Number(updated.price), currency: updated.currency,
-      isOriginal: updated.isOriginal, governorateId: updated.governorateId, wilayaId: updated.wilayaId,
-      status: updated.status, imageUrl: updated.images?.[0]?.url || null, createdAt: updated.createdAt,
-    }).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
 
@@ -293,8 +277,7 @@ export class PartsService {
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
 
-    // Remove from Meilisearch
-    this.searchService.removeDocument(INDEXES.PARTS, id).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.DELETED, part);
 

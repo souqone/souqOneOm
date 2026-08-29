@@ -17,8 +17,7 @@ import { Prisma, ApplicationStatus, NotificationType } from '@prisma/client';
 import { generateSlug } from '../common/utils/entity.utils';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
-import { SearchService } from '../search/search.service';
-import { INDEXES } from '../search/search.service';
+
 
 /** Valid application status transitions — WITHDRAWN is applicant-only (via withdrawApplication) */
 const VALID_TRANSITIONS: Record<string, ApplicationStatus[]> = {
@@ -58,27 +57,10 @@ export class JobsService {
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsService,
-    private searchService: SearchService,
   ) {}
 
   private cacheKey(suffix: string) { return `jobs:${suffix}`; }
 
-  private buildMeiliDoc(job: any) {
-    return {
-      id: job.id,
-      title: job.title,
-      description: job.description,
-      jobType: job.jobType,
-      employmentType: job.employmentType,
-      salary: job.salary ? Number(job.salary) : null,
-      governorateId: job.governorateId,
-      wilayaId: job.wilayaId,
-      status: job.status,
-      viewCount: job.viewCount,
-      experienceYears: job.experienceYears,
-      createdAt: job.createdAt,
-    };
-  }
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateJobDto) {
@@ -154,8 +136,7 @@ export class JobsService {
           await this.geoService.syncLocation('driver_jobs', job.id, dto.latitude, dto.longitude);
         }
 
-        this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(job))
-          .catch((err) => this.logger.warn(`Failed to index job ${job.id}: ${(err as Error).message}`));
+
         await this.redis.delPattern(this.cacheKey('list:*'));
 
         return job;
@@ -371,8 +352,7 @@ export class JobsService {
       }
     }
 
-    this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(updated))
-      .catch((err) => this.logger.warn(`Failed to index updated job ${updated.id}: ${(err as Error).message}`));
+
 
     // CACHE-1: invalidate both UUID and slug-based cache keys
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -423,8 +403,7 @@ export class JobsService {
     });
     await this.prisma.cleanupPolymorphicOrphans('JOB', id);
 
-    this.searchService.removeDocument(INDEXES.JOBS, id)
-      .catch((err) => this.logger.warn(`Failed to remove job ${id} from search: ${(err as Error).message}`));
+
 
     // CACHE-1: invalidate both UUID and slug-based cache keys
     await this.redis.del(this.cacheKey(`detail:${id}`));

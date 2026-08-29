@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+
 import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma } from '@prisma/client';
 
@@ -13,7 +13,6 @@ export class AdminJobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly searchService: SearchService,
     private readonly notifications: NotificationsService,
   ) {}
 
@@ -131,7 +130,6 @@ export class AdminJobsService {
     // ADMIN-1: full cleanup — orphans, search index, caches
     await this.prisma.cleanupPolymorphicOrphans('JOB', jobId);
 
-    this.searchService.removeDocument(INDEXES.JOBS, jobId).catch(() => {});
 
     await this.redis.del(`jobs:detail:${jobId}`);
     if (job.slug) await this.redis.del(`jobs:detail:${job.slug}`);

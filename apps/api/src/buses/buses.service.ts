@@ -10,7 +10,7 @@ import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.ev
 import { ListingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+
 import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
@@ -40,7 +40,6 @@ export class BusesService {
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly search: SearchService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -59,30 +58,6 @@ export class BusesService {
     });
   }
 
-  private buildMeiliDoc(bus: any): Record<string, any> {
-    return {
-      id: bus.id,
-      title: bus.title,
-      slug: bus.slug,
-      description: bus.description,
-      busListingType: bus.busListingType,
-      busType: bus.busType,
-      make: bus.make,
-      model: bus.model,
-      price: bus.price ? Number(bus.price) : null,
-      dailyPrice: bus.dailyPrice ? Number(bus.dailyPrice) : null,
-      monthlyPrice: bus.monthlyPrice ? Number(bus.monthlyPrice) : null,
-      contractMonthly: bus.contractMonthly ? Number(bus.contractMonthly) : null,
-      capacity: bus.capacity,
-      governorateId: bus.governorateId,
-      wilayaId: bus.wilayaId,
-      status: bus.status,
-      isPremium: bus.isPremium,
-      viewCount: bus.viewCount,
-      imageUrl: bus.images?.[0]?.url || null,
-      createdAt: bus.createdAt instanceof Date ? bus.createdAt.getTime() : bus.createdAt,
-    };
-  }
 
 
   async create(dto: CreateBusListingDto, userId: string) {
@@ -153,7 +128,7 @@ export class BusesService {
     }
 
     await this.invalidateCache();
-    this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(bus)).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.CREATED, bus);
 
@@ -423,7 +398,7 @@ export class BusesService {
     }
 
     await this.invalidateCache(id);
-    this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(updated)).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
     if (statusChanged) {
@@ -449,7 +424,7 @@ export class BusesService {
       });
     });
     await this.invalidateCache(id);
-    this.search.removeDocument(INDEXES.BUSES, id).catch(() => {});
+
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('BUS_LISTING', id);
