@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchService, INDEXES } from './search.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Processor('search-sync')
 export class SearchSyncWorker {
@@ -18,7 +19,7 @@ export class SearchSyncWorker {
     const { entityId, entityType, action } = job.data;
     this.logger.debug(`Processing search sync job ${job.id} for ${entityType} ${entityId}`);
 
-    if (entityType === 'LISTING') {
+    if (entityType === ENTITY_TYPES.LISTING) {
       if (action === 'DELETE') {
         await this.searchService.removeDocument(INDEXES.LISTINGS, entityId).catch(() => {});
         return;

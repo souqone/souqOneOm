@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 const PUBLIC_SELLER_SELECT = {
   id: true,
@@ -33,7 +34,7 @@ export class ListingsRepository {
         });
         await tx.outboxEvent.create({
           data: {
-            entityType: 'LISTING',
+            entityType: ENTITY_TYPES.LISTING,
             entityId: listing.id,
             action: 'UPSERT',
           },
@@ -83,7 +84,7 @@ export class ListingsRepository {
         });
         await tx.outboxEvent.create({
           data: {
-            entityType: 'LISTING',
+            entityType: ENTITY_TYPES.LISTING,
             entityId: listing.id,
             action: 'UPSERT',
           },
@@ -100,7 +101,7 @@ export class ListingsRepository {
         const listing = await tx.listing.delete({ where: { id } });
         await tx.outboxEvent.create({
           data: {
-            entityType: 'LISTING',
+            entityType: ENTITY_TYPES.LISTING,
             entityId: id,
             action: 'DELETE',
           },

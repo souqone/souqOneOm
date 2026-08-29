@@ -14,6 +14,7 @@ import { QueryPartsDto } from './dto/query-parts.dto';
 import { USER_SELECT } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class PartsService {
@@ -269,7 +270,7 @@ export class PartsService {
   private emitListingEvent(event: string, item: any, status?: string) {
     try {
       const payload: ListingEventPayload = {
-        entityType: 'SPARE_PART',
+        entityType: ENTITY_TYPES.SPARE_PART,
         listingId: item.id,
         title: item.title,
         userId: item.sellerId,

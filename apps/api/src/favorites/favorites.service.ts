@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { USER_SELECT } from '../common/utils/entity.utils';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 const IMAGES_INCLUDE = { images: { orderBy: { order: 'asc' as const }, take: 5 } } as const;
 const USER_INCLUDE = { user: { select: USER_SELECT } } as const;
@@ -44,7 +45,7 @@ export class FavoritesService {
         entityType,
         entityId,
         // Keep listingId populated for LISTING type (backward compat)
-        ...(entityType === 'LISTING' ? { listingId: entityId } : {}),
+        ...(entityType === ENTITY_TYPES.LISTING ? { listingId: entityId } : {}),
       },
     });
 
@@ -107,7 +108,7 @@ export class FavoritesService {
           createdAt: fav.createdAt,
         };
 
-        if (fav.entityType === 'LISTING' && fav.listing) {
+        if (fav.entityType === ENTITY_TYPES.LISTING && fav.listing) {
           return {
             ...base,
             listing: fav.listing,
@@ -128,12 +129,12 @@ export class FavoritesService {
           listing: fav.listing,
           entity,
           // Full entity data keyed by type for frontend transformers
-          ...(fullEntity && fav.entityType === 'BUS_LISTING'        ? { busListing: fullEntity }        : {}),
-          ...(fullEntity && fav.entityType === 'EQUIPMENT_LISTING'  ? { equipmentListing: fullEntity }  : {}),
-          ...(fullEntity && fav.entityType === 'OPERATOR_LISTING'   ? { operatorListing: fullEntity }   : {}),
-          ...(fullEntity && fav.entityType === 'SPARE_PART'         ? { sparePart: fullEntity }         : {}),
-          ...(fullEntity && fav.entityType === 'CAR_SERVICE'        ? { carService: fullEntity }        : {}),
-          ...(fullEntity && fav.entityType === 'JOB'                ? { job: fullEntity }               : {}),
+          ...(fullEntity && fav.entityType === ENTITY_TYPES.BUS_LISTING        ? { busListing: fullEntity }        : {}),
+          ...(fullEntity && fav.entityType === ENTITY_TYPES.EQUIPMENT_LISTING  ? { equipmentListing: fullEntity }  : {}),
+          ...(fullEntity && fav.entityType === ENTITY_TYPES.OPERATOR_LISTING   ? { operatorListing: fullEntity }   : {}),
+          ...(fullEntity && fav.entityType === ENTITY_TYPES.SPARE_PART         ? { sparePart: fullEntity }         : {}),
+          ...(fullEntity && fav.entityType === ENTITY_TYPES.CAR_SERVICE        ? { carService: fullEntity }        : {}),
+          ...(fullEntity && fav.entityType === ENTITY_TYPES.JOB                ? { job: fullEntity }               : {}),
         };
       }),
     );

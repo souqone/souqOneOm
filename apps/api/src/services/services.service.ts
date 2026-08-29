@@ -9,13 +9,14 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { QueryServicesDto } from './dto/query-services.dto';
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class ServicesService extends BaseListingService {
   protected readonly config: ListingConfig = {
     modelName: 'carService',
     meiliIndex: INDEXES.SERVICES,
-    entityType: 'CAR_SERVICE',
+    entityType: ENTITY_TYPES.CAR_SERVICE,
     notFoundMsg: 'الخدمة غير موجودة',
     decimalFields: ['priceFrom', 'priceTo'],
   };

@@ -6,6 +6,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PushService } from './push.service';
 import { ExpoPushService } from './expo-push.service';
 import { NOTIFICATION_EVENTS } from './notification.events';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 /** Retention window for the notification list (findAll only) */
 const RETENTION_DAYS = 90;
@@ -162,19 +163,19 @@ export class NotificationsService {
     const inferred: Record<string, any> = { ...data };
 
     if (data.jobId && !data.applicationId) {
-      inferred.entityType = 'JOB';
+      inferred.entityType = ENTITY_TYPES.JOB;
       inferred.entityId = data.jobId;
     } else if (data.applicationId) {
-      inferred.entityType = 'JOB_APPLICATION';
+      inferred.entityType = ENTITY_TYPES.JOB_APPLICATION;
       inferred.entityId = data.applicationId;
     } else if (data.requestId) {
-      inferred.entityType = 'TRANSPORT_REQUEST';
+      inferred.entityType = ENTITY_TYPES.TRANSPORT_REQUEST;
       inferred.entityId = data.requestId;
     } else if (data.bookingId) {
-      inferred.entityType = 'TRANSPORT_BOOKING';
+      inferred.entityType = ENTITY_TYPES.TRANSPORT_BOOKING;
       inferred.entityId = data.bookingId;
     } else if (data.listingId) {
-      inferred.entityType = data.entityType ?? 'LISTING';
+      inferred.entityType = data.entityType ?? ENTITY_TYPES.LISTING;
       inferred.entityId = data.listingId;
     }
 
@@ -194,8 +195,8 @@ export class NotificationsService {
 
       case NotificationType.LISTING_SOLD:
       case NotificationType.LISTING_FAVORITED:
-        if (d?.entityType === 'BUS_LISTING')        return d?.entityId ? `/buses/${d.entityId}`       : '/buses';
-        if (d?.entityType === 'EQUIPMENT_LISTING')  return d?.entityId ? `/equipment/${d.entityId}`   : '/equipment';
+        if (d?.entityType === ENTITY_TYPES.BUS_LISTING)        return d?.entityId ? `/buses/${d.entityId}`       : '/buses';
+        if (d?.entityType === ENTITY_TYPES.EQUIPMENT_LISTING)  return d?.entityId ? `/equipment/${d.entityId}`   : '/equipment';
         return d?.entityId ? `/sale/car/${d.entityId}` : '/profile';
 
       case NotificationType.PRICE_DROP:

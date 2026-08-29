@@ -30,6 +30,7 @@ const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
 };
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class BusesService {
@@ -513,7 +514,7 @@ export class BusesService {
   private emitListingEvent(event: string, item: any, status?: string) {
     try {
       const payload: ListingEventPayload = {
-        entityType: 'BUS_LISTING',
+        entityType: ENTITY_TYPES.BUS_LISTING,
         listingId: item.id,
         title: item.title,
         userId: item.userId,

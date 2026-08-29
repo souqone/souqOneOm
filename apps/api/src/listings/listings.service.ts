@@ -16,6 +16,7 @@ import { ListingsRepository } from './listings.repository';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 
 
@@ -571,7 +572,7 @@ export class ListingsService {
   private emitListingEvent(event: string, item: any, status?: string) {
     try {
       const payload: ListingEventPayload = {
-        entityType: 'LISTING',
+        entityType: ENTITY_TYPES.LISTING,
         listingId: item.id,
         title: item.title,
         userId: item.sellerId,

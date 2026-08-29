@@ -16,6 +16,7 @@ import { QueryEquipmentListingsDto } from './dto/query-equipment-listings.dto';
 import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.utils';
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class EquipmentListingsService {
@@ -387,7 +388,7 @@ export class EquipmentListingsService {
   private emitListingEvent(event: string, item: any, status?: string) {
     try {
       const payload: ListingEventPayload = {
-        entityType: 'EQUIPMENT_LISTING',
+        entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
         listingId: item.id,
         title: item.title,
         userId: item.userId,

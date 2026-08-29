@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class TransportReviewService {
@@ -40,7 +41,7 @@ export class TransportReviewService {
       where: {
         reviewerId_entityType_entityId: {
           reviewerId: userId,
-          entityType: 'CARRIER_PROFILE',
+          entityType: ENTITY_TYPES.CARRIER_PROFILE,
           entityId: bookingId,
         },
       },
@@ -54,7 +55,7 @@ export class TransportReviewService {
       data: {
         rating,
         comment,
-        entityType: 'CARRIER_PROFILE',
+        entityType: ENTITY_TYPES.CARRIER_PROFILE,
         entityId: bookingId, // Use booking ID to uniquely tie it to this trip
         reviewerId: userId,
         revieweeId: booking.quote.carrier.userId, // The carrier's user ID
@@ -65,7 +66,7 @@ export class TransportReviewService {
     const allReviews = await this.prisma.review.findMany({
       where: {
         revieweeId: booking.quote.carrier.userId,
-        entityType: 'CARRIER_PROFILE',
+        entityType: ENTITY_TYPES.CARRIER_PROFILE,
       },
       select: { rating: true },
     });
@@ -98,7 +99,7 @@ export class TransportReviewService {
   async getBookingReview(bookingId: string) {
     return this.prisma.review.findFirst({
       where: {
-        entityType: 'CARRIER_PROFILE',
+        entityType: ENTITY_TYPES.CARRIER_PROFILE,
         entityId: bookingId,
       },
       include: {
@@ -126,7 +127,7 @@ export class TransportReviewService {
       this.prisma.review.findMany({
         where: {
           revieweeId: carrier.userId,
-          entityType: 'CARRIER_PROFILE',
+          entityType: ENTITY_TYPES.CARRIER_PROFILE,
         },
         skip,
         take: limit,
@@ -144,7 +145,7 @@ export class TransportReviewService {
       this.prisma.review.count({
         where: {
           revieweeId: carrier.userId,
-          entityType: 'CARRIER_PROFILE',
+          entityType: ENTITY_TYPES.CARRIER_PROFILE,
         },
       }),
     ]);
