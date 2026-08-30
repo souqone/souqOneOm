@@ -12,6 +12,7 @@ import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { QueryReviewsDto } from './dto/query-reviews.dto';
 import { ReplyReviewDto } from './dto/reply-review.dto';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class ReviewsService {
@@ -29,14 +30,14 @@ export class ReviewsService {
 
     // Carrier reviews must go through POST /transport/bookings/:id/review
     // to guarantee the booking validation runs and prevent duplicate notifications.
-    if (dto.entityType === 'CARRIER_PROFILE') {
+    if (dto.entityType === ENTITY_TYPES.CARRIER_PROFILE) {
       throw new BadRequestException(
         'يجب تقييم الناقل من خلال صفحة الحجز (POST /transport/bookings/:id/review)',
       );
     }
 
     // Job-related review validation: require ACCEPTED application
-    if (dto.entityType === 'DRIVER_PROFILE' || dto.entityType === 'EMPLOYER_PROFILE') {
+    if (dto.entityType === ENTITY_TYPES.DRIVER_PROFILE || dto.entityType === ENTITY_TYPES.EMPLOYER_PROFILE) {
       await this.validateJobReview(dto, reviewerId);
     }
 
@@ -66,11 +67,11 @@ export class ReviewsService {
     await this.recalculateUserRating(dto.revieweeId);
 
     // Also recalculate profile-level ratings for job reviews
-    if (dto.entityType === 'DRIVER_PROFILE') {
+    if (dto.entityType === ENTITY_TYPES.DRIVER_PROFILE) {
       await this.recalculateDriverProfileRating(dto.entityId);
-    } else if (dto.entityType === 'EMPLOYER_PROFILE') {
+    } else if (dto.entityType === ENTITY_TYPES.EMPLOYER_PROFILE) {
       await this.recalculateEmployerProfileRating(dto.entityId);
-    } else if (dto.entityType === 'CARRIER_PROFILE') {
+    } else if (dto.entityType === ENTITY_TYPES.CARRIER_PROFILE) {
       await this.recalculateCarrierProfileRating(dto.entityId);
     }
 
@@ -202,7 +203,7 @@ export class ReviewsService {
 
   private async recalculateDriverProfileRating(profileId: string) {
     const result = await this.prisma.review.aggregate({
-      where: { entityType: 'DRIVER_PROFILE', entityId: profileId },
+      where: { entityType: ENTITY_TYPES.DRIVER_PROFILE, entityId: profileId },
       _avg: { rating: true },
       _count: true,
     });
@@ -218,7 +219,7 @@ export class ReviewsService {
 
   private async recalculateEmployerProfileRating(profileId: string) {
     const result = await this.prisma.review.aggregate({
-      where: { entityType: 'EMPLOYER_PROFILE', entityId: profileId },
+      where: { entityType: ENTITY_TYPES.EMPLOYER_PROFILE, entityId: profileId },
       _avg: { rating: true },
       _count: true,
     });
@@ -234,7 +235,7 @@ export class ReviewsService {
 
   private async recalculateCarrierProfileRating(profileId: string) {
     const result = await this.prisma.review.aggregate({
-      where: { entityType: 'CARRIER_PROFILE', entityId: profileId },
+      where: { entityType: ENTITY_TYPES.CARRIER_PROFILE, entityId: profileId },
       _avg: { rating: true },
       _count: true,
     });

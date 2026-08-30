@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { CreateDriverProfileDto } from './dto/create-driver-profile.dto';
 import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
 import { QueryDriversDto } from './dto/query-drivers.dto';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 /** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
 const PUBLIC_USER_SELECT = {
@@ -169,7 +170,7 @@ export class DriverProfileService {
     const limit = Math.min(50, Math.max(1, parseInt(query.limit || '20', 10)));
     const skip = (page - 1) * limit;
 
-    const where = { entityType: 'DRIVER_PROFILE' as const, entityId: profileId };
+    const where = { entityType: ENTITY_TYPES.DRIVER_PROFILE, entityId: profileId };
 
     const [items, total] = await Promise.all([
       this.prisma.review.findMany({

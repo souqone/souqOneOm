@@ -8,12 +8,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { SearchService, INDEXES } from '../search/search.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
 import { USER_SELECT } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class PartsService {
@@ -22,7 +22,6 @@ export class PartsService {
   constructor(
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
-    private readonly searchService: SearchService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -43,59 +42,64 @@ export class PartsService {
 
     const slug = this.generateSlug(dto.title);
 
-    const part = await this.prisma.sparePart.create({
-      data: {
-        title: dto.title,
-        slug,
-        description: dto.description,
-        partCategory: dto.partCategory,
-        condition: dto.condition ?? 'USED',
-        partNumber: dto.partNumber,
-        compatibleMakes: dto.compatibleMakes ?? [],
-        compatibleModels: dto.compatibleModels ?? [],
-        yearFrom: dto.yearFrom,
-        yearTo: dto.yearTo,
-        isOriginal: dto.isOriginal ?? false,
-        price: new Prisma.Decimal(dto.price),
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
-        sellerId,
-        ...(dto.images && dto.images.length > 0 && {
-          images: {
-            create: dto.images.map((url, i) => ({
-              url,
-              order: i,
-              isPrimary: i === 0,
-            })),
-          },
-        }),
-      },
-      include: {
-        seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true } },
-        images: true,
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const part = await this.prisma.$transaction(async (tx) => {
+      const createdPart = await tx.sparePart.create({
+        data: {
+          title: dto.title,
+          slug,
+          description: dto.description,
+          partCategory: dto.partCategory,
+          condition: dto.condition ?? 'USED',
+          partNumber: dto.partNumber,
+          compatibleMakes: dto.compatibleMakes ?? [],
+          compatibleModels: dto.compatibleModels ?? [],
+          yearFrom: dto.yearFrom,
+          yearTo: dto.yearTo,
+          isOriginal: dto.isOriginal ?? false,
+          price: new Prisma.Decimal(dto.price),
+          currency: dto.currency ?? 'OMR',
+          isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          governorateId: dto.governorateId,
+          wilayaId: dto.wilayaId,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          contactPhone: dto.contactPhone,
+          whatsapp: dto.whatsapp,
+          sellerId,
+          ...(dto.images && dto.images.length > 0 && {
+            images: {
+              create: dto.images.map((url, i) => ({
+                url,
+                order: i,
+                isPrimary: i === 0,
+              })),
+            },
+          }),
+        },
+        include: {
+          seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true } },
+          images: true,
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.SPARE_PART,
+          entityId: createdPart.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdPart;
     });
 
     if (dto.latitude && dto.longitude) {
       await this.geoService.syncLocation('spare_parts', part.id, dto.latitude, dto.longitude);
     }
 
-    // Sync to Meilisearch
-    this.searchService.indexDocument(INDEXES.PARTS, {
-      id: part.id, title: part.title, slug: part.slug, description: part.description,
-      partCategory: part.partCategory, condition: part.condition, partNumber: part.partNumber,
-      compatibleMakes: part.compatibleMakes, price: Number(part.price), currency: part.currency,
-      isOriginal: part.isOriginal, governorateId: part.governorateId, wilayaId: part.wilayaId,
-      status: part.status, imageUrl: part.images?.[0]?.url || null, createdAt: part.createdAt,
-    }).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.CREATED, part);
 
@@ -217,14 +221,26 @@ export class PartsService {
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
 
-    const updated = await this.prisma.sparePart.update({
-      where: { id },
-      data,
-      include: {
-        images: { take: 1, orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.sparePart.update({
+        where: { id },
+        data,
+        include: {
+          images: { take: 1, orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.SPARE_PART,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -235,14 +251,7 @@ export class PartsService {
       }
     }
 
-    // Sync to Meilisearch
-    this.searchService.indexDocument(INDEXES.PARTS, {
-      id: updated.id, title: updated.title, slug: updated.slug, description: updated.description,
-      partCategory: updated.partCategory, condition: updated.condition, partNumber: updated.partNumber,
-      compatibleMakes: updated.compatibleMakes, price: Number(updated.price), currency: updated.currency,
-      isOriginal: updated.isOriginal, governorateId: updated.governorateId, wilayaId: updated.wilayaId,
-      status: updated.status, imageUrl: updated.images?.[0]?.url || null, createdAt: updated.createdAt,
-    }).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
 
@@ -254,13 +263,21 @@ export class PartsService {
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.sparePart.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.sparePart.delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.SPARE_PART,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
 
-    // Remove from Meilisearch
-    this.searchService.removeDocument(INDEXES.PARTS, id).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.DELETED, part);
 
@@ -269,7 +286,7 @@ export class PartsService {
   private emitListingEvent(event: string, item: any, status?: string) {
     try {
       const payload: ListingEventPayload = {
-        entityType: 'SPARE_PART',
+        entityType: ENTITY_TYPES.SPARE_PART,
         listingId: item.id,
         title: item.title,
         userId: item.sellerId,

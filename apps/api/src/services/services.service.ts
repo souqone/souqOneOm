@@ -3,27 +3,28 @@ import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+import { INDEXES } from '../search/search.service';
 import { BaseListingService, ListingConfig } from '../common/services/base-listing.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { QueryServicesDto } from './dto/query-services.dto';
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class ServicesService extends BaseListingService {
   protected readonly config: ListingConfig = {
     modelName: 'carService',
     meiliIndex: INDEXES.SERVICES,
-    entityType: 'CAR_SERVICE',
+    entityType: ENTITY_TYPES.CAR_SERVICE,
     notFoundMsg: 'الخدمة غير موجودة',
     decimalFields: ['priceFrom', 'priceTo'],
   };
 
   constructor(
     private readonly geoService: GeoService,
-prisma: PrismaService, searchService: SearchService, redis: RedisService, eventEmitter: EventEmitter2) {
-    super(prisma, searchService, redis, eventEmitter);
+prisma: PrismaService, redis: RedisService, eventEmitter: EventEmitter2) {
+    super(prisma, redis, eventEmitter);
   }
 
   protected buildCreateData(dto: CreateServiceDto, slug: string, userId: string) {

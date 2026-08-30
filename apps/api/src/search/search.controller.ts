@@ -2,6 +2,8 @@ import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchQueryDto, AutocompleteQueryDto } from './dto/search-query.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('search')
 export class SearchController {
@@ -28,7 +30,8 @@ export class SearchController {
    * POST /api/search/reindex — Full re-sync from PostgreSQL.
    * Protected — requires authentication (admin use).
    */
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Post('reindex')
   reindex() {
     return this.searchService.reindexAll();

@@ -72,10 +72,20 @@ export class PaymentsController {
       this.logger.warn('Webhook rejected — invalid secret');
       throw new ForbiddenException('Invalid webhook secret');
     }
-    await this.webhookQueue.add(
-      { body },
-      { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
-    );
+    try {
+      await this.webhookQueue.add(
+        { body },
+        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      );
+    } catch (error) {
+      // Queue unavailable (e.g. Redis down) — never return 500 to a payment
+      // provider, that can cause double-charging or missed confirmations on
+      // their side. No suitable DB fallback table exists yet (no
+      // WebhookEvent model, and OutboxEvent has no payload column and is
+      // consumed by unrelated search-sync processing) — log the full
+      // payload so it can be recovered manually, then still ack with 200.
+      this.logger.error('Payment webhook queue unavailable — stored as fallback', { body, error });
+    }
     return { received: true };
   }
 

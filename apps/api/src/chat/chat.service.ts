@@ -12,6 +12,7 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { CHAT_EVENTS } from './chat.events';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class ChatService {
@@ -79,7 +80,7 @@ export class ChatService {
 
   async createOrGetConversation(dto: CreateConversationDto, userId: string) {
     // Backward compat: old clients sending listingId only
-    const entityType = dto.entityType || 'LISTING';
+    const entityType = dto.entityType || ENTITY_TYPES.LISTING;
     const entityId = dto.entityId || dto.listingId!;
 
     if (!entityId) throw new BadRequestException('معرف الكيان مطلوب');
@@ -120,7 +121,7 @@ export class ChatService {
       data: {
         entityType,
         entityId,
-        listingId: entityType === 'LISTING' ? entityId : undefined,
+        listingId: entityType === ENTITY_TYPES.LISTING ? entityId : undefined,
         participants: {
           create: [
             { userId },
@@ -282,7 +283,7 @@ export class ChatService {
           data: {
             conversationId,
             messageId: message.id,
-            entityType: 'ROOM',
+            entityType: ENTITY_TYPES.ROOM,
             entityId: conversationId,
           },
         });

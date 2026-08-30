@@ -9,6 +9,7 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { Prisma } from '@prisma/client';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 const USER_SELECT = {
   id: true,
@@ -192,7 +193,7 @@ export class TransportQuoteService {
 
       const conversation = await tx.conversation.create({
         data: {
-          entityType: 'TRANSPORT_BOOKING',
+          entityType: ENTITY_TYPES.TRANSPORT_BOOKING,
           entityId: booking.id,
           participants: {
             create: [

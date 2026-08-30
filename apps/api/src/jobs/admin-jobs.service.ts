@@ -4,16 +4,16 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+
 import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma } from '@prisma/client';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class AdminJobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly searchService: SearchService,
     private readonly notifications: NotificationsService,
   ) {}
 
@@ -63,9 +63,19 @@ export class AdminJobsService {
     if (data.status !== undefined) safeData.status = data.status;
     if (data.title !== undefined) safeData.title = data.title;
 
-    const updated = await this.prisma.driverJob.update({
-      where: { id: jobId },
-      data: safeData,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedJob = await tx.driverJob.update({
+        where: { id: jobId },
+        data: safeData,
+      });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.JOB,
+          entityId: updatedJob.id,
+          action: 'UPSERT',
+        },
+      });
+      return updatedJob;
     });
 
     // NOTIF-3: notify job owner of admin status change
@@ -126,12 +136,21 @@ export class AdminJobsService {
       }
     });
 
-    await this.prisma.driverJob.delete({ where: { id: jobId } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.driverJob.delete({ where: { id: jobId } });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.JOB,
+          entityId: jobId,
+          action: 'DELETE',
+        },
+      });
+    });
 
     // ADMIN-1: full cleanup — orphans, search index, caches
     await this.prisma.cleanupPolymorphicOrphans('JOB', jobId);
 
-    this.searchService.removeDocument(INDEXES.JOBS, jobId).catch(() => {});
 
     await this.redis.del(`jobs:detail:${jobId}`);
     if (job.slug) await this.redis.del(`jobs:detail:${job.slug}`);

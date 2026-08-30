@@ -17,7 +17,13 @@ const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  outboxEvent: {
+    create: jest.fn(),
+  },
   cleanupPolymorphicOrphans: jest.fn(),
+  $transaction: jest.fn().mockImplementation(async (callback) => {
+    return await callback(mockPrisma);
+  }),
 };
 
 const mockRedis = {
@@ -107,7 +113,6 @@ describe('ServicesService', () => {
 
       expect(result).toEqual(mockItem);
       expect(mockPrisma.carService.create).toHaveBeenCalledTimes(1);
-      expect(mockSearch.indexDocument).toHaveBeenCalledTimes(1);
       expect(mockRedis.delPattern).toHaveBeenCalled();
     });
 
@@ -228,7 +233,6 @@ describe('ServicesService', () => {
       const result = await service.update('svc-1', 'user-1', { title: 'خدمة جديدة' });
 
       expect(result.title).toBe('خدمة جديدة');
-      expect(mockSearch.indexDocument).toHaveBeenCalledTimes(1);
       expect(mockRedis.del).toHaveBeenCalled();
     });
 
@@ -270,7 +274,6 @@ describe('ServicesService', () => {
 
       expect(result.message).toBe('تم حذف الإعلان بنجاح');
       expect(mockPrisma.cleanupPolymorphicOrphans).toHaveBeenCalledWith('CAR_SERVICE', 'svc-1');
-      expect(mockSearch.removeDocument).toHaveBeenCalled();
       expect(mockRedis.del).toHaveBeenCalled();
     });
 

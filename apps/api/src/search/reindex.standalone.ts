@@ -84,6 +84,68 @@ async function main() {
   if (serviceDocs.length > 0) await meili.index('services').addDocuments(serviceDocs);
   counts.services = serviceDocs.length;
 
+  // ── Jobs ──
+  const jobs = await prisma.driverJob.findMany({
+    where: { status: 'ACTIVE' },
+  });
+  const jobDocs = jobs.map(j => serialize({
+    id: j.id, title: j.title, slug: j.slug, description: j.description,
+    jobType: j.jobType, employmentType: j.employmentType,
+    salary: j.salary ? Number(j.salary) : null, salaryPeriod: j.salaryPeriod,
+    currency: j.currency, governorateId: j.governorateId, wilayaId: j.wilayaId,
+    status: j.status, viewCount: j.viewCount, createdAt: j.createdAt,
+  }));
+  if (jobDocs.length > 0) await meili.index('jobs').addDocuments(jobDocs);
+  counts.jobs = jobDocs.length;
+
+  // ── Buses ──
+  const buses = await prisma.busListing.findMany({
+    where: { status: 'ACTIVE', deletedAt: null },
+    include: { images: { take: 1, orderBy: { order: 'asc' } } },
+  });
+  const busDocs = buses.map(b => serialize({
+    id: b.id, title: b.title, slug: b.slug, description: b.description,
+    busListingType: b.busListingType, busType: b.busType,
+    make: b.make, model: b.model, year: b.year, capacity: b.capacity,
+    price: b.price ? Number(b.price) : null, currency: b.currency,
+    isPremium: b.isPremium, governorateId: b.governorateId, wilayaId: b.wilayaId,
+    status: b.status, viewCount: b.viewCount, imageUrl: b.images[0]?.url || null,
+    createdAt: b.createdAt,
+  }));
+  if (busDocs.length > 0) await meili.index('buses').addDocuments(busDocs);
+  counts.buses = busDocs.length;
+
+  // ── Equipment ──
+  const equipment = await prisma.equipmentListing.findMany({
+    where: { status: 'ACTIVE' },
+    include: { images: { take: 1, orderBy: { order: 'asc' } } },
+  });
+  const equipmentDocs = equipment.map(e => serialize({
+    id: e.id, title: e.title, slug: e.slug, description: e.description,
+    equipmentType: e.equipmentType, listingType: e.listingType,
+    make: e.make, model: e.model, condition: e.condition,
+    price: e.price ? Number(e.price) : null, dailyPrice: e.dailyPrice ? Number(e.dailyPrice) : null,
+    currency: e.currency, isPremium: e.isPremium, governorateId: e.governorateId, wilayaId: e.wilayaId,
+    status: e.status, viewCount: e.viewCount, imageUrl: e.images[0]?.url || null,
+    createdAt: e.createdAt,
+  }));
+  if (equipmentDocs.length > 0) await meili.index('equipment').addDocuments(equipmentDocs);
+  counts.equipment = equipmentDocs.length;
+
+  // ── Operators ──
+  const operators = await prisma.operatorListing.findMany({
+    where: { status: 'ACTIVE' },
+  });
+  const operatorDocs = operators.map(o => serialize({
+    id: o.id, title: o.title, slug: o.slug, description: o.description,
+    operatorType: o.operatorType, dailyRate: o.dailyRate ? Number(o.dailyRate) : null,
+    hourlyRate: o.hourlyRate ? Number(o.hourlyRate) : null, currency: o.currency,
+    governorateId: o.governorateId, wilayaId: o.wilayaId, status: o.status,
+    viewCount: o.viewCount, createdAt: o.createdAt,
+  }));
+  if (operatorDocs.length > 0) await meili.index('operators').addDocuments(operatorDocs);
+  counts.operators = operatorDocs.length;
+
   console.log('🔄 Reindex complete:', counts);
   await prisma.$disconnect();
 }

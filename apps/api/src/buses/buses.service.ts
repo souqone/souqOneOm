@@ -10,7 +10,7 @@ import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.ev
 import { ListingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { SearchService, INDEXES } from '../search/search.service';
+
 import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
@@ -30,6 +30,7 @@ const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
 };
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class BusesService {
@@ -39,7 +40,6 @@ export class BusesService {
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly search: SearchService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -58,30 +58,6 @@ export class BusesService {
     });
   }
 
-  private buildMeiliDoc(bus: any): Record<string, any> {
-    return {
-      id: bus.id,
-      title: bus.title,
-      slug: bus.slug,
-      description: bus.description,
-      busListingType: bus.busListingType,
-      busType: bus.busType,
-      make: bus.make,
-      model: bus.model,
-      price: bus.price ? Number(bus.price) : null,
-      dailyPrice: bus.dailyPrice ? Number(bus.dailyPrice) : null,
-      monthlyPrice: bus.monthlyPrice ? Number(bus.monthlyPrice) : null,
-      contractMonthly: bus.contractMonthly ? Number(bus.contractMonthly) : null,
-      capacity: bus.capacity,
-      governorateId: bus.governorateId,
-      wilayaId: bus.wilayaId,
-      status: bus.status,
-      isPremium: bus.isPremium,
-      viewCount: bus.viewCount,
-      imageUrl: bus.images?.[0]?.url || null,
-      createdAt: bus.createdAt instanceof Date ? bus.createdAt.getTime() : bus.createdAt,
-    };
-  }
 
 
   async create(dto: CreateBusListingDto, userId: string) {
@@ -89,50 +65,62 @@ export class BusesService {
 
     const slug = generateSlug(dto.title);
 
-    const bus = await this.prisma.busListing.create({
-      data: {
-        title: dto.title,
-        slug,
-        description: dto.description,
-        busListingType: dto.busListingType,
-        busType: dto.busType,
-        make: dto.make,
-        model: dto.model,
-        manufacturerId: dto.manufacturerId,
-        modelId: dto.modelId,
-        year: dto.year,
-        capacity: dto.capacity,
-        mileage: dto.mileage,
-        fuelType: dto.fuelType,
-        transmission: dto.transmission,
-        condition: dto.condition ?? 'USED',
-        features: dto.features ?? [],
-        plateNumber: dto.plateNumber,
-        price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        contractType: dto.contractType,
-        contractClient: dto.contractClient,
-        contractMonthly: dto.contractMonthly != null ? new Prisma.Decimal(dto.contractMonthly) : null,
-        contractDuration: dto.contractDuration,
-        contractExpiry: dto.contractExpiry ? new Date(dto.contractExpiry) : null,
-        dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
-        monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
-        withDriver: dto.withDriver ?? false,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
-        userId,
-      },
-      include: {
-        user: { select: USER_SELECT },
-        images: true,
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const bus = await this.prisma.$transaction(async (tx) => {
+      const createdBus = await tx.busListing.create({
+        data: {
+          title: dto.title,
+          slug,
+          description: dto.description,
+          busListingType: dto.busListingType,
+          busType: dto.busType,
+          make: dto.make,
+          model: dto.model,
+          manufacturerId: dto.manufacturerId,
+          modelId: dto.modelId,
+          year: dto.year,
+          capacity: dto.capacity,
+          mileage: dto.mileage,
+          fuelType: dto.fuelType,
+          transmission: dto.transmission,
+          condition: dto.condition ?? 'USED',
+          features: dto.features ?? [],
+          plateNumber: dto.plateNumber,
+          price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
+          currency: dto.currency ?? 'OMR',
+          isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          contractType: dto.contractType,
+          contractClient: dto.contractClient,
+          contractMonthly: dto.contractMonthly != null ? new Prisma.Decimal(dto.contractMonthly) : null,
+          contractDuration: dto.contractDuration,
+          contractExpiry: dto.contractExpiry ? new Date(dto.contractExpiry) : null,
+          dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
+          monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
+          withDriver: dto.withDriver ?? false,
+          governorateId: dto.governorateId,
+          wilayaId: dto.wilayaId,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          contactPhone: dto.contactPhone,
+          whatsapp: dto.whatsapp,
+          userId,
+        },
+        include: {
+          user: { select: USER_SELECT },
+          images: true,
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.BUS_LISTING,
+          entityId: createdBus.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return createdBus;
     });
 
     if (dto.latitude && dto.longitude) {
@@ -140,7 +128,7 @@ export class BusesService {
     }
 
     await this.invalidateCache();
-    this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(bus)).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.CREATED, bus);
 
@@ -355,15 +343,27 @@ export class BusesService {
       }
     }
 
-    const updated = await this.prisma.busListing.update({
-      where: { id },
-      data,
-      include: {
-        user: { select: USER_SELECT },
-        images: { orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.busListing.update({
+        where: { id },
+        data,
+        include: {
+          user: { select: USER_SELECT },
+          images: { orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.BUS_LISTING,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -398,7 +398,7 @@ export class BusesService {
     }
 
     await this.invalidateCache(id);
-    this.search.indexDocument(INDEXES.BUSES, this.buildMeiliDoc(updated)).catch(() => {});
+
 
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
     if (statusChanged) {
@@ -413,9 +413,18 @@ export class BusesService {
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (bus.userId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.busListing.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.busListing.update({ where: { id }, data: { deletedAt: new Date() } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.BUS_LISTING,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
     await this.invalidateCache(id);
-    this.search.removeDocument(INDEXES.BUSES, id).catch(() => {});
+
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('BUS_LISTING', id);
@@ -513,7 +522,7 @@ export class BusesService {
   private emitListingEvent(event: string, item: any, status?: string) {
     try {
       const payload: ListingEventPayload = {
-        entityType: 'BUS_LISTING',
+        entityType: ENTITY_TYPES.BUS_LISTING,
         listingId: item.id,
         title: item.title,
         userId: item.userId,

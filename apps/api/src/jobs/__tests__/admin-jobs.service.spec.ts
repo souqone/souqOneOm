@@ -19,6 +19,10 @@ const mockPrisma = {
   employerProfile: { findMany: jest.fn(), count: jest.fn() },
   driverVerification: { count: jest.fn() },
   cleanupPolymorphicOrphans: jest.fn(),
+  outboxEvent: { create: jest.fn() },
+  $transaction: jest.fn().mockImplementation(async (callback) => {
+    return await callback(mockPrisma);
+  }),
 };
 
 const mockRedis = { del: jest.fn(), delPattern: jest.fn() };

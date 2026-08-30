@@ -17,8 +17,7 @@ import { Prisma, ApplicationStatus, NotificationType } from '@prisma/client';
 import { generateSlug } from '../common/utils/entity.utils';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
-import { SearchService } from '../search/search.service';
-import { INDEXES } from '../search/search.service';
+
 
 /** Valid application status transitions — WITHDRAWN is applicant-only (via withdrawApplication) */
 const VALID_TRANSITIONS: Record<string, ApplicationStatus[]> = {
@@ -47,6 +46,7 @@ const PUBLIC_USER_SELECT = {
 };
 
 import { GeoService } from '../locations/geo.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
 @Injectable()
 export class JobsService {
@@ -57,27 +57,10 @@ export class JobsService {
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsService,
-    private searchService: SearchService,
   ) {}
 
   private cacheKey(suffix: string) { return `jobs:${suffix}`; }
 
-  private buildMeiliDoc(job: any) {
-    return {
-      id: job.id,
-      title: job.title,
-      description: job.description,
-      jobType: job.jobType,
-      employmentType: job.employmentType,
-      salary: job.salary ? Number(job.salary) : null,
-      governorateId: job.governorateId,
-      wilayaId: job.wilayaId,
-      status: job.status,
-      viewCount: job.viewCount,
-      experienceYears: job.experienceYears,
-      createdAt: job.createdAt,
-    };
-  }
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateJobDto) {
@@ -132,17 +115,28 @@ export class JobsService {
     let slug = baseSlug;
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        const job = await this.prisma.driverJob.create({
-          data: { ...createData, slug },
-          include,
+        const job = await this.prisma.$transaction(async (tx) => {
+          const createdJob = await tx.driverJob.create({
+            data: { ...createData, slug },
+            include,
+          });
+
+          await tx.outboxEvent.create({
+            data: {
+              entityType: ENTITY_TYPES.JOB,
+              entityId: createdJob.id,
+              action: 'UPSERT',
+            },
+          });
+
+          return createdJob;
         });
 
         if (dto.latitude && dto.longitude) {
           await this.geoService.syncLocation('driver_jobs', job.id, dto.latitude, dto.longitude);
         }
 
-        this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(job))
-          .catch((err) => this.logger.warn(`Failed to index job ${job.id}: ${(err as Error).message}`));
+
         await this.redis.delPattern(this.cacheKey('list:*'));
 
         return job;
@@ -296,14 +290,26 @@ export class JobsService {
       data[key] = DECIMAL_FIELDS.has(key) ? new Prisma.Decimal(val as number) : val;
     }
 
-    const updated = await this.prisma.driverJob.update({
-      where: { id },
-      data,
-      include: {
-        user: { select: PUBLIC_USER_SELECT },
-        governorateRef: true,
-        wilayaRef: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.driverJob.update({
+        where: { id },
+        data,
+        include: {
+          user: { select: PUBLIC_USER_SELECT },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.JOB,
+          entityId: res.id,
+          action: 'UPSERT',
+        },
+      });
+
+      return res;
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -346,8 +352,7 @@ export class JobsService {
       }
     }
 
-    this.searchService.indexDocument(INDEXES.JOBS, this.buildMeiliDoc(updated))
-      .catch((err) => this.logger.warn(`Failed to index updated job ${updated.id}: ${(err as Error).message}`));
+
 
     // CACHE-1: invalidate both UUID and slug-based cache keys
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -386,11 +391,19 @@ export class JobsService {
         this.logger.warn(`Delete notification failed for applicant ${affectedApps[i].applicantId}`, r.reason);
     });
 
-    await this.prisma.driverJob.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.driverJob.delete({ where: { id } });
+      await tx.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.JOB,
+          entityId: id,
+          action: 'DELETE',
+        },
+      });
+    });
     await this.prisma.cleanupPolymorphicOrphans('JOB', id);
 
-    this.searchService.removeDocument(INDEXES.JOBS, id)
-      .catch((err) => this.logger.warn(`Failed to remove job ${id} from search: ${(err as Error).message}`));
+
 
     // CACHE-1: invalidate both UUID and slug-based cache keys
     await this.redis.del(this.cacheKey(`detail:${id}`));
