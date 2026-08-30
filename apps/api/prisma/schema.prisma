@@ -283,7 +283,6 @@ model Listing {
   @@index([year])
   @@index([status])
   @@index([price])
-  @@index([governorate])
   @@index([createdAt])
   @@index([slug])
   @@index([listingType])
@@ -516,8 +515,6 @@ model DriverJob {
   hasOwnVehicle Boolean  @default(false)
 
   // الموقع
-  governorate String?
-  city        String?
 
   // التواصل
   contactPhone String?
@@ -550,7 +547,6 @@ model DriverJob {
   @@index([userId])
   @@index([jobType])
   @@index([status])
-  @@index([governorate])
   @@index([createdAt])
   @@index([slug])
   @@map("driver_jobs")
@@ -624,7 +620,6 @@ model DriverProfile {
   /// @Prisma.ignore
   // location Unsupported("geography(Point, 4326)")?
 
-  @@index([governorate])
   @@index([isAvailable])
   @@index([isVerified])
   @@map("driver_profiles")
@@ -666,7 +661,6 @@ model EmployerProfile {
   /// @Prisma.ignore
   // location Unsupported("geography(Point, 4326)")?
 
-  @@index([governorate])
   @@map("employer_profiles")
 }
 
@@ -1087,7 +1081,6 @@ model CarService {
 
   @@index([userId])
   @@index([serviceType])
-  @@index([governorate])
   @@index([status])
   @@index([slug])
   @@map("car_services")
@@ -1198,8 +1191,6 @@ model BusListing {
   monthlyPrice Decimal? @db.Decimal(12, 2)
   withDriver   Boolean  @default(false)
 
-  governorate String?
-  city        String?
   latitude    Float?
   longitude   Float?
 
@@ -1236,7 +1227,6 @@ model BusListing {
   @@index([busListingType])
   @@index([busType])
   @@index([status])
-  @@index([governorate])
   @@index([createdAt])
   @@index([slug])
   @@index([deletedAt])
@@ -1394,7 +1384,6 @@ model EquipmentListing {
   @@index([equipmentType])
   @@index([listingType])
   @@index([status])
-  @@index([governorate])
   @@index([createdAt])
   @@index([slug])
   @@map("equipment_listings")
@@ -1464,7 +1453,6 @@ model OperatorListing {
   @@index([userId])
   @@index([operatorType])
   @@index([status])
-  @@index([governorate])
   @@index([slug])
   @@map("operator_listings")
 }

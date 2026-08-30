@@ -277,8 +277,6 @@ async function main() {
       title: 'مطلوب سائق شاحنة خفيفة',
       slug: 'light-truck-driver',
       description: 'نبحث عن سائق ذو خبرة في توصيل الطلبات داخل مسقط.',
-      governorate: 'مسقط',
-      city: 'السيب',
       status: 'ACTIVE',
     },
   });
@@ -306,8 +304,6 @@ async function main() {
       title: 'سائق حافلة مطلوب',
       slug: 'bus-driver-needed',
       description: 'مطلوب سائق حافلة متوسطة بعقد جزئي.',
-      governorate: 'ظفار',
-      city: 'صلالة',
       status: 'CLOSED',
     },
   });

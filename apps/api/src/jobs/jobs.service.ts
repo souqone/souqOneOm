@@ -616,7 +616,6 @@ export class JobsService {
             salary: true,
             salaryPeriod: true,
             currency: true,
-            governorate: true,
             status: true,
             userId: true,
             jobType: true,
