@@ -992,6 +992,11 @@ model SparePart {
   status            ListingStatus @default(ACTIVE)
   viewCount         Int           @default(0)
 
+  hasWarranty            Boolean?
+  warrantyDuration       String?
+  quantity               String?
+  compatibleVehicleTypes String[]  @default([])
+
   sellerId String
   seller   User             @relation("UserSpareParts", fields: [sellerId], references: [id], onDelete: Cascade)
   images   SparePartImage[]

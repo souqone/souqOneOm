@@ -36,7 +36,7 @@ const INDEX_CONFIGS: Record<IndexName, IndexConfig> = {
   },
   parts: {
     searchableAttributes: ['title', 'description', 'partNumber', 'compatibleMakes'],
-    filterableAttributes: ['price', 'partCategory', 'condition', 'governorateId', 'wilayaId', 'status', 'isOriginal'],
+    filterableAttributes: ['price', 'partCategory', 'condition', 'governorateId', 'wilayaId', 'status', 'isOriginal', 'hasWarranty', 'compatibleVehicleTypes'],
     sortableAttributes: ['price', 'createdAt'],
   },
   services: {
@@ -453,6 +453,10 @@ export class SearchService implements OnModuleInit {
       price: Number(p.price),
       currency: p.currency,
       isOriginal: p.isOriginal,
+      hasWarranty: p.hasWarranty ?? false,
+      warrantyDuration: p.warrantyDuration ?? null,
+      quantity: p.quantity ?? null,
+      compatibleVehicleTypes: p.compatibleVehicleTypes ?? [],
       governorateId: p.governorateId,
       wilayaId: p.wilayaId,
       status: p.status,
