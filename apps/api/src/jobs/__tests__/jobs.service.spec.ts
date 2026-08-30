@@ -35,8 +35,14 @@ const mockPrisma: any = {
   driverProfile: { findUnique: jest.fn() },
   employerProfile: { findUnique: jest.fn() },
   cleanupPolymorphicOrphans: jest.fn().mockResolvedValue(undefined),
-  // C-1: transaction support for CAS writes
   $transaction: jest.fn().mockImplementation((fn: (tx: any) => any) => fn(mockPrisma)),
+  outboxEvent: {
+    create: jest.fn().mockResolvedValue({}),
+    update: jest.fn().mockResolvedValue({}),
+    updateMany: jest.fn().mockResolvedValue({}),
+    findMany: jest.fn().mockResolvedValue([]),
+    count: jest.fn().mockResolvedValue(0),
+  },
 };
 
 const mockRedis = {
