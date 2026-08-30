@@ -66,6 +66,10 @@ export class PartsService {
           contactPhone: dto.contactPhone,
           whatsapp: dto.whatsapp,
           sellerId,
+          hasWarranty: dto.hasWarranty,
+          warrantyDuration: dto.warrantyDuration,
+          quantity: dto.quantity,
+          compatibleVehicleTypes: dto.compatibleVehicleTypes ?? [],
           ...(dto.images && dto.images.length > 0 && {
             images: {
               create: dto.images.map((url, i) => ({
