@@ -1,4 +1,4 @@
-﻿-- DropIndex
+-- DropIndex
 DROP INDEX "bus_listings_governorate_idx";
 DROP INDEX "driver_jobs_governorate_idx";
 
