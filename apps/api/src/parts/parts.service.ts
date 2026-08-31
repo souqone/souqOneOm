@@ -66,6 +66,10 @@ export class PartsService {
           contactPhone: dto.contactPhone,
           whatsapp: dto.whatsapp,
           sellerId,
+          hasWarranty: dto.hasWarranty,
+          warrantyDuration: dto.warrantyDuration,
+          quantity: dto.quantity,
+          compatibleVehicleTypes: dto.compatibleVehicleTypes ?? [],
           ...(dto.images && dto.images.length > 0 && {
             images: {
               create: dto.images.map((url, i) => ({
@@ -125,6 +129,8 @@ export class PartsService {
     if (query.governorateId) where.governorateId = parseInt(query.governorateId);
     if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.sellerId) where.sellerId = query.sellerId;
+    if (query.hasWarranty !== undefined) where.hasWarranty = query.hasWarranty;
+    if (query.compatibleVehicleType) where.compatibleVehicleTypes = { has: query.compatibleVehicleType };
     if (query.partNumber) where.partNumber = { contains: query.partNumber, mode: 'insensitive' };
     if (query.isOriginal !== undefined) where.isOriginal = query.isOriginal === 'true';
     // isScrap is not a Prisma field — accepted by DTO to avoid 400, but not applied as filter
@@ -220,6 +226,10 @@ export class PartsService {
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
+    if (dto.hasWarranty !== undefined) data.hasWarranty = dto.hasWarranty;
+    if (dto.warrantyDuration !== undefined) data.warrantyDuration = dto.warrantyDuration;
+    if (dto.quantity !== undefined) data.quantity = dto.quantity;
+    if (dto.compatibleVehicleTypes !== undefined) data.compatibleVehicleTypes = dto.compatibleVehicleTypes;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const res = await tx.sparePart.update({
