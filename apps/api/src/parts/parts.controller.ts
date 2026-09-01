@@ -7,6 +7,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { PartsService } from './parts.service';
 import { CreatePartDto } from './dto/create-part.dto';
+import { UpdatePartDto } from './dto/update-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
 
 @Controller('parts')
@@ -37,7 +38,7 @@ export class PartsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreatePartDto>, @CurrentUser() user: JwtPayload) {
+  update(@Param('id') id: string, @Body() dto: UpdatePartDto, @CurrentUser() user: JwtPayload) {
     return this.partsService.update(id, user.sub, dto);
   }
 

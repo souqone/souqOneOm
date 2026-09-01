@@ -156,6 +156,26 @@ describe('Services API (e2e)', () => {
         .send({ providerName: 'X' })
         .expect(401);
     });
+
+    it('should reject invalid PATCH payload with 400 (negative priceTo or invalid priceFrom)', async () => {
+      const { accessToken } = await registerUser();
+      const created = await request(getApp().getHttpServer())
+        .post('/api/services')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(validService);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/services/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ priceTo: -5 })
+        .expect(400);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/services/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ priceFrom: 'not-a-number' })
+        .expect(400);
+    });
   });
 
   describe('DELETE /api/services/:id', () => {

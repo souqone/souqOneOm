@@ -9,6 +9,7 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 import { QueryServicesDto } from './dto/query-services.dto';
 
 @Controller('services')
@@ -50,7 +51,7 @@ export class ServicesController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateServiceDto>, @CurrentUser() user: JwtPayload) {
+  update(@Param('id') id: string, @Body() dto: UpdateServiceDto, @CurrentUser() user: JwtPayload) {
     return this.servicesService.update(id, user.sub, dto);
   }
 

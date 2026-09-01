@@ -9,6 +9,7 @@ import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.ev
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePartDto } from './dto/create-part.dto';
+import { UpdatePartDto } from './dto/update-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
 import { USER_SELECT } from '../common/utils/entity.utils';
 
@@ -97,7 +98,7 @@ export class PartsService {
       });
 
       return createdPart;
-    });
+    }, { timeout: 20000, maxWait: 10000 });
 
     if (dto.latitude && dto.longitude) {
       await this.geoService.syncLocation('spare_parts', part.id, dto.latitude, dto.longitude);
@@ -195,7 +196,7 @@ export class PartsService {
     });
   }
 
-  async update(id: string, userId: string, dto: Partial<CreatePartDto>) {
+  async update(id: string, userId: string, dto: UpdatePartDto) {
     const part = await this.prisma.sparePart.findUnique({ where: { id } });
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
@@ -251,7 +252,7 @@ export class PartsService {
       });
 
       return res;
-    });
+    }, { timeout: 20000, maxWait: 10000 });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
@@ -282,7 +283,7 @@ export class PartsService {
           action: 'DELETE',
         },
       });
-    });
+    }, { timeout: 20000, maxWait: 10000 });
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
