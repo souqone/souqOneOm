@@ -323,7 +323,7 @@ describe('ServicesService', () => {
   describe('event emission', () => {
     it('should emit listing.created on create', async () => {
       mockPrisma.carService.create.mockResolvedValue(mockItem);
-      await service.create({ title: 'خدمة', description: 'وصف بالتفصيل', serviceType: 'MAINTENANCE', providerType: 'WORKSHOP', providerName: 'ورشة', governorate: 'مسقط' } as any, 'user-1');
+      await service.create({ title: 'خدمة', description: 'وصف بالتفصيل', serviceType: 'MAINTENANCE', providerType: 'WORKSHOP', providerName: 'ورشة', governorateId: 1, wilayaId: 101, priceFrom: 10, images: ['https://img.test/1.jpg'] } as any, 'user-1');
       expect(mockEventEmitter.emit).toHaveBeenCalledWith('listing.created', expect.objectContaining({ entityType: 'CAR_SERVICE', userId: 'user-1' }));
     });
 

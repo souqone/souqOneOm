@@ -15,6 +15,7 @@ const validService = {
   governorateId: 1,
   wilayaId: 1,
   contactPhone: '+96899112233',
+  images: ['https://example.com/wash.jpg'],
 };
 
 describe('Services API (e2e)', () => {

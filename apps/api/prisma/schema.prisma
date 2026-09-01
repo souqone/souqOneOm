@@ -1055,8 +1055,6 @@ model CarService {
   workingHoursOpen  String?
   workingHoursClose String?
   workingDays       String[]
-  governorate       String?
-  city              String?
   address           String?
   latitude          Float?
   longitude         Float?
