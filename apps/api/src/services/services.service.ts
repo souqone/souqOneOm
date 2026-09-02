@@ -6,6 +6,7 @@ import { RedisService } from '../redis/redis.service';
 import { INDEXES } from '../search/search.service';
 import { BaseListingService, ListingConfig } from '../common/services/base-listing.service';
 import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 import { QueryServicesDto } from './dto/query-services.dto';
 
 import { GeoService } from '../locations/geo.service';
@@ -74,7 +75,7 @@ prisma: PrismaService, redis: RedisService, eventEmitter: EventEmitter2) {
     return item;
   }
 
-  async update(id: string, userId: string, dto: Partial<CreateServiceDto>) {
+  async update(id: string, userId: string, dto: UpdateServiceDto) {
     if (dto.images) delete dto.images;
     const existing = await this.prisma.carService.findUnique({ where: { id } });
     if (existing) {

@@ -168,6 +168,32 @@ describe('Parts API (e2e)', () => {
         .send({ price: 1 })
         .expect(401);
     });
+
+    it('should reject invalid PATCH payload with 400 (negative price, invalid quantity, or too short title)', async () => {
+      const { accessToken } = await registerUser();
+      const created = await request(getApp().getHttpServer())
+        .post('/api/parts')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(validPart);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/parts/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ price: -10 })
+        .expect(400);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/parts/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ quantity: 'INVALID_QUANTITY' })
+        .expect(400);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/parts/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'ab' })
+        .expect(400);
+    });
   });
 
   describe('DELETE /api/parts/:id', () => {

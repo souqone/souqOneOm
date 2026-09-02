@@ -189,6 +189,16 @@ export async function createTestApp(): Promise<INestApplication> {
   await app.init();
   prisma = app.get(PrismaService);
 
+  // In E2E tests against remote database, increase default interactive transaction timeout
+  // to prevent WAN TLS round-trip latency from timing out 5s transactions in test environment only
+  const origTransaction = prisma.$transaction.bind(prisma);
+  prisma.$transaction = ((arg: any, options?: any) => {
+    if (typeof arg === 'function') {
+      return origTransaction(arg, { timeout: 30000, maxWait: 15000, ...options });
+    }
+    return origTransaction(arg, options);
+  }) as any;
+
   // Clean database before each test suite for full isolation
   await cleanDatabase(prisma);
 

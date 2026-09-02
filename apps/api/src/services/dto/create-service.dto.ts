@@ -1,7 +1,55 @@
-﻿import { IsInt, IsString, IsEnum, IsOptional, IsNumber, IsArray,
-  IsBoolean, Min, MaxLength, IsPositive } from 'class-validator';
+import {
+  IsInt,
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  IsBoolean,
+  Min,
+  MaxLength,
+  IsPositive,
+  ArrayMinSize,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ServiceType, ProviderType } from '@prisma/client';
+
+@ValidatorConstraint({ name: 'isGreaterThanOrEqualTo', async: false })
+export class IsGreaterThanOrEqualToConstraint implements ValidatorConstraintInterface {
+  validate(propertyValue: any, args: ValidationArguments) {
+    const [relatedPropertyName] = args.constraints;
+    const relatedValue = (args.object as any)[relatedPropertyName];
+    if (propertyValue === undefined || propertyValue === null) {
+      return true;
+    }
+    if (relatedValue === undefined || relatedValue === null) {
+      return true;
+    }
+    return Number(propertyValue) >= Number(relatedValue);
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    const [relatedPropertyName] = args.constraints;
+    return `${args.property} must be greater than or equal to ${relatedPropertyName}`;
+  }
+}
+
+export function IsGreaterThanOrEqualTo(property: string, validationOptions?: ValidationOptions) {
+  return function (object: Object, propertyName: string) {
+    registerDecorator({
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      constraints: [property],
+      validator: IsGreaterThanOrEqualToConstraint,
+    });
+  };
+}
 
 export class CreateServiceDto {
   @IsString()
@@ -26,16 +74,18 @@ export class CreateServiceDto {
   @IsString({ each: true })
   specializations?: string[];
 
-  @IsOptional()
-  @IsNumber()
+  @IsNumber({}, { message: 'السعر الأدنى يجب أن يكون رقمًا' })
   @Type(() => Number)
-  @Min(0)
-  priceFrom?: number;
+  @Min(0, { message: 'السعر الأدنى يجب أن يكون 0 أو أكثر' })
+  priceFrom!: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsNumber({}, { message: 'السعر الأعلى يجب أن يكون رقمًا' })
   @Type(() => Number)
-  @Min(0)
+  @Min(0, { message: 'السعر الأعلى يجب أن يكون 0 أو أكثر' })
+  @IsGreaterThanOrEqualTo('priceFrom', {
+    message: 'السعر الأعلى يجب أن يكون أكبر من أو يساوي السعر الأدنى (priceTo must be >= priceFrom)',
+  })
   priceTo?: number;
 
   @IsOptional()
@@ -93,9 +143,8 @@ export class CreateServiceDto {
   @IsString()
   website?: string;
 
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  images?: string[];
+  @IsArray({ message: 'الصور يجب أن تكون مصفوفة' })
+  @ArrayMinSize(1, { message: 'يجب إضافة صورة واحدة على الأقل' })
+  @IsString({ each: true, message: 'كل صورة يجب أن تكون رابط نصي صحيح' })
+  images!: string[];
 }
-

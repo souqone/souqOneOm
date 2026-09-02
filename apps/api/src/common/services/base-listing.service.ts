@@ -282,8 +282,6 @@ export abstract class BaseListingService {
       return res;
     });
 
-
-
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
@@ -314,7 +312,6 @@ export abstract class BaseListingService {
       });
     });
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
-
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -352,8 +349,6 @@ export abstract class BaseListingService {
 
       return res;
     });
-
-
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));

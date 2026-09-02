@@ -78,7 +78,7 @@ async function main() {
     id: s.id, title: s.title, slug: s.slug, description: s.description,
     serviceType: s.serviceType, providerName: s.providerName, providerType: s.providerType,
     priceFrom: s.priceFrom ? Number(s.priceFrom) : null, currency: s.currency,
-    governorate: s.governorate, city: s.city, isHomeService: s.isHomeService,
+    governorateId: s.governorateId, wilayaId: s.wilayaId, isHomeService: s.isHomeService,
     status: s.status, imageUrl: s.images[0]?.url || null, createdAt: s.createdAt,
   }));
   if (serviceDocs.length > 0) await meili.index('services').addDocuments(serviceDocs);
