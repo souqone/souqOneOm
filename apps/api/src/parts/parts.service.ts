@@ -98,7 +98,7 @@ export class PartsService {
       });
 
       return createdPart;
-    }, { timeout: 20000, maxWait: 10000 });
+    });
 
     if (dto.latitude && dto.longitude) {
       await this.geoService.syncLocation('spare_parts', part.id, dto.latitude, dto.longitude);
@@ -252,7 +252,7 @@ export class PartsService {
       });
 
       return res;
-    }, { timeout: 20000, maxWait: 10000 });
+    });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
@@ -283,7 +283,7 @@ export class PartsService {
           action: 'DELETE',
         },
       });
-    }, { timeout: 20000, maxWait: 10000 });
+    });
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);

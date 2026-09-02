@@ -124,7 +124,7 @@ export abstract class BaseListingService {
       });
 
       return createdItem;
-    }, { timeout: 20000, maxWait: 10000 });
+    });
 
 
     // Invalidate list cache
@@ -280,7 +280,7 @@ export abstract class BaseListingService {
       });
 
       return res;
-    }, { timeout: 20000, maxWait: 10000 });
+    });
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -310,7 +310,7 @@ export abstract class BaseListingService {
           action: 'DELETE',
         },
       });
-    }, { timeout: 20000, maxWait: 10000 });
+    });
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
 
     // Invalidate caches
@@ -348,7 +348,7 @@ export abstract class BaseListingService {
       });
 
       return res;
-    }, { timeout: 20000, maxWait: 10000 });
+    });
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
