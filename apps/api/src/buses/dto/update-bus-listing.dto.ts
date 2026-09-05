@@ -35,6 +35,14 @@ export class UpdateBusListingDto {
   model?: string;
 
   @IsOptional()
+  @IsString()
+  manufacturerId?: string;
+
+  @IsOptional()
+  @IsString()
+  modelId?: string;
+
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   @Min(1970)
