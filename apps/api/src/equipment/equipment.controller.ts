@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
 import { EquipmentListingsService } from './equipment-listings.service';
 import { CreateEquipmentListingDto } from './dto/create-equipment-listing.dto';
@@ -27,8 +28,8 @@ export class EquipmentController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  my(@CurrentUser() user: JwtPayload) {
-    return this.svc.my(user.sub);
+  my(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
+    return this.svc.my(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
   @Get('slug/:slug')

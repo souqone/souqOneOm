@@ -235,15 +235,27 @@ export class EquipmentListingsService {
     return item;
   }
 
-  async my(userId: string) {
-    return this.prisma.equipmentListing.findMany({
-      where: { userId }, orderBy: { createdAt: 'desc' },
-      include: {
-        images: { orderBy: { order: 'asc' }, take: 1 },
-        governorateRef: true,
-        wilayaRef: true,
-      },
-    });
+  async my(userId: string, page = 1, limit = 20) {
+    limit = Math.min(limit, 50);
+    const skip = (page - 1) * limit;
+    const where = { userId };
+
+    const [items, total] = await Promise.all([
+      this.prisma.equipmentListing.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      }),
+      this.prisma.equipmentListing.count({ where }),
+    ]);
+
+    return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
   async update(id: string, userId: string, dto: UpdateEquipmentListingDto) {

@@ -13,6 +13,8 @@ describe('EquipmentListingsService - Image Handling', () => {
     const prismaMock = {
       equipmentListing: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn(),
       },
       equipmentListingImage: {
         count: jest.fn(),
@@ -127,6 +129,71 @@ describe('EquipmentListingsService - Image Handling', () => {
       expect(prisma.equipmentListingImage.delete).toHaveBeenCalledWith({ where: { id: imageId } });
       expect(prisma.equipmentListingImage.findFirst).not.toHaveBeenCalled();
       expect(prisma.equipmentListingImage.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('my — pagination', () => {
+    it('should return paginated results with meta', async () => {
+      const mockItems = [{ id: 'eq-1', title: 'Excavator 1' }, { id: 'eq-2', title: 'Excavator 2' }];
+      prisma.equipmentListing.findMany.mockResolvedValue(mockItems);
+      prisma.equipmentListing.count.mockResolvedValue(2);
+
+      const result = await service.my('user-1', 1, 20);
+
+      expect(result).toEqual({
+        items: mockItems,
+        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
+      });
+      expect(prisma.equipmentListing.findMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+        skip: 0,
+        take: 20,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+    });
+
+    it('should cap limit at 50', async () => {
+      prisma.equipmentListing.findMany.mockResolvedValue([]);
+      prisma.equipmentListing.count.mockResolvedValue(0);
+
+      const result = await service.my('user-1', 1, 100);
+
+      expect(result.meta.limit).toBe(50);
+      expect(prisma.equipmentListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 50 }),
+      );
+    });
+
+    it('should use default page=1, limit=20', async () => {
+      prisma.equipmentListing.findMany.mockResolvedValue([]);
+      prisma.equipmentListing.count.mockResolvedValue(0);
+
+      const result = await service.my('user-1');
+
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.limit).toBe(20);
+      expect(prisma.equipmentListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 20 }),
+      );
+    });
+
+    it('should calculate correct skip for page 3', async () => {
+      prisma.equipmentListing.findMany.mockResolvedValue([]);
+      prisma.equipmentListing.count.mockResolvedValue(45);
+
+      const result = await service.my('user-1', 3, 10);
+
+      expect(result.meta.page).toBe(3);
+      expect(result.meta.limit).toBe(10);
+      expect(result.meta.totalPages).toBe(5);
+      expect(prisma.equipmentListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 20, take: 10 }),
+      );
     });
   });
 });
