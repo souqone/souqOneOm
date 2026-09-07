@@ -61,6 +61,9 @@ export class CreateOperatorListingDto {
   @IsOptional() @IsNumber()
   longitude?: number;
 
+  @IsOptional() @IsString()
+  profileImageUrl?: string;
+
   @IsString() @MinLength(8)
   contactPhone!: string;
 

@@ -9,6 +9,7 @@ import { OperatorsService } from './operators.service';
 import { CreateOperatorListingDto } from './dto/create-operator-listing.dto';
 import { UpdateOperatorListingDto } from './dto/update-operator-listing.dto';
 import { QueryOperatorListingsDto } from './dto/query-operator-listings.dto';
+import { RequestDeletionDto } from './dto/request-deletion.dto';
 
 @Controller('operators')
 export class OperatorsController {
@@ -43,8 +44,18 @@ export class OperatorsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Delete('deletion-requests/:id')
+  cancelDeletionRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.svc.cancelDeletionRequest(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.svc.remove(id, user.sub);
+  requestDeletion(
+    @Param('id') id: string,
+    @Body() body: RequestDeletionDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.svc.requestDeletion(id, user.sub, body?.reason);
   }
 }

@@ -909,6 +909,8 @@ enum NotificationType {
   TRANSPORT_REQUEST_NEW
   TRANSPORT_REQUEST_UPDATED
   REVIEW_REMINDER
+  OPERATOR_DELETION_APPROVED
+  OPERATOR_DELETION_REJECTED
 }
 
 // ══════════════════════════════════════════════════
@@ -1442,11 +1444,15 @@ model OperatorListing {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  profileImageUrl String?
+
   // New Location Fields
   governorateId  Int?
   governorateRef Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
-  wilayaId       Int?
-  wilayaRef      Wilaya?      @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+  wilayaId       Int
+  wilayaRef      Wilaya       @relation(fields: [wilayaId], references: [id], onDelete: Restrict)
+
+  deletionRequests OperatorDeletionRequest[]
 
   // PostGIS location column will be added via SQL migration. Prisma ignores Unsupported if it's not strictly queried, 
   // but we can define it as Unsupported("geography(Point, 4326)")? 
@@ -1458,6 +1464,32 @@ model OperatorListing {
   @@index([status])
   @@index([slug])
   @@map("operator_listings")
+}
+
+enum OperatorDeletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model OperatorDeletionRequest {
+  id                String                 @id @default(cuid())
+  operatorListingId String?
+  operatorListing   OperatorListing?       @relation(fields: [operatorListingId], references: [id], onDelete: SetNull)
+  userId            String
+  reason            String?
+  status            OperatorDeletionStatus @default(PENDING)
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  cancelledAt       DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([operatorListingId])
+  @@index([status])
+  @@map("operator_deletion_requests")
 }
 
 // ══════════════════════════════════════════════════

@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { LocationsModule } from '../locations/locations.module';
 import { OperatorsService } from './operators.service';
 import { OperatorsController } from './operators.controller';
-
-import { LocationsModule } from '../locations/locations.module';
+import { AdminOperatorsController } from './admin-operators.controller';
 
 @Module({
-  imports: [LocationsModule, PrismaModule],
-  controllers: [OperatorsController],
+  imports: [LocationsModule, PrismaModule, NotificationsModule],
+  controllers: [OperatorsController, AdminOperatorsController],
   providers: [OperatorsService],
   exports: [OperatorsService],
 })
