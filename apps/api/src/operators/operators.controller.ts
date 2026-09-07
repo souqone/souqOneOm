@@ -3,6 +3,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { OperatorsService } from './operators.service';
@@ -32,9 +33,10 @@ export class OperatorsController {
     return this.svc.my(user.sub);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.svc.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
+    return this.svc.findOne(id, user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
