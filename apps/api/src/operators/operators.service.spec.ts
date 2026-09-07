@@ -26,7 +26,7 @@ describe('OperatorsService', () => {
         findMany: jest.fn(),
         count: jest.fn(),
         create: jest.fn(),
-        update: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
         delete: jest.fn(),
       },
       operatorDeletionRequest: {
@@ -370,6 +370,73 @@ describe('OperatorsService', () => {
           body: expect.stringContaining('الملف نشط ويحتوي على حجوزات'),
         }),
       );
+    });
+  });
+
+  describe('findOne', () => {
+    it('should throw NotFoundException if operator listing does not exist', async () => {
+      prisma.operatorListing.findUnique.mockResolvedValue(null);
+      await expect(service.findOne('op-x')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return pendingDeletionRequest populated if requested by the owner and a PENDING request exists', async () => {
+      prisma.operatorListing.findUnique.mockResolvedValue({ id: 'op-1', userId: 'owner-id' });
+      prisma.operatorDeletionRequest.findFirst.mockResolvedValue({
+        id: 'req-1',
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        status: OperatorDeletionStatus.PENDING,
+      });
+
+      const res = await service.findOne('op-1', 'owner-id');
+      expect(res.pendingDeletionRequest).toBeDefined();
+      expect(res.pendingDeletionRequest.id).toBe('req-1');
+      expect(res.pendingDeletionRequest.status).toBe(OperatorDeletionStatus.PENDING);
+    });
+
+    it('should return pendingDeletionRequest as null if requested by the owner but no PENDING request exists', async () => {
+      prisma.operatorListing.findUnique.mockResolvedValue({ id: 'op-1', userId: 'owner-id' });
+      prisma.operatorDeletionRequest.findFirst.mockResolvedValue(null);
+
+      const res = await service.findOne('op-1', 'owner-id');
+      expect(res.pendingDeletionRequest).toBeNull();
+    });
+
+    it('should NOT include pendingDeletionRequest at all if requested by someone else (public view)', async () => {
+      prisma.operatorListing.findUnique.mockResolvedValue({ id: 'op-1', userId: 'owner-id' });
+      // Call with no userId or a different userId
+      const res = await service.findOne('op-1', 'other-user');
+      expect(res.pendingDeletionRequest).toBeUndefined();
+
+      const res2 = await service.findOne('op-1');
+      expect(res2.pendingDeletionRequest).toBeUndefined();
+
+      expect(prisma.operatorDeletionRequest.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('my', () => {
+    it('should fetch pending deletion requests for the listings', async () => {
+      prisma.operatorListing.findMany.mockResolvedValue([
+        { id: 'op-1', userId: 'owner-id' },
+        { id: 'op-2', userId: 'owner-id' }
+      ]);
+      prisma.operatorDeletionRequest.findFirst
+        .mockResolvedValueOnce({
+          id: 'req-1',
+          createdAt: new Date(),
+          status: OperatorDeletionStatus.PENDING,
+        })
+        .mockResolvedValueOnce(null);
+
+      const res = await service.my('owner-id');
+      expect(res.length).toBe(2);
+      
+      expect(res[0].pendingDeletionRequest).toBeDefined();
+      expect(res[0].pendingDeletionRequest.id).toBe('req-1');
+      
+      expect(res[1].pendingDeletionRequest).toBeNull();
+      
+      expect(prisma.operatorDeletionRequest.findFirst).toHaveBeenCalledTimes(2);
     });
   });
 

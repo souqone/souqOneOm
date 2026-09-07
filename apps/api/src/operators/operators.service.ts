@@ -158,7 +158,7 @@ export class OperatorsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string) {
     const item = await this.prisma.operatorListing.findUnique({
       where: { id },
       include: {
@@ -169,11 +169,25 @@ export class OperatorsService {
     });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     this.prisma.operatorListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+
+    let pendingDeletionRequest = null;
+    if (userId && item.userId === userId) {
+      const pendingRequest = await this.prisma.operatorDeletionRequest.findFirst({
+        where: { operatorListingId: item.id, status: OperatorDeletionStatus.PENDING },
+        select: { id: true, createdAt: true, status: true },
+      });
+      pendingDeletionRequest = pendingRequest ?? null;
+      return {
+        ...item,
+        pendingDeletionRequest,
+      };
+    }
+
     return item;
   }
 
   async my(userId: string) {
-    return this.prisma.operatorListing.findMany({
+    const listings = await this.prisma.operatorListing.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -181,6 +195,19 @@ export class OperatorsService {
         wilayaRef: true,
       },
     });
+    
+    return Promise.all(
+      listings.map(async (listing) => {
+        const pendingRequest = await this.prisma.operatorDeletionRequest.findFirst({
+          where: { operatorListingId: listing.id, status: OperatorDeletionStatus.PENDING },
+          select: { id: true, createdAt: true, status: true },
+        });
+        return {
+          ...listing,
+          pendingDeletionRequest: pendingRequest ?? null,
+        };
+      })
+    );
   }
 
   async update(id: string, userId: string, dto: UpdateOperatorListingDto) {
