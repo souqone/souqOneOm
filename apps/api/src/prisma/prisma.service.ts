@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient, ReviewEntityType } from '@prisma/client';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -26,21 +26,36 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   /**
-   * Clean up orphaned Conversation and Favorite records that reference
+   * Clean up orphaned Conversation, Favorite, and Review records that reference
    * a deleted entity via the polymorphic entityType + entityId columns.
    *
    * Call this AFTER successfully deleting any entity that can be referenced
-   * by Conversations or Favorites.
+   * by Conversations, Favorites, or Reviews.
    */
   async cleanupPolymorphicOrphans(entityType: string, entityId: string): Promise<void> {
     try {
-      const [favs, convs] = await this.$transaction([
+      const operations: Prisma.PrismaPromise<any>[] = [
         this.favorite.deleteMany({ where: { entityType, entityId } }),
         this.conversation.deleteMany({ where: { entityType, entityId } }),
-      ]);
-      if (favs.count > 0 || convs.count > 0) {
+      ];
+
+      const reviewableTypes: string[] = Object.values(ReviewEntityType);
+      const isReviewable = reviewableTypes.includes(entityType);
+      if (isReviewable) {
+        operations.push(
+          this.review.deleteMany({
+            where: { entityType: entityType as ReviewEntityType, entityId },
+          }),
+        );
+      }
+
+      const results = await this.$transaction(operations);
+      const [favs, convs] = results;
+      const revs = isReviewable ? results[2] : { count: 0 };
+
+      if (favs.count > 0 || convs.count > 0 || revs.count > 0) {
         this.logger.log(
-          `Cleaned orphans for ${entityType}:${entityId} — ${favs.count} favorites, ${convs.count} conversations`,
+          `Cleaned orphans for ${entityType}:${entityId} — ${favs.count} favorites, ${convs.count} conversations, ${revs.count} reviews`,
         );
       }
     } catch (err) {

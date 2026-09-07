@@ -1,15 +1,23 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, OperatorType, EquipmentType } from '@prisma/client';
+import {
+  Prisma,
+  OperatorType,
+  EquipmentType,
+  OperatorDeletionStatus,
+  NotificationType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateOperatorListingDto } from './dto/create-operator-listing.dto';
 import { UpdateOperatorListingDto } from './dto/update-operator-listing.dto';
 import { QueryOperatorListingsDto } from './dto/query-operator-listings.dto';
 import { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
-
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
@@ -17,9 +25,29 @@ import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 export class OperatorsService {
   constructor(
     private readonly geoService: GeoService,
-private readonly prisma: PrismaService) {}
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(dto: CreateOperatorListingDto, userId: string) {
+    const existing = await this.prisma.operatorListing.findFirst({ where: { userId } });
+    if (existing) {
+      throw new ConflictException('لديك بروفايل مشغّل بالفعل، يمكنك تعديله أو طلب حذفه');
+    }
+
+    const recentApproved = await this.prisma.operatorDeletionRequest.findFirst({
+      where: { userId, status: OperatorDeletionStatus.APPROVED },
+      orderBy: { reviewedAt: 'desc' },
+    });
+    if (recentApproved?.reviewedAt) {
+      const elapsed = Date.now() - recentApproved.reviewedAt.getTime();
+      if (elapsed < 72 * 60 * 60 * 1000) {
+        throw new ConflictException(
+          'لا يمكنك إنشاء بروفايل جديد إلا بعد مرور 72 ساعة من حذف البروفايل السابق',
+        );
+      }
+    }
+
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     const item = await this.prisma.$transaction(async (tx) => {
@@ -37,6 +65,7 @@ private readonly prisma: PrismaService) {}
           hourlyRate: dto.hourlyRate != null ? new Prisma.Decimal(dto.hourlyRate) : null,
           currency: dto.currency ?? 'OMR',
           isPriceNegotiable: dto.isPriceNegotiable ?? false,
+          profileImageUrl: dto.profileImageUrl ?? null,
           governorateId: dto.governorateId,
           wilayaId: dto.wilayaId,
           latitude: dto.latitude,
@@ -77,6 +106,8 @@ private readonly prisma: PrismaService) {}
     if (q.operatorType) where.operatorType = q.operatorType as OperatorType;
     if (q.governorateId) where.governorateId = q.governorateId;
     if (q.wilayaId) where.wilayaId = q.wilayaId;
+    if (q.userId) where.userId = q.userId;
+
     if (q.search) {
       where.OR = [
         { title: { contains: q.search, mode: 'insensitive' } },
@@ -84,11 +115,38 @@ private readonly prisma: PrismaService) {}
       ];
     }
 
-    const orderBy: Prisma.OperatorListingOrderByWithRelationInput = { createdAt: 'desc' };
+    if (q.minDailyRate !== undefined || q.maxDailyRate !== undefined) {
+      where.dailyRate = {
+        ...(q.minDailyRate !== undefined ? { gte: new Prisma.Decimal(q.minDailyRate) } : {}),
+        ...(q.maxDailyRate !== undefined ? { lte: new Prisma.Decimal(q.maxDailyRate) } : {}),
+      };
+    }
+
+    if (q.minHourlyRate !== undefined || q.maxHourlyRate !== undefined) {
+      where.hourlyRate = {
+        ...(q.minHourlyRate !== undefined ? { gte: new Prisma.Decimal(q.minHourlyRate) } : {}),
+        ...(q.maxHourlyRate !== undefined ? { lte: new Prisma.Decimal(q.maxHourlyRate) } : {}),
+      };
+    }
+
+    if (q.minExperienceYears !== undefined || q.maxExperienceYears !== undefined) {
+      where.experienceYears = {
+        ...(q.minExperienceYears !== undefined ? { gte: q.minExperienceYears } : {}),
+        ...(q.maxExperienceYears !== undefined ? { lte: q.maxExperienceYears } : {}),
+      };
+    }
+
+    const allowedSortFields = ['createdAt', 'dailyRate', 'hourlyRate', 'experienceYears', 'viewCount'];
+    const sortField = allowedSortFields.includes(q.sortBy ?? '') ? q.sortBy! : 'createdAt';
+    const sortDirection: 'asc' | 'desc' = q.sortOrder === 'asc' ? 'asc' : 'desc';
+    const orderBy: Prisma.OperatorListingOrderByWithRelationInput = { [sortField]: sortDirection };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.operatorListing.findMany({
-        where, orderBy, skip: (page - 1) * limit, take: limit,
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
         include: {
           user: { select: USER_SELECT },
           governorateRef: true,
@@ -110,7 +168,6 @@ private readonly prisma: PrismaService) {}
       },
     });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
-    // TODO: migrate viewCount to Redis INCR + periodic sync for high traffic
     this.prisma.operatorListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
     return item;
   }
@@ -150,6 +207,7 @@ private readonly prisma: PrismaService) {}
     if (dto.hourlyRate !== undefined) data.hourlyRate = new Prisma.Decimal(dto.hourlyRate);
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isPriceNegotiable !== undefined) data.isPriceNegotiable = dto.isPriceNegotiable;
+    if (dto.profileImageUrl !== undefined) data.profileImageUrl = dto.profileImageUrl;
     if (dto.governorateId !== undefined) data.governorateId = dto.governorateId;
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
@@ -190,20 +248,185 @@ private readonly prisma: PrismaService) {}
     return updated;
   }
 
-  async remove(id: string, userId: string) {
+  async requestDeletion(id: string, userId: string, reason?: string) {
     const item = await this.prisma.operatorListing.findUnique({ where: { id } });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك حذف إعلان غيرك');
-    await this.prisma.$transaction(async (tx) => {
-      await tx.operatorListing.delete({ where: { id } });
-      await tx.outboxEvent.create({
+
+    const pending = await this.prisma.operatorDeletionRequest.findFirst({
+      where: {
+        operatorListingId: id,
+        status: OperatorDeletionStatus.PENDING,
+      },
+    });
+    if (pending) {
+      throw new ConflictException('يوجد طلب حذف قيد المراجعة بالفعل لهذا الإعلان');
+    }
+
+    const request = await this.prisma.operatorDeletionRequest.create({
+      data: {
+        operatorListingId: id,
+        userId,
+        reason: reason ?? null,
+        status: OperatorDeletionStatus.PENDING,
+      },
+    });
+
+    return {
+      message: 'تم تقديم طلب الحذف بنجاح وهو قيد مراجعة الإدارة',
+      request,
+    };
+  }
+
+  async cancelDeletionRequest(requestId: string, userId: string) {
+    const request = await this.prisma.operatorDeletionRequest.findUnique({
+      where: { id: requestId },
+    });
+    if (!request) {
+      throw new NotFoundException('طلب الحذف غير موجود');
+    }
+    if (request.userId !== userId) {
+      throw new ForbiddenException('لا يمكنك إلغاء طلب حذف لا يخصك');
+    }
+    if (request.status !== OperatorDeletionStatus.PENDING) {
+      throw new BadRequestException('لا يمكن إلغاء طلب تم البت فيه بالفعل أو تم إلغاؤه');
+    }
+
+    const elapsedMs = Date.now() - request.createdAt.getTime();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    if (elapsedMs > twentyFourHoursMs) {
+      throw new BadRequestException('انتهت مهلة إلغاء طلب الحذف (24 ساعة)، الطلب قيد مراجعة الإدارة الآن');
+    }
+
+    return this.prisma.operatorDeletionRequest.update({
+      where: { id: requestId },
+      data: {
+        status: OperatorDeletionStatus.CANCELLED,
+        cancelledAt: new Date(),
+      },
+    });
+  }
+
+  async adminListDeletionRequests(status?: OperatorDeletionStatus, page = 1, limit = 20) {
+    const safeLimit = Math.min(limit, 50);
+    const where: Prisma.OperatorDeletionRequestWhereInput = status ? { status } : {};
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.operatorDeletionRequest.findMany({
+        where,
+        skip: (page - 1) * safeLimit,
+        take: safeLimit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          operatorListing: {
+            include: {
+              user: { select: USER_SELECT },
+              governorateRef: true,
+              wilayaRef: true,
+            },
+          },
+        },
+      }),
+      this.prisma.operatorDeletionRequest.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
+  }
+
+  async adminReviewDeletion(
+    requestId: string,
+    adminId: string,
+    decision: 'APPROVED' | 'REJECTED',
+    rejectionReason?: string,
+  ) {
+    const request = await this.prisma.operatorDeletionRequest.findUnique({
+      where: { id: requestId },
+    });
+    if (!request) {
+      throw new NotFoundException('طلب الحذف غير موجود');
+    }
+    if (request.status !== OperatorDeletionStatus.PENDING) {
+      throw new BadRequestException('هذا الطلب تم البت فيه بالفعل أو تم إلغاؤه');
+    }
+
+    const targetListingId = request.operatorListingId;
+
+    if (decision === 'APPROVED') {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.operatorDeletionRequest.update({
+          where: { id: requestId },
+          data: {
+            status: OperatorDeletionStatus.APPROVED,
+            reviewedBy: adminId,
+            reviewedAt: new Date(),
+          },
+        });
+
+        if (targetListingId) {
+          await tx.operatorListing.delete({
+            where: { id: targetListingId },
+          });
+
+          await tx.outboxEvent.create({
+            data: {
+              entityType: ENTITY_TYPES.OPERATOR_LISTING,
+              entityId: targetListingId,
+              action: 'DELETE',
+            },
+          });
+        }
+      });
+
+      if (targetListingId) {
+        await this.prisma.cleanupPolymorphicOrphans('OPERATOR_LISTING', targetListingId);
+      }
+
+      await this.notificationsService.create({
+        type: NotificationType.OPERATOR_DELETION_APPROVED,
+        title: 'تمت الموافقة على طلب الحذف',
+        body: 'تمت الموافقة على حذف إعلان المشغل الخاص بك وحذفه بنجاح',
+        userId: request.userId,
+        data: { operatorListingId: targetListingId ?? undefined },
+      });
+
+      return { success: true, status: OperatorDeletionStatus.APPROVED };
+    }
+
+    if (decision === 'REJECTED') {
+      const updated = await this.prisma.operatorDeletionRequest.update({
+        where: { id: requestId },
         data: {
-          entityType: ENTITY_TYPES.OPERATOR_LISTING,
-          entityId: id,
-          action: 'DELETE',
+          status: OperatorDeletionStatus.REJECTED,
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          rejectionReason: rejectionReason ?? null,
         },
       });
-    });
-    return { deleted: true };
+
+      await this.notificationsService.create({
+        type: NotificationType.OPERATOR_DELETION_REJECTED,
+        title: 'تم رفض طلب الحذف',
+        body: rejectionReason
+          ? `تم رفض طلب حذف إعلان المشغل: ${rejectionReason}`
+          : 'تم رفض طلب حذف إعلان المشغل الخاص بك من قبل الإدارة',
+        userId: request.userId,
+        data: {
+          operatorListingId: targetListingId ?? undefined,
+          rejectionReason: rejectionReason ?? null,
+        },
+      });
+
+      return updated;
+    }
+
+    throw new BadRequestException('قرار غير صالح');
   }
 }

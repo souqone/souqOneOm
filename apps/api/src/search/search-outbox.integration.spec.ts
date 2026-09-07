@@ -38,13 +38,14 @@ describe('Outbox Integration', () => {
       }),
       busListing: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }) },
       equipmentListing: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }) },
-      operatorListing: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }) },
+      operatorListing: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }), findFirst: jest.fn().mockResolvedValue(null) },
+      operatorDeletionRequest: { findUnique: jest.fn().mockResolvedValue({ id: 'req-1', operatorListingId: '1', userId: 'owner', status: 'PENDING' }), update: jest.fn().mockResolvedValue({ id: 'req-1' }), findFirst: jest.fn().mockResolvedValue(null) },
       sparePart: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }) },
       carService: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }) },
       driverJob: { create: jest.fn().mockResolvedValue({ id: '1' }), update: jest.fn().mockResolvedValue({ id: '1' }), delete: jest.fn().mockResolvedValue({ id: '1' }), findUnique: jest.fn().mockResolvedValue({ id: '1', userId: 'owner', sellerId: 'owner' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findMany: jest.fn().mockResolvedValue([{ id: 'expired-1', userId: 'owner', sellerId: 'owner' }]) },
       jobApplication: { findMany: jest.fn().mockResolvedValue([]), updateMany: jest.fn() },
       outboxEvent: { create: jest.fn().mockResolvedValue({}) },
-      cleanupPolymorphicOrphans: jest.fn().mockResolvedValue(true),
+      cleanupPolymorphicOrphans: jest.fn().mockResolvedValue(undefined),
     };
 
     mockRedis = {
@@ -131,7 +132,7 @@ describe('Outbox Integration', () => {
       expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({ data: { entityType: ENTITY_TYPES.OPERATOR_LISTING, entityId: '1', action: 'UPSERT' } }));
     });
     it('should create OutboxEvent with OPERATOR_LISTING + DELETE on delete', async () => {
-      await operatorsService.remove('1', 'owner');
+      await operatorsService.adminReviewDeletion('req-1', 'admin-1', 'APPROVED');
       expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith(expect.objectContaining({ data: { entityType: ENTITY_TYPES.OPERATOR_LISTING, entityId: '1', action: 'DELETE' } }));
     });
   });

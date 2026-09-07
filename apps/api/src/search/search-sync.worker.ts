@@ -177,6 +177,7 @@ export class SearchSyncWorker {
           wilayaId: operator.wilayaId,
           status: operator.status,
           viewCount: operator.viewCount,
+          profileImageUrl: operator.profileImageUrl,
           createdAt: operator.createdAt,
         });
         break;

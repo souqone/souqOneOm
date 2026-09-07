@@ -41,6 +41,10 @@ export class ReviewsService {
       await this.validateJobReview(dto, reviewerId);
     }
 
+    if (dto.entityType === ENTITY_TYPES.OPERATOR_LISTING) {
+      await this.validateOperatorReview(dto, reviewerId);
+    }
+
     let review;
     try {
       review = await this.prisma.review.create({
@@ -182,6 +186,20 @@ export class ReviewsService {
 
     if (!application) {
       throw new BadRequestException('لا يمكنك تقييم إلا بعد قبول طلب التوظيف');
+    }
+  }
+
+  private async validateOperatorReview(dto: CreateReviewDto, reviewerId: string) {
+    const contactRecord = await this.prisma.conversation.findFirst({
+      where: {
+        entityType: ENTITY_TYPES.OPERATOR_LISTING,
+        entityId: dto.entityId,
+        participants: { some: { userId: reviewerId } },
+        messages: { some: { senderId: reviewerId } },
+      },
+    });
+    if (!contactRecord) {
+      throw new BadRequestException('يمكنك فقط تقييم المشغل بعد التواصل معه عبر الرسائل أولاً');
     }
   }
 

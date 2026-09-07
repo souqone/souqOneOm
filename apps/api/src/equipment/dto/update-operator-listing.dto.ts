@@ -70,6 +70,10 @@ export class UpdateOperatorListingDto {
   longitude?: number;
 
   @IsOptional()
+  @IsString()
+  profileImageUrl?: string;
+
+  @IsOptional()
   @IsString() @MinLength(8)
   contactPhone?: string;
 
