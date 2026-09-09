@@ -17,12 +17,23 @@ export class RedisIoAdapter extends IoAdapter {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        const reconnectStrategy = (retries: number) => {
+          if (retries > 20) {
+            // Stop retrying after a reasonable ceiling to avoid infinite log spam;
+            // the app itself doesn't crash, Socket.IO just runs without the Redis
+            // adapter (single-instance mode) until a manual restart if this is hit.
+            return new Error('Redis reconnect attempts exhausted');
+          }
+          return Math.min(retries * 100, 3000); // exponential-ish backoff, capped at 3s
+        };
+
         const pubClient = redisUrl
-          ? createClient({ url: redisUrl })
+          ? createClient({ url: redisUrl, socket: { reconnectStrategy } })
           : createClient({
               socket: {
                 host: process.env.REDIS_HOST || 'localhost',
                 port: parseInt(process.env.REDIS_PORT || '6379', 10),
+                reconnectStrategy,
               },
               password: process.env.REDIS_PASSWORD || undefined,
             });
@@ -30,10 +41,14 @@ export class RedisIoAdapter extends IoAdapter {
         const subClient = pubClient.duplicate();
 
         // Surface connection drops AFTER a successful initial connect too —
-        // the 'redis' client library auto-reconnects by default, but we log
-        // it loudly so it's visible in monitoring instead of silent.
+        // reconnectStrategy above now handles actually reconnecting; these
+        // handlers keep it visible in monitoring instead of silent.
         pubClient.on('error', (err) => this.logger.error(`Redis IO Adapter pubClient error: ${err.message}`));
         subClient.on('error', (err) => this.logger.error(`Redis IO Adapter subClient error: ${err.message}`));
+        pubClient.on('reconnecting', () => this.logger.log('Redis IO Adapter pubClient reconnecting...'));
+        subClient.on('reconnecting', () => this.logger.log('Redis IO Adapter subClient reconnecting...'));
+        pubClient.on('ready', () => this.logger.log('Redis IO Adapter pubClient connection restored'));
+        subClient.on('ready', () => this.logger.log('Redis IO Adapter subClient connection restored'));
 
         await Promise.all([pubClient.connect(), subClient.connect()]);
 
