@@ -65,5 +65,12 @@ PHASE*.md
 *.tsbuildinfo
 next-env.d.ts
 
+# Docs / working notes (local dev only)
+docs/
+
+# Database dumps
+*.dump
+souqone_backup.dump
+
 ## mahmmouudmuhamed2097@gmail.com
 ## 1234512345
