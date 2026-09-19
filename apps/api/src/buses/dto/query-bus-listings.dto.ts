@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsEnum, IsNumberString } from 'class-validator';
-import { BusListingType, BusType } from '@prisma/client';
+import { BusListingType, BusType, ItemCondition, Transmission } from '@prisma/client';
 
 export class QueryBusListingsDto {
   @IsOptional()
@@ -77,4 +77,24 @@ export class QueryBusListingsDto {
   @IsOptional()
   @IsString()
   isPremium?: string;
+
+  @IsOptional()
+  @IsEnum(ItemCondition)
+  condition?: ItemCondition;
+
+  @IsOptional()
+  @IsEnum(Transmission)
+  transmission?: Transmission;
+
+  @IsOptional()
+  @IsString()
+  fuelType?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  yearMin?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  yearMax?: string;
 }

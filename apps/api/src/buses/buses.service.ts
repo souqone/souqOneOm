@@ -208,6 +208,23 @@ export class BusesService {
       if (maxCapacity) where.capacity.lte = parseInt(maxCapacity);
     }
 
+    if (query.condition) where.condition = query.condition as any;
+    if (query.transmission) where.transmission = query.transmission as any;
+    if (query.fuelType) {
+      const fuels = query.fuelType.split(',').filter(Boolean);
+      if (fuels.length === 1) {
+        where.fuelType = fuels[0] as any;
+      } else if (fuels.length > 1) {
+        where.fuelType = { in: fuels as any[] };
+      }
+    }
+
+    if (query.yearMin || query.yearMax) {
+      where.year = {};
+      if (query.yearMin) where.year.gte = parseInt(query.yearMin);
+      if (query.yearMax) where.year.lte = parseInt(query.yearMax);
+    }
+
     let orderBy: Prisma.BusListingOrderByWithRelationInput = { createdAt: 'desc' };
     if (query.sort === 'price_asc') orderBy = { price: 'asc' };
     else if (query.sort === 'price_desc') orderBy = { price: 'desc' };
