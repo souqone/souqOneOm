@@ -157,13 +157,16 @@ export class BusesService {
     if (cached) return cached;
 
     const where: Prisma.BusListingWhereInput = { status: 'ACTIVE', deletedAt: null };
+    const andConditions: Prisma.BusListingWhereInput[] = [];
 
     if (query.search) {
-      where.OR = [
-        { title: { contains: query.search, mode: 'insensitive' } },
-        { description: { contains: query.search, mode: 'insensitive' } },
-        { make: { contains: query.search, mode: 'insensitive' } },
-      ];
+      andConditions.push({
+        OR: [
+          { title: { contains: query.search, mode: 'insensitive' } },
+          { description: { contains: query.search, mode: 'insensitive' } },
+          { make: { contains: query.search, mode: 'insensitive' } },
+        ],
+      });
     }
     if (query.busListingType) where.busListingType = query.busListingType;
     if (query.busType) where.busType = query.busType;
@@ -171,25 +174,38 @@ export class BusesService {
     if (query.governorateId) where.governorateId = parseInt(query.governorateId);
     if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
     if (query.userId) where.userId = query.userId;
+    if (query.isPremium !== undefined) {
+      where.isPremium = query.isPremium === 'true' || query.isPremium === (true as any);
+    }
 
-    if (query.minPrice || query.maxPrice) {
-      const minDec = query.minPrice ? new Prisma.Decimal(query.minPrice) : undefined;
-      const maxDec = query.maxPrice ? new Prisma.Decimal(query.maxPrice) : undefined;
+    const minPrice = query.minPrice || query.priceMin;
+    const maxPrice = query.maxPrice || query.priceMax;
+    if (minPrice || maxPrice) {
+      const minDec = minPrice ? new Prisma.Decimal(minPrice) : undefined;
+      const maxDec = maxPrice ? new Prisma.Decimal(maxPrice) : undefined;
       const priceRange: Prisma.DecimalFilter = {};
       if (minDec) priceRange.gte = minDec;
       if (maxDec) priceRange.lte = maxDec;
 
-      where.OR = [
-        { price: priceRange },
-        { dailyPrice: priceRange },
-        { monthlyPrice: priceRange },
-      ];
+      andConditions.push({
+        OR: [
+          { price: priceRange },
+          { dailyPrice: priceRange },
+          { monthlyPrice: priceRange },
+        ],
+      });
     }
 
-    if (query.minCapacity || query.maxCapacity) {
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
+    }
+
+    const minCapacity = query.minCapacity || query.capacityMin;
+    const maxCapacity = query.maxCapacity || query.capacityMax;
+    if (minCapacity || maxCapacity) {
       where.capacity = {};
-      if (query.minCapacity) where.capacity.gte = parseInt(query.minCapacity);
-      if (query.maxCapacity) where.capacity.lte = parseInt(query.maxCapacity);
+      if (minCapacity) where.capacity.gte = parseInt(minCapacity);
+      if (maxCapacity) where.capacity.lte = parseInt(maxCapacity);
     }
 
     let orderBy: Prisma.BusListingOrderByWithRelationInput = { createdAt: 'desc' };
@@ -204,7 +220,7 @@ export class BusesService {
         orderBy,
         include: {
           user: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          images: { orderBy: { order: 'asc' } },
           governorateRef: true,
           wilayaRef: true,
         },

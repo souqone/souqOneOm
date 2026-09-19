@@ -36,11 +36,27 @@ export class QueryBusListingsDto {
 
   @IsOptional()
   @IsNumberString()
+  priceMin?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  priceMax?: string;
+
+  @IsOptional()
+  @IsNumberString()
   minCapacity?: string;
 
   @IsOptional()
   @IsNumberString()
   maxCapacity?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  capacityMin?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  capacityMax?: string;
 
   @IsOptional()
   @IsString()
@@ -57,4 +73,8 @@ export class QueryBusListingsDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  @IsOptional()
+  @IsString()
+  isPremium?: string;
 }
