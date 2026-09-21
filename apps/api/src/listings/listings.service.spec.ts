@@ -194,6 +194,41 @@ describe('ListingsService', () => {
 
       await expect(service.create(dto, 'seller-1')).rejects.toThrow('سعر الإيجار اليومي مطلوب لإعلانات الإيجار');
     });
+
+    it('should persist whatsappEnabled: true when specified on create', async () => {
+      const dto = {
+        title: 'تويوتا كامري 2024',
+        brandId: 'brand-1',
+        carModelId: 'model-1',
+        year: 2024,
+        price: 12000,
+        whatsappEnabled: true,
+        governorateId: 1,
+        wilayaId: 1,
+      } as any;
+
+      await service.create(dto, 'seller-1');
+
+      const createArg = mockRepo.create.mock.calls[mockRepo.create.mock.calls.length - 1][0];
+      expect(createArg.whatsappEnabled).toBe(true);
+    });
+
+    it('should default whatsappEnabled to false when omitted on create', async () => {
+      const dto = {
+        title: 'تويوتا كامري 2024',
+        brandId: 'brand-1',
+        carModelId: 'model-1',
+        year: 2024,
+        price: 12000,
+        governorateId: 1,
+        wilayaId: 1,
+      } as any;
+
+      await service.create(dto, 'seller-1');
+
+      const createArg = mockRepo.create.mock.calls[mockRepo.create.mock.calls.length - 1][0];
+      expect(createArg.whatsappEnabled).toBe(false);
+    });
   });
 
   describe('cross-validation for locations', () => {
@@ -267,4 +302,35 @@ describe('ListingsService', () => {
       await expect(service.remove('listing-1', 'other-user')).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('update', () => {
+    it('should update whatsappEnabled to true when passed in update DTO', async () => {
+      mockRepo.findById.mockResolvedValueOnce(mockListing);
+      mockRepo.update.mockResolvedValueOnce({ ...mockListing, whatsappEnabled: true });
+
+      await service.update('listing-1', { version: 1, whatsappEnabled: true } as any, 'seller-1');
+
+      expect(mockRepo.update).toHaveBeenCalledWith('listing-1', expect.objectContaining({ whatsappEnabled: true }), 1);
+    });
+
+    it('should update whatsappEnabled to false when passed in update DTO', async () => {
+      mockRepo.findById.mockResolvedValueOnce({ ...mockListing, whatsappEnabled: true });
+      mockRepo.update.mockResolvedValueOnce({ ...mockListing, whatsappEnabled: false });
+
+      await service.update('listing-1', { version: 1, whatsappEnabled: false } as any, 'seller-1');
+
+      expect(mockRepo.update).toHaveBeenCalledWith('listing-1', expect.objectContaining({ whatsappEnabled: false }), 1);
+    });
+
+    it('should not include whatsappEnabled in update data when omitted in update DTO', async () => {
+      mockRepo.findById.mockResolvedValueOnce(mockListing);
+      mockRepo.update.mockResolvedValueOnce(mockListing);
+
+      await service.update('listing-1', { version: 1, title: 'عنوان جديد' } as any, 'seller-1');
+
+      const updateData = mockRepo.update.mock.calls[mockRepo.update.mock.calls.length - 1][1];
+      expect(updateData).not.toHaveProperty('whatsappEnabled');
+    });
+  });
 });
+

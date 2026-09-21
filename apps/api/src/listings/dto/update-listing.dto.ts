@@ -134,6 +134,10 @@ export class UpdateListingDto {
   insuranceIncluded?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
+
+  @IsOptional()
   @IsInt()
   @IsPositive()
   governorateId?: number;
