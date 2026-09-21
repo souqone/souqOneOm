@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ListingsRepository } from './listings.repository';
 import { PrismaService } from '../prisma/prisma.service';
+import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 
 describe('ListingsRepository', () => {
   let repository: ListingsRepository;
@@ -46,6 +47,20 @@ describe('ListingsRepository', () => {
           where: { id: 'listing-1' },
           include: expect.objectContaining({
             images: { orderBy: expectedImageOrderBy },
+          }),
+        }),
+      );
+    });
+
+    it('should select seller using USER_SELECT_LISTING_PUBLIC', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValueOnce({ id: 'listing-1' });
+
+      await repository.findById('listing-1');
+
+      expect(mockPrisma.listing.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            seller: { select: USER_SELECT_LISTING_PUBLIC },
           }),
         }),
       );
