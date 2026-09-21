@@ -227,6 +227,7 @@ model Listing {
   cancellationPolicy String?
   deliveryAvailable  Boolean  @default(false)
   insuranceIncluded  Boolean  @default(false)
+  whatsappEnabled    Boolean  @default(false)
 
   // الحالة والعرض
   condition     ItemCondition @default(USED)
