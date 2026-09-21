@@ -1,12 +1,16 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadFileStorageService } from './upload-file-storage.service';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class UploadImageManagerService {
+  private readonly logger = new Logger(UploadImageManagerService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: UploadFileStorageService,
+    private readonly redis: RedisService,
   ) {}
 
   private async deleteStoredImageByUrl(url: string) {
@@ -19,12 +23,21 @@ export class UploadImageManagerService {
     }
   }
 
+  private async invalidateListingCaches(listingId: string): Promise<void> {
+    try {
+      await this.redis.del(`listing:${listingId}`);
+      await this.redis.delPattern('listings:*');
+    } catch (err) {
+      this.logger.warn(`Failed to invalidate listing caches for ${listingId}`);
+    }
+  }
+
   async addImageToListing(listingId: string, userId: string, url: string, isPrimary: boolean) {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing) throw new NotFoundException('الإعلان غير موجود');
     if (listing.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Acquire row lock on the listing to serialize concurrent uploads
       await tx.$executeRaw`SELECT id FROM "listings" WHERE id = ${listingId} FOR UPDATE`;
 
@@ -52,6 +65,10 @@ export class UploadImageManagerService {
         data: { url, order: nextOrder, isPrimary: shouldBePrimary, listingId },
       });
     });
+
+    await this.invalidateListingCaches(listingId);
+
+    return result;
   }
 
   async removeImageFromListing(imageId: string, userId: string) {
@@ -61,6 +78,8 @@ export class UploadImageManagerService {
     });
     if (!image) throw new NotFoundException('الصورة غير موجودة');
     if (image.listing.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+
+    const listingId = image.listing.id;
 
     await this.deleteStoredImageByUrl(image.url);
     await this.prisma.listingImage.delete({ where: { id: imageId } });
@@ -74,6 +93,8 @@ export class UploadImageManagerService {
         await this.prisma.listingImage.update({ where: { id: first.id }, data: { isPrimary: true } });
       }
     }
+
+    await this.invalidateListingCaches(listingId);
 
     return { message: 'تم حذف الصورة بنجاح' };
   }
@@ -105,6 +126,8 @@ export class UploadImageManagerService {
         }),
       ),
     );
+
+    await this.invalidateListingCaches(listingId);
 
     return { message: 'تم إعادة ترتيب الصور بنجاح' };
   }

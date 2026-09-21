@@ -2,21 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
-
-const PUBLIC_SELLER_SELECT = {
-  id: true,
-  username: true,
-  displayName: true,
-  avatarUrl: true,
-  governorate: true,
-  isVerified: true,
-  createdAt: true,
-  // phone is intentionally excluded for privacy
-};
+import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 
 const PUBLIC_LISTING_INCLUDE = {
-  seller: { select: PUBLIC_SELLER_SELECT },
-  images: true,
+  seller: { select: USER_SELECT_LISTING_PUBLIC },
+  images: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] as Prisma.ListingImageOrderByWithRelationInput[] },
   governorateRef: true,
   wilayaRef: true,
 } as const;

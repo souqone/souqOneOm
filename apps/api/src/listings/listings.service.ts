@@ -136,6 +136,9 @@ export class ListingsService {
       dto.depositAmount = undefined;
       dto.minRentalDays = undefined;
       dto.kmLimitPerDay = undefined;
+      dto.cancellationPolicy = undefined;
+      dto.deliveryAvailable = undefined;
+      dto.insuranceIncluded = undefined;
     }
 
     const slug = this.generateSlug(`${brand.name}-${carModel.name}-${dto.year}-${dto.title}`);
@@ -168,6 +171,12 @@ export class ListingsService {
         dailyPrice: dto.dailyPrice ? new Prisma.Decimal(dto.dailyPrice) : undefined,
         monthlyPrice: dto.monthlyPrice ? new Prisma.Decimal(dto.monthlyPrice) : undefined,
         withDriver: dto.withDriver ?? false,
+        depositAmount: dto.depositAmount !== undefined ? new Prisma.Decimal(dto.depositAmount) : undefined,
+        minRentalDays: dto.minRentalDays,
+        kmLimitPerDay: dto.kmLimitPerDay,
+        cancellationPolicy: dto.cancellationPolicy,
+        deliveryAvailable: dto.deliveryAvailable ?? false,
+        insuranceIncluded: dto.insuranceIncluded ?? false,
         governorateRef: { connect: { id: dto.governorateId } },
         wilayaRef: { connect: { id: dto.wilayaId } },
         latitude: dto.latitude,

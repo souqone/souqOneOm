@@ -21,3 +21,9 @@ export const USER_SELECT_DETAIL = {
   phone: true,
   createdAt: true,
 } as const satisfies Prisma.UserSelect;
+
+/** Public seller info for listing detail pages — no phone. */
+export const USER_SELECT_LISTING_PUBLIC = {
+  ...USER_SELECT_PUBLIC,
+  createdAt: true,
+} as const satisfies Prisma.UserSelect;

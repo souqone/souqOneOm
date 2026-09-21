@@ -5,6 +5,7 @@ import { UploadFileStorageService } from './upload-file-storage.service';
 import { UploadImageManagerService } from './upload-image-manager.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { RedisService } from '../redis/redis.service';
 
 const mockPrisma = {
   listing: { findUnique: jest.fn() },
@@ -17,6 +18,13 @@ const mockPrisma = {
     findMany: jest.fn(),
     delete: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
+  },
+  sparePart: { findUnique: jest.fn() },
+  sparePartImage: {
+    aggregate: jest.fn(),
+    count: jest.fn(),
+    create: jest.fn(),
     updateMany: jest.fn(),
   },
   $executeRaw: jest.fn().mockResolvedValue(1),
@@ -33,8 +41,14 @@ const mockCloudinary = {
   delete: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockRedis = {
+  del: jest.fn().mockResolvedValue(1),
+  delPattern: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('UploadsService', () => {
   let service: UploadsService;
+  let imageManager: UploadImageManagerService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -48,10 +62,12 @@ describe('UploadsService', () => {
         UploadImageManagerService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: CloudinaryService, useValue: mockCloudinary },
+        { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();
 
     service = module.get<UploadsService>(UploadsService);
+    imageManager = module.get<UploadImageManagerService>(UploadImageManagerService);
   });
 
   describe('uploadFile', () => {
@@ -120,6 +136,115 @@ describe('UploadsService', () => {
       mockPrisma.listingImage.findUnique.mockResolvedValue(null);
 
       await expect(service.removeImageFromListing('nonexistent', 'user-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('UploadImageManagerService - listing cache invalidation', () => {
+    it('should invalidate listing caches after addImageToListing succeeds (asserting call order)', async () => {
+      const callOrder: string[] = [];
+      mockPrisma.listing.findUnique.mockResolvedValue({ id: 'listing-1', sellerId: 'user-1' });
+      mockPrisma.listingImage.aggregate.mockResolvedValue({ _max: { order: 0 } });
+      mockPrisma.listingImage.count.mockResolvedValue(1);
+      mockPrisma.listingImage.create.mockImplementation(async () => {
+        callOrder.push('db');
+        return { id: 'img-1', url: 'http://test.com/img.jpg' };
+      });
+      mockRedis.del.mockImplementation(async () => {
+        callOrder.push('redis.del');
+        return 1;
+      });
+      mockRedis.delPattern.mockImplementation(async () => {
+        callOrder.push('redis.delPattern');
+        return undefined;
+      });
+
+      await imageManager.addImageToListing('listing-1', 'user-1', 'http://test.com/img.jpg', false);
+
+      expect(callOrder).toEqual(['db', 'redis.del', 'redis.delPattern']);
+      expect(mockRedis.del).toHaveBeenCalledWith('listing:listing-1');
+      expect(mockRedis.delPattern).toHaveBeenCalledWith('listings:*');
+    });
+
+    it('should invalidate listing caches after removeImageFromListing succeeds (asserting call order)', async () => {
+      const callOrder: string[] = [];
+      mockPrisma.listingImage.findUnique.mockResolvedValue({
+        id: 'img-1',
+        url: 'http://localhost:4000/uploads/test.jpg',
+        isPrimary: false,
+        listing: { sellerId: 'user-1', id: 'listing-1' },
+      });
+      mockPrisma.listingImage.delete.mockImplementation(async () => {
+        callOrder.push('db.delete');
+        return {};
+      });
+      mockRedis.del.mockImplementation(async () => {
+        callOrder.push('redis.del');
+        return 1;
+      });
+      mockRedis.delPattern.mockImplementation(async () => {
+        callOrder.push('redis.delPattern');
+        return undefined;
+      });
+
+      await imageManager.removeImageFromListing('img-1', 'user-1');
+
+      expect(callOrder).toEqual(['db.delete', 'redis.del', 'redis.delPattern']);
+      expect(mockRedis.del).toHaveBeenCalledWith('listing:listing-1');
+      expect(mockRedis.delPattern).toHaveBeenCalledWith('listings:*');
+    });
+
+    it('should invalidate listing caches after reorderImages succeeds (asserting call order)', async () => {
+      const callOrder: string[] = [];
+      mockPrisma.listing.findUnique.mockResolvedValue({ id: 'listing-1', sellerId: 'user-1' });
+      mockPrisma.listingImage.findMany.mockResolvedValue([
+        { listingId: 'listing-1' },
+        { listingId: 'listing-1' },
+      ]);
+      mockPrisma.listingImage.update.mockImplementation(async () => {
+        callOrder.push('db.update');
+        return {};
+      });
+      mockRedis.del.mockImplementation(async () => {
+        callOrder.push('redis.del');
+        return 1;
+      });
+      mockRedis.delPattern.mockImplementation(async () => {
+        callOrder.push('redis.delPattern');
+        return undefined;
+      });
+
+      await imageManager.reorderImages('listing-1', 'user-1', ['img-1', 'img-2']);
+
+      expect(callOrder).toContain('db.update');
+      expect(callOrder.indexOf('db.update')).toBeLessThan(callOrder.indexOf('redis.del'));
+      expect(callOrder.indexOf('redis.del')).toBeLessThan(callOrder.indexOf('redis.delPattern'));
+      expect(mockRedis.del).toHaveBeenCalledWith('listing:listing-1');
+      expect(mockRedis.delPattern).toHaveBeenCalledWith('listings:*');
+    });
+
+    it('should not throw if Redis cache invalidation fails', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValue({ id: 'listing-1', sellerId: 'user-1' });
+      mockPrisma.listingImage.aggregate.mockResolvedValue({ _max: { order: 0 } });
+      mockPrisma.listingImage.count.mockResolvedValue(1);
+      mockPrisma.listingImage.create.mockResolvedValue({ id: 'img-1', url: 'http://test.com/img.jpg' });
+
+      mockRedis.del.mockRejectedValueOnce(new Error('Redis connection timed out'));
+
+      await expect(
+        imageManager.addImageToListing('listing-1', 'user-1', 'http://test.com/img.jpg', false),
+      ).resolves.toBeDefined();
+    });
+
+    it('regression: should NOT call redis.del or redis.delPattern for non-Cars methods (e.g. addImageToPart)', async () => {
+      mockPrisma.sparePart.findUnique.mockResolvedValue({ id: 'part-1', sellerId: 'user-1' });
+      mockPrisma.sparePartImage.aggregate.mockResolvedValue({ _max: { order: 0 } });
+      mockPrisma.sparePartImage.count.mockResolvedValue(0);
+      mockPrisma.sparePartImage.create.mockResolvedValue({ id: 'pi-1' });
+
+      await imageManager.addImageToPart('part-1', 'user-1', 'http://test.com/part.jpg', true);
+
+      expect(mockRedis.del).not.toHaveBeenCalled();
+      expect(mockRedis.delPattern).not.toHaveBeenCalled();
     });
   });
 });
