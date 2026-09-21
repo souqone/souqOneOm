@@ -16,7 +16,7 @@ const PUBLIC_SELLER_SELECT = {
 
 const PUBLIC_LISTING_INCLUDE = {
   seller: { select: PUBLIC_SELLER_SELECT },
-  images: true,
+  images: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] as Prisma.ListingImageOrderByWithRelationInput[] },
   governorateRef: true,
   wilayaRef: true,
 } as const;
