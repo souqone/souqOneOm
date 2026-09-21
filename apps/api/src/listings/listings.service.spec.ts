@@ -114,6 +114,86 @@ describe('ListingsService', () => {
       expect(mockRepo.create).toHaveBeenCalledTimes(1);
       expect(mockRedis.delPattern).toHaveBeenCalledWith('listings:*');
     });
+
+    it('should persist all six rental fields on RENTAL create, preserving 0 for depositAmount and kmLimitPerDay', async () => {
+      const dto = {
+        title: 'تويوتا كامري إيجار',
+        description: 'سيارة للإيجار',
+        brandId: 'brand-1',
+        carModelId: 'model-1',
+        year: 2024,
+        price: 50,
+        listingType: 'RENTAL',
+        dailyPrice: 50,
+        monthlyPrice: 1200,
+        depositAmount: 0,
+        minRentalDays: 2,
+        kmLimitPerDay: 0,
+        cancellationPolicy: 'مرنة حتى 24 ساعة',
+        deliveryAvailable: true,
+        insuranceIncluded: true,
+        governorateId: 1,
+        wilayaId: 1,
+      } as any;
+
+      await service.create(dto, 'seller-1');
+
+      const createArg = mockRepo.create.mock.calls[mockRepo.create.mock.calls.length - 1][0];
+      expect(createArg.listingType).toBe('RENTAL');
+      expect(createArg.depositAmount?.toNumber()).toBe(0);
+      expect(createArg.minRentalDays).toBe(2);
+      expect(createArg.kmLimitPerDay).toBe(0);
+      expect(createArg.cancellationPolicy).toBe('مرنة حتى 24 ساعة');
+      expect(createArg.deliveryAvailable).toBe(true);
+      expect(createArg.insuranceIncluded).toBe(true);
+    });
+
+    it('should not persist rental fields on SALE create even if provided in DTO', async () => {
+      const dto = {
+        title: 'تويوتا كامري للبيع',
+        description: 'سيارة للبيع',
+        brandId: 'brand-1',
+        carModelId: 'model-1',
+        year: 2024,
+        price: 12000,
+        listingType: 'SALE',
+        dailyPrice: 50,
+        depositAmount: 100,
+        minRentalDays: 3,
+        kmLimitPerDay: 200,
+        cancellationPolicy: 'شروط معينة',
+        deliveryAvailable: true,
+        insuranceIncluded: true,
+        governorateId: 1,
+        wilayaId: 1,
+      } as any;
+
+      await service.create(dto, 'seller-1');
+
+      const createArg = mockRepo.create.mock.calls[mockRepo.create.mock.calls.length - 1][0];
+      expect(createArg.listingType).toBe('SALE');
+      expect(createArg.dailyPrice).toBeUndefined();
+      expect(createArg.depositAmount).toBeUndefined();
+      expect(createArg.minRentalDays).toBeUndefined();
+      expect(createArg.kmLimitPerDay).toBeUndefined();
+      expect(createArg.cancellationPolicy).toBeUndefined();
+      expect(createArg.deliveryAvailable).toBe(false);
+      expect(createArg.insuranceIncluded).toBe(false);
+    });
+
+    it('should throw BadRequestException on RENTAL create without positive dailyPrice', async () => {
+      const dto = {
+        title: 'تويوتا كامري إيجار',
+        brandId: 'brand-1',
+        carModelId: 'model-1',
+        year: 2024,
+        price: 0,
+        listingType: 'RENTAL',
+        dailyPrice: 0,
+      } as any;
+
+      await expect(service.create(dto, 'seller-1')).rejects.toThrow('سعر الإيجار اليومي مطلوب لإعلانات الإيجار');
+    });
   });
 
   describe('cross-validation for locations', () => {
