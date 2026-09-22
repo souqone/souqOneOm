@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
-import { Prisma } from '@prisma/client';
+import { Prisma, ListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
@@ -17,6 +17,8 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { assertListingVisible } from './listing-visibility';
+import { incrementViewCount } from '../common/utils/view-count.helper';
 
 
 
@@ -211,8 +213,15 @@ export class ListingsService {
   }
 
   async findAll(query: QueryListingsDto) {
-    // Generate cache key from query
-    const cacheKey = `listings:${JSON.stringify(query)}`;
+    const PUBLIC_STATUSES: ListingStatus[] = [ListingStatus.ACTIVE, ListingStatus.SOLD, ListingStatus.RENTED];
+    const effectiveStatus = query.status && PUBLIC_STATUSES.includes(query.status)
+      ? query.status
+      : ListingStatus.ACTIVE;
+
+    const sanitizedQuery = { ...query, status: effectiveStatus };
+
+    // Generate cache key from sanitized query
+    const cacheKey = `listings:${JSON.stringify(sanitizedQuery)}`;
     
     // Try to get from cache
     const cached = await this.redis.get(cacheKey);
@@ -253,7 +262,7 @@ export class ListingsService {
     if (query.wilayaId) where.wilayaId = query.wilayaId;
     if (query.sellerId) where.sellerId = query.sellerId;
     if (query.listingType) where.listingType = query.listingType;
-    where.status = query.status ?? 'ACTIVE';
+    where.status = effectiveStatus;
 
     if (query.yearMin || query.yearMax) {
       where.year = {};
@@ -318,33 +327,47 @@ export class ListingsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewerId?: string, ip?: string) {
     const cacheKey = `listing:${id}`;
     
-    const cached = await this.redis.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    const listing = await this.repo.findById(id);
-
+    let listing = await this.redis.get<any>(cacheKey);
     if (!listing) {
-      throw new NotFoundException('الإعلان غير موجود');
+      listing = await this.repo.findById(id);
+
+      if (!listing) {
+        throw new NotFoundException('الإعلان غير موجود');
+      }
+
+      await this.redis.set(cacheKey, listing, 600); // 10 minutes
     }
 
-    await this.redis.set(cacheKey, listing, 600); // 10 minutes
+    assertListingVisible(listing, viewerId);
+
+    if (!viewerId || viewerId !== listing.sellerId) {
+      const shouldCount = await incrementViewCount(this.redis, 'LISTING', listing.id, ip);
+      if (shouldCount) {
+        await this.repo.incrementViewCount(listing.id);
+      }
+    }
 
     return listing;
   }
 
-  async findBySlug(slug: string) {
+  async findBySlug(slug: string, viewerId?: string, ip?: string) {
     const listing = await this.repo.findBySlug(slug);
 
     if (!listing) {
       throw new NotFoundException('الإعلان غير موجود');
     }
 
-    await this.repo.incrementViewCount(listing.id);
+    assertListingVisible(listing, viewerId);
+
+    if (!viewerId || viewerId !== listing.sellerId) {
+      const shouldCount = await incrementViewCount(this.redis, 'LISTING', listing.id, ip);
+      if (shouldCount) {
+        await this.repo.incrementViewCount(listing.id);
+      }
+    }
 
     return listing;
   }
