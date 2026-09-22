@@ -2,25 +2,25 @@ import { IsString, IsInt, IsNumber, IsOptional, IsEnum, IsBoolean, IsArray, Min,
 import { FuelType, Transmission, ItemCondition, ListingType } from '@prisma/client';
 
 export class CreateListingDto {
-  @IsString()
-  @MaxLength(200)
+  @IsString({ message: 'العنوان يجب أن يكون نصاً' })
+  @MaxLength(200, { message: 'العنوان يجب ألا يتجاوز 200 حرف' })
   title!: string;
 
-  @IsString()
+  @IsString({ message: 'الوصف يجب أن يكون نصاً' })
   description!: string;
 
-  @IsInt()
-  @Min(1900)
-  @Max(2030)
+  @IsInt({ message: 'سنة الصنع يجب أن تكون رقماً صحيحاً' })
+  @Min(1900, { message: 'سنة الصنع يجب أن تكون 1900 أو أحدث' })
+  @Max(2030, { message: 'سنة الصنع يجب ألا تتجاوز 2030' })
   year!: number;
 
-  @IsNumber()
-  @Min(0)
+  @IsNumber({}, { message: 'السعر يجب أن يكون رقماً' })
+  @Min(0, { message: 'السعر لا يمكن أن يكون سالباً' })
   price!: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
+  @IsInt({ message: 'الممشى يجب أن يكون رقماً صحيحاً' })
+  @Min(0, { message: 'الممشى لا يمكن أن يكون سالباً' })
   mileage?: number;
 
   @IsOptional()
@@ -32,48 +32,48 @@ export class CreateListingDto {
   transmission?: Transmission;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'نوع الهيكل يجب أن يكون نصاً' })
   bodyType?: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'اللون الخارجي يجب أن يكون نصاً' })
   exteriorColor?: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'اللون الداخلي يجب أن يكون نصاً' })
   interior?: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'سعة المحرك يجب أن تكون نصاً' })
   engineSize?: string;
 
   @IsOptional()
-  @IsInt()
+  @IsInt({ message: 'القوة الحصانية يجب أن تكون رقماً صحيحاً' })
   horsepower?: number;
 
   @IsOptional()
-  @IsInt()
+  @IsInt({ message: 'عدد الأبواب يجب أن يكون رقماً صحيحاً' })
   doors?: number;
 
   @IsOptional()
-  @IsInt()
+  @IsInt({ message: 'عدد المقاعد يجب أن يكون رقماً صحيحاً' })
   seats?: number;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'نظام الدفع يجب أن يكون نصاً' })
   driveType?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @IsArray({ message: 'المميزات يجب أن تكون قائمة' })
+  @IsString({ each: true, message: 'كل ميزة يجب أن تكون نصاً' })
   features?: string[];
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'العملة يجب أن تكون نصاً' })
   currency?: string;
 
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'قابلية التفاوض يجب أن تكون قيمة منطقية' })
   isPriceNegotiable?: boolean;
 
   @IsOptional()
@@ -81,86 +81,86 @@ export class CreateListingDto {
   condition?: ItemCondition;
 
   @IsOptional()
-  @IsEnum(ListingType)
+  @IsEnum(ListingType, { message: 'نوع الإعلان غير صالح' })
   listingType?: ListingType;
 
   // سعر الإيجار الاسترشادي
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @IsNumber({}, { message: 'سعر الإيجار اليومي يجب أن يكون رقماً' })
+  @Min(0, { message: 'سعر الإيجار اليومي لا يمكن أن يكون سالباً' })
   dailyPrice?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @IsNumber({}, { message: 'سعر الإيجار الشهري يجب أن يكون رقماً' })
+  @Min(0, { message: 'سعر الإيجار الشهري لا يمكن أن يكون سالباً' })
   monthlyPrice?: number;
 
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'خيار السائق يجب أن يكون قيمة منطقية' })
   withDriver?: boolean;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @IsNumber({}, { message: 'مبلغ التأمين يجب أن يكون رقماً' })
+  @Min(0, { message: 'مبلغ التأمين لا يمكن أن يكون سالباً' })
   depositAmount?: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'أدنى مدة للإيجار يجب أن تكون رقماً صحيحاً' })
+  @Min(1, { message: 'أدنى مدة للإيجار يجب أن تكون يوماً واحداً على الأقل' })
   minRentalDays?: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
+  @IsInt({ message: 'حد الكيلومترات اليومي يجب أن يكون رقماً صحيحاً' })
+  @Min(0, { message: 'حد الكيلومترات اليومي لا يمكن أن يكون سالباً' })
   kmLimitPerDay?: number;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'سياسة الإلغاء يجب أن تكون نصاً' })
   cancellationPolicy?: string;
 
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'خيار التوصيل يجب أن يكون قيمة منطقية' })
   deliveryAvailable?: boolean;
 
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'خيار التأمين يجب أن يكون قيمة منطقية' })
   insuranceIncluded?: boolean;
 
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'تفعيل الواتساب يجب أن يكون قيمة منطقية' })
   whatsappEnabled?: boolean;
 
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'معرف المحافظة يجب أن يكون رقماً صحيحاً' })
+  @IsPositive({ message: 'معرف المحافظة يجب أن يكون رقماً موجباً' })
   governorateId!: number;
 
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'معرف الولاية يجب أن يكون رقماً صحيحاً' })
+  @IsPositive({ message: 'معرف الولاية يجب أن يكون رقماً موجباً' })
   wilayaId!: number;
 
   @IsOptional()
-  @IsLatitude()
+  @IsLatitude({ message: 'خط العرض غير صالح' })
   latitude?: number;
 
   @IsOptional()
-  @IsLongitude()
+  @IsLongitude({ message: 'خط الطول غير صالح' })
   longitude?: number;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'معرف الماركة يجب أن يكون نصاً' })
+  @IsNotEmpty({ message: 'معرف الماركة مطلوب' })
   brandId!: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'معرف الموديل يجب أن يكون نصاً' })
+  @IsNotEmpty({ message: 'معرف الموديل مطلوب' })
   carModelId!: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'معرف الفئة يجب أن يكون نصاً' })
   carTrimId?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @IsArray({ message: 'الصور يجب أن تكون قائمة' })
+  @IsString({ each: true, message: 'رابط الصورة يجب أن يكون نصاً' })
   @ArrayMaxSize(20, { message: 'لا يمكن تجاوز 20 صورة' })
   images?: string[];
 }
