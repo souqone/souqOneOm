@@ -29,6 +29,7 @@ import { OperatorsModule } from './operators/operators.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { PaymentsModule } from './payments/payments.module';
 import { TransportModule } from './transport/transport.module';
+import { ContactModule } from './contact/contact.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
 import { LocationsModule } from './locations/locations.module';
@@ -71,6 +72,7 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     PaymentsModule,
     TransportModule,
     LocationsModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [
