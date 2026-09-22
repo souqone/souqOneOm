@@ -177,6 +177,7 @@ export class ListingsService {
         cancellationPolicy: dto.cancellationPolicy,
         deliveryAvailable: dto.deliveryAvailable ?? false,
         insuranceIncluded: dto.insuranceIncluded ?? false,
+        whatsappEnabled: dto.whatsappEnabled ?? false,
         governorateRef: { connect: { id: dto.governorateId } },
         wilayaRef: { connect: { id: dto.wilayaId } },
         latitude: dto.latitude,
@@ -464,6 +465,7 @@ export class ListingsService {
     if (dto.cancellationPolicy !== undefined) data.cancellationPolicy = dto.cancellationPolicy;
     if (dto.deliveryAvailable !== undefined) data.deliveryAvailable = dto.deliveryAvailable;
     if (dto.insuranceIncluded !== undefined) data.insuranceIncluded = dto.insuranceIncluded;
+    if (dto.whatsappEnabled !== undefined) data.whatsappEnabled = dto.whatsappEnabled;
     if (dto.brandId !== undefined)    data.brand    = dto.brandId    ? { connect: { id: dto.brandId    } } : { disconnect: true };
     if (dto.carModelId !== undefined) data.carModel = dto.carModelId ? { connect: { id: dto.carModelId } } : { disconnect: true };
     if (dto.carTrimId !== undefined)  data.carTrim  = dto.carTrimId  ? { connect: { id: dto.carTrimId  } } : { disconnect: true };

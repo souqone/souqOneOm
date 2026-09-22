@@ -126,6 +126,10 @@ export class CreateListingDto {
   @IsBoolean()
   insuranceIncluded?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
+
   @IsInt()
   @IsPositive()
   governorateId!: number;
