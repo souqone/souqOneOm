@@ -22,6 +22,7 @@ import { ListingsService } from './listings.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
+import { SimilarListingsQueryDto } from './dto/similar-listings-query.dto';
 
 @ApiTags('Listings')
 @ApiBearerAuth()
@@ -56,6 +57,16 @@ export class ListingsController {
     @CurrentUser() user?: JwtPayload,
   ) {
     return this.listingsService.findOne(id, user?.sub, req.ip);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get(':id/similar')
+  findSimilar(
+    @Param('id') id: string,
+    @Query() query: SimilarListingsQueryDto,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.listingsService.findSimilar(id, query.limit, user?.sub);
   }
 
   @UseGuards(OptionalJwtAuthGuard)

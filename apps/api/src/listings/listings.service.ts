@@ -372,6 +372,93 @@ export class ListingsService {
     return listing;
   }
 
+  async findSimilar(id: string, limit = 8, viewerId?: string) {
+    const cacheKey = `listings:similar:${id}:${limit}`;
+    const cached = await this.redis.get<any>(cacheKey);
+    if (cached) return cached;
+
+    const original = await this.repo.findById(id);
+    if (!original) {
+      throw new NotFoundException('الإعلان غير موجود');
+    }
+
+    assertListingVisible(original, viewerId);
+
+    const referencePrice = original.listingType === 'RENTAL' ? original.dailyPrice : original.price;
+    const toNum = (val: any): number => {
+      if (val == null) return 0;
+      if (typeof val === 'number') return val;
+      if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
+      const n = Number(val);
+      return isNaN(n) ? 0 : n;
+    };
+    const numericPrice = toNum(referencePrice);
+    const hasPrice = numericPrice > 0;
+    const priceMin = hasPrice ? numericPrice * 0.7 : undefined;
+    const priceMax = hasPrice ? numericPrice * 1.3 : undefined;
+
+    const narrowWhere: Prisma.ListingWhereInput = {
+      id: { not: id },
+      status: 'ACTIVE',
+      listingType: original.listingType,
+      make: { equals: original.make, mode: 'insensitive' },
+      model: { equals: original.model, mode: 'insensitive' },
+      year: { gte: original.year - 3, lte: original.year + 3 },
+      ...(hasPrice
+        ? original.listingType === 'RENTAL'
+          ? { dailyPrice: { gte: new Prisma.Decimal(priceMin!), lte: new Prisma.Decimal(priceMax!) } }
+          : { price: { gte: new Prisma.Decimal(priceMin!), lte: new Prisma.Decimal(priceMax!) } }
+        : {}),
+    };
+
+    const candidateLimit = limit * 3;
+    const narrowRes = await this.repo.findMany(
+      narrowWhere,
+      { createdAt: 'desc' },
+      0,
+      candidateLimit,
+    );
+    const narrowCandidates = Array.isArray(narrowRes) && Array.isArray(narrowRes[0]) ? narrowRes[0] : [];
+
+    let sortedNarrow = narrowCandidates;
+    if (hasPrice) {
+      sortedNarrow = [...narrowCandidates].sort((a, b) => {
+        const aPrice = toNum(original.listingType === 'RENTAL' ? a.dailyPrice : a.price);
+        const bPrice = toNum(original.listingType === 'RENTAL' ? b.dailyPrice : b.price);
+        const diffA = Math.abs(aPrice - numericPrice);
+        const diffB = Math.abs(bPrice - numericPrice);
+        if (diffA !== diffB) return diffA - diffB;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
+
+    let results = sortedNarrow.slice(0, limit);
+
+    if (results.length < limit) {
+      const remaining = limit - results.length;
+      const excludedIds = [id, ...results.map((r: any) => r.id)];
+      const broaderWhere: Prisma.ListingWhereInput = {
+        id: { notIn: excludedIds },
+        status: 'ACTIVE',
+        listingType: original.listingType,
+        make: { equals: original.make, mode: 'insensitive' },
+      };
+
+      const broaderRes = await this.repo.findMany(
+        broaderWhere,
+        { createdAt: 'desc' },
+        0,
+        remaining,
+      );
+      const broaderItems = Array.isArray(broaderRes) && Array.isArray(broaderRes[0]) ? broaderRes[0] : [];
+
+      results = [...results, ...broaderItems];
+    }
+
+    await this.redis.set(cacheKey, results, 300);
+    return results;
+  }
+
   async update(id: string, dto: UpdateListingDto, userId: string) {
     const listing = await this.repo.findById(id);
     if (!listing) {
