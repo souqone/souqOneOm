@@ -192,6 +192,30 @@ describe('ContactService & ContactController', () => {
         86400,
       );
     });
+
+    it('throws NotFoundException instead of 429 when cap is at 50 but listing does not exist', async () => {
+      mockRedis.get.mockResolvedValue(50);
+      mockPrisma.listing.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getContact('LISTING', 'missing-listing', 'viewer-2'),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.getContact('LISTING', 'missing-listing', 'viewer-2'),
+      ).rejects.toThrow('الإعلان غير موجود');
+    });
+
+    it('throws BadRequestException instead of 429 when cap is at 50 but viewer is the listing owner', async () => {
+      mockRedis.get.mockResolvedValue(50);
+      mockPrisma.listing.findUnique.mockResolvedValue(sampleListing);
+
+      await expect(
+        service.getContact('LISTING', 'listing-101', 'seller-user-1'),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.getContact('LISTING', 'listing-101', 'seller-user-1'),
+      ).rejects.toThrow('لا يمكنك عرض بيانات التواصل لإعلانك الخاص');
+    });
   });
 
   describe('Controller response headers and metadata', () => {

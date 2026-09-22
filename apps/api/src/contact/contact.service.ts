@@ -22,25 +22,7 @@ export class ContactService {
       throw new NotFoundException('جهة الاتصال غير موجودة');
     }
 
-    const date = new Date().toISOString().split('T')[0];
-    const memberKey = `contact-cap:${viewerId}:${date}:${entityId}`;
-    const counterKey = `contact-cap:${viewerId}:${date}:count`;
-
-    // 1. Check if this listing's contact was already revealed today by this user
-    const alreadyRevealed = await this.redis.exists(memberKey);
-
-    if (!alreadyRevealed) {
-      // 2. Check daily distinct-listing reveal cap against 50 before doing the lookup
-      const currentCount = await this.redis.get<number>(counterKey);
-      if (currentCount && Number(currentCount) >= 50) {
-        throw new HttpException(
-          'لقد تجاوزت الحد اليومي لعرض أرقام التواصل (50 إعلاناً في اليوم)',
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-    }
-
-    // 3. Direct DB lookup (minimal query, not from Redis cache)
+    // 1. Direct DB lookup (minimal query, not from Redis cache)
     const listing = await this.prisma.listing.findUnique({
       where: { id: entityId },
       select: {
@@ -55,21 +37,38 @@ export class ContactService {
       throw new NotFoundException('الإعلان غير موجود');
     }
 
-    // 4. Visibility gate check
+    // 2. Visibility gate check
     assertListingVisible(listing, viewerId);
 
-    // 5. If viewer is the owner -> reject with BadRequestException
+    // 3. If viewer is the owner -> reject with BadRequestException
     if (viewerId === listing.sellerId) {
       throw new BadRequestException('لا يمكنك عرض بيانات التواصل لإعلانك الخاص');
     }
 
-    // 6. Record reveal and increment daily distinct count if not already revealed
+    // 4. Daily distinct-listing reveal cap check
+    const date = new Date().toISOString().split('T')[0];
+    const memberKey = `contact-cap:${viewerId}:${date}:${entityId}`;
+    const counterKey = `contact-cap:${viewerId}:${date}:count`;
+
+    const alreadyRevealed = await this.redis.exists(memberKey);
+
+    if (!alreadyRevealed) {
+      const currentCount = await this.redis.get<number>(counterKey);
+      if (currentCount && Number(currentCount) >= 50) {
+        throw new HttpException(
+          'لقد تجاوزت الحد اليومي لعرض أرقام التواصل (50 إعلاناً في اليوم)',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+
+    // 5. Record reveal and increment daily distinct count if not already revealed
     if (!alreadyRevealed) {
       await this.redis.set(memberKey, '1', 86400);
       await this.redis.incr(counterKey, 86400);
     }
 
-    // 7. Load seller phone and normalize
+    // 6. Load seller phone and normalize
     const seller = await this.prisma.user.findUnique({
       where: { id: listing.sellerId },
       select: { phone: true },
