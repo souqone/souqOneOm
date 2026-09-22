@@ -7,12 +7,15 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { ListingsService } from './listings.service';
@@ -45,14 +48,24 @@ export class ListingsController {
     return this.listingsService.findMyListings({ ...query, sellerId: user.sub });
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.listingsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.listingsService.findOne(id, user?.sub, req.ip);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
-    return this.listingsService.findBySlug(slug);
+  findBySlug(
+    @Param('slug') slug: string,
+    @Req() req: Request,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.listingsService.findBySlug(slug, user?.sub, req.ip);
   }
 
   @UseGuards(JwtAuthGuard)

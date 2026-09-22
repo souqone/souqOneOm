@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ListingStatus } from '@prisma/client';
 import { ListingsService } from './listings.service';
 import { GeoService } from '../locations/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -51,6 +52,7 @@ const mockRedis = {
   set: jest.fn().mockResolvedValue(undefined),
   del: jest.fn().mockResolvedValue(undefined),
   delPattern: jest.fn().mockResolvedValue(undefined),
+  setNX: jest.fn().mockResolvedValue(true),
 };
 
 const mockSearchService = {
@@ -269,6 +271,38 @@ describe('ListingsService', () => {
       expect(result).toEqual(cached);
       expect(mockRepo.findMany).not.toHaveBeenCalled();
     });
+
+    it.each([ListingStatus.DRAFT, ListingStatus.SUSPENDED, ListingStatus.ARCHIVED])(
+      'should map hidden status %s to ACTIVE in where clause',
+      async (hiddenStatus) => {
+        mockRepo.findMany.mockResolvedValueOnce([[mockListing], 1]);
+
+        await service.findAll({ status: hiddenStatus as any });
+
+        expect(mockRepo.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ status: ListingStatus.ACTIVE }),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+        );
+      },
+    );
+
+    it.each([ListingStatus.SOLD, ListingStatus.RENTED])(
+      'should preserve allowed status %s in where clause',
+      async (allowedStatus) => {
+        mockRepo.findMany.mockResolvedValueOnce([[mockListing], 1]);
+
+        await service.findAll({ status: allowedStatus });
+
+        expect(mockRepo.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ status: allowedStatus }),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+        );
+      },
+    );
   });
 
   describe('findOne', () => {
@@ -283,6 +317,148 @@ describe('ListingsService', () => {
       mockRepo.findById.mockResolvedValue(null);
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+
+    describe('visibility gate matrix (findOne)', () => {
+      const allStatuses: ListingStatus[] = [
+        ListingStatus.ACTIVE,
+        ListingStatus.SOLD,
+        ListingStatus.RENTED,
+        ListingStatus.DRAFT,
+        ListingStatus.ARCHIVED,
+        ListingStatus.SUSPENDED,
+      ];
+
+      allStatuses.forEach((status) => {
+        const isPublic = ['ACTIVE', 'SOLD', 'RENTED'].includes(status);
+
+        it(`handles anonymous viewer for status=${status}`, async () => {
+          mockRepo.findById.mockResolvedValue({ ...mockListing, status });
+          if (isPublic) {
+            const res = await service.findOne('listing-1', undefined);
+            expect(res).toBeDefined();
+          } else {
+            await expect(service.findOne('listing-1', undefined)).rejects.toThrow(NotFoundException);
+          }
+        });
+
+        it(`handles other viewer for status=${status}`, async () => {
+          mockRepo.findById.mockResolvedValue({ ...mockListing, status });
+          if (isPublic) {
+            const res = await service.findOne('listing-1', 'other-viewer');
+            expect(res).toBeDefined();
+          } else {
+            await expect(service.findOne('listing-1', 'other-viewer')).rejects.toThrow(NotFoundException);
+          }
+        });
+
+        it(`handles owner viewer for status=${status}`, async () => {
+          mockRepo.findById.mockResolvedValue({ ...mockListing, status });
+          const res = await service.findOne('listing-1', 'seller-1');
+          expect(res).toBeDefined();
+        });
+      });
+
+      it('applies visibility gate on cache hit', async () => {
+        mockRedis.get.mockResolvedValueOnce({ ...mockListing, status: ListingStatus.DRAFT });
+        await expect(service.findOne('listing-1', 'other-viewer')).rejects.toThrow(NotFoundException);
+        expect(mockRepo.findById).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('view counter (findOne)', () => {
+      it('increments view count when cooldown allows', async () => {
+        mockRepo.findById.mockResolvedValue(mockListing);
+        mockRedis.setNX.mockResolvedValueOnce(true);
+
+        await service.findOne('listing-1', 'viewer-2', '192.168.1.1');
+
+        expect(mockRedis.setNX).toHaveBeenCalledWith('view:LISTING:listing-1:192.168.1.1', '1', 3600);
+        expect(mockRepo.incrementViewCount).toHaveBeenCalledWith('listing-1');
+      });
+
+      it('does not increment view count when IP is on cooldown', async () => {
+        mockRepo.findById.mockResolvedValue(mockListing);
+        mockRedis.setNX.mockResolvedValueOnce(false);
+
+        await service.findOne('listing-1', 'viewer-2', '192.168.1.1');
+
+        expect(mockRedis.setNX).toHaveBeenCalledWith('view:LISTING:listing-1:192.168.1.1', '1', 3600);
+        expect(mockRepo.incrementViewCount).not.toHaveBeenCalled();
+      });
+
+      it('skips view count increment when viewer is owner', async () => {
+        mockRepo.findById.mockResolvedValue(mockListing);
+
+        await service.findOne('listing-1', 'seller-1', '192.168.1.1');
+
+        expect(mockRedis.setNX).not.toHaveBeenCalled();
+        expect(mockRepo.incrementViewCount).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('findBySlug', () => {
+    describe('visibility gate matrix (findBySlug)', () => {
+      const allStatuses: ListingStatus[] = [
+        ListingStatus.ACTIVE,
+        ListingStatus.SOLD,
+        ListingStatus.RENTED,
+        ListingStatus.DRAFT,
+        ListingStatus.ARCHIVED,
+        ListingStatus.SUSPENDED,
+      ];
+
+      allStatuses.forEach((status) => {
+        const isPublic = ['ACTIVE', 'SOLD', 'RENTED'].includes(status);
+
+        it(`handles anonymous viewer for status=${status}`, async () => {
+          mockRepo.findBySlug.mockResolvedValue({ ...mockListing, status });
+          if (isPublic) {
+            const res = await service.findBySlug('toyota-camry-2024-abc', undefined);
+            expect(res).toBeDefined();
+          } else {
+            await expect(service.findBySlug('toyota-camry-2024-abc', undefined)).rejects.toThrow(NotFoundException);
+          }
+        });
+
+        it(`handles other viewer for status=${status}`, async () => {
+          mockRepo.findBySlug.mockResolvedValue({ ...mockListing, status });
+          if (isPublic) {
+            const res = await service.findBySlug('toyota-camry-2024-abc', 'other-viewer');
+            expect(res).toBeDefined();
+          } else {
+            await expect(service.findBySlug('toyota-camry-2024-abc', 'other-viewer')).rejects.toThrow(NotFoundException);
+          }
+        });
+
+        it(`handles owner viewer for status=${status}`, async () => {
+          mockRepo.findBySlug.mockResolvedValue({ ...mockListing, status });
+          const res = await service.findBySlug('toyota-camry-2024-abc', 'seller-1');
+          expect(res).toBeDefined();
+        });
+      });
+    });
+
+    describe('view counter (findBySlug)', () => {
+      it('increments view count when cooldown allows', async () => {
+        mockRepo.findBySlug.mockResolvedValue(mockListing);
+        mockRedis.setNX.mockResolvedValueOnce(true);
+
+        await service.findBySlug('toyota-camry-2024-abc', 'viewer-2', '192.168.1.1');
+
+        expect(mockRedis.setNX).toHaveBeenCalledWith('view:LISTING:listing-1:192.168.1.1', '1', 3600);
+        expect(mockRepo.incrementViewCount).toHaveBeenCalledWith('listing-1');
+      });
+
+      it('skips view count increment when viewer is owner', async () => {
+        mockRepo.findBySlug.mockResolvedValue(mockListing);
+
+        await service.findBySlug('toyota-camry-2024-abc', 'seller-1', '192.168.1.1');
+
+        expect(mockRedis.setNX).not.toHaveBeenCalled();
+        expect(mockRepo.incrementViewCount).not.toHaveBeenCalled();
+      });
     });
   });
 
