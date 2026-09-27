@@ -30,6 +30,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = DEFAULT_ARABIC_MESSAGES[HttpStatus.INTERNAL_SERVER_ERROR];
+    let validationErrors: string[] | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -44,14 +45,25 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         if (typeof res.message === 'string') {
           extractedMessage = res.message;
         } else if (Array.isArray(res.message) && res.message.length > 0) {
-          const firstMsg = String(res.message[0]);
-          if (containsArabic(firstMsg)) {
-            extractedMessage = firstMsg;
+          validationErrors = res.message.map(String);
+          const arabicMsg = validationErrors.find(containsArabic);
+          if (arabicMsg) {
+            extractedMessage = arabicMsg;
+          } else {
+            const first = validationErrors[0];
+            if (first.includes('should not exist')) {
+              const prop = first.split(' ')[1] || '';
+              extractedMessage = `حقل غير مسموح به: ${prop}`;
+            } else if (first.includes('must be an email')) {
+              extractedMessage = 'البريد الإلكتروني غير صالح';
+            } else {
+              extractedMessage = first;
+            }
           }
         }
       }
 
-      if (extractedMessage && containsArabic(extractedMessage)) {
+      if (extractedMessage) {
         message = extractedMessage;
       } else {
         message = DEFAULT_ARABIC_MESSAGES[status] ?? 'طلب غير صالح';
@@ -84,11 +96,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message = DEFAULT_ARABIC_MESSAGES[HttpStatus.INTERNAL_SERVER_ERROR];
     }
 
-    response.status(status).json({
+    const jsonResponse: Record<string, unknown> = {
       statusCode: status,
       message,
       timestamp: new Date().toISOString(),
-    });
+    };
+    if (validationErrors && validationErrors.length > 0) {
+      jsonResponse.errors = validationErrors;
+    }
+
+    response.status(status).json(jsonResponse);
   }
 }
 
