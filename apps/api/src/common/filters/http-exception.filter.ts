@@ -44,9 +44,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         if (typeof res.message === 'string') {
           extractedMessage = res.message;
         } else if (Array.isArray(res.message) && res.message.length > 0) {
-          const firstMsg = String(res.message[0]);
-          if (containsArabic(firstMsg)) {
-            extractedMessage = firstMsg;
+          const arabicMsg = res.message.map(String).find(containsArabic);
+          if (arabicMsg) {
+            extractedMessage = arabicMsg;
           }
         }
       }

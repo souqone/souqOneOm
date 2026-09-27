@@ -7,7 +7,7 @@ export class ResetPasswordDto {
   @IsString({ message: 'رمز التحقق مطلوب' })
   code!: string;
 
-  @IsString()
+  @IsString({ message: 'كلمة المرور يجب أن تكون نصية' })
   @MinLength(8, { message: 'كلمة المرور يجب أن تكون ٨ أحرف على الأقل' })
   @Matches(/^(?=.*[A-Z])(?=.*\d)/, { message: 'كلمة المرور يجب أن تحتوي على حرف كبير ورقم على الأقل' })
   newPassword!: string;
