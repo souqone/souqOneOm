@@ -11,6 +11,7 @@ import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
 
 @Injectable()
 export class AuthService {
@@ -111,10 +112,11 @@ export class AuthService {
 
   async googleAuth(dto: GoogleAuthDto, ip?: string, userAgent?: string) {
     let payload;
+    const audiences = [GOOGLE_CLIENT_ID, GOOGLE_IOS_CLIENT_ID].filter(Boolean);
     try {
       const ticket = await this.googleClient.verifyIdToken({
         idToken: dto.credential,
-        audience: GOOGLE_CLIENT_ID,
+        audience: audiences.length > 0 ? (audiences.length === 1 ? audiences[0] : audiences) : GOOGLE_CLIENT_ID,
       });
       payload = ticket.getPayload();
     } catch {
