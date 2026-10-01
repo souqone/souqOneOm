@@ -9,7 +9,7 @@ export class SearchQueryDto {
 
   /** Filter by entity type */
   @IsOptional()
-  @IsIn(['listings', 'parts', 'services', 'jobs', 'buses', 'equipment'])
+  @IsIn(['listings', 'parts', 'services', 'jobs', 'buses', 'equipment', 'operators'])
   entityType?: string;
 
   /** Minimum price filter */
@@ -54,9 +54,9 @@ export class SearchQueryDto {
   @IsIn(['SALE', 'RENTAL'])
   listingType?: string;
 
-  /** Sort: price:asc, price:desc, newest */
+  /** Sort: price:asc, price:desc, newest, createdAt:desc */
   @IsOptional()
-  @IsIn(['price:asc', 'price:desc', 'newest'])
+  @IsIn(['price:asc', 'price:desc', 'newest', 'createdAt:desc'])
   sortBy?: string = 'newest';
 
   /** Page number (1-indexed) */

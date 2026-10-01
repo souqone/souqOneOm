@@ -173,41 +173,43 @@ export class SearchService implements OnModuleInit {
   // ══════════════════════════════════════════
 
   async search(dto: SearchQueryDto) {
-    if (!this.meili) return { hits: [], totalHits: 0, page: 1, totalPages: 0, limit: 20 };
+    if (!this.meili) {
+      return {
+        items: [],
+        meta: { total: 0, page: 1, limit: 20, totalPages: 0, processingTimeMs: 0 },
+      };
+    }
     const { q = '', entityType, page = 1, limit = 20, sortBy } = dto;
     const offset = (page - 1) * limit;
-
-    // Build filter string
-    const filters = this.buildFilters(dto);
-
-    // Build sort
-    const sort = this.buildSort(sortBy, entityType);
-
-    const searchParams: Record<string, any> = {
-      limit,
-      offset,
-      filter: filters.length > 0 ? filters.join(' AND ') : undefined,
-      sort: sort.length > 0 ? sort : undefined,
-      attributesToHighlight: ['title', 'description'],
-      highlightPreTag: '<mark>',
-      highlightPostTag: '</mark>',
-    };
 
     // Determine which indexes to search
     const targetIndexes = entityType ? [entityType] : Object.values(INDEXES);
 
     if (targetIndexes.length === 1) {
       // Single-index search
-      return this.searchSingleIndex(targetIndexes[0], q, searchParams, page, limit);
+      const indexName = targetIndexes[0];
+      const filters = this.buildFilters(dto, indexName);
+      const sort = this.buildSort(sortBy, indexName);
+      const searchParams: Record<string, any> = {
+        limit,
+        offset,
+        filter: filters.length > 0 ? filters.join(' AND ') : undefined,
+        sort: sort.length > 0 ? sort : undefined,
+        attributesToHighlight: ['title', 'description'],
+        highlightPreTag: '<mark>',
+        highlightPostTag: '</mark>',
+      };
+      return this.searchSingleIndex(indexName, q, dto, searchParams, page, limit);
     }
 
     // Multi-index search
-    return this.searchMultiIndex(targetIndexes, q, searchParams, page, limit);
+    return this.searchMultiIndex(targetIndexes, q, dto, page, limit);
   }
 
   private async searchSingleIndex(
     indexName: string,
     q: string,
+    dto: SearchQueryDto,
     params: Record<string, any>,
     page: number,
     limit: number,
@@ -231,24 +233,34 @@ export class SearchService implements OnModuleInit {
       };
     } catch (err) {
       this.logger.warn(`Meilisearch failed for single index, falling back to PostgreSQL: ${(err as Error).message}`);
-      return this.fallbackSearch(indexName, q, page, limit);
+      return this.fallbackSearch(indexName, q, dto, page, limit);
     }
   }
 
   private async searchMultiIndex(
     indexNames: string[],
     q: string,
-    params: Record<string, any>,
+    dto: SearchQueryDto,
     page: number,
     limit: number,
   ) {
     try {
-      // Use Meilisearch multi-search API
-      const queries = indexNames.map(indexUid => ({
-        indexUid,
-        q,
-        ...params,
-      }));
+      // Use Meilisearch multi-search API with per-index filters and sorting
+      const queries = indexNames.map(indexUid => {
+        const filters = this.buildFilters(dto, indexUid);
+        const sort = this.buildSort(dto.sortBy, indexUid);
+        return {
+          indexUid,
+          q,
+          limit,
+          offset: (page - 1) * limit,
+          filter: filters.length > 0 ? filters.join(' AND ') : undefined,
+          sort: sort.length > 0 ? sort : undefined,
+          attributesToHighlight: ['title', 'description'],
+          highlightPreTag: '<mark>',
+          highlightPostTag: '</mark>',
+        };
+      });
 
       const multiResult = await this.meili.multiSearch({ queries });
 
@@ -268,8 +280,6 @@ export class SearchService implements OnModuleInit {
       }
 
       // Sort merged results by relevance (already sorted per-index by Meilisearch)
-      // For multi-index, we interleave fairly but keep within-index order
-      // Limit to requested page size
       allHits = allHits.slice(0, limit);
 
       return {
@@ -287,7 +297,7 @@ export class SearchService implements OnModuleInit {
       let allItems: any[] = [];
       let total = 0;
       for (const indexName of indexNames) {
-        const fb = await this.fallbackSearch(indexName, q, page, limit);
+        const fb = await this.fallbackSearch(indexName, q, dto, page, limit);
         allItems = allItems.concat(fb.items);
         total += fb.meta.total;
       }
@@ -304,7 +314,7 @@ export class SearchService implements OnModuleInit {
     }
   }
 
-  private async fallbackSearch(indexName: string, q: string, page: number, limit: number) {
+  private async fallbackSearch(indexName: string, q: string, dto: SearchQueryDto, page: number, limit: number) {
     const offset = (page - 1) * limit;
     let items = [];
     let total = 0;
@@ -322,13 +332,40 @@ export class SearchService implements OnModuleInit {
     
     const model = modelMap[indexName];
     if (model) {
-      const where = q ? {
-        OR: [
+      const where: Record<string, any> = { status: 'ACTIVE' };
+      if (q) {
+        where.OR = [
           { title: { contains: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } }
-        ],
-        status: 'ACTIVE'
-      } : { status: 'ACTIVE' };
+          { description: { contains: q, mode: 'insensitive' } },
+        ];
+      }
+      if (dto.governorateId !== undefined) {
+        where.governorateId = dto.governorateId;
+      }
+      if (dto.wilayaId !== undefined) {
+        where.wilayaId = dto.wilayaId;
+      }
+      if (dto.minPrice !== undefined || dto.maxPrice !== undefined) {
+        const priceFilter: Record<string, any> = {};
+        if (dto.minPrice !== undefined) priceFilter.gte = dto.minPrice;
+        if (dto.maxPrice !== undefined) priceFilter.lte = dto.maxPrice;
+
+        if (indexName === 'services') {
+          where.priceFrom = priceFilter;
+        } else if (indexName === 'jobs') {
+          where.salary = priceFilter;
+        } else if (indexName === 'operators') {
+          where.dailyRate = priceFilter;
+        } else {
+          where.price = priceFilter;
+        }
+      }
+      if (dto.condition && (indexName === 'listings' || indexName === 'parts' || indexName === 'equipment')) {
+        where.condition = dto.condition;
+      }
+      if (dto.make && (indexName === 'listings' || indexName === 'equipment' || indexName === 'buses')) {
+        where.make = { contains: dto.make, mode: 'insensitive' };
+      }
       
       try {
         const [data, count] = await Promise.all([
@@ -635,40 +672,69 @@ export class SearchService implements OnModuleInit {
   }
 
   /**
-   * Build Meilisearch filter expressions from DTO.
+   * Build Meilisearch filter expressions from DTO, optionally tailored to a specific index.
    */
-  private buildFilters(dto: SearchQueryDto): string[] {
+  private buildFilters(dto: SearchQueryDto, indexName?: string): string[] {
     const filters: string[] = [];
+    const config = indexName ? INDEX_CONFIGS[indexName as IndexName] : null;
 
     if (dto.minPrice !== undefined) {
-      filters.push(`price >= ${dto.minPrice}`);
+      if (!config || config.filterableAttributes.includes('price')) {
+        filters.push(`price >= ${dto.minPrice}`);
+      } else if (config.filterableAttributes.includes('priceFrom')) {
+        filters.push(`priceFrom >= ${dto.minPrice}`);
+      } else if (config.filterableAttributes.includes('salary')) {
+        filters.push(`salary >= ${dto.minPrice}`);
+      } else if (config.filterableAttributes.includes('dailyRate')) {
+        filters.push(`dailyRate >= ${dto.minPrice}`);
+      }
     }
     if (dto.maxPrice !== undefined) {
-      filters.push(`price <= ${dto.maxPrice}`);
+      if (!config || config.filterableAttributes.includes('price')) {
+        filters.push(`price <= ${dto.maxPrice}`);
+      } else if (config.filterableAttributes.includes('priceFrom')) {
+        filters.push(`priceFrom <= ${dto.maxPrice}`);
+      } else if (config.filterableAttributes.includes('salary')) {
+        filters.push(`salary <= ${dto.maxPrice}`);
+      } else if (config.filterableAttributes.includes('dailyRate')) {
+        filters.push(`dailyRate <= ${dto.maxPrice}`);
+      }
     }
     if (dto.category) {
-      // category maps to different fields per entity
-      // Use OR across possible category fields
-      filters.push(`(partCategory = "${dto.category}" OR serviceType = "${dto.category}")`);
+      if (!config || config.filterableAttributes.includes('partCategory') || config.filterableAttributes.includes('serviceType')) {
+        filters.push(`(partCategory = "${dto.category}" OR serviceType = "${dto.category}")`);
+      }
     }
     if (dto.governorateId !== undefined) {
-      filters.push(`governorateId = ${dto.governorateId}`);
+      if (!config || config.filterableAttributes.includes('governorateId')) {
+        filters.push(`governorateId = ${dto.governorateId}`);
+      }
     }
     if (dto.wilayaId !== undefined) {
-      filters.push(`wilayaId = ${dto.wilayaId}`);
+      if (!config || config.filterableAttributes.includes('wilayaId')) {
+        filters.push(`wilayaId = ${dto.wilayaId}`);
+      }
     }
     if (dto.make) {
-      filters.push(`make = "${dto.make}"`);
+      if (!config || config.filterableAttributes.includes('make')) {
+        filters.push(`make = "${dto.make}"`);
+      }
     }
     if (dto.condition) {
-      filters.push(`condition = "${dto.condition}"`);
+      if (!config || config.filterableAttributes.includes('condition')) {
+        filters.push(`condition = "${dto.condition}"`);
+      }
     }
     if (dto.listingType) {
-      filters.push(`listingType = "${dto.listingType}"`);
+      if (!config || config.filterableAttributes.includes('listingType')) {
+        filters.push(`listingType = "${dto.listingType}"`);
+      }
     }
 
     // Only show active listings
-    filters.push(`status = "ACTIVE"`);
+    if (!config || config.filterableAttributes.includes('status')) {
+      filters.push(`status = "ACTIVE"`);
+    }
 
     return filters;
   }
@@ -677,11 +743,12 @@ export class SearchService implements OnModuleInit {
    * Build Meilisearch sort array from sortBy param.
    */
   private buildSort(sortBy?: string, entityType?: string): string[] {
+    const direction = sortBy === 'price:desc' ? 'desc' : 'asc';
     switch (sortBy) {
       case 'price:asc':
-        return this.getPriceSortField(entityType, 'asc');
       case 'price:desc':
-        return this.getPriceSortField(entityType, 'desc');
+        return this.getPriceSortField(entityType, direction);
+      case 'createdAt:desc':
       case 'newest':
       default:
         return ['createdAt:desc'];
@@ -695,6 +762,10 @@ export class SearchService implements OnModuleInit {
     switch (entityType) {
       case 'services':
         return [`priceFrom:${direction}`];
+      case 'jobs':
+        return [`salary:${direction}`];
+      case 'operators':
+        return [`dailyRate:${direction}`];
       default:
         return [`price:${direction}`];
     }

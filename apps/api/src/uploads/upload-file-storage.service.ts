@@ -5,7 +5,7 @@ import * as path from 'path';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif', 'image/jpg'];
 
 @Injectable()
 export class UploadFileStorageService {
@@ -27,7 +27,7 @@ export class UploadFileStorageService {
       throw new BadRequestException('لم يتم تحميل أي ملف');
     }
     if (!ALLOWED_MIME.includes(file.mimetype)) {
-      throw new BadRequestException('نوع الملف غير مدعوم. يُسمح بـ JPEG, PNG, WebP, AVIF');
+      throw new BadRequestException('نوع الملف غير مدعوم. يُسمح بـ JPEG, PNG, WebP, AVIF, HEIC');
     }
     if (file.size > MAX_FILE_SIZE) {
       throw new BadRequestException('حجم الملف يتجاوز الحد الأقصى (10MB)');
