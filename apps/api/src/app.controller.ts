@@ -68,7 +68,8 @@ export class AppController implements OnModuleDestroy {
             () =>
               this.http.pingCheck(
                 'meilisearch',
-                process.env.MEILISEARCH_URL || 'http://localhost:7700/health',
+                process.env.MEILISEARCH_URL ||
+                  (process.env.MEILI_HOST ? `${process.env.MEILI_HOST}/health` : 'http://localhost:7700/health'),
               ),
           ]
         : [() => Promise.resolve({ meilisearch: { status: 'up' } } as any)]),

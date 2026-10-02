@@ -19,7 +19,7 @@ export const MeiliProvider: Provider = {
       logger.warn('MEILI_HOST not set — Meilisearch disabled');
       return null;
     }
-    const apiKey = process.env.MEILI_API_KEY || 'carone_meili_master_key_2024';
+    const apiKey = process.env.MEILI_API_KEY || process.env.MEILI_MASTER_KEY || 'carone_meili_master_key_2024';
     const { Meilisearch } = await importDynamic('meilisearch');
     const client = new Meilisearch({ host, apiKey });
     logger.log(`Meilisearch client initialized: ${host}`);
