@@ -28,7 +28,7 @@ async function main() {
   const { Meilisearch } = await import('meilisearch');
 
   const host = process.env.MEILI_HOST || 'http://localhost:7700';
-  const apiKey = process.env.MEILI_API_KEY || 'carone_meili_master_key_2024';
+  const apiKey = process.env.MEILI_API_KEY || process.env.MEILI_MASTER_KEY || 'carone_meili_master_key_2024';
   const meili = new Meilisearch({ host, apiKey });
 
   console.log(`🔗 Meilisearch: ${host}`);
