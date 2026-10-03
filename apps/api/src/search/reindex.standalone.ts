@@ -4,8 +4,47 @@
  */
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { buildSynonymsMap } from './synonyms';
 
 const prisma = new PrismaClient();
+
+const INDEX_CONFIGS: Record<string, { searchableAttributes: string[]; filterableAttributes: string[]; sortableAttributes: string[] }> = {
+  listings: {
+    searchableAttributes: ['title', 'description', 'make', 'model'],
+    filterableAttributes: ['price', 'make', 'model', 'year', 'fuelType', 'transmission', 'condition', 'governorateId', 'wilayaId', 'listingType', 'status', 'isPremium'],
+    sortableAttributes: ['price', 'createdAt', 'year', 'mileage', 'viewCount'],
+  },
+  parts: {
+    searchableAttributes: ['title', 'description', 'partNumber', 'compatibleMakes'],
+    filterableAttributes: ['price', 'partCategory', 'condition', 'governorateId', 'wilayaId', 'status', 'isOriginal', 'hasWarranty', 'compatibleVehicleTypes'],
+    sortableAttributes: ['price', 'createdAt'],
+  },
+  services: {
+    searchableAttributes: ['title', 'description', 'providerName'],
+    filterableAttributes: ['serviceType', 'providerType', 'governorateId', 'wilayaId', 'status', 'isHomeService'],
+    sortableAttributes: ['priceFrom', 'createdAt'],
+  },
+  jobs: {
+    searchableAttributes: ['title', 'description'],
+    filterableAttributes: ['jobType', 'employmentType', 'governorateId', 'wilayaId', 'status', 'salary'],
+    sortableAttributes: ['salary', 'createdAt', 'viewCount', 'experienceYears'],
+  },
+  buses: {
+    searchableAttributes: ['title', 'description', 'make', 'model'],
+    filterableAttributes: ['price', 'busListingType', 'busType', 'make', 'governorateId', 'wilayaId', 'status', 'capacity', 'isPremium'],
+    sortableAttributes: ['price', 'createdAt', 'viewCount', 'capacity'],
+  },
+  equipment: {
+    searchableAttributes: ['title', 'description', 'make', 'model'],
+    filterableAttributes: ['price', 'dailyPrice', 'equipmentType', 'listingType', 'condition', 'governorateId', 'wilayaId', 'status', 'isPremium'],
+    sortableAttributes: ['price', 'dailyPrice', 'createdAt', 'viewCount'],
+  },
+  operators: {
+    searchableAttributes: ['title', 'description'],
+    filterableAttributes: ['operatorType', 'governorateId', 'wilayaId', 'status', 'dailyRate', 'hourlyRate'],
+    sortableAttributes: ['dailyRate', 'hourlyRate', 'createdAt', 'viewCount'],
+  },
+};
 
 function serialize(doc: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -23,6 +62,39 @@ function serialize(doc: Record<string, unknown>): Record<string, unknown> {
   return result;
 }
 
+async function retry<T>(fn: () => Promise<T>, retries = 4, delay = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (retries <= 0) throw err;
+    await new Promise(r => setTimeout(r, delay));
+    return retry(fn, retries - 1, delay * 1.5);
+  }
+}
+
+async function prepareAndSyncIndex(meili: any, indexName: string, docs: any[], synonyms: Record<string, string[]>) {
+  try {
+    await meili.createIndex(indexName, { primaryKey: 'id' });
+  } catch {
+    // Already created
+  }
+  const index = meili.index(indexName);
+  const cfg = INDEX_CONFIGS[indexName];
+  if (cfg) {
+    await retry(() => index.updateFilterableAttributes(cfg.filterableAttributes));
+    await retry(() => index.updateSortableAttributes(cfg.sortableAttributes));
+    await retry(() => index.updateSearchableAttributes(cfg.searchableAttributes));
+  }
+  if (synonyms && Object.keys(synonyms).length > 0) {
+    await retry(() => index.updateSynonyms(synonyms));
+  }
+  if (docs.length > 0) {
+    const task = await retry<any>(() => index.addDocuments(docs, { primaryKey: 'id' }));
+    console.log(`  📦 Enqueued ${docs.length} docs for [${indexName}], task: ${task?.taskUid}`);
+  }
+  return docs.length;
+}
+
 async function main() {
   // @ts-ignore — ESM-only dynamic import
   const { Meilisearch } = await import('meilisearch');
@@ -35,6 +107,7 @@ async function main() {
   const health = await meili.health();
   console.log(`✅ Meilisearch status: ${health.status}`);
 
+  const synonyms = buildSynonymsMap();
   const counts: Record<string, number> = {};
 
   // ── Listings ──
@@ -51,8 +124,7 @@ async function main() {
     status: l.status, viewCount: l.viewCount,
     imageUrl: l.images[0]?.url || null, createdAt: l.createdAt,
   }));
-  if (listingDocs.length > 0) await meili.index('listings').addDocuments(listingDocs);
-  counts.listings = listingDocs.length;
+  counts.listings = await prepareAndSyncIndex(meili, 'listings', listingDocs, synonyms);
 
   // ── Parts ──
   const parts = await prisma.sparePart.findMany({
@@ -66,8 +138,7 @@ async function main() {
     isOriginal: p.isOriginal, governorate: p.governorate, city: p.city,
     status: p.status, imageUrl: p.images[0]?.url || null, createdAt: p.createdAt,
   }));
-  if (partDocs.length > 0) await meili.index('parts').addDocuments(partDocs);
-  counts.parts = partDocs.length;
+  counts.parts = await prepareAndSyncIndex(meili, 'parts', partDocs, synonyms);
 
   // ── Services ──
   const services = await prisma.carService.findMany({
@@ -81,8 +152,7 @@ async function main() {
     governorateId: s.governorateId, wilayaId: s.wilayaId, isHomeService: s.isHomeService,
     status: s.status, imageUrl: s.images[0]?.url || null, createdAt: s.createdAt,
   }));
-  if (serviceDocs.length > 0) await meili.index('services').addDocuments(serviceDocs);
-  counts.services = serviceDocs.length;
+  counts.services = await prepareAndSyncIndex(meili, 'services', serviceDocs, synonyms);
 
   // ── Jobs ──
   const jobs = await prisma.driverJob.findMany({
@@ -95,8 +165,7 @@ async function main() {
     currency: j.currency, governorateId: j.governorateId, wilayaId: j.wilayaId,
     status: j.status, viewCount: j.viewCount, createdAt: j.createdAt,
   }));
-  if (jobDocs.length > 0) await meili.index('jobs').addDocuments(jobDocs);
-  counts.jobs = jobDocs.length;
+  counts.jobs = await prepareAndSyncIndex(meili, 'jobs', jobDocs, synonyms);
 
   // ── Buses ──
   const buses = await prisma.busListing.findMany({
@@ -112,8 +181,7 @@ async function main() {
     status: b.status, viewCount: b.viewCount, imageUrl: b.images[0]?.url || null,
     createdAt: b.createdAt,
   }));
-  if (busDocs.length > 0) await meili.index('buses').addDocuments(busDocs);
-  counts.buses = busDocs.length;
+  counts.buses = await prepareAndSyncIndex(meili, 'buses', busDocs, synonyms);
 
   // ── Equipment ──
   const equipment = await prisma.equipmentListing.findMany({
@@ -129,8 +197,7 @@ async function main() {
     status: e.status, viewCount: e.viewCount, imageUrl: e.images[0]?.url || null,
     createdAt: e.createdAt,
   }));
-  if (equipmentDocs.length > 0) await meili.index('equipment').addDocuments(equipmentDocs);
-  counts.equipment = equipmentDocs.length;
+  counts.equipment = await prepareAndSyncIndex(meili, 'equipment', equipmentDocs, synonyms);
 
   // ── Operators ──
   const operators = await prisma.operatorListing.findMany({
@@ -143,10 +210,9 @@ async function main() {
     governorateId: o.governorateId, wilayaId: o.wilayaId, status: o.status,
     viewCount: o.viewCount, createdAt: o.createdAt,
   }));
-  if (operatorDocs.length > 0) await meili.index('operators').addDocuments(operatorDocs);
-  counts.operators = operatorDocs.length;
+  counts.operators = await prepareAndSyncIndex(meili, 'operators', operatorDocs, synonyms);
 
-  console.log('🔄 Reindex complete:', counts);
+  console.log('🔄 Reindex enqueued complete:', counts);
   await prisma.$disconnect();
 }
 
