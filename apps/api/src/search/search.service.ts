@@ -214,6 +214,10 @@ export class SearchService implements OnModuleInit {
     page: number,
     limit: number,
   ) {
+    if (!this.meili) {
+      return this.fallbackSearch(indexName, q, dto, page, limit);
+    }
+
     try {
       const index = this.meili.index(indexName);
       const result = await index.search(q, params);
@@ -244,6 +248,26 @@ export class SearchService implements OnModuleInit {
     page: number,
     limit: number,
   ) {
+    if (!this.meili) {
+      let allItems: any[] = [];
+      let total = 0;
+      for (const indexName of indexNames) {
+        const fb = await this.fallbackSearch(indexName, q, dto, page, limit);
+        allItems = allItems.concat(fb.items);
+        total += fb.meta.total;
+      }
+      return {
+        items: allItems.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, limit),
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          processingTimeMs: 0,
+        },
+      };
+    }
+
     try {
       // Use Meilisearch multi-search API with per-index filters and sorting
       const queries = indexNames.map(indexUid => {
@@ -333,11 +357,21 @@ export class SearchService implements OnModuleInit {
     const model = modelMap[indexName];
     if (model) {
       const where: Record<string, any> = { status: 'ACTIVE' };
-      if (q) {
-        where.OR = [
-          { title: { contains: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } },
-        ];
+      if (q && q.trim()) {
+        const words = q.trim().split(/\s+/).filter(Boolean);
+        const hasMakeModel = (indexName === 'listings' || indexName === 'equipment' || indexName === 'buses');
+
+        // Match every keyword across title, description, or make/model
+        where.AND = words.map(w => ({
+          OR: [
+            { title: { contains: w, mode: 'insensitive' } },
+            { description: { contains: w, mode: 'insensitive' } },
+            ...(hasMakeModel ? [
+              { make: { contains: w, mode: 'insensitive' } },
+              { model: { contains: w, mode: 'insensitive' } },
+            ] : []),
+          ],
+        }));
       }
       if (dto.governorateId !== undefined) {
         where.governorateId = dto.governorateId;
@@ -367,12 +401,27 @@ export class SearchService implements OnModuleInit {
         where.make = { contains: dto.make, mode: 'insensitive' };
       }
       
+      const supportsImages = ['listings', 'parts', 'services', 'buses', 'equipment'].includes(indexName);
+      const queryOptions: any = {
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' },
+      };
+      if (supportsImages) {
+        queryOptions.include = { images: { take: 1, orderBy: { order: 'asc' } } };
+      }
+
       try {
         const [data, count] = await Promise.all([
-          model.findMany({ where, take: limit, skip: offset, orderBy: { createdAt: 'desc' } }),
+          model.findMany(queryOptions),
           model.count({ where })
         ]);
-        items = data.map((d: any) => ({ ...d, _entityType: indexName }));
+        items = data.map((d: any) => ({
+          ...d,
+          _entityType: indexName,
+          imageUrl: d.images?.[0]?.url || d.imageUrl || null,
+        }));
         total = count;
       } catch (err) {
         this.logger.error(`Fallback search failed for ${indexName}: ${(err as Error).message}`);
@@ -396,41 +445,99 @@ export class SearchService implements OnModuleInit {
   // ══════════════════════════════════════════
 
   async autocomplete(q: string, limit: number = 8) {
-    const queries = Object.values(INDEXES).map(indexUid => ({
-      indexUid,
-      q,
-      limit: Math.ceil(limit / Object.values(INDEXES).length) + 1,
-      attributesToRetrieve: ['id', 'title'],
-      attributesToHighlight: ['title'],
-      highlightPreTag: '<mark>',
-      highlightPostTag: '</mark>',
-    }));
+    if (!q || !q.trim()) return [];
 
-    const multiResult = await this.meili.multiSearch({ queries });
+    if (this.meili) {
+      try {
+        const queries = Object.values(INDEXES).map(indexUid => ({
+          indexUid,
+          q,
+          limit: Math.ceil(limit / Object.values(INDEXES).length) + 1,
+          attributesToRetrieve: ['id', 'title'],
+          attributesToHighlight: ['title'],
+          highlightPreTag: '<mark>',
+          highlightPostTag: '</mark>',
+        }));
 
-    const suggestions: { id: string; title: string; highlighted: string; entityType: string }[] = [];
+        const multiResult = await this.meili.multiSearch({ queries });
 
-    for (const result of multiResult.results) {
-      for (const hit of result.hits as any[]) {
-        suggestions.push({
-          id: hit.id as string,
-          title: hit.title as string,
-          highlighted: (hit._formatted?.title as string) || (hit.title as string),
-          entityType: result.indexUid,
+        const suggestions: { id: string; title: string; highlighted: string; entityType: string }[] = [];
+
+        for (const result of multiResult.results) {
+          for (const hit of result.hits as any[]) {
+            suggestions.push({
+              id: hit.id as string,
+              title: hit.title as string,
+              highlighted: (hit._formatted?.title as string) || (hit.title as string),
+              entityType: result.indexUid,
+            });
+          }
+        }
+
+        // Deduplicate by title and limit
+        const seen = new Set<string>();
+        const unique = suggestions.filter(s => {
+          const key = s.title.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
         });
+
+        if (unique.length > 0) {
+          return unique.slice(0, limit);
+        }
+      } catch (err) {
+        this.logger.warn(`Meilisearch autocomplete failed, falling back to PostgreSQL: ${(err as Error).message}`);
       }
     }
 
-    // Deduplicate by title and limit
+    // Graceful fallback to PostgreSQL — never throws 500
+    try {
+      return await this.fallbackAutocomplete(q, limit);
+    } catch (err) {
+      this.logger.error(`Fallback autocomplete failed: ${(err as Error).message}`);
+      return [];
+    }
+  }
+
+  private async fallbackAutocomplete(q: string, limit: number) {
+    const trimmed = q.trim();
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    const searchConditions = words.map(w => ({
+      title: { contains: w, mode: 'insensitive' as const },
+    }));
+
+    const [listings, parts, services] = await Promise.all([
+      this.prisma.listing.findMany({
+        where: { status: 'ACTIVE', AND: searchConditions },
+        select: { id: true, title: true },
+        take: limit,
+      }),
+      this.prisma.sparePart.findMany({
+        where: { status: 'ACTIVE', AND: searchConditions },
+        select: { id: true, title: true },
+        take: limit,
+      }),
+      this.prisma.carService.findMany({
+        where: { status: 'ACTIVE', AND: searchConditions },
+        select: { id: true, title: true },
+        take: limit,
+      }),
+    ]);
+
+    const suggestions: { id: string; title: string; highlighted: string; entityType: string }[] = [
+      ...listings.map(l => ({ id: l.id, title: l.title, highlighted: l.title, entityType: 'listings' })),
+      ...parts.map(p => ({ id: p.id, title: p.title, highlighted: p.title, entityType: 'parts' })),
+      ...services.map(s => ({ id: s.id, title: s.title, highlighted: s.title, entityType: 'services' })),
+    ];
+
     const seen = new Set<string>();
-    const unique = suggestions.filter(s => {
+    return suggestions.filter(s => {
       const key = s.title.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    });
-
-    return unique.slice(0, limit);
+    }).slice(0, limit);
   }
 
   // ══════════════════════════════════════════

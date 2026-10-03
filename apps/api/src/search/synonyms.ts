@@ -97,7 +97,59 @@ export const GENERAL_SYNONYMS: Record<string, string[]> = {
   // Transport
   'نقل': ['شحن', 'transport', 'shipping'],
   'توصيل': ['delivery'],
+};
 
+/**
+ * Common vehicle model synonyms (Arabic concatenated vs spaced & English names).
+ */
+export const MODEL_SYNONYMS: Record<string, string[]> = {
+  // Toyota
+  'لاندكروزر': ['لاند كروزر', 'لاندكروزر', 'land cruiser', 'landcruiser', 'كروزر', 'cruiser'],
+  'كامري': ['كامري', 'camry'],
+  'كورولا': ['كورولا', 'corolla'],
+  'هايلكس': ['هايلوكس', 'هايلكس', 'hilux'],
+  'برادو': ['برادو', 'prado'],
+  'افالون': ['أفالون', 'افالون', 'avalon'],
+  'راف فور': ['راف4', 'rav4', 'rav 4', 'راف فور'],
+  'فورتشنر': ['فورتشنر', 'fortuner'],
+  'يارس': ['ياريس', 'يارس', 'yaris'],
+
+  // Nissan
+  'باترول': ['باترول', 'patrol', 'نيسان باترول'],
+  'التيما': ['ألتيما', 'التيما', 'altima'],
+  'مكسيما': ['ماكسيما', 'مكسيما', 'maxima'],
+  'صني': ['صنى', 'صني', 'sunny'],
+  'باثفايندر': ['باثفندر', 'باثفايندر', 'pathfinder'],
+  'اكس تريل': ['اكستريل', 'x-trail', 'xtrail'],
+
+  // Hyundai & Kia
+  'اكسنت': ['أكسنت', 'اكسنت', 'accent'],
+  'النترا': ['إلنترا', 'النترا', 'elantra'],
+  'سوناتا': ['سوناتا', 'sonata'],
+  'توسان': ['توسان', 'tucson'],
+  'سنتافي': ['سنتا في', 'سنتافي', 'santa fe'],
+  'سبورتاج': ['سبورتاج', 'sportage'],
+  'سيراتو': ['سيراتو', 'cerato'],
+  'اوبتيما': ['أوبتيما', 'اوبتيما', 'optima', 'k5'],
+  'سورينتو': ['سورينتو', 'sorento'],
+
+  // American
+  'تاهو': ['تاهو', 'tahoe'],
+  'يوكن': ['يوكون', 'يوكن', 'yukon'],
+  'سييرا': ['سييرا', 'sierra'],
+  'سيلفرادو': ['سيلفرادو', 'silverado'],
+  'اف 150': ['اف150', 'f-150', 'f150', 'f 150'],
+  'موستانج': ['موستنج', 'موستانج', 'mustang'],
+  'شارجر': ['تشارجر', 'charger'],
+  'تشالنجر': ['تشالنجر', 'challenger'],
+  'رانجلر': ['رانجلر', 'wrangler'],
+  'شيروكي': ['جراند شيروكي', 'شيروكي', 'cherokee', 'grand cherokee'],
+
+  // Luxury
+  'لكزس 570': ['lx570', 'lx 570', '570', 'لكزس 570'],
+  'لكزس 600': ['lx600', 'lx 600', '600', 'لكزس 600'],
+  'رنج روفر': ['رينج روفر', 'رنجروفر', 'range rover'],
+  'ديفندر': ['ديفندر', 'defender'],
 };
 
 /**
@@ -107,7 +159,7 @@ export const GENERAL_SYNONYMS: Record<string, string[]> = {
 export function buildSynonymsMap(): Record<string, string[]> {
   const synonyms: Record<string, string[]> = {};
 
-  const allMaps = { ...BRAND_SYNONYMS, ...GENERAL_SYNONYMS };
+  const allMaps = { ...BRAND_SYNONYMS, ...GENERAL_SYNONYMS, ...MODEL_SYNONYMS };
 
   for (const [key, equivalents] of Object.entries(allMaps)) {
     // All terms (key + equivalents) are synonyms of each other
