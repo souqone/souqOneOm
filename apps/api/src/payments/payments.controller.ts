@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import {
   Controller,
   Post,
@@ -7,7 +8,8 @@ import {
   Req,
   Headers,
   UseGuards,
-  ForbiddenException,
+  ServiceUnavailableException,
+  UnauthorizedException,
   Logger,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -25,6 +27,7 @@ import { CreateSubscriptionPaymentDto } from './dto/create-subscription-payment.
 @Controller('payments')
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
+  private hasWarnedMissingSecret = false;
 
   constructor(
     private readonly paymentsService: PaymentsService,
@@ -68,9 +71,25 @@ export class PaymentsController {
     @Headers('x-thawani-secret') secret?: string,
   ) {
     const expectedSecret = process.env.THAWANI_WEBHOOK_SECRET;
-    if (expectedSecret && secret !== expectedSecret) {
-      this.logger.warn('Webhook rejected — invalid secret');
-      throw new ForbiddenException('Invalid webhook secret');
+    if (!expectedSecret || expectedSecret.trim() === '') {
+      if (!this.hasWarnedMissingSecret) {
+        this.logger.error('THAWANI_WEBHOOK_SECRET is not configured — webhook endpoint is disabled (fail-closed)');
+        this.hasWarnedMissingSecret = true;
+      }
+      throw new ServiceUnavailableException('Payment webhook service is not configured');
+    }
+
+    if (!secret || typeof secret !== 'string') {
+      this.logger.warn('Webhook rejected — missing webhook secret header');
+      throw new UnauthorizedException('Missing or invalid webhook secret');
+    }
+
+    const expectedHash = crypto.createHash('sha256').update(expectedSecret).digest();
+    const providedHash = crypto.createHash('sha256').update(secret).digest();
+
+    if (!crypto.timingSafeEqual(expectedHash, providedHash)) {
+      this.logger.warn('Webhook rejected — invalid webhook secret header');
+      throw new UnauthorizedException('Missing or invalid webhook secret');
     }
     try {
       await this.webhookQueue.add(
