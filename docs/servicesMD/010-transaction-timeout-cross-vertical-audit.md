@@ -234,8 +234,8 @@ index 7d07362..2525044 100644
 # E2E Test Environment (Neon Cloud Test Branch)
 # Isolated database — test-e2e branch
 # ──────────────────────────────────────
-DATABASE_URL="postgresql://neondb_owner:npg_rJsy0F2abLDM@ep-autumn-mountain-am22cdfw.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30"
-DIRECT_URL="postgresql://neondb_owner:npg_rJsy0F2abLDM@ep-autumn-mountain-am22cdfw.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://user:password@host:5432/db"
+DIRECT_URL="postgresql://user:password@host:5432/db"
 JWT_SECRET=test-jwt-secret-e2e
 JWT_EXPIRATION=1h
 API_PORT=4001
@@ -250,8 +250,8 @@ REDIS_PORT=6379
 # E2E Test Environment (Neon Cloud Test Branch)
 # Isolated database — test-e2e branch
 # ──────────────────────────────────────
-DATABASE_URL="postgresql://neondb_owner:npg_rJsy0F2abLDM@ep-autumn-mountain-am22cdfw.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30&connection_limit=20&pool_timeout=30"
-DIRECT_URL="postgresql://neondb_owner:npg_rJsy0F2abLDM@ep-autumn-mountain-am22cdfw.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://user:password@host:5432/db"
+DIRECT_URL="postgresql://user:password@host:5432/db"
 JWT_SECRET=test-jwt-secret-e2e
 JWT_EXPIRATION=1h
 API_PORT=4001
