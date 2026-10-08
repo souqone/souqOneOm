@@ -125,6 +125,17 @@ describe('DriverVerificationService', () => {
       });
       await expect(service.adminReview('v1', 'admin1', 'REJECTED')).rejects.toThrow(BadRequestException);
     });
+
+    it('should NOT query raw User credentials (must use allowlist select without passwordHash, tokenVersion, phone)', async () => {
+      setupReview();
+      await service.adminReview('v1', 'admin1', 'APPROVED');
+      const queryArgs = mockPrisma.driverVerification.findUnique.mock.calls[0][0];
+      expect(queryArgs.include?.driverProfile?.include?.user).not.toBe(true);
+      const userSelect = queryArgs.include?.driverProfile?.select?.user?.select || queryArgs.include?.driverProfile?.include?.user?.select;
+      expect(userSelect).toBeDefined();
+      expect(userSelect.passwordHash).toBeUndefined();
+      expect(userSelect.tokenVersion).toBeUndefined();
+    });
   });
 
   describe('adminList', () => {
