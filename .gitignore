@@ -74,5 +74,6 @@ docs/
 *.dump
 souqone_backup.dump
 
-## mahmmouudmuhamed2097@gmail.com
-## 1234512345
+# Security sensitive keys
+vapid-keys.txt
+

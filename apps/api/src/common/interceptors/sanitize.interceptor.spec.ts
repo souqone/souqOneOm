@@ -30,7 +30,7 @@ describe('SanitizeInterceptor', () => {
     });
   });
 
-  it('should strip tokenVersion, password, and refreshToken from response', (done) => {
+  it('should strip tokenVersion, password, and refreshTokenHash from response', (done) => {
     const rawData = {
       id: 'user-2',
       displayName: 'Omar',
@@ -45,8 +45,8 @@ describe('SanitizeInterceptor', () => {
     interceptor.intercept(mockContext, next).subscribe((result: any) => {
       expect(result.password).toBeUndefined();
       expect(result.tokenVersion).toBeUndefined();
-      expect(result.refreshToken).toBeUndefined();
       expect(result.refreshTokenHash).toBeUndefined();
+      expect(result.refreshToken).toBe('refresh-token-value');
       expect(result.id).toBe('user-2');
       expect(result.displayName).toBe('Omar');
       done();

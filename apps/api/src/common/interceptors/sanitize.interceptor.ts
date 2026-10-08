@@ -19,7 +19,6 @@ export const SENSITIVE_FIELDS = [
   'passwordResetExpiry',
   'verificationCode',
   'verificationExpiry',
-  'refreshToken',
   'refreshTokenHash',
   'secret',
 ];

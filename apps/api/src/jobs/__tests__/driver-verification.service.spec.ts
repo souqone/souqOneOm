@@ -133,6 +133,8 @@ describe('DriverVerificationService', () => {
       expect(queryArgs.include?.driverProfile?.include?.user).not.toBe(true);
       const userSelect = queryArgs.include?.driverProfile?.select?.user?.select || queryArgs.include?.driverProfile?.include?.user?.select;
       expect(userSelect).toBeDefined();
+      expect(userSelect.email).toBe(true);
+      expect(userSelect.phone).toBe(true);
       expect(userSelect.passwordHash).toBeUndefined();
       expect(userSelect.tokenVersion).toBeUndefined();
     });

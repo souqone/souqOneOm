@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { USER_SELECT_PUBLIC } from '../common/constants/user-select.constant';
+import { USER_SELECT_ADMIN_VERIFICATION } from '../common/constants/user-select.constant';
 
 @Injectable()
 export class DriverVerificationService {
@@ -68,7 +68,7 @@ export class DriverVerificationService {
         include: {
           driverProfile: {
             include: {
-              user: { select: USER_SELECT_PUBLIC },
+              user: { select: USER_SELECT_ADMIN_VERIFICATION },
             },
           },
         },
@@ -93,7 +93,7 @@ export class DriverVerificationService {
           select: {
             id: true,
             userId: true,
-            user: { select: USER_SELECT_PUBLIC },
+            user: { select: USER_SELECT_ADMIN_VERIFICATION },
           },
         },
       },
