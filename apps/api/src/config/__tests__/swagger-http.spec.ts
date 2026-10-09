@@ -63,6 +63,7 @@ describe('Swagger HTTP Security & Routing (Production vs Development)', () => {
 
     beforeAll(async () => {
       process.env.NODE_ENV = 'development';
+      process.env.SWAGGER_ENABLED = 'true';
 
       const moduleFixture: TestingModule = await Test.createTestingModule({
         controllers: [DummyController],
@@ -77,8 +78,10 @@ describe('Swagger HTTP Security & Routing (Production vs Development)', () => {
     });
 
     afterAll(async () => {
+      delete process.env.SWAGGER_ENABLED;
       await app.close();
     });
+
 
     it('GET /api/docs-json must return 200 with OpenAPI JSON in development', async () => {
       const res = await request(app.getHttpServer())

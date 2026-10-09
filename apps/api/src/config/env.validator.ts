@@ -10,6 +10,8 @@ const PLACEHOLDER_PATTERNS = [
   'placeholder',
 ];
 
+export const MIN_SECRET_LENGTH = 32;
+
 export function isPlaceholderSecret(val: string | undefined): boolean {
   if (!val || val.trim() === '') return true;
   const lower = val.toLowerCase().trim();
@@ -32,6 +34,26 @@ export function validateProductionEnv(): void {
     );
   }
 
+  if (jwtSecret.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      `[EnvValidation] JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters long in production`,
+    );
+  }
+
+  const jwtPreviousSecret = process.env.JWT_PREVIOUS_SECRET;
+  if (jwtPreviousSecret && jwtPreviousSecret.trim() !== '') {
+    if (isPlaceholderSecret(jwtPreviousSecret)) {
+      throw new Error(
+        '[EnvValidation] JWT_PREVIOUS_SECRET contains an unrunnable placeholder in production. Refusing to boot.',
+      );
+    }
+    if (jwtPreviousSecret.length < MIN_SECRET_LENGTH) {
+      throw new Error(
+        `[EnvValidation] JWT_PREVIOUS_SECRET must be at least ${MIN_SECRET_LENGTH} characters long in production`,
+      );
+    }
+  }
+
   const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
   if (jwtRefreshSecret && isPlaceholderSecret(jwtRefreshSecret)) {
     throw new Error(
@@ -39,3 +61,4 @@ export function validateProductionEnv(): void {
     );
   }
 }
+

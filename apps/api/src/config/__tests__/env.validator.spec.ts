@@ -50,9 +50,39 @@ describe('Environment Boot Validation (Production Safety)', () => {
     );
   });
 
+  it('should throw and reject boot in production if JWT_SECRET is shorter than 32 characters', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'too-short-secret-under-32';
+
+    expect(() => validateProductionEnv()).toThrow(
+      /JWT_SECRET must be at least 32 characters long in production/i,
+    );
+  });
+
+  it('should throw and reject boot in production if JWT_PREVIOUS_SECRET is a placeholder', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'valid-production-jwt-secret-key-32chars';
+    process.env.JWT_PREVIOUS_SECRET = 'CHANGE_ME_NOT_A_REAL_SECRET';
+
+    expect(() => validateProductionEnv()).toThrow(
+      /JWT_PREVIOUS_SECRET contains an unrunnable placeholder in production/i,
+    );
+  });
+
+  it('should throw and reject boot in production if JWT_PREVIOUS_SECRET is shorter than 32 characters', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'valid-production-jwt-secret-key-32chars';
+    process.env.JWT_PREVIOUS_SECRET = 'short-prev-secret';
+
+    expect(() => validateProductionEnv()).toThrow(
+      /JWT_PREVIOUS_SECRET must be at least 32 characters long in production/i,
+    );
+  });
+
   it('should pass validation in production when secrets are valid and not placeholders', () => {
     process.env.NODE_ENV = 'production';
     process.env.JWT_SECRET = 'real-production-secret-with-high-entropy-64bytes';
+    process.env.JWT_PREVIOUS_SECRET = 'previous-production-secret-high-entropy-32b';
     process.env.JWT_REFRESH_SECRET = 'real-production-refresh-secret-high-entropy';
 
     expect(() => validateProductionEnv()).not.toThrow();
@@ -66,3 +96,4 @@ describe('Environment Boot Validation (Production Safety)', () => {
     expect(() => validateProductionEnv()).not.toThrow();
   });
 });
+

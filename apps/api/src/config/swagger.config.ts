@@ -9,6 +9,11 @@ export function setupSwagger(app: INestApplication): boolean {
     return false;
   }
 
+  if (process.env.SWAGGER_ENABLED !== 'true') {
+    logger.log('Swagger documentation is disabled (SWAGGER_ENABLED !== true).');
+    return false;
+  }
+
   const config = new DocumentBuilder()
     .setTitle('CarOne API')
     .setDescription('The CarOne API description')

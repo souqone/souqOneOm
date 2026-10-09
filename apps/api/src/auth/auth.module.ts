@@ -17,6 +17,7 @@ import { getJwtSecret } from '../config/jwt.config';
         secret: getJwtSecret(),
         signOptions: {
           expiresIn: process.env.JWT_EXPIRATION || '15m',
+          algorithm: 'HS256',
         },
       }),
     }),
