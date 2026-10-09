@@ -178,9 +178,9 @@ export class JobsController {
 
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request) {
-    // M-8: read real client IP from X-Forwarded-For (behind load balancer/proxy)
-    const clientIp =
-      (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.ip;
+    // Use req.ip directly — behind Railway reverse proxy (trust proxy = 1), Express resolves
+    // the real client IP from the rightmost untrusted hop, preventing client-spoofed X-Forwarded-For prefixes.
+    const clientIp = req.ip;
     return this.jobsService.findOne(decodeURIComponent(id), clientIp);
   }
 
