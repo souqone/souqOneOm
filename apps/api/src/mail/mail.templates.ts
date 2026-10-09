@@ -1,6 +1,6 @@
 import { VERIFICATION_CODE_TTL_MINUTES } from '../auth/auth.constants';
 
-export const BRAND_LOGO_URL = 'https://res.cloudinary.com/souqone/image/upload/brand/logo.png';
+export const BRAND_LOGO_URL = 'https://res.cloudinary.com/souqone/image/upload/brand/logo-email.png';
 
 function escapeHtml(str: string): string {
   return str
@@ -137,13 +137,13 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 20px auto;">
         <tr>
           <td align="center" style="border: 1.5px solid #009CB5; border-radius: 8px; padding: 16px 28px; text-align: center; background-color: #FFFFFF;">
-            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #11232E; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
+            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #007A8F; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
           </td>
         </tr>
       </table>
 
-      <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.6; color: #4B5563; text-align: center;">ينتهي هذا الرمز خلال <bdi dir="ltr">${ttlMinutes}</bdi> دقيقة من وقت إرساله.</p>
-      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6B7280; text-align: center;">إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.</p>
+      <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">ينتهي هذا الرمز خلال <bdi dir="ltr">${ttlMinutes}</bdi> دقيقة من وقت إرساله.</p>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.</p>
     
               </div>
             </td>
@@ -161,11 +161,11 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
             <td align="center" style="padding: 20px 0 0 0; text-align: center;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
                 <tr>
-                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #6B7280; text-align: center;">
+                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
                     <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">سوق ون — <bdi dir="ltr">SouqOne</bdi></p>
-                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #6B7280; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
-                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
-                    <p style="margin: 0; font-size: 11px; color: #9CA3AF; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">2026</bdi> سوق ون.</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">2026</bdi> سوق ون.</p>
                   </td>
                 </tr>
               </table>
@@ -315,13 +315,13 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 20px auto;">
         <tr>
           <td align="center" style="border: 1.5px solid #009CB5; border-radius: 8px; padding: 16px 28px; text-align: center; background-color: #FFFFFF;">
-            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #11232E; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
+            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #007A8F; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
           </td>
         </tr>
       </table>
 
-      <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.6; color: #4B5563; text-align: center;">ينتهي هذا الرمز خلال <bdi dir="ltr">${ttlMinutes}</bdi> دقيقة من وقت إرساله.</p>
-      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6B7280; text-align: center;">إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذه الرسالة، وستبقى كلمة المرور الحالية صالحة دون تغيير.</p>
+      <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">ينتهي هذا الرمز خلال <bdi dir="ltr">${ttlMinutes}</bdi> دقيقة من وقت إرساله.</p>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذه الرسالة، وستبقى كلمة المرور الحالية صالحة دون تغيير.</p>
     
               </div>
             </td>
@@ -339,11 +339,11 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
             <td align="center" style="padding: 20px 0 0 0; text-align: center;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
                 <tr>
-                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #6B7280; text-align: center;">
+                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
                     <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">سوق ون — <bdi dir="ltr">SouqOne</bdi></p>
-                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #6B7280; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
-                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
-                    <p style="margin: 0; font-size: 11px; color: #9CA3AF; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">2026</bdi> سوق ون.</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">2026</bdi> سوق ون.</p>
                   </td>
                 </tr>
               </table>
