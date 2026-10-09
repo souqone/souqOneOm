@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -9,12 +9,14 @@ import { GoogleAuthDto } from './dto/google-auth.dto';
 import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
+import { VERIFICATION_CODE_TTL_MS } from './auth.constants';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly googleClient: OAuth2Client;
 
   constructor(
@@ -33,7 +35,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
     const code = this.tokens.generateVerificationCode();
-    const expiry = new Date(Date.now() + 15 * 60 * 1000);
+    const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
 
     try {
       const user = await this.prisma.user.create({
@@ -202,7 +204,7 @@ export class AuthService {
     if (user.isVerified) return { message: 'البريد موثق بالفعل' };
 
     const code = this.tokens.generateVerificationCode();
-    const expiry = new Date(Date.now() + 15 * 60 * 1000);
+    const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
 
     await this.prisma.user.update({
       where: { id: userId },
@@ -219,14 +221,18 @@ export class AuthService {
     if (!user) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
 
     const code = this.tokens.generateVerificationCode();
-    const expiry = new Date(Date.now() + 15 * 60 * 1000);
+    const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: { passwordResetCode: code, passwordResetExpiry: expiry },
     });
 
-    await this.mailService.sendPasswordResetEmail(user.email, code);
+    try {
+      await this.mailService.sendPasswordResetEmail(user.email, code);
+    } catch (err) {
+      this.logger.error(`Failed to send password reset email for user ${user.id}`, err);
+    }
     return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
   }
 
