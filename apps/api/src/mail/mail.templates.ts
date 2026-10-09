@@ -137,7 +137,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 20px auto;">
         <tr>
           <td align="center" style="border: 1.5px solid #009CB5; border-radius: 8px; padding: 16px 28px; text-align: center; background-color: #FFFFFF;">
-            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #007A8F; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
+            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #11232E; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
           </td>
         </tr>
       </table>
@@ -315,7 +315,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 20px auto;">
         <tr>
           <td align="center" style="border: 1.5px solid #009CB5; border-radius: 8px; padding: 16px 28px; text-align: center; background-color: #FFFFFF;">
-            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #007A8F; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
+            <div dir="ltr" id="otp-box" style="font-family: 'Courier New', Courier, monospace, Tahoma; font-size: 34px; font-weight: bold; letter-spacing: 12px; color: #11232E; text-align: center; unicode-bidi: isolate;"><bdi dir="ltr">${safeCode}</bdi></div>
           </td>
         </tr>
       </table>

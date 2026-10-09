@@ -9,6 +9,187 @@ describe('mail.templates', () => {
   const emojiRegex = /\p{Extended_Pictographic}/u;
   const sampleCode = '849201';
 
+  // Minimal inline-style DOM resolver for WCAG AA compliance verification
+  function hexToRgb(hex: string): [number, number, number] {
+    let cleaned = hex.trim().replace(/^#/, '');
+    if (cleaned.length === 3) {
+      cleaned = cleaned.split('').map((c) => c + c).join('');
+    }
+    const num = parseInt(cleaned, 16);
+    return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+  }
+
+  function parseColor(str?: string | null): [number, number, number] | null {
+    if (!str) return null;
+    const s = str.trim().toLowerCase();
+    if (s === 'transparent' || s === 'inherit' || s === 'initial') return null;
+    if (s.startsWith('#')) return hexToRgb(s);
+    const rgbMatch = s.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (rgbMatch) {
+      return [parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10)];
+    }
+    if (s === 'white') return [255, 255, 255];
+    if (s === 'black') return [0, 0, 0];
+    return null;
+  }
+
+  function relativeLuminance([r, g, b]: [number, number, number]): number {
+    const [rs, gs, bs] = [r, g, b].map((c) => {
+      const s = c / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  }
+
+  function contrastRatio(fg: [number, number, number], bg: [number, number, number]): number {
+    const l1 = relativeLuminance(fg);
+    const l2 = relativeLuminance(bg);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  interface StackElement {
+    tag: string;
+    style: string;
+    color: [number, number, number] | null;
+    bgColor: [number, number, number] | null;
+    fontSizePx: number | null;
+    isBold: boolean;
+    isHidden: boolean;
+    id?: string;
+  }
+
+  function extractVisibleTextElements(html: string) {
+    const results: {
+      text: string;
+      fg: [number, number, number];
+      bg: [number, number, number];
+      fontSizePx: number;
+      isBold: boolean;
+      isLarge: boolean;
+      ratio: number;
+      requiredRatio: number;
+    }[] = [];
+
+    const stack: StackElement[] = [];
+    const tokenRegex = /(<!--[\s\S]*?-->)|(<style[\s\S]*?<\/style>)|(<script[\s\S]*?<\/script>)|(<\/?[a-zA-Z0-9]+[^>]*>)|([^<]+)/gi;
+
+    let match: RegExpExecArray | null;
+    while ((match = tokenRegex.exec(html)) !== null) {
+      const [full, comment, styleTag, scriptTag, tag, text] = match;
+      if (comment || styleTag || scriptTag) continue;
+
+      if (tag) {
+        if (tag.startsWith('</')) {
+          stack.pop();
+        } else {
+          const isSelfClosing = tag.endsWith('/>') || /^<(img|meta|link|br|hr|input)/i.test(tag);
+          const tagNameMatch = tag.match(/^<([a-zA-Z0-9]+)/i);
+          const tagName = tagNameMatch ? tagNameMatch[1].toLowerCase() : '';
+          const styleMatch = tag.match(/style=["']([^"']*)["']/i);
+          const style = styleMatch ? styleMatch[1] : '';
+          const idMatch = tag.match(/id=["']([^"']*)["']/i);
+          const id = idMatch ? idMatch[1] : undefined;
+          const bgAttrMatch = tag.match(/bgcolor=["']([^"']*)["']/i);
+
+          const colorMatch = style.match(/(?:^|;)\s*(?<!background-)color\s*:\s*([^;]+)/i);
+          const bgColorMatch = style.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/i);
+          const fontSizeMatch = style.match(/(?:^|;)\s*font-size\s*:\s*([\d.]+)px/i);
+          const fontWeightMatch = style.match(/(?:^|;)\s*font-weight\s*:\s*([^;]+)/i);
+
+          const color = colorMatch ? parseColor(colorMatch[1]) : null;
+          const bgColor = bgColorMatch
+            ? parseColor(bgColorMatch[1])
+            : bgAttrMatch
+              ? parseColor(bgAttrMatch[1])
+              : null;
+          const fontSizePx = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : null;
+
+          const isBold =
+            ['h1', 'h2', 'h3', 'strong', 'b', 'th'].includes(tagName) ||
+            fontWeightMatch?.[1].toLowerCase().includes('bold') === true ||
+            (fontWeightMatch ? parseInt(fontWeightMatch[1], 10) >= 700 : false);
+
+          const isHidden =
+            tagName === 'head' ||
+            tagName === 'title' ||
+            style.includes('display: none') ||
+            style.includes('display:none') ||
+            style.includes('visibility: hidden') ||
+            style.includes('opacity: 0') ||
+            stack.some((parent) => parent.isHidden);
+
+          const el: StackElement = {
+            tag: tagName,
+            style,
+            color,
+            bgColor,
+            fontSizePx,
+            isBold,
+            isHidden,
+            id,
+          };
+
+          if (!isSelfClosing) {
+            stack.push(el);
+          }
+        }
+      } else if (text) {
+        const cleanText = text.replace(/&nbsp;|&zwnj;/g, ' ').replace(/\s+/g, ' ').trim();
+        if (cleanText.length > 0 && !stack.some((el) => el.isHidden)) {
+          // Resolve effective foreground color (nearest up stack)
+          let fg: [number, number, number] | null = null;
+          for (let i = stack.length - 1; i >= 0; i--) {
+            if (stack[i].color) {
+              fg = stack[i].color;
+              break;
+            }
+          }
+          if (!fg) fg = [0, 0, 0];
+
+          // Resolve effective background color (nearest up stack)
+          let bg: [number, number, number] | null = null;
+          for (let i = stack.length - 1; i >= 0; i--) {
+            if (stack[i].bgColor) {
+              bg = stack[i].bgColor;
+              break;
+            }
+          }
+          if (!bg) bg = [255, 255, 255]; // Default white page canvas
+
+          // Resolve effective font size
+          let fontSizePx = 16;
+          for (let i = stack.length - 1; i >= 0; i--) {
+            if (stack[i].fontSizePx !== null) {
+              fontSizePx = stack[i].fontSizePx!;
+              break;
+            }
+          }
+
+          // Resolve bold status
+          const isBold = stack.some((el) => el.isBold);
+          const isLarge = fontSizePx >= 24 || (fontSizePx >= 18.66 && isBold);
+          const ratio = contrastRatio(fg, bg);
+          const requiredRatio = isLarge ? 3.0 : 4.5;
+
+          results.push({
+            text: cleanText,
+            fg,
+            bg,
+            fontSizePx,
+            isBold,
+            isLarge,
+            ratio: Math.round(ratio * 100) / 100,
+            requiredRatio,
+          });
+        }
+      }
+    }
+
+    return results;
+  }
+
   describe.each([
     {
       name: 'buildVerificationEmail',
@@ -72,38 +253,22 @@ describe('mail.templates', () => {
       );
       expect(result.html).toContain(BRAND_LOGO_URL);
 
-      // Contrast rules: obsolete low-contrast colors must not appear
-      expect(result.html).not.toContain('#718096');
-      expect(result.html).not.toContain('#A0AEC0');
-
       // #009CB5 is preserved for borders and lines, never as text color
       expect(result.html).not.toMatch(/(?<!background-)color\s*:\s*#009CB5/i);
+
+      // OTP digits element has official brand navy text color #11232E
+      expect(result.html).toMatch(/id="otp-box"[^>]*color:\s*#11232E/i);
     });
 
-    it('should meet WCAG AA contrast thresholds for all declared text colors', () => {
-      function hexToRgb(hex: string): [number, number, number] {
-        const h = hex.replace('#', '');
-        const num = parseInt(h, 16);
-        return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
-      }
-      function getLuminance(hex: string): number {
-        const [r, g, b] = hexToRgb(hex).map((c) => {
-          const s = c / 255;
-          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-        });
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      }
-      function contrast(fg: string, bg: string): number {
-        const l1 = getLuminance(fg);
-        const l2 = getLuminance(bg);
-        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-      }
+    it('should meet WCAG AA contrast thresholds for all real text elements in the generated HTML', () => {
+      const result = builder({ code: sampleCode });
+      const elements = extractVisibleTextElements(result.html);
 
-      // Check text colors used on white (#FFFFFF) background
-      expect(contrast('#11232E', '#FFFFFF')).toBeGreaterThanOrEqual(4.5); // H1 & body text
-      expect(contrast('#007A8F', '#FFFFFF')).toBeGreaterThanOrEqual(3.0); // Code digits (34px bold)
-      expect(contrast('#4A5568', '#FFFFFF')).toBeGreaterThanOrEqual(4.5); // Secondary & footer text
-      expect(contrast('#6B7280', '#FFFFFF')).toBeGreaterThanOrEqual(4.5); // Legal / copyright text
+      expect(elements.length).toBeGreaterThan(0);
+
+      for (const el of elements) {
+        expect(el.ratio).toBeGreaterThanOrEqual(el.requiredRatio);
+      }
     });
 
     it('should throw when code is not 6 digits', () => {
