@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AdminApiKeyGuard implements CanActivate {
@@ -11,7 +12,18 @@ export class AdminApiKeyGuard implements CanActivate {
       throw new ForbiddenException('Admin access not configured');
     }
 
-    if (apiKey !== expected) {
+    if (!apiKey || typeof apiKey !== 'string') {
+      throw new ForbiddenException('Invalid admin key');
+    }
+
+    const keyBuf = Buffer.from(apiKey);
+    const expectedBuf = Buffer.from(expected);
+
+    if (keyBuf.length !== expectedBuf.length) {
+      throw new ForbiddenException('Invalid admin key');
+    }
+
+    if (!crypto.timingSafeEqual(keyBuf, expectedBuf)) {
       throw new ForbiddenException('Invalid admin key');
     }
 

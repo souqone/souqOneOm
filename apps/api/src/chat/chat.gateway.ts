@@ -12,14 +12,13 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
 import { WsJwtGuard } from './guards/ws-jwt.guard';
 import { ChatService } from './chat.service';
 import { RedisService } from '../redis/redis.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { CHAT_EVENTS } from './chat.events';
 import { NOTIFICATION_EVENTS } from '../notifications/notification.events';
-import { getJwtSecret } from '../config/jwt.config';
+import { verifyAccessToken } from '../config/jwt.config';
 import type { JwtPayload } from '../auth/auth.types';
 
 @SkipThrottle()
@@ -41,7 +40,6 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(
     private readonly chatService: ChatService,
     private readonly redis: RedisService,
-    private readonly jwtService: JwtService,
   ) {}
 
   async afterInit() {
@@ -59,9 +57,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         return;
       }
 
-      const user = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: getJwtSecret(),
-      });
+      const user = verifyAccessToken<JwtPayload>(token);
       client.data.user = user;
 
       if (!user) {

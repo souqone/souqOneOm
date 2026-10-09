@@ -30,6 +30,25 @@ describe('SanitizeInterceptor', () => {
     });
   });
 
+  it('should strip emailVerificationCode and emailVerificationExpiry from response', (done) => {
+    const rawData = {
+      id: 'user-email-test',
+      email: 'test@example.com',
+      emailVerificationCode: '654321',
+      emailVerificationExpiry: new Date(Date.now() + 3600000),
+    };
+
+    const next: CallHandler = { handle: () => of(rawData) };
+
+    interceptor.intercept(mockContext, next).subscribe((result: any) => {
+      expect(result.id).toBe('user-email-test');
+      expect(result.email).toBe('test@example.com');
+      expect(result.emailVerificationCode).toBeUndefined();
+      expect(result.emailVerificationExpiry).toBeUndefined();
+      done();
+    });
+  });
+
   it('should strip tokenVersion, password, and refreshTokenHash from response', (done) => {
     const rawData = {
       id: 'user-2',

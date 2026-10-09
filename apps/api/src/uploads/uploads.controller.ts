@@ -16,6 +16,7 @@ import {
   FileInterceptor,
   FilesInterceptor,
 } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
@@ -26,6 +27,7 @@ export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   /** Upload a single image file */
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
@@ -79,7 +81,22 @@ export class UploadsController {
     @Body() body: { url: string; isPrimary?: boolean },
     @CurrentUser() user: JwtPayload,
   ) {
-    if (!body.url.includes('cloudinary.com') && !body.url.includes('localhost')) {
+    if (!body?.url || typeof body.url !== 'string') {
+      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(body.url);
+    } catch {
+      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
+    }
+
+    const isLocalAllowed = process.env.NODE_ENV !== 'production';
+    const isLocalhost = isLocalAllowed && (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1');
+    const isCloudinary = parsedUrl.protocol === 'https:' && parsedUrl.hostname === 'res.cloudinary.com';
+
+    if (!isCloudinary && !isLocalhost) {
       throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
     }
     return this.uploadsService.addImageToListing(

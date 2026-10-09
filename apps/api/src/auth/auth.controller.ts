@@ -29,16 +29,19 @@ export class AuthController {
     return this.authService.login(dto, req.ip, req.headers['user-agent']);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('google')
   googleAuth(@Body() dto: GoogleAuthDto, @Req() req: Request) {
     return this.authService.googleAuth(dto, req.ip, req.headers['user-agent']);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Post('logout')
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto.refreshToken);
