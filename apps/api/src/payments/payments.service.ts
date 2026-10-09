@@ -40,7 +40,7 @@ export class PaymentsService {
   ) {}
 
   private assertEnabled() {
-    if (process.env.PAYMENTS_ENABLED === 'false') {
+    if (process.env.PAYMENTS_ENABLED !== 'true') {
       throw new ServiceUnavailableException('خدمة الدفع متوقفة مؤقتاً');
     }
   }

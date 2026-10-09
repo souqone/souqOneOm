@@ -27,3 +27,11 @@ export const USER_SELECT_LISTING_PUBLIC = {
   ...USER_SELECT_PUBLIC,
   createdAt: true,
 } as const satisfies Prisma.UserSelect;
+
+/** Admin verification view — includes email + phone for driver verification review. No password/tokens. */
+export const USER_SELECT_ADMIN_VERIFICATION = {
+  ...USER_SELECT_PUBLIC,
+  email: true,
+  phone: true,
+} as const satisfies Prisma.UserSelect;
+

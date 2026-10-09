@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
@@ -27,6 +28,7 @@ export class UsersController {
     return this.usersService.updateProfile(user.sub, dto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @Patch('me/password')
   changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto) {
@@ -45,6 +47,7 @@ export class UsersController {
     return this.usersService.revokeSession(user.sub, sessionId);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @Post('me/sessions/revoke-all')
   revokeAllSessions(@CurrentUser() user: JwtPayload) {

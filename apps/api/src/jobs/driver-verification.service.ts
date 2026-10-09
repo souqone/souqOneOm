@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { USER_SELECT_ADMIN_VERIFICATION } from '../common/constants/user-select.constant';
 
 @Injectable()
 export class DriverVerificationService {
@@ -67,7 +68,7 @@ export class DriverVerificationService {
         include: {
           driverProfile: {
             include: {
-              user: { select: { id: true, username: true, displayName: true, avatarUrl: true, email: true } },
+              user: { select: USER_SELECT_ADMIN_VERIFICATION },
             },
           },
         },
@@ -87,7 +88,15 @@ export class DriverVerificationService {
   ) {
     const verification = await this.prisma.driverVerification.findUnique({
       where: { id: verificationId },
-      include: { driverProfile: { include: { user: true } } },
+      include: {
+        driverProfile: {
+          select: {
+            id: true,
+            userId: true,
+            user: { select: USER_SELECT_ADMIN_VERIFICATION },
+          },
+        },
+      },
     });
     if (!verification) throw new NotFoundException('طلب التوثيق غير موجود');
     if (verification.status !== 'PENDING') {

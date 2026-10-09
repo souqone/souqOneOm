@@ -4,15 +4,17 @@ import { json, urlencoded } from 'express';
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SanitizeInterceptor } from './common/interceptors/sanitize.interceptor';
 import { NormalizeImagesInterceptor } from './common/interceptors/normalize-images.interceptor';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
+import { validateProductionEnv } from './config/env.validator';
+import { setupSwagger } from './config/swagger.config';
 import * as path from 'path';
 
 async function bootstrap() {
+  validateProductionEnv();
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -67,14 +69,7 @@ async function bootstrap() {
   // بادئة API مع إصدار
   app.setGlobalPrefix('api/v1');
 
-  const config = new DocumentBuilder()
-    .setTitle('CarOne API')
-    .setDescription('The CarOne API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app as any, config);
-  SwaggerModule.setup('api/docs', app as any, document);
+  setupSwagger(app);
 
   const port = process.env.PORT || process.env.API_PORT || 4000;
   await app.listen(port);

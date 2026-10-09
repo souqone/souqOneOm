@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { USER_SELECT_PUBLIC } from '../common/constants/user-select.constant';
 
 @Injectable()
 export class TransportReviewService {
@@ -24,7 +25,17 @@ export class TransportReviewService {
       where: { id: bookingId },
       include: {
         request: true,
-        quote: { include: { carrier: { include: { user: true } } } },
+        quote: {
+          include: {
+            carrier: {
+              select: {
+                id: true,
+                userId: true,
+                user: { select: USER_SELECT_PUBLIC },
+              },
+            },
+          },
+        },
       },
     });
 

@@ -71,7 +71,7 @@ describe('PaymentsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    delete process.env.PAYMENTS_ENABLED;
+    process.env.PAYMENTS_ENABLED = 'true';
 
     prisma = createMockPrisma();
     thawani = {
@@ -110,15 +110,24 @@ describe('PaymentsService', () => {
   // ═══════════════════════════════════════
 
   describe('Feature Flag', () => {
-    it('T01 — should throw when PAYMENTS_ENABLED=false', async () => {
+    it('T01 — should throw when PAYMENTS_ENABLED is not true (false, unset, or 0)', async () => {
       process.env.PAYMENTS_ENABLED = 'false';
+      await expect(
+        service.createFeaturedPayment({ entityType: 'LISTING', entityId: 'e1' }, 'u1'),
+      ).rejects.toThrow(ServiceUnavailableException);
 
+      delete process.env.PAYMENTS_ENABLED;
+      await expect(
+        service.createFeaturedPayment({ entityType: 'LISTING', entityId: 'e1' }, 'u1'),
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      process.env.PAYMENTS_ENABLED = '0';
       await expect(
         service.createFeaturedPayment({ entityType: 'LISTING', entityId: 'e1' }, 'u1'),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
-    it('T02 — should allow when PAYMENTS_ENABLED is not false', async () => {
+    it('T02 — should allow when PAYMENTS_ENABLED is exactly true', async () => {
       process.env.PAYMENTS_ENABLED = 'true';
       setupCleanCreate();
 

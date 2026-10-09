@@ -11,12 +11,18 @@ import { map } from 'rxjs/operators';
  * Fields that must NEVER be returned in any API response.
  * This interceptor acts as a safety net on top of Prisma `select`.
  */
-const SENSITIVE_FIELDS = [
+export const SENSITIVE_FIELDS = [
+  'password',
   'passwordHash',
+  'tokenVersion',
   'passwordResetCode',
   'passwordResetExpiry',
   'verificationCode',
   'verificationExpiry',
+  'emailVerificationCode',
+  'emailVerificationExpiry',
+  'refreshTokenHash',
+  'secret',
 ];
 
 function stripSensitive(data: unknown): unknown {
