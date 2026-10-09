@@ -324,6 +324,16 @@ describe('AuthService', () => {
 
       expect(mockMail.sendPasswordResetEmail).toHaveBeenCalledWith('a@b.com', expect.any(String));
     });
+
+    it('should return safe message when email sending fails and preserve anti-enumeration', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com' });
+      mockPrisma.user.update.mockResolvedValue({});
+      mockMail.sendPasswordResetEmail.mockRejectedValueOnce(new Error('SMTP outage'));
+
+      const result = await service.forgotPassword('a@b.com');
+
+      expect(result.message).toContain('ستصلك رسالة');
+    });
   });
 
   /* ═══════ RESET PASSWORD ═══════ */
