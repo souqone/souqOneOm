@@ -7,19 +7,13 @@ import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 import { JwtStrategy } from './jwt.strategy';
 import { TokenCleanupService } from './token-cleanup.service';
-import { getJwtSecret } from '../config/jwt.config';
+import { getJwtModuleOptions } from '../config/jwt.config';
 
 @Module({
   imports: [
     PassportModule,
     JwtModule.registerAsync({
-      useFactory: () => ({
-        secret: getJwtSecret(),
-        signOptions: {
-          expiresIn: process.env.JWT_EXPIRATION || '15m',
-          algorithm: 'HS256',
-        },
-      }),
+      useFactory: () => getJwtModuleOptions(),
     }),
   ],
   controllers: [AuthController],

@@ -62,8 +62,33 @@ describe('UploadsController — addImageByUrl SSRF Protection', () => {
     );
   });
 
-  it('should allow valid HTTPS Cloudinary URLs', async () => {
+  it('should reject in production when CLOUDINARY_CLOUD_NAME is unset with 400', async () => {
     process.env.NODE_ENV = 'production';
+    delete process.env.CLOUDINARY_CLOUD_NAME;
+    await expect(
+      controller.addImageByUrl('listing-1', { url: 'https://res.cloudinary.com/souqone/image/upload/v12345/car.jpg' }, mockUser as any),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should reject attacker-cloud URL https://res.cloudinary.com/attacker-cloud/image/upload/x.jpg with 400', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
+    await expect(
+      controller.addImageByUrl('listing-1', { url: 'https://res.cloudinary.com/attacker-cloud/image/upload/x.jpg' }, mockUser as any),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should reject mismatched prefix https://res.cloudinary.com/souqone-fake/image/upload/x.jpg with 400', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
+    await expect(
+      controller.addImageByUrl('listing-1', { url: 'https://res.cloudinary.com/souqone-fake/image/upload/x.jpg' }, mockUser as any),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should allow valid HTTPS Cloudinary URLs matching own cloud name', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
     const validUrl = 'https://res.cloudinary.com/souqone/image/upload/v12345/car.jpg';
     const result = await controller.addImageByUrl('listing-1', { url: validUrl, isPrimary: true }, mockUser as any);
     expect(result).toBeDefined();

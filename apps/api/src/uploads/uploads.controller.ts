@@ -92,9 +92,20 @@ export class UploadsController {
       throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
     }
 
-    const isLocalAllowed = process.env.NODE_ENV !== 'production';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+
+    // In production, if CLOUDINARY_CLOUD_NAME is unset, reject everything
+    if (isProduction && !cloudName) {
+      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
+    }
+
+    const isLocalAllowed = !isProduction;
     const isLocalhost = isLocalAllowed && (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1');
-    const isCloudinary = parsedUrl.protocol === 'https:' && parsedUrl.hostname === 'res.cloudinary.com';
+    const isCloudinary =
+      parsedUrl.protocol === 'https:' &&
+      parsedUrl.hostname === 'res.cloudinary.com' &&
+      Boolean(cloudName && (parsedUrl.pathname === `/${cloudName}` || parsedUrl.pathname.startsWith(`/${cloudName}/`)));
 
     if (!isCloudinary && !isLocalhost) {
       throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');

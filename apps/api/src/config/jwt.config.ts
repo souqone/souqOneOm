@@ -1,8 +1,19 @@
 import * as jwt from 'jsonwebtoken';
+import type { JwtModuleOptions } from '@nestjs/jwt';
 import { isPlaceholderSecret } from './env.validator';
 
 export const MIN_JWT_SECRET_LENGTH = 32;
 export const DEV_FALLBACK_SECRET = 'dev-secret-minimum-32-chars-long-for-testing!!';
+
+export function getJwtModuleOptions(): JwtModuleOptions {
+  return {
+    secret: getJwtSecret(),
+    signOptions: {
+      expiresIn: (process.env.JWT_EXPIRATION || '15m') as any,
+      algorithm: 'HS256',
+    },
+  };
+}
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;

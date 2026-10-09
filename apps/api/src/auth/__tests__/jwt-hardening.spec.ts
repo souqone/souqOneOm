@@ -6,6 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import {
   getJwtSecret,
   getJwtPreviousSecret,
+  getJwtModuleOptions,
   resolveJwtSecretForToken,
   verifyAccessToken,
   MIN_JWT_SECRET_LENGTH,
@@ -260,20 +261,18 @@ describe('JWT Hardening & Rotation Suite (Task 017 / B1b Phase 2)', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 3. Output of signAccessToken() Algorithm Pinning (HS256 in Header)
+  // 3. Output of signAccessToken() Algorithm Pinning (HS256 in Header) & Expiration
   // ═══════════════════════════════════════════════════════════════════════════
-  describe('signAccessToken() Algorithm Pinning Verification', () => {
-    it('should generate access tokens with header alg strictly set to HS256', async () => {
+  describe('signAccessToken() Algorithm Pinning & Expiration Verification', () => {
+    it('should generate access tokens with header alg strictly set to HS256 and expiresIn following JWT_EXPIRATION', async () => {
       process.env.JWT_SECRET = currentSecret;
+      process.env.JWT_EXPIRATION = '1h';
 
-      const jwtService = new JwtService({
-        secret: currentSecret,
-        signOptions: {
-          expiresIn: '15m',
-          algorithm: 'HS256',
-        },
-      });
+      const options = getJwtModuleOptions();
+      expect(options.signOptions?.algorithm).toBe('HS256');
+      expect(options.signOptions?.expiresIn).toBe('1h');
 
+      const jwtService = new JwtService(options);
       const mockPrisma: any = {};
       const authTokenService = new AuthTokenService(mockPrisma, jwtService);
 
@@ -285,11 +284,42 @@ describe('JWT Hardening & Rotation Suite (Task 017 / B1b Phase 2)', () => {
       };
 
       const token = await authTokenService.signAccessToken(mockUser);
-      const decoded = jwt.decode(token, { complete: true });
+      const decoded = jwt.decode(token, { complete: true }) as any;
 
       expect(decoded).toBeDefined();
       expect(decoded?.header.alg).toBe('HS256');
-      expect((decoded?.payload as any).sub).toBe('usr-123');
+      expect(decoded?.payload.sub).toBe('usr-123');
+
+      // Verify expiresIn follows JWT_EXPIRATION (1h = 3600 seconds)
+      const lifetimeSeconds = decoded.payload.exp - decoded.payload.iat;
+      expect(lifetimeSeconds).toBe(3600);
+    });
+
+    it('should fall back to 15m default expiration when JWT_EXPIRATION is unset', async () => {
+      process.env.JWT_SECRET = currentSecret;
+      delete process.env.JWT_EXPIRATION;
+
+      const options = getJwtModuleOptions();
+      expect(options.signOptions?.algorithm).toBe('HS256');
+      expect(options.signOptions?.expiresIn).toBe('15m');
+
+      const jwtService = new JwtService(options);
+      const mockPrisma: any = {};
+      const authTokenService = new AuthTokenService(mockPrisma, jwtService);
+
+      const mockUser: any = {
+        id: 'usr-456',
+        email: 'pin2@test.com',
+        username: 'pintester2',
+        role: 'USER',
+      };
+
+      const token = await authTokenService.signAccessToken(mockUser);
+      const decoded = jwt.decode(token, { complete: true }) as any;
+
+      expect(decoded?.header.alg).toBe('HS256');
+      const lifetimeSeconds = decoded.payload.exp - decoded.payload.iat;
+      expect(lifetimeSeconds).toBe(900); // 15m = 900s
     });
   });
 
