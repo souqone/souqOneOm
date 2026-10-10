@@ -197,6 +197,7 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
       mockPrisma = {
         user: {
           findUnique: jest.fn(),
+          findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
           update: jest.fn(),
         },

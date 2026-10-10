@@ -12,6 +12,7 @@ import { RedisService } from '../redis/redis.service';
 const mockPrisma = {
   user: {
     findUnique: jest.fn(),
+    findFirst: jest.fn().mockResolvedValue(null),
     create: jest.fn(),
     update: jest.fn(),
   },

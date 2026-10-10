@@ -34,7 +34,20 @@ export class AuthService {
     if (!isValidNormalizedEmail(email)) {
       throw new BadRequestException('البريد الإلكتروني غير صالح');
     }
-    const username = dto.username.trim();
+    const username = dto.username.trim().toLowerCase();
+
+    const existingUserByUsername = await this.prisma.user.findFirst({
+      where: {
+        username: {
+          equals: username,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true },
+    });
+    if (existingUserByUsername) {
+      throw new BadRequestException('اسم المستخدم مستخدم بالفعل');
+    }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 

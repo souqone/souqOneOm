@@ -31,6 +31,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = DEFAULT_ARABIC_MESSAGES[HttpStatus.INTERNAL_SERVER_ERROR];
 
+    let extractedCode: string | undefined;
+
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
@@ -41,6 +43,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         extractedMessage = exceptionResponse;
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const res = exceptionResponse as Record<string, unknown>;
+        if (
+          typeof res.code === 'string' &&
+          /^[A-Z][A-Z0-9_]{2,63}$/.test(res.code)
+        ) {
+          extractedCode = res.code;
+        }
         if (typeof res.message === 'string') {
           extractedMessage = res.message;
         } else if (Array.isArray(res.message) && res.message.length > 0) {
@@ -88,6 +96,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message,
       timestamp: new Date().toISOString(),
+      ...(extractedCode ? { code: extractedCode } : {}),
     });
   }
 }
