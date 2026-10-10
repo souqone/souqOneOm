@@ -48,6 +48,7 @@ function hashToken(token: string) {
 
 describe('AuthService', () => {
   let service: AuthService;
+  let tokenService: AuthTokenService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -65,6 +66,7 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    tokenService = module.get<AuthTokenService>(AuthTokenService);
   });
 
   /* ═══════ SIGNUP ═══════ */
@@ -490,4 +492,35 @@ describe('AuthService', () => {
       });
     });
   });
+
+  /* ═══════ SANITIZE USER ═══════ */
+  describe('AuthTokenService.sanitizeUser', () => {
+    it('should strip googleId and all sensitive fields from user', () => {
+      const fullUser: any = {
+        id: 'u-100',
+        email: 'user@test.com',
+        username: 'user100',
+        displayName: 'User 100',
+        role: 'USER',
+        googleId: 'google-sub-secret-id',
+        passwordHash: 'secret-hash',
+        emailVerificationCode: '123456',
+        emailVerificationExpiry: new Date(),
+        passwordResetCode: '654321',
+        passwordResetExpiry: new Date(),
+      };
+
+      const sanitized: any = tokenService.sanitizeUser(fullUser);
+
+      expect(sanitized.googleId).toBeUndefined();
+      expect(sanitized.passwordHash).toBeUndefined();
+      expect(sanitized.emailVerificationCode).toBeUndefined();
+      expect(sanitized.emailVerificationExpiry).toBeUndefined();
+      expect(sanitized.passwordResetCode).toBeUndefined();
+      expect(sanitized.passwordResetExpiry).toBeUndefined();
+      expect(sanitized.id).toBe('u-100');
+      expect(sanitized.email).toBe('user@test.com');
+    });
+  });
 });
+
