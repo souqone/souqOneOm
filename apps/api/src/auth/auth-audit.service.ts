@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { normalizeEmail } from './auth.validators';
 
 const MAX_LOGIN_ATTEMPTS = 10;
 const BASE_ATTEMPT_WINDOW_SECONDS = 15 * 60; // 15 minutes
@@ -43,7 +44,7 @@ export class AuthAuditService {
   }
 
   async checkLockout(email: string): Promise<{ locked: boolean; ttlMinutes?: number }> {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     const lockoutKey = `auth:fail:${normalizedEmail}`;
     const attempts = await this.redis.get<number>(lockoutKey);
     if (attempts !== null && attempts >= MAX_LOGIN_ATTEMPTS) {
@@ -54,7 +55,7 @@ export class AuthAuditService {
   }
 
   async recordFailedAttempt(email: string): Promise<void> {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     const lockoutKey = `auth:fail:${normalizedEmail}`;
     const stageKey = `auth:lockstage:${normalizedEmail}`;
 
@@ -70,7 +71,7 @@ export class AuthAuditService {
   }
 
   async resetLockout(email: string): Promise<void> {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     const lockoutKey = `auth:fail:${normalizedEmail}`;
     const stageKey = `auth:lockstage:${normalizedEmail}`;
     await Promise.all([

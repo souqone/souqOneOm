@@ -1,7 +1,10 @@
-import { IsEmail, IsInt, IsOptional, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsInt, IsOptional, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsNormalizedEmail, normalizeEmail } from '../auth.validators';
 
 export class SignupDto {
-  @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  @IsNormalizedEmail({ message: 'البريد الإلكتروني غير صالح' })
   email!: string;
 
   @IsString({ message: 'اسم المستخدم يجب أن يكون نصياً' })
