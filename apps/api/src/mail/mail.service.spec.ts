@@ -60,10 +60,10 @@ describe('MailService', () => {
     expect(mockSendMail).toHaveBeenCalledTimes(1);
     const callArgs = mockSendMail.mock.calls[0][0];
 
-    expect(callArgs.from).toBe('"سوق ون" <noreply@mail.souqoneom.com>');
+    expect(callArgs.from).toBe('"SouqOne" <noreply@mail.souqoneom.com>');
     expect(callArgs.to).toBe('test@example.com');
     expect(callArgs.replyTo).toBe('support@souqoneom.com');
-    expect(callArgs.subject).toBe('رمز التحقق من البريد الإلكتروني — سوق ون');
+    expect(callArgs.subject).toBe('رمز التحقق من البريد الإلكتروني — SouqOne');
     expect(typeof callArgs.html).toBe('string');
     expect(typeof callArgs.text).toBe('string');
     expect(callArgs.html).toContain(testCode);
@@ -81,10 +81,10 @@ describe('MailService', () => {
     expect(mockSendMail).toHaveBeenCalledTimes(1);
     const callArgs = mockSendMail.mock.calls[0][0];
 
-    expect(callArgs.from).toBe('"سوق ون" <alerts@mail.souqoneom.com>');
+    expect(callArgs.from).toBe('"SouqOne" <alerts@mail.souqoneom.com>');
     expect(callArgs.to).toBe('reset@example.com');
     expect(callArgs.replyTo).toBe('help@souqoneom.com');
-    expect(callArgs.subject).toBe('طلب استعادة كلمة المرور — سوق ون');
+    expect(callArgs.subject).toBe('طلب استعادة كلمة المرور — SouqOne');
     expect(typeof callArgs.html).toBe('string');
     expect(typeof callArgs.text).toBe('string');
   });
