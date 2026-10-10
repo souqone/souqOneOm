@@ -87,7 +87,15 @@ export class AuthTokenService {
   }
 
   sanitizeUser(user: User) {
-    const { passwordHash, emailVerificationCode, emailVerificationExpiry, passwordResetCode, passwordResetExpiry, ...safeUser } = user;
+    const {
+      passwordHash,
+      googleId,
+      emailVerificationCode,
+      emailVerificationExpiry,
+      passwordResetCode,
+      passwordResetExpiry,
+      ...safeUser
+    } = user;
     return safeUser;
   }
 

@@ -24,6 +24,7 @@ describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)'
     isVerified: true,
     governorate: 'Muscat',
     passwordHash: '$2a$10$unleakedpasswordhashsecret1234567890',
+    googleId: 'google-sub-secret-12345',
     tokenVersion: 4,
     passwordResetCode: '999999',
     passwordResetExpiry: new Date(Date.now() + 100000),
@@ -95,6 +96,7 @@ describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)'
     // Sensitive User fields MUST remain stripped
     expect(res.body.user).toBeDefined();
     expect(res.body.user.passwordHash).toBeUndefined();
+    expect(res.body.user.googleId).toBeUndefined();
     expect(res.body.user.tokenVersion).toBeUndefined();
     expect(res.body.user.passwordResetCode).toBeUndefined();
     expect(res.body.user.verificationCode).toBeUndefined();
@@ -119,6 +121,7 @@ describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)'
     expect(res.body.refreshToken).toBe('refresh-token-signup-456');
     expect(res.body.accessToken).toBe('jwt-access-token-signup-123');
     expect(res.body.user.passwordHash).toBeUndefined();
+    expect(res.body.user.googleId).toBeUndefined();
     expect(res.body.user.tokenVersion).toBeUndefined();
   });
 
@@ -131,6 +134,7 @@ describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)'
     expect(res.body.refreshToken).toBe('refresh-token-signup-456');
     expect(res.body.accessToken).toBe('jwt-access-token-signup-123');
     expect(res.body.user.passwordHash).toBeUndefined();
+    expect(res.body.user.googleId).toBeUndefined();
     expect(res.body.user.tokenVersion).toBeUndefined();
   });
 
@@ -143,6 +147,7 @@ describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)'
     expect(res.body.refreshToken).toBe('refresh-token-google-456');
     expect(res.body.accessToken).toBe('jwt-access-token-google-123');
     expect(res.body.user.passwordHash).toBeUndefined();
+    expect(res.body.user.googleId).toBeUndefined();
     expect(res.body.user.tokenVersion).toBeUndefined();
   });
 });

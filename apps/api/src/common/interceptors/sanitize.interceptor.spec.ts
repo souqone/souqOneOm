@@ -102,4 +102,48 @@ describe('SanitizeInterceptor', () => {
       done();
     });
   });
+
+  it('should strip googleId and all sensitive fields from a user object', (done) => {
+    const rawUserWithAllSensitives = {
+      id: 'u-all-sensitive',
+      email: 'sensitive@souqone.om',
+      username: 'sens_user',
+      displayName: 'Sensitive User',
+      googleId: 'google-oauth2-sub-10928374',
+      password: 'plain-secret-password',
+      passwordHash: '$2a$10$hashedpasswordstring',
+      tokenVersion: 3,
+      passwordResetCode: '123456',
+      passwordResetExpiry: new Date(Date.now() + 60000),
+      verificationCode: '654321',
+      verificationExpiry: new Date(Date.now() + 60000),
+      emailVerificationCode: '987654',
+      emailVerificationExpiry: new Date(Date.now() + 60000),
+      refreshTokenHash: 'sha256refreshtokenhash',
+      secret: 'mfa-totp-secret',
+    };
+
+    const next: CallHandler = { handle: () => of(rawUserWithAllSensitives) };
+
+    interceptor.intercept(mockContext, next).subscribe((result: any) => {
+      expect(result.googleId).toBeUndefined();
+      expect(result.password).toBeUndefined();
+      expect(result.passwordHash).toBeUndefined();
+      expect(result.tokenVersion).toBeUndefined();
+      expect(result.passwordResetCode).toBeUndefined();
+      expect(result.passwordResetExpiry).toBeUndefined();
+      expect(result.verificationCode).toBeUndefined();
+      expect(result.verificationExpiry).toBeUndefined();
+      expect(result.emailVerificationCode).toBeUndefined();
+      expect(result.emailVerificationExpiry).toBeUndefined();
+      expect(result.refreshTokenHash).toBeUndefined();
+      expect(result.secret).toBeUndefined();
+      expect(result.id).toBe('u-all-sensitive');
+      expect(result.email).toBe('sensitive@souqone.om');
+      expect(result.username).toBe('sens_user');
+      expect(result.displayName).toBe('Sensitive User');
+      done();
+    });
+  });
 });
+

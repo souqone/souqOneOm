@@ -14,6 +14,7 @@ import { map } from 'rxjs/operators';
 export const SENSITIVE_FIELDS = [
   'password',
   'passwordHash',
+  'googleId',
   'tokenVersion',
   'passwordResetCode',
   'passwordResetExpiry',
