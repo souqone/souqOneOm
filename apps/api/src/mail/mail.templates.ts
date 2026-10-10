@@ -30,6 +30,7 @@ export interface EmailTemplateResult {
 export function buildVerificationEmail({ code }: { code: string }): EmailTemplateResult {
   const safeCode = validateCode(code);
   const ttlMinutes = VERIFICATION_CODE_TTL_MINUTES;
+  const currentYear = new Date().getFullYear();
 
   const subject = 'رمز التحقق من البريد الإلكتروني — سوق ون';
 
@@ -165,7 +166,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
                     <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">سوق ون — <bdi dir="ltr">SouqOne</bdi></p>
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
                     <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
-                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">2026</bdi> سوق ون.</p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${currentYear}</bdi> سوق ون.</p>
                   </td>
                 </tr>
               </table>
@@ -196,7 +197,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
 سوق ون — SouqOne
 سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
 للمساعدة والاستفسار: support@souqoneom.com
-جميع الحقوق محفوظة 2026 سوق ون.
+جميع الحقوق محفوظة ${currentYear} سوق ون.
 `;
 
   return { subject, html, text };
@@ -208,6 +209,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
 export function buildPasswordResetEmail({ code }: { code: string }): EmailTemplateResult {
   const safeCode = validateCode(code);
   const ttlMinutes = VERIFICATION_CODE_TTL_MINUTES;
+  const currentYear = new Date().getFullYear();
 
   const subject = 'طلب استعادة كلمة المرور — سوق ون';
 
@@ -343,7 +345,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
                     <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">سوق ون — <bdi dir="ltr">SouqOne</bdi></p>
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
                     <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
-                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">2026</bdi> سوق ون.</p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${currentYear}</bdi> سوق ون.</p>
                   </td>
                 </tr>
               </table>
@@ -374,7 +376,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
 سوق ون — SouqOne
 سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
 للمساعدة والاستفسار: support@souqoneom.com
-جميع الحقوق محفوظة 2026 سوق ون.
+جميع الحقوق محفوظة ${currentYear} سوق ون.
 `;
 
   return { subject, html, text };

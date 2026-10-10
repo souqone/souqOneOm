@@ -9,7 +9,6 @@ describe('mail.templates', () => {
   const emojiRegex = /\p{Extended_Pictographic}/u;
   const sampleCode = '849201';
 
-  // Minimal inline-style DOM resolver for WCAG AA compliance verification
   function hexToRgb(hex: string): [number, number, number] {
     let cleaned = hex.trim().replace(/^#/, '');
     if (cleaned.length === 3) {
@@ -17,6 +16,10 @@ describe('mail.templates', () => {
     }
     const num = parseInt(cleaned, 16);
     return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+  }
+
+  function rgbToHex([r, g, b]: [number, number, number]): string {
+    return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0').toUpperCase()).join('');
   }
 
   function parseColor(str?: string | null): [number, number, number] | null {
@@ -49,6 +52,13 @@ describe('mail.templates', () => {
     return (lighter + 0.05) / (darker + 0.05);
   }
 
+  function extractAttribute(tag: string, attrName: string): string | undefined {
+    const regex = new RegExp(`\\s${attrName}=(?:"([^"]*)"|'([^']*)')`, 'i');
+    const m = tag.match(regex);
+    if (!m) return undefined;
+    return m[1] !== undefined ? m[1] : m[2];
+  }
+
   interface StackElement {
     tag: string;
     style: string;
@@ -60,25 +70,31 @@ describe('mail.templates', () => {
     id?: string;
   }
 
-  function extractVisibleTextElements(html: string) {
-    const results: {
-      text: string;
-      fg: [number, number, number];
-      bg: [number, number, number];
-      fontSizePx: number;
-      isBold: boolean;
-      isLarge: boolean;
-      ratio: number;
-      requiredRatio: number;
-    }[] = [];
+  interface ResolvedTextElement {
+    text: string;
+    tag: string;
+    id?: string;
+    fg: [number, number, number];
+    fgHex: string;
+    fgExplicit: boolean;
+    bg: [number, number, number];
+    bgHex: string;
+    fontSizePx: number;
+    isBold: boolean;
+    isLarge: boolean;
+    ratio: number;
+    requiredRatio: number;
+  }
 
+  function extractVisibleTextElements(html: string): ResolvedTextElement[] {
+    const results: ResolvedTextElement[] = [];
     const stack: StackElement[] = [];
-    const tokenRegex = /(<!--[\s\S]*?-->)|(<style[\s\S]*?<\/style>)|(<script[\s\S]*?<\/script>)|(<\/?[a-zA-Z0-9]+[^>]*>)|([^<]+)/gi;
+    const tokenRegex = /(<!--[\s\S]*?-->)|(<![^>]*>)|(<style[\s\S]*?<\/style>)|(<script[\s\S]*?<\/script>)|(<\/?[a-zA-Z0-9]+[^>]*>)|([^<]+)/gi;
 
     let match: RegExpExecArray | null;
     while ((match = tokenRegex.exec(html)) !== null) {
-      const [full, comment, styleTag, scriptTag, tag, text] = match;
-      if (comment || styleTag || scriptTag) continue;
+      const [full, comment, doctype, styleTag, scriptTag, tag, text] = match;
+      if (comment || doctype || styleTag || scriptTag) continue;
 
       if (tag) {
         if (tag.startsWith('</')) {
@@ -87,11 +103,10 @@ describe('mail.templates', () => {
           const isSelfClosing = tag.endsWith('/>') || /^<(img|meta|link|br|hr|input)/i.test(tag);
           const tagNameMatch = tag.match(/^<([a-zA-Z0-9]+)/i);
           const tagName = tagNameMatch ? tagNameMatch[1].toLowerCase() : '';
-          const styleMatch = tag.match(/style=["']([^"']*)["']/i);
-          const style = styleMatch ? styleMatch[1] : '';
-          const idMatch = tag.match(/id=["']([^"']*)["']/i);
-          const id = idMatch ? idMatch[1] : undefined;
-          const bgAttrMatch = tag.match(/bgcolor=["']([^"']*)["']/i);
+
+          const style = extractAttribute(tag, 'style') || '';
+          const id = extractAttribute(tag, 'id');
+          const bgcolor = extractAttribute(tag, 'bgcolor');
 
           const colorMatch = style.match(/(?:^|;)\s*(?<!background-)color\s*:\s*([^;]+)/i);
           const bgColorMatch = style.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/i);
@@ -101,8 +116,8 @@ describe('mail.templates', () => {
           const color = colorMatch ? parseColor(colorMatch[1]) : null;
           const bgColor = bgColorMatch
             ? parseColor(bgColorMatch[1])
-            : bgAttrMatch
-              ? parseColor(bgAttrMatch[1])
+            : bgcolor
+              ? parseColor(bgcolor)
               : null;
           const fontSizePx = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : null;
 
@@ -140,13 +155,18 @@ describe('mail.templates', () => {
         if (cleanText.length > 0 && !stack.some((el) => el.isHidden)) {
           // Resolve effective foreground color (nearest up stack)
           let fg: [number, number, number] | null = null;
+          let fgExplicit = false;
           for (let i = stack.length - 1; i >= 0; i--) {
             if (stack[i].color) {
               fg = stack[i].color;
+              fgExplicit = true;
               break;
             }
           }
-          if (!fg) fg = [0, 0, 0];
+          if (!fg) {
+            fg = [0, 0, 0];
+            fgExplicit = false;
+          }
 
           // Resolve effective background color (nearest up stack)
           let bg: [number, number, number] | null = null;
@@ -173,10 +193,17 @@ describe('mail.templates', () => {
           const ratio = contrastRatio(fg, bg);
           const requiredRatio = isLarge ? 3.0 : 4.5;
 
+          const currentElement = stack[stack.length - 1];
+
           results.push({
             text: cleanText,
+            tag: currentElement ? currentElement.tag : '',
+            id: currentElement ? currentElement.id : undefined,
             fg,
+            fgHex: rgbToHex(fg),
+            fgExplicit,
             bg,
+            bgHex: rgbToHex(bg),
             fontSizePx,
             isBold,
             isLarge,
@@ -201,7 +228,7 @@ describe('mail.templates', () => {
       builder: buildPasswordResetEmail,
       expectedSubject: 'طلب استعادة كلمة المرور — سوق ون',
     },
-  ])('$name', ({ builder, expectedSubject }) => {
+  ])('$name', ({ name, builder, expectedSubject }) => {
     it('should generate valid subject, html, and text with code and TTL', () => {
       const result = builder({ code: sampleCode });
 
@@ -260,14 +287,57 @@ describe('mail.templates', () => {
       expect(result.html).toMatch(/id="otp-box"[^>]*color:\s*#11232E/i);
     });
 
-    it('should meet WCAG AA contrast thresholds for all real text elements in the generated HTML', () => {
+    it('should meet WCAG AA contrast thresholds and verify explicit styling on all real text elements', () => {
       const result = builder({ code: sampleCode });
       const elements = extractVisibleTextElements(result.html);
 
       expect(elements.length).toBeGreaterThan(0);
 
+      // Every visible text element must have an explicit foreground color
       for (const el of elements) {
+        expect(el.fgExplicit).toBe(true);
         expect(el.ratio).toBeGreaterThanOrEqual(el.requiredRatio);
+      }
+
+      // Guard assertion 1: 6-digit code entry
+      const codeEntry = elements.find((e) => e.text === sampleCode);
+      expect(codeEntry).toBeDefined();
+      expect(codeEntry!.fgHex).toBe('#11232E');
+      expect(codeEntry!.fontSizePx).toBe(34);
+      expect(codeEntry!.isBold).toBe(true);
+      expect(codeEntry!.isLarge).toBe(true);
+      expect(codeEntry!.ratio).toBeGreaterThanOrEqual(3.0);
+
+      // Guard assertion 2: H1 entry
+      const h1Entry = elements.find((e) => e.tag === 'h1' || e.id === 'mail-heading');
+      expect(h1Entry).toBeDefined();
+      expect(h1Entry!.fgHex).toBe('#11232E');
+      expect(h1Entry!.fontSizePx).toBe(20);
+      expect(h1Entry!.isBold).toBe(true);
+
+      // Guard assertion 3: Support-email link entry
+      const supportEntry = elements.find((e) => e.text.includes('support@souqoneom.com'));
+      expect(supportEntry).toBeDefined();
+      expect(supportEntry!.fgHex).toBe('#007A8F');
+      expect(supportEntry!.fontSizePx).toBe(12);
+
+      // Guard assertion 4: Copyright notice entry
+      const copyrightEntry = elements.find((e) => e.text.includes('جميع الحقوق محفوظة'));
+      expect(copyrightEntry).toBeDefined();
+      expect(copyrightEntry!.fgHex).toBe('#6B7280');
+      expect(copyrightEntry!.fontSizePx).toBe(11);
+    });
+
+    it('should generate dynamic copyright year matching the current date', () => {
+      jest.useFakeTimers().setSystemTime(new Date('2031-05-01T12:00:00Z'));
+      try {
+        const result = builder({ code: sampleCode });
+        expect(result.html).toContain('2031');
+        expect(result.text).toContain('2031');
+        expect(result.html).not.toContain('2026');
+        expect(result.text).not.toContain('2026');
+      } finally {
+        jest.useRealTimers();
       }
     });
 
@@ -278,5 +348,9 @@ describe('mail.templates', () => {
       expect(() => builder({ code: '<script>123456</script>' })).toThrow();
       expect(() => builder({ code: '' })).toThrow();
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 });

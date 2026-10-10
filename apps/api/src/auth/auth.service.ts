@@ -231,7 +231,10 @@ export class AuthService {
     try {
       await this.mailService.sendPasswordResetEmail(user.email, code);
     } catch (err) {
-      this.logger.error(`Failed to send password reset email for user ${user.id}`, err);
+      this.logger.error(
+        `Failed to send password reset email for user ${user.id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
     return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
   }
