@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import { AuthService } from './auth.service';
@@ -323,6 +323,34 @@ describe('AuthService', () => {
       await service.forgotPassword('a@b.com');
 
       expect(mockMail.sendPasswordResetEmail).toHaveBeenCalledWith('a@b.com', expect.any(String));
+    });
+
+    it('should return safe message when email sending fails and preserve anti-enumeration', async () => {
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      try {
+        mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com' });
+        mockPrisma.user.update.mockResolvedValue({});
+        const mailError = new Error('SMTP outage');
+        mockMail.sendPasswordResetEmail.mockRejectedValueOnce(mailError);
+
+        const result = await service.forgotPassword('a@b.com');
+
+        expect(result.message).toContain('ستصلك رسالة');
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith(
+          'Failed to send password reset email for user u1',
+          mailError.stack,
+        );
+
+        // Security check: ensure reset code is NEVER logged
+        const loggedArgs = JSON.stringify(errorSpy.mock.calls);
+        const updateCall = (mockPrisma.user.update as jest.Mock).mock.calls[0][0];
+        const sentCode = updateCall.data.passwordResetCode;
+        expect(sentCode).toBeDefined();
+        expect(loggedArgs).not.toContain(sentCode);
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
   });
 

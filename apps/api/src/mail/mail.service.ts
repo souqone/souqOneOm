@@ -1,20 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import {
+  buildVerificationEmail,
+  buildPasswordResetEmail,
+  EmailTemplateResult,
+} from './mail.templates';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: Transporter | null = null;
   private readonly fromAddress: string;
-  private readonly fromName = 'سوق وان';
+  private readonly fromName = 'سوق ون';
+  private readonly replyTo: string;
 
   constructor() {
     const host = process.env.MAIL_HOST;
     const port = parseInt(process.env.MAIL_PORT || '465', 10);
     const user = process.env.MAIL_USER;
     const pass = process.env.MAIL_PASS;
-    this.fromAddress = process.env.MAIL_FROM || user || 'noreply@souqone.com';
+    this.fromAddress = process.env.MAIL_FROM || 'noreply@mail.souqoneom.com';
+    this.replyTo = process.env.MAIL_REPLY_TO || 'support@souqoneom.com';
 
     if (!host || !user || !pass) {
       this.logger.warn('MAIL_HOST/MAIL_USER/MAIL_PASS not set — emails will be logged but not sent');
@@ -29,7 +36,7 @@ export class MailService {
     }
   }
 
-  private async send(to: string, subject: string, html: string): Promise<void> {
+  private async send(to: string, { subject, html, text }: EmailTemplateResult): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(`[DEV] Email to ${to} | Subject: ${subject}`);
       return;
@@ -39,8 +46,10 @@ export class MailService {
       await this.transporter.sendMail({
         from: `"${this.fromName}" <${this.fromAddress}>`,
         to,
+        replyTo: this.replyTo,
         subject,
         html,
+        text,
       });
       this.logger.log(`Email sent to ${to} | Subject: ${subject}`);
     } catch (error) {
@@ -50,32 +59,13 @@ export class MailService {
   }
 
   async sendVerificationEmail(to: string, code: string): Promise<void> {
-    const html = `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border-radius: 16px; background: #f8f9fa;">
-        <h2 style="color: #1565c0; margin-bottom: 8px;">سوق وان 🚗</h2>
-        <p style="color: #333; font-size: 16px;">مرحباً! رمز التحقق الخاص بك هو:</p>
-        <div style="background: #1565c0; color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; padding: 16px; border-radius: 12px; margin: 24px 0;">
-          ${code}
-        </div>
-        <p style="color: #666; font-size: 14px;">هذا الرمز صالح لمدة 15 دقيقة.</p>
-        <p style="color: #999; font-size: 12px;">إذا لم تطلب هذا الرمز، تجاهل هذه الرسالة.</p>
-      </div>
-    `;
-    await this.send(to, 'رمز التحقق — سوق وان', html);
+    const template = buildVerificationEmail({ code });
+    await this.send(to, template);
   }
 
   async sendPasswordResetEmail(to: string, code: string): Promise<void> {
-    const html = `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border-radius: 16px; background: #f8f9fa;">
-        <h2 style="color: #1565c0; margin-bottom: 8px;">سوق وان 🚗</h2>
-        <p style="color: #333; font-size: 16px;">طلبت إعادة تعيين كلمة المرور. رمز التحقق هو:</p>
-        <div style="background: #1565c0; color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; padding: 16px; border-radius: 12px; margin: 24px 0;">
-          ${code}
-        </div>
-        <p style="color: #666; font-size: 14px;">هذا الرمز صالح لمدة 15 دقيقة فقط.</p>
-        <p style="color: #999; font-size: 12px;">إذا لم تطلب إعادة تعيين كلمة المرور، تجاهل هذه الرسالة.</p>
-      </div>
-    `;
-    await this.send(to, 'إعادة تعيين كلمة المرور — سوق وان', html);
+    const template = buildPasswordResetEmail({ code });
+    await this.send(to, template);
   }
 }
+
