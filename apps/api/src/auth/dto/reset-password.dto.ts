@@ -1,7 +1,10 @@
-import { IsEmail, IsString, MinLength, Matches } from 'class-validator';
+import { IsString, MinLength, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsNormalizedEmail, normalizeEmail } from '../auth.validators';
 
 export class ResetPasswordDto {
-  @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  @IsNormalizedEmail({ message: 'البريد الإلكتروني غير صالح' })
   email!: string;
 
   @IsString({ message: 'رمز التحقق مطلوب' })

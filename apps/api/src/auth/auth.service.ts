@@ -10,6 +10,7 @@ import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 import { VERIFICATION_CODE_TTL_MS } from './auth.constants';
+import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
@@ -29,7 +30,10 @@ export class AuthService {
   }
 
   async signup(dto: SignupDto) {
-    const email = dto.email.trim().toLowerCase();
+    const email = normalizeEmail(dto.email);
+    if (!isValidNormalizedEmail(email)) {
+      throw new BadRequestException('البريد الإلكتروني غير صالح');
+    }
     const username = dto.username.trim();
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -65,7 +69,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
-    const email = dto.email.trim().toLowerCase();
+    const email = normalizeEmail(dto.email);
 
     // Brute-force lockout check
     const lockout = await this.audit.checkLockout(email);
@@ -140,7 +144,7 @@ export class AuthService {
 
     const { email, sub: googleId, name, picture } = payload;
     const hd = (payload as any).hd;
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     const isGoogleAuthoritative =
       normalizedEmail.endsWith('@gmail.com') || Boolean(hd && String(hd).trim().length > 0);
 
@@ -279,7 +283,7 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
     if (!user) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
 
     const code = this.tokens.generateVerificationCode();
@@ -302,7 +306,7 @@ export class AuthService {
   }
 
   async resetPassword(email: string, code: string, newPassword: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
     if (!user || !user.passwordResetCode || !user.passwordResetExpiry) {
       throw new BadRequestException('رمز إعادة التعيين غير صالح');
     }
