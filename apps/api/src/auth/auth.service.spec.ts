@@ -196,8 +196,8 @@ describe('AuthService', () => {
       expect(mockRedis.incr).toHaveBeenCalledWith('auth:fail:test@example.com', 900);
     });
 
-    it('should block login after 5 failed attempts', async () => {
-      mockRedis.get.mockResolvedValue(5);
+    it('should block login after 10 failed attempts', async () => {
+      mockRedis.get.mockResolvedValue(10);
       mockRedis.getTTL.mockResolvedValue(600);
 
       await expect(
@@ -481,7 +481,7 @@ describe('AuthService', () => {
     });
 
     it('should log lockout attempt', async () => {
-      mockRedis.get.mockResolvedValue(5);
+      mockRedis.get.mockResolvedValue(10);
       mockRedis.getTTL.mockResolvedValue(600);
 
       await expect(
