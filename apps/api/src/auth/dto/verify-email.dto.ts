@@ -1,7 +1,9 @@
-import { IsString, Length } from 'class-validator';
+import { Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { normalizeDigits } from '../auth.validators';
 
 export class VerifyEmailDto {
-  @IsString()
-  @Length(6, 6, { message: 'رمز التحقق يجب أن يكون 6 أرقام' })
+  @Transform(({ value }) => normalizeDigits(value))
+  @Matches(/^\d{6}$/, { message: 'رمز التحقق يجب أن يكون 6 أرقام' })
   code!: string;
 }

@@ -1,10 +1,16 @@
-import { IsOptional, IsString, MaxLength, IsInt, IsPositive } from 'class-validator';
+import { IsOptional, IsString, MinLength, MaxLength, Matches, IsInt, IsPositive } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { cleanDisplayName } from '../../auth/auth.validators';
 
 export class UpdateProfileDto {
   @IsOptional()
+  @Transform(({ value }) => cleanDisplayName(value))
   @IsString()
+  @MinLength(2, { message: 'الاسم المعروض يجب ألا يقل عن حرفين' })
   @MaxLength(50)
+  @Matches(/^[^<>]*$/, { message: 'الاسم المعروض لا يجب أن يحتوي على < أو >' })
   displayName?: string;
+
 
   @IsOptional()
   @IsString()
