@@ -210,4 +210,22 @@ describe('B1: Session Revocation on Password Change and Reset', () => {
       );
     });
   });
+
+  describe('UsersService.getProfile (/users/me)', () => {
+    it('should return user profile and throw NotFoundException if user not found', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-me',
+        email: 'me@souqone.om',
+        username: 'meuser',
+        displayName: 'Me User',
+      });
+
+      const profile = await usersService.getProfile('u-me');
+      expect(profile.id).toBe('u-me');
+      expect(profile.email).toBe('me@souqone.om');
+
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+      await expect(usersService.getProfile('u-missing')).rejects.toThrow(NotFoundException);
+    });
+  });
 });

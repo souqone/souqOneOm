@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -129,32 +129,34 @@ export class AuthService {
       throw new UnauthorizedException('لم يتم العثور على بريد إلكتروني في حساب Google');
     }
 
+    if (payload.email_verified !== true) {
+      throw new UnauthorizedException('البريد الإلكتروني لحساب Google غير موثق');
+    }
+
     // Nonce validation for CSRF protection
     if (dto.nonce && payload.nonce !== dto.nonce) {
       throw new UnauthorizedException('رمز التحقق (nonce) غير متطابق — محاولة غير آمنة');
     }
 
     const { email, sub: googleId, name, picture } = payload;
+    const hd = (payload as any).hd;
+    const normalizedEmail = email.trim().toLowerCase();
+    const isGoogleAuthoritative =
+      normalizedEmail.endsWith('@gmail.com') || Boolean(hd && String(hd).trim().length > 0);
 
     // Check if user exists by googleId
     let user = await this.prisma.user.findUnique({ where: { googleId } });
 
     if (!user) {
-      // Check if user exists by email (link accounts)
-      user = await this.prisma.user.findUnique({ where: { email } });
+      // Check if user exists by email
+      user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
 
-      if (user) {
-        // Link existing email account with Google
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: { googleId, avatarUrl: user.avatarUrl || picture },
-        });
-      } else {
+      if (!user) {
         // Create new user from Google
-        const username = email.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex');
+        const username = normalizedEmail.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex');
         user = await this.prisma.user.create({
           data: {
-            email,
+            email: normalizedEmail,
             username,
             displayName: name || username,
             googleId,
@@ -162,10 +164,70 @@ export class AuthService {
             isVerified: true,
           },
         });
+      } else {
+        // User exists with this email
+        if (!isGoogleAuthoritative) {
+          throw new ConflictException({
+            statusCode: 409,
+            code: 'ACCOUNT_LINK_REQUIRED',
+            message: 'هذا البريد مسجل بالفعل. يرجى تسجيل الدخول بكلمة المرور لربط حساب Google.',
+          });
+        }
+
+        if (!user.isVerified) {
+          // Pre-hijacking mitigation: unverified account + authoritative Google
+          const targetUserId = user.id;
+          const targetAvatarUrl = user.avatarUrl;
+          user = await this.prisma.$transaction(async (tx) => {
+            const updated = await tx.user.update({
+              where: { id: targetUserId },
+              data: {
+                passwordHash: null,
+                emailVerificationCode: null,
+                emailVerificationExpiry: null,
+                passwordResetCode: null,
+                passwordResetExpiry: null,
+                googleId,
+                isVerified: true,
+                avatarUrl: targetAvatarUrl || picture,
+              },
+            });
+            await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
+            return updated;
+          });
+        } else if (user.passwordHash) {
+          // Verified user with existing password
+          throw new ConflictException({
+            statusCode: 409,
+            code: 'ACCOUNT_LINK_REQUIRED',
+            message: 'هذا الحساب مسجل بالفعل بكلمة مرور. يرجى تسجيل الدخول بكلمة المرور لربط حساب Google.',
+          });
+        } else {
+          // Verified user with no password (require explicit linking, no silent link)
+          if (user.googleId && user.googleId !== googleId) {
+            throw new ConflictException({
+              statusCode: 409,
+              code: 'ACCOUNT_LINK_REQUIRED',
+              message: 'هذا الحساب مرتبط بحساب Google آخر.',
+            });
+          }
+
+          if (!user.googleId) {
+            throw new ConflictException({
+              statusCode: 409,
+              code: 'ACCOUNT_LINK_REQUIRED',
+              message: 'هذا البريد مسجل بالفعل. يرجى ربط حساب Google من إعدادات الحساب.',
+            });
+          }
+        }
       }
     }
 
-    await this.audit.logAudit({ email, userId: user.id, success: true, method: 'GOOGLE', ip, userAgent });
+    if (!user) {
+      throw new UnauthorizedException('فشل تسجيل الدخول بواسطة Google');
+    }
+
+    await this.audit.logAudit({ email: normalizedEmail, userId: user.id, success: true, method: 'GOOGLE', ip, userAgent });
 
     const accessToken = await this.tokens.signAccessToken(user);
     const refreshToken = await this.tokens.generateRefreshToken(user.id);
