@@ -1,6 +1,7 @@
 import { VERIFICATION_CODE_TTL_MINUTES } from '../auth/auth.constants';
 
-export const BRAND_LOGO_URL = 'https://res.cloudinary.com/souqone/image/upload/brand/logo-email.png';
+export const BRAND_NAME = 'SouqOne';
+export const BRAND_LOGO_URL = 'https://res.cloudinary.com/souqone/image/upload/brand/logo.png';
 
 function escapeHtml(str: string): string {
   return str
@@ -32,7 +33,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
   const ttlMinutes = VERIFICATION_CODE_TTL_MINUTES;
   const currentYear = new Date().getFullYear();
 
-  const subject = 'رمز التحقق من البريد الإلكتروني — سوق ون';
+  const subject = `رمز التحقق من البريد الإلكتروني — ${BRAND_NAME}`;
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -41,7 +42,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
-  <title>رمز التحقق من البريد الإلكتروني — سوق ون</title>
+  <title>${subject}</title>
   <!--[if mso]>
   <style type="text/css">
     body, table, td, p, div, a { font-family: Tahoma, Arial, sans-serif !important; }
@@ -88,7 +89,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
 
   <!-- Hidden Preheader -->
   <div style="display: none; font-size: 1px; color: #FFFFFF; line-height: 1px; font-family: Tahoma, Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
-    رمز التحقق الخاص بكم في سوق ون: ${safeCode}
+    أكد بريدكم الإلكتروني في ${BRAND_NAME}. ينتهي الرمز خلال ${ttlMinutes} دقيقة.
     &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
   </div>
 
@@ -103,13 +104,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
           <!-- Logo Row -->
           <tr>
             <td align="center" style="padding: 0 0 20px 0; text-align: center;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#FFFFFF" style="margin: 0 auto; background-color: #FFFFFF; border-radius: 8px;">
-                <tr>
-                  <td align="center" bgcolor="#FFFFFF" style="background-color: #FFFFFF; padding: 8px 16px; text-align: center;">
-                    <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="سوق ون SouqOne" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
-                  </td>
-                </tr>
-              </table>
+              <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="${BRAND_NAME}" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
             </td>
           </tr>
 
@@ -133,7 +128,7 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
               <div class="content-block" style="max-width: 440px; margin: 0 auto; text-align: center;">
                 
       <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">عزيزي المستخدم،</p>
-      <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">نرحب بانضمامكم إلى منصة سوق ون. يرجى استخدام رمز التحقق التالي لتأكيد بريدكم الإلكتروني وإتمام إنشاء الحساب:</p>
+      <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">نرحب بانضمامكم إلى منصة <bdi dir="ltr">${BRAND_NAME}</bdi>. يرجى استخدام رمز التحقق التالي لتأكيد بريدكم الإلكتروني وإتمام إنشاء الحساب:</p>
       
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 20px auto;">
         <tr>
@@ -163,10 +158,10 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
                 <tr>
                   <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
-                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">سوق ون — <bdi dir="ltr">SouqOne</bdi></p>
+                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">${BRAND_NAME}</p>
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
                     <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
-                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${currentYear}</bdi> سوق ون.</p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${BRAND_NAME} ${currentYear}</bdi>.</p>
                   </td>
                 </tr>
               </table>
@@ -182,11 +177,11 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
 </body>
 </html>`;
 
-  const text = `سوق ون — رمز التحقق من البريد الإلكتروني
+  const text = `${subject}
 
 عزيزي المستخدم،
 
-نرحب بانضمامكم إلى منصة سوق ون. يرجى استخدام رمز التحقق التالي لتأكيد بريدكم الإلكتروني وإتمام إنشاء الحساب:
+نرحب بانضمامكم إلى منصة ${BRAND_NAME}. يرجى استخدام رمز التحقق التالي لتأكيد بريدكم الإلكتروني وإتمام إنشاء الحساب:
 
 الرمز: ${safeCode}
 
@@ -194,10 +189,10 @@ export function buildVerificationEmail({ code }: { code: string }): EmailTemplat
 إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.
 
 ---
-سوق ون — SouqOne
+${BRAND_NAME}
 سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
 للمساعدة والاستفسار: support@souqoneom.com
-جميع الحقوق محفوظة ${currentYear} سوق ون.
+جميع الحقوق محفوظة ${BRAND_NAME} ${currentYear}.
 `;
 
   return { subject, html, text };
@@ -211,7 +206,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
   const ttlMinutes = VERIFICATION_CODE_TTL_MINUTES;
   const currentYear = new Date().getFullYear();
 
-  const subject = 'طلب استعادة كلمة المرور — سوق ون';
+  const subject = `طلب استعادة كلمة المرور — ${BRAND_NAME}`;
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -220,7 +215,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
-  <title>طلب استعادة كلمة المرور — سوق ون</title>
+  <title>${subject}</title>
   <!--[if mso]>
   <style type="text/css">
     body, table, td, p, div, a { font-family: Tahoma, Arial, sans-serif !important; }
@@ -267,7 +262,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
 
   <!-- Hidden Preheader -->
   <div style="display: none; font-size: 1px; color: #FFFFFF; line-height: 1px; font-family: Tahoma, Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
-    رمز استعادة كلمة المرور الخاص بحسابكم: ${safeCode}
+    تلقينا طلباً لإعادة تعيين كلمة المرور. ينتهي الرمز خلال ${ttlMinutes} دقيقة.
     &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
   </div>
 
@@ -282,13 +277,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
           <!-- Logo Row -->
           <tr>
             <td align="center" style="padding: 0 0 20px 0; text-align: center;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#FFFFFF" style="margin: 0 auto; background-color: #FFFFFF; border-radius: 8px;">
-                <tr>
-                  <td align="center" bgcolor="#FFFFFF" style="background-color: #FFFFFF; padding: 8px 16px; text-align: center;">
-                    <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="سوق ون SouqOne" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
-                  </td>
-                </tr>
-              </table>
+              <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="${BRAND_NAME}" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
             </td>
           </tr>
 
@@ -312,7 +301,7 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
               <div class="content-block" style="max-width: 440px; margin: 0 auto; text-align: center;">
                 
       <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">عزيزي المستخدم،</p>
-      <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابكم في سوق ون. يرجى إدخال الرمز التالي في التطبيق للمتابعة:</p>
+      <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابكم في <bdi dir="ltr">${BRAND_NAME}</bdi>. يرجى إدخال الرمز التالي في التطبيق للمتابعة:</p>
       
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 20px auto;">
         <tr>
@@ -342,10 +331,10 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
                 <tr>
                   <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
-                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">سوق ون — <bdi dir="ltr">SouqOne</bdi></p>
+                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">${BRAND_NAME}</p>
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
                     <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار، يسعدنا تواصلكم عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
-                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${currentYear}</bdi> سوق ون.</p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${BRAND_NAME} ${currentYear}</bdi>.</p>
                   </td>
                 </tr>
               </table>
@@ -361,11 +350,11 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
 </body>
 </html>`;
 
-  const text = `سوق ون — استعادة كلمة المرور
+  const text = `${subject}
 
 عزيزي المستخدم،
 
-تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابكم في سوق ون. يرجى إدخال الرمز التالي في التطبيق للمتابعة:
+تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابكم في ${BRAND_NAME}. يرجى إدخال الرمز التالي في التطبيق للمتابعة:
 
 الرمز: ${safeCode}
 
@@ -373,10 +362,10 @@ export function buildPasswordResetEmail({ code }: { code: string }): EmailTempla
 إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذه الرسالة، وستبقى كلمة المرور الحالية صالحة دون تغيير.
 
 ---
-سوق ون — SouqOne
+${BRAND_NAME}
 سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
 للمساعدة والاستفسار: support@souqoneom.com
-جميع الحقوق محفوظة ${currentYear} سوق ون.
+جميع الحقوق محفوظة ${BRAND_NAME} ${currentYear}.
 `;
 
   return { subject, html, text };

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import {
+  BRAND_NAME,
   buildVerificationEmail,
   buildPasswordResetEmail,
   EmailTemplateResult,
@@ -12,7 +13,7 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: Transporter | null = null;
   private readonly fromAddress: string;
-  private readonly fromName = 'سوق ون';
+  private readonly fromName = BRAND_NAME;
   private readonly replyTo: string;
 
   constructor() {

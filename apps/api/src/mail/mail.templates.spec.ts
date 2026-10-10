@@ -2,6 +2,7 @@ import {
   buildVerificationEmail,
   buildPasswordResetEmail,
   BRAND_LOGO_URL,
+  BRAND_NAME,
 } from './mail.templates';
 import { VERIFICATION_CODE_TTL_MINUTES } from '../auth/auth.constants';
 
@@ -221,21 +222,33 @@ describe('mail.templates', () => {
     {
       name: 'buildVerificationEmail',
       builder: buildVerificationEmail,
-      expectedSubject: 'رمز التحقق من البريد الإلكتروني — سوق ون',
+      expectedSubject: 'رمز التحقق من البريد الإلكتروني — SouqOne',
+      expectedPreheader: `أكد بريدكم الإلكتروني في SouqOne. ينتهي الرمز خلال ${VERIFICATION_CODE_TTL_MINUTES} دقيقة.`,
+      expectedBodySentence: 'نرحب بانضمامكم إلى منصة <bdi dir="ltr">SouqOne</bdi>. يرجى استخدام رمز التحقق التالي لتأكيد بريدكم الإلكتروني وإتمام إنشاء الحساب:',
     },
     {
       name: 'buildPasswordResetEmail',
       builder: buildPasswordResetEmail,
-      expectedSubject: 'طلب استعادة كلمة المرور — سوق ون',
+      expectedSubject: 'طلب استعادة كلمة المرور — SouqOne',
+      expectedPreheader: `تلقينا طلباً لإعادة تعيين كلمة المرور. ينتهي الرمز خلال ${VERIFICATION_CODE_TTL_MINUTES} دقيقة.`,
+      expectedBodySentence: 'تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابكم في <bdi dir="ltr">SouqOne</bdi>. يرجى إدخال الرمز التالي في التطبيق للمتابعة:',
     },
-  ])('$name', ({ name, builder, expectedSubject }) => {
+  ])('$name', ({ name, builder, expectedSubject, expectedPreheader, expectedBodySentence }) => {
     it('should generate valid subject, html, and text with code and TTL', () => {
       const result = builder({ code: sampleCode });
 
       // Subject
       expect(result.subject).toBe(expectedSubject);
-      expect(result.subject).toContain('سوق ون');
+      expect(result.subject).toContain('SouqOne');
+      expect(result.subject).not.toContain('سوق ون');
       expect(result.subject).not.toContain('سوق وان');
+      expect(BRAND_NAME).toBe('SouqOne');
+
+      // <title> equals the subject
+      expect(result.html.match(/<title>([^<]*)<\/title>/)?.[1]).toBe(result.subject);
+
+      // Plain-text first line is identical to the subject
+      expect(result.text.split('\n')[0]).toBe(result.subject);
 
       // HTML assertions
       expect(result.html).toContain(sampleCode);
@@ -244,11 +257,22 @@ describe('mail.templates', () => {
       expect(result.html).toContain('lang="ar"');
       expect(result.html).toContain(BRAND_LOGO_URL);
 
-      // Brand spelling
-      expect(result.html).toContain('سوق ون');
+      // Brand name: English only, never the Arabic spellings
+      expect(result.html).toContain('SouqOne');
+      expect(result.text).toContain('SouqOne');
+      expect(result.html).not.toContain('سوق ون');
       expect(result.html).not.toContain('سوق وان');
-      expect(result.text).toContain('سوق ون');
+      expect(result.text).not.toContain('سوق ون');
       expect(result.text).not.toContain('سوق وان');
+      expect(result.html).toContain('<bdi dir="ltr">SouqOne</bdi>');
+
+      // Exact body sentence (HTML wraps the brand in bdi, text does not)
+      expect(result.html).toContain(expectedBodySentence);
+      expect(result.text).toContain(expectedBodySentence.replace('<bdi dir="ltr">SouqOne</bdi>', 'SouqOne'));
+
+      // Copyright sign is never used
+      expect(result.html).not.toContain('©');
+      expect(result.text).not.toContain('©');
 
       // No emojis in HTML or text
       expect(emojiRegex.test(result.html)).toBe(false);
@@ -274,11 +298,15 @@ describe('mail.templates', () => {
       expect(result.text).toContain(sampleCode);
       expect(result.text).toContain(VERIFICATION_CODE_TTL_MINUTES.toString());
 
-      // Logo URL points to official flat email logo
+      // Logo URL points to the transparent brand logo
       expect(BRAND_LOGO_URL).toBe(
-        'https://res.cloudinary.com/souqone/image/upload/brand/logo-email.png',
+        'https://res.cloudinary.com/souqone/image/upload/brand/logo.png',
       );
       expect(result.html).toContain(BRAND_LOGO_URL);
+
+      // Logo alt text is exactly the English brand
+      expect(extractAttribute(imgs[0], 'alt')).toBe('SouqOne');
+      expect(extractAttribute(imgs[0], 'id')).toBe('brand-logo');
 
       // #009CB5 is preserved for borders and lines, never as text color
       expect(result.html).not.toMatch(/(?<!background-)color\s*:\s*#009CB5/i);
@@ -326,6 +354,53 @@ describe('mail.templates', () => {
       expect(copyrightEntry).toBeDefined();
       expect(copyrightEntry!.fgHex).toBe('#6B7280');
       expect(copyrightEntry!.fontSizePx).toBe(11);
+
+      // Guard assertion 5: footer first entry is the bare brand name (bold, 13px, navy)
+      const descriptionIdx = elements.findIndex((e) => e.text.includes('سوق إلكتروني للإعلانات'));
+      expect(descriptionIdx).toBeGreaterThan(0);
+      const footerFirst = elements[descriptionIdx - 1];
+      expect(footerFirst.text).toBe('SouqOne');
+      expect(footerFirst.fgHex).toBe('#11232E');
+      expect(footerFirst.fontSizePx).toBe(13);
+      expect(footerFirst.isBold).toBe(true);
+
+      // Guard assertion 6: copyright entries (11px, #6B7280) contain the current year
+      const currentYear = String(new Date().getFullYear());
+      const copyrightEntries = elements.filter((e) => e.fgHex === '#6B7280' && e.fontSizePx === 11);
+      expect(copyrightEntries.length).toBeGreaterThan(0);
+      expect(copyrightEntries.some((e) => e.text.includes(currentYear))).toBe(true);
+      expect(copyrightEntries.some((e) => e.text === `SouqOne ${currentYear}`)).toBe(true);
+    });
+
+    it('should render the logo without any white wrapper around the transparent image', () => {
+      const result = builder({ code: sampleCode });
+      const imgIdx = result.html.indexOf('id="brand-logo"');
+      expect(imgIdx).toBeGreaterThan(0);
+
+      const rowStart = result.html.indexOf('<!-- Logo Row -->');
+      expect(rowStart).toBeGreaterThan(0);
+      expect(rowStart).toBeLessThan(imgIdx);
+      const closingTd = result.html.indexOf('</td>', imgIdx);
+      expect(closingTd).toBeGreaterThan(imgIdx);
+      const logoCell = result.html.slice(rowStart, closingTd + '</td>'.length);
+
+      expect(logoCell.length).toBeLessThan(600);
+      expect(logoCell).not.toContain('bgcolor');
+      expect(logoCell).not.toContain('background-color');
+      expect(logoCell).not.toContain('border-radius');
+    });
+
+    it('should keep the code out of the hidden preheader and keep the TTL in it', () => {
+      const result = builder({ code: sampleCode });
+      const hidden = result.html.match(/<div style="[^"]*display: none[^"]*">([\s\S]*?)<\/div>/);
+      expect(hidden).not.toBeNull();
+      const preheaderText = hidden![1].replace(/&nbsp;|&zwnj;/g, ' ').replace(/\s+/g, ' ').trim();
+
+      expect(preheaderText).not.toContain(sampleCode);
+      expect(preheaderText).toContain(VERIFICATION_CODE_TTL_MINUTES.toString());
+      expect(preheaderText).toBe(expectedPreheader);
+      // The &nbsp;&zwnj; padding after the preheader text is preserved
+      expect(hidden![1]).toContain('&nbsp;&zwnj;&nbsp;&zwnj;');
     });
 
     it('should generate dynamic copyright year matching the current date', () => {
