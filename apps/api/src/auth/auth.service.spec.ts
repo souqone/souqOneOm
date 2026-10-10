@@ -19,10 +19,17 @@ const mockPrisma = {
     create: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
   },
   loginAudit: {
     create: jest.fn().mockResolvedValue({}),
   },
+  $transaction: jest.fn().mockImplementation(async (cb: any) => {
+    if (typeof cb === 'function') {
+      return cb(mockPrisma);
+    }
+    return Promise.all(cb);
+  }),
 };
 
 const mockJwt = {

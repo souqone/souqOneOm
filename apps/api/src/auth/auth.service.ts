@@ -252,9 +252,12 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash, passwordResetCode: null, passwordResetExpiry: null },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, passwordResetCode: null, passwordResetExpiry: null },
+      });
+      await this.tokens.revokeAllRefreshTokens(user.id, tx);
     });
 
     return { message: 'تم تغيير كلمة المرور بنجاح' };

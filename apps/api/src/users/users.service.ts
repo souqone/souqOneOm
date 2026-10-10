@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
+import { AuthTokenService } from '../auth/auth-token.service';
 import * as bcrypt from 'bcryptjs';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -10,6 +11,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
+    private readonly authTokenService: AuthTokenService,
   ) {}
 
   private readonly publicSelect = {
@@ -139,12 +141,23 @@ export class UsersService {
     }
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash },
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+      await this.authTokenService.revokeAllRefreshTokens(userId, tx);
+      return u;
     });
 
-    return { message: 'تم تغيير كلمة المرور بنجاح' };
+    const accessToken = await this.authTokenService.signAccessToken(updatedUser);
+    const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
+
+    return {
+      message: 'تم تغيير كلمة المرور بنجاح',
+      accessToken,
+      refreshToken,
+    };
   }
 
   async getActiveSessions(userId: string) {

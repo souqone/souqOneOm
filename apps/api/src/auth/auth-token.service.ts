@@ -55,6 +55,14 @@ export class AuthTokenService {
     }
   }
 
+  async revokeAllRefreshTokens(userId: string, tx?: any): Promise<void> {
+    const client = tx || this.prisma;
+    await client.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   async rotateRefreshToken(rawToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     const hashedToken = this.hashToken(rawToken);
     const stored = await this.prisma.refreshToken.findUnique({ where: { token: hashedToken } });
