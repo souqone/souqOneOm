@@ -13,7 +13,7 @@ const redis: any = {
   del: jest.fn(), delPattern: jest.fn(),
 };
 
-// contactPhone / whatsapp ARE filled in the database
+// A record as cached by a pre-migration deploy: the dropped columns are still inside it.
 const makeBus = (over: Record<string, any> = {}) => ({
   id: 'bus-1', slug: 'bus-slug', title: 'Bus', status: 'ACTIVE', userId: 'owner-1', deletedAt: null,
   year: 2020, capacity: 30, whatsappEnabled: true,
@@ -25,7 +25,7 @@ const makeBus = (over: Record<string, any> = {}) => ({
 
 const OTHER_FIELDS = ['id', 'slug', 'title', 'status', 'year', 'capacity', 'whatsappEnabled', 'user'];
 
-describe('Bus detail response never contains listing-level contactPhone/whatsapp', () => {
+describe('Bus detail never leaks contactPhone/whatsapp, even from legacy (pre-PR-6) cached records', () => {
   let service: BusesService;
 
   beforeEach(async () => {
@@ -77,11 +77,11 @@ describe('Bus detail response never contains listing-level contactPhone/whatsapp
     expectNoListingPhone(await service.findOne('bus-1', undefined, undefined));
   });
 
-  it('even if the Prisma query returned them, the response omits them (select is not relied on)', async () => {
+  it('even if the record returned by the data layer still carries them, the response omits them', async () => {
     const record = makeBus();
     prisma.busListing.findFirst.mockResolvedValue(record);
     const res = await service.findOne('bus-1', undefined, 'member-1');
-    expect(record).toHaveProperty('contactPhone'); // the DB record had both fields...
+    expect(record).toHaveProperty('contactPhone'); // the legacy record has both fields...
     expectNoListingPhone(res); // ...the response has neither
   });
 
@@ -110,5 +110,27 @@ describe('Bus detail response never contains listing-level contactPhone/whatsapp
     expect(out).not.toHaveProperty('whatsapp');
     expect(out.contractClient).toBe('ACME');
     expect(input.contactPhone).toBe('91111111');
+  });
+});
+
+describe('A current record (columns dropped) has no phone keys at all', () => {
+  it('makeBus without the legacy fields passes through unchanged for a member', async () => {
+    const mod = await Test.createTestingModule({
+      providers: [
+        BusesService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: RedisService, useValue: redis },
+        { provide: GeoService, useValue: {} },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
+    }).compile();
+    const svc = mod.get(BusesService);
+    const { contactPhone, whatsapp, ...current } = makeBus();
+    redis.get.mockResolvedValue(null);
+    prisma.busListing.findFirst.mockResolvedValue(current);
+    const res: any = await svc.findOne('bus-1', undefined, 'member-1');
+    expect(res).not.toHaveProperty('contactPhone');
+    expect(res).not.toHaveProperty('whatsapp');
+    expect(res.title).toBe('Bus');
   });
 });

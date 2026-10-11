@@ -26,8 +26,6 @@ const makeBus = (over: Record<string, any> = {}) => ({
   status: 'ACTIVE',
   userId: OWNER,
   deletedAt: null,
-  contactPhone: '96890000000',
-  whatsapp: '96890000001',
   contractClient: 'ACME',
   contractMonthly: '500',
   contractDuration: 12,
@@ -36,9 +34,8 @@ const makeBus = (over: Record<string, any> = {}) => ({
   ...over,
 });
 
-const CONTACT = ['contactPhone', 'whatsapp'];
 const CONTRACT = ['contractClient', 'contractMonthly', 'contractDuration', 'contractExpiry'];
-const SENSITIVE = [...CONTACT, ...CONTRACT];
+const SENSITIVE = CONTRACT;
 
 describe('BusesService detail - visibility gate and privacy', () => {
   let service: BusesService;
@@ -93,7 +90,7 @@ describe('BusesService detail - visibility gate and privacy', () => {
     await expect(service.findOne('bus-1', undefined, OWNER)).rejects.toThrow(NotFoundException);
   });
 
-  describe('members-only fields (phone / WhatsApp / contract)', () => {
+  describe('members-only fields (contract data)', () => {
     it('are removed for a visitor (findOne)', async () => {
       prisma.busListing.findFirst.mockResolvedValue(makeBus());
       const res: any = await service.findOne('bus-1', undefined, undefined);

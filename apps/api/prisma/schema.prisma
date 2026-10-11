@@ -1200,8 +1200,6 @@ model BusListing {
   latitude    Float?
   longitude   Float?
 
-  contactPhone String?
-  whatsapp     String?
   whatsappEnabled Boolean @default(false)
 
   status        ListingStatus @default(ACTIVE)

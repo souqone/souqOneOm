@@ -20,7 +20,6 @@ const validBus = {
   price: 12000,
   governorateId: 1,
   wilayaId: 1,
-  contactPhone: '+96899112233',
 };
 
 describe('Buses API (e2e)', () => {
