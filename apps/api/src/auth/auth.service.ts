@@ -9,7 +9,7 @@ import { GoogleAuthDto } from './dto/google-auth.dto';
 import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
-import { VERIFICATION_CODE_TTL_MS } from './auth.constants';
+import { MAX_VERIFY_ATTEMPTS, VERIFICATION_CODE_TTL_MS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
@@ -303,17 +303,14 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('المستخدم غير موجود');
 
     if (user.isVerified) {
-      const accessToken = await this.tokens.signAccessToken(user);
-      const refreshToken = await this.tokens.generateRefreshToken(user.id);
       return {
-        accessToken,
-        refreshToken,
-        user: this.tokens.sanitizeUser(user),
+        message: 'البريد موثق بالفعل. يرجى تسجيل الدخول.',
+        alreadyVerified: true,
       };
     }
 
     const attempts = await this.audit.getVerifyAttempts(userId);
-    if (attempts >= 5) {
+    if (attempts >= MAX_VERIFY_ATTEMPTS) {
       await this.prisma.user.update({
         where: { id: userId },
         data: { emailVerificationCode: null, emailVerificationExpiry: null },
@@ -331,7 +328,7 @@ export class AuthService {
 
     if (!this.tokens.safeCompare(user.emailVerificationCode, code)) {
       const currentAttempts = await this.audit.recordVerifyFailure(userId);
-      if (currentAttempts >= 5) {
+      if (currentAttempts >= MAX_VERIFY_ATTEMPTS) {
         await this.prisma.user.update({
           where: { id: userId },
           data: { emailVerificationCode: null, emailVerificationExpiry: null },

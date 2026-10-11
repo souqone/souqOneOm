@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
+  HttpCode,
   HttpStatus,
   INestApplication,
+  Post,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -30,6 +33,8 @@ const JWT_SECRET = 'super-secret-key-at-least-32-chars-long-for-test!!';
 
 @Controller('test-gate')
 class TestGateController {
+  constructor(private readonly authService?: AuthService) {}
+
   @Get('protected')
   @UseGuards(JwtAuthGuard)
   getProtected(@CurrentUser() user: any) {
@@ -46,6 +51,14 @@ class TestGateController {
   @UseGuards(VerificationGuard)
   getVerifyEndpoint(@CurrentUser() user: any) {
     return { ok: true, sub: user?.sub };
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(VerificationGuard)
+  verifyEmail(@Body() dto: any, @CurrentUser() user: any) {
+    if (!this.authService) throw new Error('AuthService not injected');
+    return this.authService.verifyEmail(user.sub, dto?.code);
   }
 }
 
@@ -173,6 +186,12 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           JwtAuthGuard,
           OptionalJwtAuthGuard,
           VerificationGuard,
+          AuthService,
+          AuthTokenService,
+          AuthAuditService,
+          { provide: PrismaService, useValue: mockPrisma },
+          { provide: MailService, useValue: mockMail },
+          { provide: RedisService, useValue: mockRedis },
         ],
       }).compile();
 
@@ -242,6 +261,30 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
         .set('Authorization', `Bearer ${regularToken}`);
 
       expect(resFail.status).toBe(HttpStatus.UNAUTHORIZED);
+    });
+
+    it('attack scenario: signed verificationToken for verified user on POST /verify-email returns 200 without tokens', async () => {
+      const vToken = jwtService.sign(
+        { sub: 'victim-user-id', purpose: 'email-verify' },
+        { secret: JWT_SECRET, expiresIn: '15m' },
+      );
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'victim-user-id',
+        email: 'victim@example.com',
+        isVerified: true,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/test-gate/verify-email')
+        .set('Authorization', `Bearer ${vToken}`)
+        .send({ code: '123456' });
+
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(res.body.alreadyVerified).toBe(true);
+      expect(res.body.message).toBe('البريد موثق بالفعل. يرجى تسجيل الدخول.');
+      expect(res.body.accessToken).toBeUndefined();
+      expect(res.body.refreshToken).toBeUndefined();
     });
   });
 
@@ -498,6 +541,27 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
       await authService.resendVerification('u-resend');
 
       expect(redisStore.has('auth:verify:attempts:u-resend')).toBe(false);
+    });
+
+    it('verifyEmail for already verified user returns alreadyVerified: true and NO tokens without calling signAccessToken', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-already-verified',
+        email: 'already@example.com',
+        isVerified: true,
+      });
+      const signSpy = jest.spyOn(authTokenService, 'signAccessToken');
+      const refreshSpy = jest.spyOn(authTokenService, 'generateRefreshToken');
+
+      const res = await authService.verifyEmail('u-already-verified', 'any-code-999');
+
+      expect(res.alreadyVerified).toBe(true);
+      expect(res.message).toBe('البريد موثق بالفعل. يرجى تسجيل الدخول.');
+      expect((res as any).accessToken).toBeUndefined();
+      expect((res as any).refreshToken).toBeUndefined();
+      expect(signSpy).not.toHaveBeenCalled();
+      expect(refreshSpy).not.toHaveBeenCalled();
+      signSpy.mockRestore();
+      refreshSpy.mockRestore();
     });
   });
 });

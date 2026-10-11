@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -49,6 +49,7 @@ export class AuthController {
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @UseGuards(VerificationGuard)
+  @HttpCode(HttpStatus.OK)
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto, @CurrentUser() user: JwtPayload) {
     return this.authService.verifyEmail(user.sub, dto.code);

@@ -301,15 +301,19 @@ describe('AuthService', () => {
       await expect(service.verifyEmail('user-1', '123456')).rejects.toThrow(BadRequestException);
     });
 
-    it('should return session tokens if already verified', async () => {
+    it('should return message without session tokens if already verified', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1', isVerified: true, role: 'USER',
       });
-      mockPrisma.refreshToken.create.mockResolvedValue({ token: 'ht' });
 
       const result = await service.verifyEmail('user-1', '123456');
-      expect(result.accessToken).toBe('mock-access-token');
-      expect(result.refreshToken).toBeDefined();
+      expect(result).toEqual({
+        message: 'البريد موثق بالفعل. يرجى تسجيل الدخول.',
+        alreadyVerified: true,
+      });
+      expect((result as any).accessToken).toBeUndefined();
+      expect((result as any).refreshToken).toBeUndefined();
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
     });
   });
 
