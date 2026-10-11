@@ -149,15 +149,6 @@ export class CreateBusListingDto {
   @Type(() => Number)
   longitude?: number;
 
-  // ── Contact ──
-  @IsOptional()
-  @IsString()
-  contactPhone?: string;
-
-  @IsOptional()
-  @IsString()
-  whatsapp?: string;
-
   @IsOptional()
   @IsBoolean()
   whatsappEnabled?: boolean;

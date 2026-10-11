@@ -112,11 +112,11 @@ describe('BusesService.findSimilar', () => {
   it('strips members-only fields from returned cards and caches the result', async () => {
     prisma.busListing.findFirst.mockResolvedValue(original());
     prisma.busListing.findMany.mockResolvedValue([
-      { id: 'b2', createdAt: '2026-01-01', price: '10000', contactPhone: '999', whatsapp: '999', contractClient: 'X', contractMonthly: '1', contractDuration: 1, contractExpiry: 'd' },
+      { id: 'b2', createdAt: '2026-01-01', price: '10000', contractClient: 'X', contractMonthly: '1', contractDuration: 1, contractExpiry: 'd' },
     ]);
     const res: any = await service.findSimilar('bus-1', 4, undefined);
-    expect(res[0]).not.toHaveProperty('contactPhone');
     expect(res[0]).not.toHaveProperty('contractClient');
+    expect(res[0]).not.toHaveProperty('contractMonthly');
     expect(redis.set).toHaveBeenCalledWith('busListing:similar:bus-1:4', res, 300);
   });
 

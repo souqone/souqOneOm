@@ -25,9 +25,10 @@ const LIST_CACHE_TTL = 300;   // 5 min
 const DETAIL_CACHE_TTL = 600; // 10 min
 
 /**
- * Listing-level phone/WhatsApp are never part of a public bus response (same as cars, which have
- * no such fields): contact details come only from GET /contact/BUS_LISTING/:id (owner account phone).
- * The columns stay in the schema; this is an API-level removal.
+ * DEFENSIVE ONLY. BusListing no longer has contactPhone/whatsapp columns (dropped in PR-6), so new
+ * records never contain them. This strip stays because Redis may still hold detail records cached
+ * (DETAIL_CACHE_TTL = 10 min) by a pre-migration deploy; it can be deleted once that window has
+ * passed. Contact details come only from GET /contact/BUS_LISTING/:id (owner account phone).
  */
 const NEVER_EXPOSED_FIELDS = ['contactPhone', 'whatsapp'] as const;
 
@@ -133,8 +134,6 @@ export class BusesService {
           wilayaId: dto.wilayaId,
           latitude: dto.latitude,
           longitude: dto.longitude,
-          contactPhone: dto.contactPhone,
-          whatsapp: dto.whatsapp,
           whatsappEnabled: dto.whatsappEnabled ?? false,
           userId,
         },

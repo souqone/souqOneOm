@@ -27,8 +27,6 @@ describe('Contact endpoint - BUS_LISTING', () => {
     userId: 'owner-1',
     status: ListingStatus.ACTIVE,
     whatsappEnabled: true,
-    contactPhone: '91111111',
-    whatsapp: '92222222',
   };
   const viewer = { sub: 'viewer-1' } as any;
 
@@ -55,7 +53,7 @@ describe('Contact endpoint - BUS_LISTING', () => {
 
   it('controller accepts BUS_LISTING and reads from prisma.busListing (not prisma.listing)', async () => {
     const res = await controller.getContact('BUS_LISTING', 'bus-1', viewer);
-    // owner's ACCOUNT phone (not the listing's contactPhone/whatsapp), same as cars
+    // owner's ACCOUNT phone, same as cars (bus listings have no phone columns of their own)
     expect(res).toEqual({ phone: '+96893333333', whatsappNumber: '+96893333333' });
     expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'owner-1' } }),
@@ -78,14 +76,10 @@ describe('Contact endpoint - BUS_LISTING', () => {
     expect(res.phone).toBe('+96893333333');
   });
 
-  it('never uses the listing-level contactPhone/whatsapp, even when they are set', async () => {
-    mockPrisma.busListing.findFirst.mockResolvedValue({ ...bus, contactPhone: '91111111', whatsapp: '92222222' });
-    const res = await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
-    expect(JSON.stringify(res)).not.toContain('91111111');
-    expect(JSON.stringify(res)).not.toContain('92222222');
+  it('selects only ownership/visibility/whatsappEnabled from the bus (no phone columns)', async () => {
+    await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
     const select = mockPrisma.busListing.findFirst.mock.calls[0][0].select;
-    expect(select).not.toHaveProperty('contactPhone');
-    expect(select).not.toHaveProperty('whatsapp');
+    expect(Object.keys(select).sort()).toEqual(['id', 'status', 'userId', 'whatsappEnabled']);
   });
 
   it('owner without a phone -> phone and whatsappNumber are null', async () => {
