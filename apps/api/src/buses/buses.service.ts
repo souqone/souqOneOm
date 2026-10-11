@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -167,7 +168,9 @@ export class BusesService {
     await this.redis.delPattern('busListing:similar:*');
     if (id) {
       await this.redis.del(this.cacheKey(`detail:${id}`));
-      await this.redis.del(this.cacheKey(`slug:*`));
+      // RedisService.del takes ONE literal key; slug keys are keyed by slug (unknown here),
+      // so use the SCAN-based delPattern instead of the old no-op `del('...slug:*')`.
+      await this.redis.delPattern(this.cacheKey('slug:*'));
     }
   }
 
@@ -433,6 +436,11 @@ export class BusesService {
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (bus.userId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
+    // Fail fast on a stale client; the version-guarded UPDATE below still protects against races.
+    if (dto.version !== bus.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+
     const nextGovId = dto.governorateId !== undefined ? dto.governorateId : bus.governorateId;
     const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : bus.wilayaId;
     if (nextGovId || nextWilayaId) {
@@ -457,7 +465,7 @@ export class BusesService {
 
     const data: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(dto)) {
-      if (value === undefined) continue;
+      if (value === undefined || key === 'version') continue;
       if (DECIMAL_FIELDS.includes(key)) {
         data[key] = new Prisma.Decimal(value as number);
       } else if (DATE_FIELDS.includes(key)) {
@@ -467,28 +475,37 @@ export class BusesService {
       }
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.busListing.update({
-        where: { id },
-        data,
-        include: {
-          user: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' } },
-          governorateRef: true,
-          wilayaRef: true,
-        },
-      });
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        // `version` in the unique filter makes a stale write fail with P2025 (-> 409 below)
+        const res = await tx.busListing.update({
+          where: { id, version: dto.version },
+          data: { ...data, version: { increment: 1 } },
+          include: {
+            user: { select: USER_SELECT },
+            images: { orderBy: { order: 'asc' } },
+            governorateRef: true,
+            wilayaRef: true,
+          },
+        });
 
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.BUS_LISTING,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.BUS_LISTING,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
 
-      return res;
-    });
+        return res;
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {

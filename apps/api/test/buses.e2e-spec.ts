@@ -159,6 +159,48 @@ describe('Buses API (e2e)', () => {
     });
   });
 
+  // ─── Visibility gate + privacy ───
+  describe('GET /api/buses/:id - visibility and privacy', () => {
+    it('hides an ARCHIVED listing from visitors (404) but not from its owner', async () => {
+      const { accessToken } = await registerUser();
+      const created = await request(getApp().getHttpServer())
+        .post('/api/buses')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(validBus);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/buses/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ version: created.body.version, status: 'ARCHIVED' })
+        .expect(200);
+
+      await request(getApp().getHttpServer()).get(`/api/buses/${created.body.id}`).expect(404);
+      await request(getApp().getHttpServer())
+        .get(`/api/buses/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+    });
+
+    it('strips phone/whatsapp/contract fields for visitors but shows them to any signed-in user', async () => {
+      const owner = await registerUser();
+      const other = await registerUser();
+      const created = await request(getApp().getHttpServer())
+        .post('/api/buses')
+        .set('Authorization', `Bearer ${owner.accessToken}`)
+        .send(validBus);
+
+      const visitor = await request(getApp().getHttpServer()).get(`/api/buses/${created.body.id}`).expect(200);
+      expect(visitor.body).not.toHaveProperty('contactPhone');
+      expect(visitor.body.user).not.toHaveProperty('phone');
+
+      const member = await request(getApp().getHttpServer())
+        .get(`/api/buses/${created.body.id}`)
+        .set('Authorization', `Bearer ${other.accessToken}`)
+        .expect(200);
+      expect(member.body.contactPhone).toBe(validBus.contactPhone);
+    });
+  });
+
   // ─── Update ───
   describe('PATCH /api/buses/:id', () => {
     it('should update own bus listing', async () => {
@@ -171,7 +213,7 @@ describe('Buses API (e2e)', () => {
       const res = await request(getApp().getHttpServer())
         .patch(`/api/buses/${created.body.id}`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ price: 15000 })
+        .send({ version: created.body.version, price: 15000 })
         .expect(200);
 
       expect(Number(res.body.price)).toBe(15000);
@@ -189,8 +231,30 @@ describe('Buses API (e2e)', () => {
       await request(getApp().getHttpServer())
         .patch(`/api/buses/${created.body.id}`)
         .set('Authorization', `Bearer ${user2.accessToken}`)
-        .send({ price: 1 })
+        .send({ version: created.body.version, price: 1 })
         .expect(403);
+    });
+
+    it('should return 409 when the version is stale and bump version on success', async () => {
+      const { accessToken } = await registerUser();
+      const created = await request(getApp().getHttpServer())
+        .post('/api/buses')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(validBus);
+      const v = created.body.version;
+
+      const ok = await request(getApp().getHttpServer())
+        .patch(`/api/buses/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ version: v, price: 15000 })
+        .expect(200);
+      expect(ok.body.version).toBe(v + 1);
+
+      await request(getApp().getHttpServer())
+        .patch(`/api/buses/${created.body.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ version: v, price: 16000 })
+        .expect(409);
     });
 
     it('should reject without auth', async () => {
