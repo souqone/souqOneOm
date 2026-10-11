@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
 import type { User } from '@prisma/client';
 import type { JwtPayload } from './auth.types';
+import { VERIFICATION_TOKEN_TTL } from './auth.constants';
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 
@@ -20,6 +21,7 @@ export class AuthTokenService {
       email: user.email,
       username: user.username,
       role: user.role,
+      verified: user.isVerified === true,
     };
   }
 
@@ -29,6 +31,13 @@ export class AuthTokenService {
 
   async signAccessToken(user: User): Promise<string> {
     return this.jwtService.signAsync(this.buildPayload(user));
+  }
+
+  async signVerificationToken(userId: string): Promise<string> {
+    return this.jwtService.signAsync(
+      { sub: userId, purpose: 'email-verify' },
+      { expiresIn: VERIFICATION_TOKEN_TTL },
+    );
   }
 
   async generateRefreshToken(userId: string): Promise<string> {
@@ -78,7 +87,7 @@ export class AuthTokenService {
     });
 
     const user = await this.prisma.user.findUnique({ where: { id: stored.userId } });
-    if (!user) return null as any;
+    if (!user || !user.isVerified) return null as any;
 
     const accessToken = await this.signAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user.id);

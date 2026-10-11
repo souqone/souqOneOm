@@ -153,6 +153,9 @@ describe('Auth & Input Validation Suite', () => {
       mockAuditService = {
         recordLoginSuccess: jest.fn().mockResolvedValue(undefined),
         recordLoginFailure: jest.fn().mockResolvedValue(undefined),
+        getVerifyAttempts: jest.fn().mockResolvedValue(0),
+        recordVerifyFailure: jest.fn().mockResolvedValue(1),
+        clearVerifyAttempts: jest.fn().mockResolvedValue(undefined),
       };
 
       authService = new AuthService(
@@ -180,7 +183,11 @@ describe('Auth & Input Validation Suite', () => {
       });
 
       const result = await authService.verifyEmail('user-1', dto.code);
-      expect(result).toEqual({ message: 'تم توثيق البريد بنجاح' });
+      expect(result).toEqual({
+        accessToken: 'acc-token',
+        refreshToken: 'ref-token',
+        user: expect.objectContaining({ isVerified: true }),
+      });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
         data: {

@@ -3,4 +3,6 @@ export type JwtPayload = {
   email: string;
   username: string;
   role: string;
+  verified?: boolean;
+  purpose?: 'email-verify';
 };

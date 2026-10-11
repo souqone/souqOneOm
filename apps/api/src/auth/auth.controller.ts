@@ -9,7 +9,7 @@ import { GoogleAuthDto } from './dto/google-auth.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { VerificationGuard } from './verification.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from './auth.types';
 
@@ -48,14 +48,14 @@ export class AuthController {
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(VerificationGuard)
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto, @CurrentUser() user: JwtPayload) {
     return this.authService.verifyEmail(user.sub, dto.code);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 3 } })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(VerificationGuard)
   @Post('resend-verification')
   resendVerification(@CurrentUser() user: JwtPayload) {
     return this.authService.resendVerification(user.sub);
