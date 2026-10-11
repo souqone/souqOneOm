@@ -5,6 +5,7 @@ import {
 
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
@@ -44,14 +45,26 @@ export class BusesController {
     return this.busesService.myListings(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string, @Req() req: Request) {
-    return this.busesService.findBySlug(slug, req.ip);
+  findBySlug(@Param('slug') slug: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.busesService.findBySlug(slug, req.ip, user?.sub);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get(':id/similar')
+  findSimilar(
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.busesService.findSimilar(id, limit ? parseInt(limit, 10) : 8, user?.sub);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
-    return this.busesService.findOne(id, req.ip);
+  findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.busesService.findOne(id, req.ip, user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)

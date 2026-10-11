@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -15,10 +16,42 @@ import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
 import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
+import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
+import { assertEntityVisible } from '../listings/listing-visibility';
+import { findSimilarListings } from '../common/utils/similar-listings.util';
 
 const VIEW_COOLDOWN_SECONDS = 3600; // 1 view per IP per listing per hour
 const LIST_CACHE_TTL = 300;   // 5 min
 const DETAIL_CACHE_TTL = 600; // 10 min
+
+/**
+ * Listing-level phone/WhatsApp are never part of a public bus response (same as cars, which have
+ * no such fields): contact details come only from GET /contact/BUS_LISTING/:id (owner account phone).
+ * The columns stay in the schema; this is an API-level removal.
+ */
+const NEVER_EXPOSED_FIELDS = ['contactPhone', 'whatsapp'] as const;
+
+/** Commercial contract data: visible to any signed-in viewer, hidden from visitors. */
+const MEMBERS_ONLY_FIELDS = [
+  'contractClient',
+  'contractMonthly',
+  'contractDuration',
+  'contractExpiry',
+] as const;
+
+/** Shallow copy without contactPhone/whatsapp (applies to EVERY viewer). */
+export function stripNeverExposedFields<T extends Record<string, any>>(bus: T): T {
+  const copy: Record<string, any> = { ...bus };
+  for (const f of NEVER_EXPOSED_FIELDS) delete copy[f];
+  return copy as T;
+}
+
+/** Shallow copy without contact fields AND contract fields (visitors, lists, similar cards). */
+export function stripMembersOnlyFields<T extends Record<string, any>>(bus: T): T {
+  const copy: Record<string, any> = stripNeverExposedFields(bus);
+  for (const f of MEMBERS_ONLY_FIELDS) delete copy[f];
+  return copy as T;
+}
 
 const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
   DRAFT:     ['ACTIVE'],
@@ -102,6 +135,7 @@ export class BusesService {
           longitude: dto.longitude,
           contactPhone: dto.contactPhone,
           whatsapp: dto.whatsapp,
+          whatsappEnabled: dto.whatsappEnabled ?? false,
           userId,
         },
         include: {
@@ -140,9 +174,12 @@ export class BusesService {
 
   private async invalidateCache(id?: string) {
     await this.redis.delPattern('busListing:list:*');
+    await this.redis.delPattern('busListing:similar:*');
     if (id) {
       await this.redis.del(this.cacheKey(`detail:${id}`));
-      await this.redis.del(this.cacheKey(`slug:*`));
+      // RedisService.del takes ONE literal key; slug keys are keyed by slug (unknown here),
+      // so use the SCAN-based delPattern instead of the old no-op `del('...slug:*')`.
+      await this.redis.delPattern(this.cacheKey('slug:*'));
     }
   }
 
@@ -236,7 +273,7 @@ export class BusesService {
         take: limit,
         orderBy,
         include: {
-          user: { select: USER_SELECT },
+          user: { select: USER_SELECT_LISTING_PUBLIC },
           images: { orderBy: { order: 'asc' } },
           governorateRef: true,
           wilayaRef: true,
@@ -245,57 +282,123 @@ export class BusesService {
       this.prisma.busListing.count({ where }),
     ]);
 
-    const result = { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    // List cards never need contact/contract data — strip for everyone (cache is shared)
+    const result = { items: items.map((b) => stripMembersOnlyFields(b)), meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
     await this.redis.set(cKey, result, LIST_CACHE_TTL);
     return result;
   }
 
-  async findOne(id: string, ip?: string) {
-    const cKey = this.cacheKey(`detail:${id}`);
-    const cached = await this.redis.get<any>(cKey);
-    if (cached) {
-      await this.incrementViewIfAllowed(id, ip);
-      return cached;
-    }
-
-    const bus = await this.prisma.busListing.findFirst({
-      where: { id, deletedAt: null },
-      include: {
-        user: { select: USER_SELECT },
-        images: { orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
-    });
-    if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
-
-    await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
+  /** Applies the visibility gate + viewer-dependent field stripping, then counts the view. */
+  private async serveDetail(bus: any, ip?: string, viewerId?: string) {
+    if (!bus || bus.deletedAt) throw new NotFoundException('إعلان الحافلة غير موجود');
+    assertEntityVisible(bus, bus.userId, viewerId, 'إعلان الحافلة غير موجود');
     await this.incrementViewIfAllowed(bus.id, ip);
-    return bus;
+    return viewerId ? stripNeverExposedFields(bus) : stripMembersOnlyFields(bus);
   }
 
-  async findBySlug(slug: string, ip?: string) {
-    const cKey = this.cacheKey(`slug:${slug}`);
-    const cached = await this.redis.get<any>(cKey);
-    if (cached) {
-      await this.incrementViewIfAllowed(cached.id, ip);
-      return cached;
+  async findOne(id: string, ip?: string, viewerId?: string) {
+    const cKey = this.cacheKey(`detail:${id}`);
+    let bus = await this.redis.get<any>(cKey);
+
+    if (!bus) {
+      bus = await this.prisma.busListing.findFirst({
+        where: { id, deletedAt: null },
+        include: {
+          user: { select: USER_SELECT_LISTING_PUBLIC },
+          images: { orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+      if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
+      // The cache holds the full record; the gate and field stripping run on every read.
+      await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
     }
 
-    const bus = await this.prisma.busListing.findFirst({
-      where: { slug, deletedAt: null },
-      include: {
-        user: { select: USER_SELECT },
-        images: { orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
+    return this.serveDetail(bus, ip, viewerId);
+  }
+
+  async findBySlug(slug: string, ip?: string, viewerId?: string) {
+    const cKey = this.cacheKey(`slug:${slug}`);
+    let bus = await this.redis.get<any>(cKey);
+
+    if (!bus) {
+      bus = await this.prisma.busListing.findFirst({
+        where: { slug, deletedAt: null },
+        include: {
+          user: { select: USER_SELECT_LISTING_PUBLIC },
+          images: { orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+      if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
+      await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
+    }
+
+    return this.serveDetail(bus, ip, viewerId);
+  }
+
+  async findSimilar(id: string, limit = 8, viewerId?: string) {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 8, 1), 20);
+
+    // Gate first: a hidden listing must not leak through its "similar" list (or its cache).
+    const original = await this.prisma.busListing.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true, status: true, userId: true,
+        busListingType: true, busType: true, make: true, year: true,
+        price: true, dailyPrice: true,
       },
     });
-    if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
+    if (!original) throw new NotFoundException('إعلان الحافلة غير موجود');
+    assertEntityVisible(original, original.userId, viewerId, 'إعلان الحافلة غير موجود');
 
-    await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
-    await this.incrementViewIfAllowed(bus.id, ip);
-    return bus;
+    const cKey = this.cacheKey(`similar:${id}:${safeLimit}`);
+    const cached = await this.redis.get<any[]>(cKey);
+    if (cached) return cached;
+
+    const isRent = original.busListingType === 'BUS_RENT';
+    const priceField = isRent ? 'dailyPrice' : 'price';
+    const reference = isRent ? original.dailyPrice : original.price;
+    const refNum = reference == null ? 0 : Number(reference);
+    const priceWindow =
+      refNum > 0
+        ? { [priceField]: { gte: new Prisma.Decimal(refNum * 0.7), lte: new Prisma.Decimal(refNum * 1.3) } }
+        : {};
+
+    const items = await findSimilarListings({
+      delegate: this.prisma.busListing,
+      excludeId: id,
+      limit: safeLimit,
+      baseWhere: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        busListingType: original.busListingType,
+        busType: original.busType,
+      },
+      narrowWhere: {
+        make: { equals: original.make, mode: 'insensitive' },
+        year: { gte: original.year - 3, lte: original.year + 3 },
+        ...priceWindow,
+      },
+      broaderWhere: { make: { equals: original.make, mode: 'insensitive' } },
+      referencePrice: reference,
+      priceOf: (row) => (isRent ? row.dailyPrice : row.price),
+      query: {
+        include: {
+          user: { select: USER_SELECT_LISTING_PUBLIC },
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      },
+    });
+
+    // Card data only: never expose contact/contract fields in a list
+    const result = items.map((b) => stripMembersOnlyFields(b));
+    await this.redis.set(cKey, result, LIST_CACHE_TTL);
+    return result;
   }
 
   private async incrementViewIfAllowed(listingId: string, ip?: string) {
@@ -342,6 +445,11 @@ export class BusesService {
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (bus.userId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
+    // Fail fast on a stale client; the version-guarded UPDATE below still protects against races.
+    if (dto.version !== bus.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+
     const nextGovId = dto.governorateId !== undefined ? dto.governorateId : bus.governorateId;
     const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : bus.wilayaId;
     if (nextGovId || nextWilayaId) {
@@ -366,7 +474,7 @@ export class BusesService {
 
     const data: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(dto)) {
-      if (value === undefined) continue;
+      if (value === undefined || key === 'version') continue;
       if (DECIMAL_FIELDS.includes(key)) {
         data[key] = new Prisma.Decimal(value as number);
       } else if (DATE_FIELDS.includes(key)) {
@@ -376,28 +484,37 @@ export class BusesService {
       }
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.busListing.update({
-        where: { id },
-        data,
-        include: {
-          user: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' } },
-          governorateRef: true,
-          wilayaRef: true,
-        },
-      });
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        // `version` in the unique filter makes a stale write fail with P2025 (-> 409 below)
+        const res = await tx.busListing.update({
+          where: { id, version: dto.version },
+          data: { ...data, version: { increment: 1 } },
+          include: {
+            user: { select: USER_SELECT },
+            images: { orderBy: { order: 'asc' } },
+            governorateRef: true,
+            wilayaRef: true,
+          },
+        });
 
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.BUS_LISTING,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.BUS_LISTING,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
 
-      return res;
-    });
+        return res;
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {

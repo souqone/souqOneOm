@@ -12,6 +12,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { ContactService } from './contact.service';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+
+const CONTACT_ENTITY_TYPES: string[] = [ENTITY_TYPES.LISTING, ENTITY_TYPES.BUS_LISTING];
 
 @ApiTags('Contact')
 @ApiBearerAuth()
@@ -29,7 +32,7 @@ export class ContactController {
     @Param('entityId') entityId: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    if (entityType !== 'LISTING') {
+    if (!CONTACT_ENTITY_TYPES.includes(entityType)) {
       throw new NotFoundException('جهة الاتصال غير موجودة');
     }
     return this.contactService.getContact(entityType, entityId, user.sub);
