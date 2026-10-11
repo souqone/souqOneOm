@@ -79,4 +79,20 @@ export class AuthAuditService {
       this.redis.del(stageKey),
     ]);
   }
+
+  async getVerifyAttempts(userId: string): Promise<number> {
+    const key = `auth:verify:attempts:${userId}`;
+    const attempts = await this.redis.get<number>(key);
+    return attempts || 0;
+  }
+
+  async recordVerifyFailure(userId: string): Promise<number> {
+    const key = `auth:verify:attempts:${userId}`;
+    return this.redis.incr(key, 15 * 60);
+  }
+
+  async clearVerifyAttempts(userId: string): Promise<void> {
+    const key = `auth:verify:attempts:${userId}`;
+    await this.redis.del(key);
+  }
 }

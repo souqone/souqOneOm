@@ -156,7 +156,7 @@ describe('JWT Hardening & Rotation Suite (Task 017 / B1b Phase 2)', () => {
 
     it('valid current-secret token -> 200', async () => {
       const token = jwt.sign(
-        { sub: 'user-1', email: 'user@test.com', role: 'USER' },
+        { sub: 'user-1', email: 'user@test.com', role: 'USER', verified: true },
         currentSecret,
         { algorithm: 'HS256', expiresIn: '15m' },
       );
@@ -171,7 +171,7 @@ describe('JWT Hardening & Rotation Suite (Task 017 / B1b Phase 2)', () => {
 
     it('valid previous-secret token -> 200', async () => {
       const token = jwt.sign(
-        { sub: 'user-prev', email: 'prev@test.com', role: 'USER' },
+        { sub: 'user-prev', email: 'prev@test.com', role: 'USER', verified: true },
         previousSecret,
         { algorithm: 'HS256', expiresIn: '15m' },
       );

@@ -253,15 +253,29 @@ export async function registerUser(overrides?: {
     password: overrides?.password || 'TestPass123!',
   };
 
-  const res = await request(app.getHttpServer())
+  await request(app.getHttpServer())
     .post('/api/auth/signup')
     .send(payload)
     .expect(201);
 
+  // Verification gate: mark account as verified in test DB then login to obtain verified session tokens
+  await prisma.user.update({
+    where: { email: payload.email.toLowerCase() },
+    data: { isVerified: true },
+  });
+
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({
+      email: payload.email,
+      password: payload.password,
+    })
+    .expect(201);
+
   return {
-    accessToken: res.body.accessToken,
-    refreshToken: res.body.refreshToken,
-    user: res.body.user,
+    accessToken: loginRes.body.accessToken,
+    refreshToken: loginRes.body.refreshToken,
+    user: loginRes.body.user,
   };
 }
 

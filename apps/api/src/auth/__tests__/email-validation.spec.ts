@@ -215,6 +215,7 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
 
       mockTokens = {
         generateVerificationCode: jest.fn().mockReturnValue('123456'),
+        signVerificationToken: jest.fn().mockResolvedValue('v-token'),
         signAccessToken: jest.fn().mockResolvedValue('acc-token'),
         generateRefreshToken: jest.fn().mockResolvedValue('ref-token'),
         sanitizeUser: jest.fn().mockImplementation((u) => u),

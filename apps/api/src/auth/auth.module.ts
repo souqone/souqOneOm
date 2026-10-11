@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 import { JwtStrategy } from './jwt.strategy';
+import { JwtVerifyStrategy } from './jwt-verify.strategy';
+import { VerificationGuard } from './verification.guard';
 import { TokenCleanupService } from './token-cleanup.service';
 import { getJwtModuleOptions } from '../config/jwt.config';
 
@@ -17,7 +19,15 @@ import { getJwtModuleOptions } from '../config/jwt.config';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthTokenService, AuthAuditService, JwtStrategy, TokenCleanupService],
-  exports: [AuthTokenService],
+  providers: [
+    AuthService,
+    AuthTokenService,
+    AuthAuditService,
+    JwtStrategy,
+    JwtVerifyStrategy,
+    VerificationGuard,
+    TokenCleanupService,
+  ],
+  exports: [AuthTokenService, VerificationGuard],
 })
 export class AuthModule {}

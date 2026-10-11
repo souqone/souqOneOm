@@ -9,7 +9,7 @@ import { GoogleAuthDto } from './dto/google-auth.dto';
 import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
-import { VERIFICATION_CODE_TTL_MS } from './auth.constants';
+import { MAX_VERIFY_ATTEMPTS, VERIFICATION_CODE_TTL_MS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
@@ -66,12 +66,22 @@ export class AuthService {
         },
       });
 
-      await this.mailService.sendVerificationEmail(email, code);
+      let emailSent = true;
+      try {
+        await this.mailService.sendVerificationEmail(email, code);
+      } catch {
+        emailSent = false;
+        this.logger.error(`Failed to send verification email for user ${user.id}`);
+      }
 
-      const accessToken = await this.tokens.signAccessToken(user);
-      const refreshToken = await this.tokens.generateRefreshToken(user.id);
+      const verificationToken = await this.tokens.signVerificationToken(user.id);
 
-      return { accessToken, refreshToken, user: this.tokens.sanitizeUser(user), requiresVerification: true };
+      return {
+        requiresVerification: true,
+        verificationToken,
+        emailSent,
+        user: { email: user.email },
+      };
     } catch (err: any) {
       if (err.code === 'P2002') {
         const field = err.meta?.target?.includes('email') ? 'البريد الإلكتروني' : 'اسم المستخدم';
@@ -109,6 +119,42 @@ export class AuthService {
       await this.audit.recordFailedAttempt(email);
       await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'WRONG_PASSWORD', ip, userAgent });
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
+    }
+
+    // Check if user is verified before issuing session tokens
+    if (!user.isVerified) {
+      await this.audit.resetLockout(email);
+      await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'EMAIL_NOT_VERIFIED', ip, userAgent });
+
+      const code = this.tokens.generateVerificationCode();
+      const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpiry: expiry,
+        },
+      });
+
+      await this.audit.clearVerifyAttempts(user.id);
+
+      let emailSent = true;
+      try {
+        await this.mailService.sendVerificationEmail(email, code);
+      } catch {
+        emailSent = false;
+        this.logger.error(`Failed to send verification email on login for user ${user.id}`);
+      }
+
+      const verificationToken = await this.tokens.signVerificationToken(user.id);
+
+      return {
+        requiresVerification: true,
+        verificationToken,
+        emailSent,
+        user: { email: user.email },
+      };
     }
 
     // Reset lockout on success
@@ -255,7 +301,22 @@ export class AuthService {
   async verifyEmail(userId: string, code: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('المستخدم غير موجود');
-    if (user.isVerified) return { message: 'البريد موثق بالفعل' };
+
+    if (user.isVerified) {
+      return {
+        message: 'البريد موثق بالفعل. يرجى تسجيل الدخول.',
+        alreadyVerified: true,
+      };
+    }
+
+    const attempts = await this.audit.getVerifyAttempts(userId);
+    if (attempts >= MAX_VERIFY_ATTEMPTS) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { emailVerificationCode: null, emailVerificationExpiry: null },
+      });
+      throw new BadRequestException('تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.');
+    }
 
     if (!user.emailVerificationCode || !user.emailVerificationExpiry) {
       throw new BadRequestException('لا يوجد رمز تحقق مرسل. اطلب رمز جديد.');
@@ -266,15 +327,32 @@ export class AuthService {
     }
 
     if (!this.tokens.safeCompare(user.emailVerificationCode, code)) {
+      const currentAttempts = await this.audit.recordVerifyFailure(userId);
+      if (currentAttempts >= MAX_VERIFY_ATTEMPTS) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { emailVerificationCode: null, emailVerificationExpiry: null },
+        });
+        throw new BadRequestException('تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.');
+      }
       throw new BadRequestException('رمز التحقق غير صحيح');
     }
 
-    await this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { isVerified: true, emailVerificationCode: null, emailVerificationExpiry: null },
     });
 
-    return { message: 'تم توثيق البريد بنجاح' };
+    await this.audit.clearVerifyAttempts(userId);
+
+    const accessToken = await this.tokens.signAccessToken(updated);
+    const refreshToken = await this.tokens.generateRefreshToken(updated.id);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: this.tokens.sanitizeUser(updated),
+    };
   }
 
   async resendVerification(userId: string) {
@@ -290,9 +368,17 @@ export class AuthService {
       data: { emailVerificationCode: code, emailVerificationExpiry: expiry },
     });
 
-    await this.mailService.sendVerificationEmail(user.email, code);
+    await this.audit.clearVerifyAttempts(userId);
 
-    return { message: 'تم إرسال رمز تحقق جديد' };
+    let emailSent = true;
+    try {
+      await this.mailService.sendVerificationEmail(user.email, code);
+    } catch {
+      emailSent = false;
+      this.logger.error(`Failed to send verification email on resend for user ${userId}`);
+    }
+
+    return { message: 'تم إرسال رمز تحقق جديد', emailSent };
   }
 
   async forgotPassword(email: string) {

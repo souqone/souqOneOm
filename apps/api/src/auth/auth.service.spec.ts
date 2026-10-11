@@ -60,6 +60,8 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockRedis.get.mockResolvedValue(null);
+    mockRedis.incr.mockResolvedValue(1);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -79,7 +81,7 @@ describe('AuthService', () => {
 
   /* ═══════ SIGNUP ═══════ */
   describe('signup', () => {
-    it('should create a new user and return tokens', async () => {
+    it('should create a new user and return verification gate response without tokens', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       mockPrisma.user.create.mockResolvedValue({
         id: 'user-1',
@@ -87,8 +89,8 @@ describe('AuthService', () => {
         username: 'testuser',
         role: 'USER',
         passwordHash: 'hashed',
+        isVerified: false,
       });
-      mockPrisma.refreshToken.create.mockResolvedValue({ token: 'hashed-token' });
 
       const result = await service.signup({
         email: 'test@example.com',
@@ -96,9 +98,13 @@ describe('AuthService', () => {
         password: 'Password1',
       });
 
-      expect(result.accessToken).toBe('mock-access-token');
-      expect(result.refreshToken).toBeDefined();
       expect(result.requiresVerification).toBe(true);
+      expect(result.verificationToken).toBe('mock-access-token');
+      expect(result.emailSent).toBe(true);
+      expect(result.user).toEqual({ email: 'test@example.com' });
+      expect((result as any).accessToken).toBeUndefined();
+      expect((result as any).refreshToken).toBeUndefined();
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
       expect(mockMail.sendVerificationEmail).toHaveBeenCalledWith(
         'test@example.com',
         expect.any(String),
@@ -112,23 +118,6 @@ describe('AuthService', () => {
         service.signup({ email: 'test@example.com', username: 'new', password: 'Password1' }),
       ).rejects.toThrow(BadRequestException);
     });
-
-    it('should store hashed refresh token in DB', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue({
-        id: 'user-1', email: 'a@b.com', username: 'u', role: 'USER', passwordHash: 'h',
-      });
-      mockPrisma.refreshToken.create.mockResolvedValue({ token: 'whatever' });
-
-      const result = await service.signup({
-        email: 'a@b.com', username: 'u', password: 'Password1',
-      });
-
-      // The token stored in DB should be a SHA-256 hash, not the raw token
-      const storedToken = mockPrisma.refreshToken.create.mock.calls[0][0].data.token;
-      expect(storedToken).toHaveLength(64); // SHA-256 hex = 64 chars
-      expect(storedToken).not.toBe(result.refreshToken); // raw != hash
-    });
   });
 
   /* ═══════ LOGIN ═══════ */
@@ -138,7 +127,7 @@ describe('AuthService', () => {
       const hash = await bcrypt.hash('Password1', 10);
 
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', email: 'test@example.com', username: 'testuser', role: 'USER', passwordHash: hash,
+        id: 'user-1', email: 'test@example.com', username: 'testuser', role: 'USER', passwordHash: hash, isVerified: true,
       });
       mockPrisma.refreshToken.create.mockResolvedValue({ token: 'hashed-token' });
 
@@ -175,7 +164,7 @@ describe('AuthService', () => {
 
       mockRedis.get.mockResolvedValue(2); // 2 previous attempts
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', email: 'test@example.com', username: 'u', role: 'USER', passwordHash: hash,
+        id: 'user-1', email: 'test@example.com', username: 'u', role: 'USER', passwordHash: hash, isVerified: true,
       });
       mockPrisma.refreshToken.create.mockResolvedValue({ token: 'ht' });
 
@@ -234,7 +223,7 @@ describe('AuthService', () => {
       });
       mockPrisma.refreshToken.update.mockResolvedValue({});
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', email: 'a@b.com', username: 'u', role: 'USER',
+        id: 'user-1', email: 'a@b.com', username: 'u', role: 'USER', isVerified: true,
       });
       mockPrisma.refreshToken.create.mockResolvedValue({ token: 'new-hashed' });
 
@@ -275,16 +264,21 @@ describe('AuthService', () => {
 
   /* ═══════ VERIFY EMAIL ═══════ */
   describe('verifyEmail', () => {
-    it('should verify email with correct code', async () => {
+    it('should verify email with correct code and return session tokens', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1', isVerified: false,
         emailVerificationCode: '123456',
         emailVerificationExpiry: new Date(Date.now() + 60000),
       });
-      mockPrisma.user.update.mockResolvedValue({});
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'user-1', email: 'test@example.com', username: 'u', role: 'USER', isVerified: true,
+      });
+      mockPrisma.refreshToken.create.mockResolvedValue({ token: 'ht' });
 
       const result = await service.verifyEmail('user-1', '123456');
-      expect(result.message).toContain('توثيق');
+      expect(result.accessToken).toBe('mock-access-token');
+      expect(result.refreshToken).toBeDefined();
+      expect(result.user.isVerified).toBe(true);
     });
 
     it('should throw for wrong code', async () => {
@@ -307,13 +301,19 @@ describe('AuthService', () => {
       await expect(service.verifyEmail('user-1', '123456')).rejects.toThrow(BadRequestException);
     });
 
-    it('should return success if already verified', async () => {
+    it('should return message without session tokens if already verified', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', isVerified: true,
+        id: 'user-1', isVerified: true, role: 'USER',
       });
 
       const result = await service.verifyEmail('user-1', '123456');
-      expect(result.message).toContain('موثق');
+      expect(result).toEqual({
+        message: 'البريد موثق بالفعل. يرجى تسجيل الدخول.',
+        alreadyVerified: true,
+      });
+      expect((result as any).accessToken).toBeUndefined();
+      expect((result as any).refreshToken).toBeUndefined();
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
     });
   });
 
@@ -443,7 +443,7 @@ describe('AuthService', () => {
       mockRedis.get.mockResolvedValue(null);
 
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', email: 'test@example.com', username: 'u', role: 'USER', passwordHash: hash,
+        id: 'user-1', email: 'test@example.com', username: 'u', role: 'USER', passwordHash: hash, isVerified: true,
       });
       mockPrisma.refreshToken.create.mockResolvedValue({ token: 'ht' });
 
