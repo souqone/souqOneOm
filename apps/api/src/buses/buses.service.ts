@@ -25,21 +25,30 @@ const LIST_CACHE_TTL = 300;   // 5 min
 const DETAIL_CACHE_TTL = 600; // 10 min
 
 /**
- * Fields only a signed-in viewer may see on a bus listing (visitors get them stripped).
- * Phone/WhatsApp are additionally always available through GET /contact/BUS_LISTING/:id.
+ * Listing-level phone/WhatsApp are never part of a public bus response (same as cars, which have
+ * no such fields): contact details come only from GET /contact/BUS_LISTING/:id (owner account phone).
+ * The columns stay in the schema; this is an API-level removal.
  */
+const NEVER_EXPOSED_FIELDS = ['contactPhone', 'whatsapp'] as const;
+
+/** Commercial contract data: visible to any signed-in viewer, hidden from visitors. */
 const MEMBERS_ONLY_FIELDS = [
-  'contactPhone',
-  'whatsapp',
   'contractClient',
   'contractMonthly',
   'contractDuration',
   'contractExpiry',
 ] as const;
 
-/** Returns a shallow copy without the members-only fields. */
-export function stripMembersOnlyFields<T extends Record<string, any>>(bus: T): T {
+/** Shallow copy without contactPhone/whatsapp (applies to EVERY viewer). */
+export function stripNeverExposedFields<T extends Record<string, any>>(bus: T): T {
   const copy: Record<string, any> = { ...bus };
+  for (const f of NEVER_EXPOSED_FIELDS) delete copy[f];
+  return copy as T;
+}
+
+/** Shallow copy without contact fields AND contract fields (visitors, lists, similar cards). */
+export function stripMembersOnlyFields<T extends Record<string, any>>(bus: T): T {
+  const copy: Record<string, any> = stripNeverExposedFields(bus);
   for (const f of MEMBERS_ONLY_FIELDS) delete copy[f];
   return copy as T;
 }
@@ -284,7 +293,7 @@ export class BusesService {
     if (!bus || bus.deletedAt) throw new NotFoundException('إعلان الحافلة غير موجود');
     assertEntityVisible(bus, bus.userId, viewerId, 'إعلان الحافلة غير موجود');
     await this.incrementViewIfAllowed(bus.id, ip);
-    return viewerId ? bus : stripMembersOnlyFields(bus);
+    return viewerId ? stripNeverExposedFields(bus) : stripMembersOnlyFields(bus);
   }
 
   async findOne(id: string, ip?: string, viewerId?: string) {

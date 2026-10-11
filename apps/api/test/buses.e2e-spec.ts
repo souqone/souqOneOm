@@ -181,7 +181,7 @@ describe('Buses API (e2e)', () => {
         .expect(200);
     });
 
-    it('strips phone/whatsapp/contract fields for visitors but shows them to any signed-in user', async () => {
+    it('never returns listing-level phone/whatsapp; contract fields only for signed-in users', async () => {
       const owner = await registerUser();
       const other = await registerUser();
       const created = await request(getApp().getHttpServer())
@@ -191,13 +191,15 @@ describe('Buses API (e2e)', () => {
 
       const visitor = await request(getApp().getHttpServer()).get(`/api/buses/${created.body.id}`).expect(200);
       expect(visitor.body).not.toHaveProperty('contactPhone');
+      expect(visitor.body).not.toHaveProperty('whatsapp');
       expect(visitor.body.user).not.toHaveProperty('phone');
 
       const member = await request(getApp().getHttpServer())
         .get(`/api/buses/${created.body.id}`)
         .set('Authorization', `Bearer ${other.accessToken}`)
         .expect(200);
-      expect(member.body.contactPhone).toBe(validBus.contactPhone);
+      expect(member.body).not.toHaveProperty('contactPhone');
+      expect(member.body).not.toHaveProperty('whatsapp');
     });
   });
 

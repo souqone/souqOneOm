@@ -36,7 +36,9 @@ const makeBus = (over: Record<string, any> = {}) => ({
   ...over,
 });
 
-const SENSITIVE = ['contactPhone', 'whatsapp', 'contractClient', 'contractMonthly', 'contractDuration', 'contractExpiry'];
+const CONTACT = ['contactPhone', 'whatsapp'];
+const CONTRACT = ['contractClient', 'contractMonthly', 'contractDuration', 'contractExpiry'];
+const SENSITIVE = [...CONTACT, ...CONTRACT];
 
 describe('BusesService detail - visibility gate and privacy', () => {
   let service: BusesService;
@@ -105,10 +107,10 @@ describe('BusesService detail - visibility gate and privacy', () => {
       for (const f of SENSITIVE) expect(res).not.toHaveProperty(f);
     });
 
-    it('are present for ANY signed-in viewer, not only the owner', async () => {
+    it('contract fields are present for ANY signed-in viewer, not only the owner', async () => {
       prisma.busListing.findFirst.mockResolvedValue(makeBus());
       const res: any = await service.findOne('bus-1', undefined, 'some-other-member');
-      for (const f of SENSITIVE) expect(res).toHaveProperty(f);
+      for (const f of CONTRACT) expect(res).toHaveProperty(f);
     });
 
     it('stripping does not mutate the cached object', async () => {
