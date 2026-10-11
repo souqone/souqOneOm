@@ -20,6 +20,7 @@ import { CHAT_EVENTS } from './chat.events';
 import { NOTIFICATION_EVENTS } from '../notifications/notification.events';
 import { verifyAccessToken } from '../config/jwt.config';
 import type { JwtPayload } from '../auth/auth.types';
+import { assertVerifiedAccessPayload } from '../auth/auth-token.validator';
 
 @SkipThrottle()
 @WebSocketGateway({
@@ -58,12 +59,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       }
 
       const user = verifyAccessToken<JwtPayload>(token);
+      assertVerifiedAccessPayload(user);
       client.data.user = user;
-
-      if (!user) {
-        client.disconnect();
-        return;
-      }
 
       // Multi-socket: add this socket to the user's set
       const sockets = this.connectedUsers.get(user.sub) ?? new Set<string>();
@@ -83,8 +80,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       }
 
       client.emit('connected', { userId: user.sub, username: user.username });
-    } catch (err) {
-      this.logger.error('Connection error', err instanceof Error ? err.stack : String(err));
+    } catch (err: any) {
+      const message = err?.response?.message || err?.message || 'خطأ في المصادقة';
+      const code = err?.response?.code || 'UNAUTHORIZED';
+      this.logger.error(`Connection error: ${message}`);
+      client.emit('error', { message, code });
       client.disconnect();
     }
   }
