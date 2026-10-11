@@ -168,6 +168,10 @@ export class UpdateBusListingDto {
   @IsString()
   whatsapp?: string;
 
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
+
   // ── Status (validated by state machine in service) ──
   @IsOptional()
   @IsEnum(ListingStatus)

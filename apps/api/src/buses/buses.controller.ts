@@ -52,6 +52,16 @@ export class BusesController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
+  @Get(':id/similar')
+  findSimilar(
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.busesService.findSimilar(id, limit ? parseInt(limit, 10) : 8, user?.sub);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
     return this.busesService.findOne(id, req.ip, user?.sub);

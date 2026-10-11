@@ -17,6 +17,7 @@ import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
 import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
 import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 import { assertEntityVisible } from '../listings/listing-visibility';
+import { findSimilarListings } from '../common/utils/similar-listings.util';
 
 const VIEW_COOLDOWN_SECONDS = 3600; // 1 view per IP per listing per hour
 const LIST_CACHE_TTL = 300;   // 5 min
@@ -124,6 +125,7 @@ export class BusesService {
           longitude: dto.longitude,
           contactPhone: dto.contactPhone,
           whatsapp: dto.whatsapp,
+          whatsappEnabled: dto.whatsappEnabled ?? false,
           userId,
         },
         include: {
@@ -162,6 +164,7 @@ export class BusesService {
 
   private async invalidateCache(id?: string) {
     await this.redis.delPattern('busListing:list:*');
+    await this.redis.delPattern('busListing:similar:*');
     if (id) {
       await this.redis.del(this.cacheKey(`detail:${id}`));
       await this.redis.del(this.cacheKey(`slug:*`));
@@ -322,6 +325,68 @@ export class BusesService {
     }
 
     return this.serveDetail(bus, ip, viewerId);
+  }
+
+  async findSimilar(id: string, limit = 8, viewerId?: string) {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 8, 1), 20);
+
+    // Gate first: a hidden listing must not leak through its "similar" list (or its cache).
+    const original = await this.prisma.busListing.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true, status: true, userId: true,
+        busListingType: true, busType: true, make: true, year: true,
+        price: true, dailyPrice: true,
+      },
+    });
+    if (!original) throw new NotFoundException('إعلان الحافلة غير موجود');
+    assertEntityVisible(original, original.userId, viewerId, 'إعلان الحافلة غير موجود');
+
+    const cKey = this.cacheKey(`similar:${id}:${safeLimit}`);
+    const cached = await this.redis.get<any[]>(cKey);
+    if (cached) return cached;
+
+    const isRent = original.busListingType === 'BUS_RENT';
+    const priceField = isRent ? 'dailyPrice' : 'price';
+    const reference = isRent ? original.dailyPrice : original.price;
+    const refNum = reference == null ? 0 : Number(reference);
+    const priceWindow =
+      refNum > 0
+        ? { [priceField]: { gte: new Prisma.Decimal(refNum * 0.7), lte: new Prisma.Decimal(refNum * 1.3) } }
+        : {};
+
+    const items = await findSimilarListings({
+      delegate: this.prisma.busListing,
+      excludeId: id,
+      limit: safeLimit,
+      baseWhere: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        busListingType: original.busListingType,
+        busType: original.busType,
+      },
+      narrowWhere: {
+        make: { equals: original.make, mode: 'insensitive' },
+        year: { gte: original.year - 3, lte: original.year + 3 },
+        ...priceWindow,
+      },
+      broaderWhere: { make: { equals: original.make, mode: 'insensitive' } },
+      referencePrice: reference,
+      priceOf: (row) => (isRent ? row.dailyPrice : row.price),
+      query: {
+        include: {
+          user: { select: USER_SELECT_LISTING_PUBLIC },
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      },
+    });
+
+    // Card data only: never expose contact/contract fields in a list
+    const result = items.map((b) => stripMembersOnlyFields(b));
+    await this.redis.set(cKey, result, LIST_CACHE_TTL);
+    return result;
   }
 
   private async incrementViewIfAllowed(listingId: string, ip?: string) {
