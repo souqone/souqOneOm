@@ -15,10 +15,32 @@ import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
 import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
+import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
+import { assertEntityVisible } from '../listings/listing-visibility';
 
 const VIEW_COOLDOWN_SECONDS = 3600; // 1 view per IP per listing per hour
 const LIST_CACHE_TTL = 300;   // 5 min
 const DETAIL_CACHE_TTL = 600; // 10 min
+
+/**
+ * Fields only a signed-in viewer may see on a bus listing (visitors get them stripped).
+ * Phone/WhatsApp are additionally always available through GET /contact/BUS_LISTING/:id.
+ */
+const MEMBERS_ONLY_FIELDS = [
+  'contactPhone',
+  'whatsapp',
+  'contractClient',
+  'contractMonthly',
+  'contractDuration',
+  'contractExpiry',
+] as const;
+
+/** Returns a shallow copy without the members-only fields. */
+export function stripMembersOnlyFields<T extends Record<string, any>>(bus: T): T {
+  const copy: Record<string, any> = { ...bus };
+  for (const f of MEMBERS_ONLY_FIELDS) delete copy[f];
+  return copy as T;
+}
 
 const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
   DRAFT:     ['ACTIVE'],
@@ -236,7 +258,7 @@ export class BusesService {
         take: limit,
         orderBy,
         include: {
-          user: { select: USER_SELECT },
+          user: { select: USER_SELECT_LISTING_PUBLIC },
           images: { orderBy: { order: 'asc' } },
           governorateRef: true,
           wilayaRef: true,
@@ -245,57 +267,61 @@ export class BusesService {
       this.prisma.busListing.count({ where }),
     ]);
 
-    const result = { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    // List cards never need contact/contract data — strip for everyone (cache is shared)
+    const result = { items: items.map((b) => stripMembersOnlyFields(b)), meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
     await this.redis.set(cKey, result, LIST_CACHE_TTL);
     return result;
   }
 
-  async findOne(id: string, ip?: string) {
-    const cKey = this.cacheKey(`detail:${id}`);
-    const cached = await this.redis.get<any>(cKey);
-    if (cached) {
-      await this.incrementViewIfAllowed(id, ip);
-      return cached;
-    }
-
-    const bus = await this.prisma.busListing.findFirst({
-      where: { id, deletedAt: null },
-      include: {
-        user: { select: USER_SELECT },
-        images: { orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
-    });
-    if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
-
-    await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
+  /** Applies the visibility gate + viewer-dependent field stripping, then counts the view. */
+  private async serveDetail(bus: any, ip?: string, viewerId?: string) {
+    if (!bus || bus.deletedAt) throw new NotFoundException('إعلان الحافلة غير موجود');
+    assertEntityVisible(bus, bus.userId, viewerId, 'إعلان الحافلة غير موجود');
     await this.incrementViewIfAllowed(bus.id, ip);
-    return bus;
+    return viewerId ? bus : stripMembersOnlyFields(bus);
   }
 
-  async findBySlug(slug: string, ip?: string) {
-    const cKey = this.cacheKey(`slug:${slug}`);
-    const cached = await this.redis.get<any>(cKey);
-    if (cached) {
-      await this.incrementViewIfAllowed(cached.id, ip);
-      return cached;
+  async findOne(id: string, ip?: string, viewerId?: string) {
+    const cKey = this.cacheKey(`detail:${id}`);
+    let bus = await this.redis.get<any>(cKey);
+
+    if (!bus) {
+      bus = await this.prisma.busListing.findFirst({
+        where: { id, deletedAt: null },
+        include: {
+          user: { select: USER_SELECT_LISTING_PUBLIC },
+          images: { orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+      if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
+      // The cache holds the full record; the gate and field stripping run on every read.
+      await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
     }
 
-    const bus = await this.prisma.busListing.findFirst({
-      where: { slug, deletedAt: null },
-      include: {
-        user: { select: USER_SELECT },
-        images: { orderBy: { order: 'asc' } },
-        governorateRef: true,
-        wilayaRef: true,
-      },
-    });
-    if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
+    return this.serveDetail(bus, ip, viewerId);
+  }
 
-    await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
-    await this.incrementViewIfAllowed(bus.id, ip);
-    return bus;
+  async findBySlug(slug: string, ip?: string, viewerId?: string) {
+    const cKey = this.cacheKey(`slug:${slug}`);
+    let bus = await this.redis.get<any>(cKey);
+
+    if (!bus) {
+      bus = await this.prisma.busListing.findFirst({
+        where: { slug, deletedAt: null },
+        include: {
+          user: { select: USER_SELECT_LISTING_PUBLIC },
+          images: { orderBy: { order: 'asc' } },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      });
+      if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
+      await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
+    }
+
+    return this.serveDetail(bus, ip, viewerId);
   }
 
   private async incrementViewIfAllowed(listingId: string, ip?: string) {
