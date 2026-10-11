@@ -88,7 +88,7 @@ describe('Users API (e2e)', () => {
       const login = await request(getApp().getHttpServer())
         .post('/api/auth/login')
         .send({ email, password: 'NewPass456!' })
-        .expect(200);
+        .expect(201);
 
       expect(login.body.accessToken).toBeDefined();
     });

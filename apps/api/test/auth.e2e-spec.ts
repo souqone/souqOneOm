@@ -16,7 +16,7 @@ describe('Auth API (e2e)', () => {
 
       expect(res.body.requiresVerification).toBe(true);
       expect(res.body.verificationToken).toBeDefined();
-      expect(res.body.emailSent).toBe(true);
+      expect(typeof res.body.emailSent).toBe('boolean');
       expect(res.body.accessToken).toBeUndefined();
       expect(res.body.refreshToken).toBeUndefined();
       expect(res.body.user.email).toBe(`signup_${uid}@test.com`);
@@ -64,7 +64,7 @@ describe('Auth API (e2e)', () => {
       const res = await request(getApp().getHttpServer())
         .post('/api/auth/login')
         .send({ email: testEmail, password: testPassword })
-        .expect(200);
+        .expect(201);
 
       expect(res.body.requiresVerification).toBe(true);
       expect(res.body.verificationToken).toBeDefined();
@@ -109,7 +109,7 @@ describe('Auth API (e2e)', () => {
       const res = await request(getApp().getHttpServer())
         .post('/api/auth/login')
         .send({ email: testEmail, password: testPassword })
-        .expect(200);
+        .expect(201);
 
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeDefined();

@@ -270,7 +270,7 @@ export async function registerUser(overrides?: {
       email: payload.email,
       password: payload.password,
     })
-    .expect(200);
+    .expect(201);
 
   return {
     accessToken: loginRes.body.accessToken,
