@@ -76,25 +76,21 @@ describe('Users API (e2e)', () => {
       const uid = uniqueId();
       const email = `chpw_${uid}@test.com`;
       const oldPass = 'OldPass123!';
-      await request(getApp().getHttpServer())
-        .post('/api/auth/signup')
-        .send({ email, username: `chpw_${uid}`, password: oldPass });
-
-      const login = await request(getApp().getHttpServer())
-        .post('/api/auth/login')
-        .send({ email, password: oldPass });
+      const { accessToken } = await registerUser({ email, password: oldPass });
 
       await request(getApp().getHttpServer())
         .patch('/api/users/me/password')
-        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({ currentPassword: oldPass, newPassword: 'NewPass456!' })
         .expect(200);
 
       // Verify new password works
-      await request(getApp().getHttpServer())
+      const login = await request(getApp().getHttpServer())
         .post('/api/auth/login')
         .send({ email, password: 'NewPass456!' })
-        .expect(201);
+        .expect(200);
+
+      expect(login.body.accessToken).toBeDefined();
     });
 
     it('should reject wrong current password', async () => {
