@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { assertListingVisible } from '../listings/listing-visibility';
+import { assertListingVisible, assertEntityVisible } from '../listings/listing-visibility';
+import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { normalizePhone } from '../common/utils/normalize-phone';
 
 @Injectable()
@@ -17,12 +18,30 @@ export class ContactService {
     private readonly redis: RedisService,
   ) {}
 
-  async getContact(entityType: string, entityId: string, viewerId: string) {
-    if (entityType !== 'LISTING') {
-      throw new NotFoundException('جهة الاتصال غير موجودة');
+  /**
+   * Resolves the minimal, uncached record needed to serve contact details for an entity type,
+   * enforcing that vertical's visibility gate. Adding a vertical = add one branch here.
+   */
+  private async loadContactTarget(entityType: string, entityId: string, viewerId: string) {
+    if (entityType === ENTITY_TYPES.BUS_LISTING) {
+      const bus = await this.prisma.busListing.findFirst({
+        where: { id: entityId, deletedAt: null },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          whatsappEnabled: true,
+        },
+      });
+      if (!bus) throw new NotFoundException('الإعلان غير موجود');
+      assertEntityVisible(bus, bus.userId, viewerId);
+      return {
+        ownerId: bus.userId,
+        whatsappEnabled: bus.whatsappEnabled,
+      };
     }
 
-    // 1. Direct DB lookup (minimal query, not from Redis cache)
+    // Cars (LISTING)
     const listing = await this.prisma.listing.findUnique({
       where: { id: entityId },
       select: {
@@ -32,13 +51,22 @@ export class ContactService {
         whatsappEnabled: true,
       },
     });
+    if (!listing) throw new NotFoundException('الإعلان غير موجود');
+    assertListingVisible(listing, viewerId);
+    return {
+      ownerId: listing.sellerId,
+      whatsappEnabled: listing.whatsappEnabled,
+    };
+  }
 
-    if (!listing) {
-      throw new NotFoundException('الإعلان غير موجود');
+  async getContact(entityType: string, entityId: string, viewerId: string) {
+    if (entityType !== ENTITY_TYPES.LISTING && entityType !== ENTITY_TYPES.BUS_LISTING) {
+      throw new NotFoundException('جهة الاتصال غير موجودة');
     }
 
-    // 2. Visibility gate check
-    assertListingVisible(listing, viewerId);
+    // 1+2. Direct DB lookup (not from Redis cache) + visibility gate
+    const target = await this.loadContactTarget(entityType, entityId, viewerId);
+    const listing = { sellerId: target.ownerId, whatsappEnabled: target.whatsappEnabled };
 
     // 3. If viewer is the owner -> reject with BadRequestException
     if (viewerId === listing.sellerId) {
@@ -74,6 +102,7 @@ export class ContactService {
       select: { phone: true },
     });
 
+    // Same rule for every vertical: the owner's account phone only; WhatsApp only when enabled.
     const normalized = normalizePhone(seller?.phone);
     const phone = normalized;
     const whatsappNumber = listing.whatsappEnabled ? normalized : null;

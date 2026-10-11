@@ -78,6 +78,7 @@ const mockBus = {
   year: 2020,
   capacity: 30,
   status: 'ACTIVE',
+  version: 1,
   viewCount: 5,
   userId: 'user-1',
   createdAt: new Date(),
@@ -251,7 +252,7 @@ describe('BusesService', () => {
         mockPrisma.busListing.findUnique.mockResolvedValue({ ...mockBus, status: from });
         mockPrisma.busListing.update.mockResolvedValue({ ...mockBus, status: to });
 
-        await service.update('bus-1', 'user-1', { status: to as any });
+        await service.update('bus-1', 'user-1', { version: 1, status: to as any });
 
         expect(mockPrisma.busListing.update).toHaveBeenCalled();
       },
@@ -263,7 +264,7 @@ describe('BusesService', () => {
         mockPrisma.busListing.findUnique.mockResolvedValue({ ...mockBus, status: from });
 
         await expect(
-          service.update('bus-1', 'user-1', { status: to as any }),
+          service.update('bus-1', 'user-1', { version: 1, status: to as any }),
         ).rejects.toThrow(BadRequestException);
       },
     );
@@ -272,7 +273,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
       mockPrisma.busListing.update.mockResolvedValue({ ...mockBus, title: 'عنوان جديد' });
 
-      await service.update('bus-1', 'user-1', { title: 'عنوان جديد' });
+      await service.update('bus-1', 'user-1', { version: 1, title: 'عنوان جديد' });
 
       expect(mockPrisma.busListing.update).toHaveBeenCalled();
     });
@@ -281,7 +282,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
 
       await expect(
-        service.update('bus-1', 'other-user', { title: 'hacked' }),
+        service.update('bus-1', 'other-user', { version: 1, title: 'hacked' }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -289,7 +290,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update('non-existent', 'user-1', { title: 'test' }),
+        service.update('non-existent', 'user-1', { version: 1, title: 'test' }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -409,7 +410,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.update.mockResolvedValue({ ...mockBus, status: 'SOLD' });
       mockPrisma.busListingStatusLog.create.mockResolvedValue({});
 
-      await service.update('bus-1', 'user-1', { status: 'SOLD' as any });
+      await service.update('bus-1', 'user-1', { version: 1, status: 'SOLD' as any });
 
       expect(mockPrisma.busListingStatusLog.create).toHaveBeenCalledWith({
         data: {
@@ -425,7 +426,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
       mockPrisma.busListing.update.mockResolvedValue(mockBus);
 
-      await service.update('bus-1', 'user-1', { title: 'new title' });
+      await service.update('bus-1', 'user-1', { version: 1, title: 'new title' });
 
       expect(mockPrisma.busListingStatusLog.create).not.toHaveBeenCalled();
     });
@@ -532,7 +533,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.update.mockResolvedValue({ ...mockBus, price: { toString: () => '12000' } });
       mockPrisma.busListingPriceHistory.create.mockResolvedValue({});
 
-      await service.update('bus-1', 'user-1', { price: 12000 } as any);
+      await service.update('bus-1', 'user-1', { version: 1, price: 12000 } as any);
 
       expect(mockPrisma.busListingPriceHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -546,7 +547,7 @@ describe('BusesService', () => {
       mockPrisma.busListing.findUnique.mockResolvedValue(mockBus);
       mockPrisma.busListing.update.mockResolvedValue(mockBus);
 
-      await service.update('bus-1', 'user-1', { title: 'new title' });
+      await service.update('bus-1', 'user-1', { version: 1, title: 'new title' });
 
       expect(mockPrisma.busListingPriceHistory.create).not.toHaveBeenCalled();
     });
@@ -561,7 +562,7 @@ describe('BusesService', () => {
     it('should fail on update if wilaya mismatch', async () => {
       mockPrisma.busListing.findUnique.mockResolvedValueOnce(mockBus);
       mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
-      const dto = { governorateId: 1, wilayaId: 10 } as any;
+      const dto = { version: 1, governorateId: 1, wilayaId: 10 } as any;
       await expect(service.update('bus-1', 'user-1', dto)).rejects.toThrow('Mismatch');
     });
   });

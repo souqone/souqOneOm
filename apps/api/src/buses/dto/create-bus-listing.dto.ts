@@ -157,4 +157,8 @@ export class CreateBusListingDto {
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 }

@@ -7,6 +7,12 @@ import {
 } from '@prisma/client';
 
 export class UpdateBusListingDto {
+  /** Optimistic-concurrency token: the `version` the client last read. Mismatch -> 409. */
+  @IsInt({ message: 'رقم النسخة يجب أن يكون رقماً صحيحاً' })
+  @Min(1)
+  @Type(() => Number)
+  version!: number;
+
   @IsOptional()
   @IsString()
   @MinLength(3)
@@ -167,6 +173,10 @@ export class UpdateBusListingDto {
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 
   // ── Status (validated by state machine in service) ──
   @IsOptional()
