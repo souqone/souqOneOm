@@ -1202,6 +1202,7 @@ model BusListing {
 
   contactPhone String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   status        ListingStatus @default(ACTIVE)
   isPremium     Boolean       @default(false)
@@ -1216,6 +1217,7 @@ model BusListing {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  version   Int       @default(1)
   deletedAt DateTime?
 
   // New Location Fields
