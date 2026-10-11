@@ -55,7 +55,11 @@ describe('Contact endpoint - BUS_LISTING', () => {
 
   it('controller accepts BUS_LISTING and reads from prisma.busListing (not prisma.listing)', async () => {
     const res = await controller.getContact('BUS_LISTING', 'bus-1', viewer);
-    expect(res).toEqual({ phone: '+96891111111', whatsappNumber: '+96892222222' });
+    // owner's ACCOUNT phone (not the listing's contactPhone/whatsapp), same as cars
+    expect(res).toEqual({ phone: '+96893333333', whatsappNumber: '+96893333333' });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'owner-1' } }),
+    );
     expect(mockPrisma.busListing.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'bus-1', deletedAt: null } }),
     );
@@ -71,13 +75,23 @@ describe('Contact endpoint - BUS_LISTING', () => {
     mockPrisma.busListing.findFirst.mockResolvedValue({ ...bus, whatsappEnabled: false });
     const res = await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
     expect(res.whatsappNumber).toBeNull();
-    expect(res.phone).toBe('+96891111111');
+    expect(res.phone).toBe('+96893333333');
   });
 
-  it('falls back to the owner profile phone when the listing has no contactPhone', async () => {
-    mockPrisma.busListing.findFirst.mockResolvedValue({ ...bus, contactPhone: null, whatsapp: null });
+  it('never uses the listing-level contactPhone/whatsapp, even when they are set', async () => {
+    mockPrisma.busListing.findFirst.mockResolvedValue({ ...bus, contactPhone: '91111111', whatsapp: '92222222' });
     const res = await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
-    expect(res).toEqual({ phone: '+96893333333', whatsappNumber: '+96893333333' });
+    expect(JSON.stringify(res)).not.toContain('91111111');
+    expect(JSON.stringify(res)).not.toContain('92222222');
+    const select = mockPrisma.busListing.findFirst.mock.calls[0][0].select;
+    expect(select).not.toHaveProperty('contactPhone');
+    expect(select).not.toHaveProperty('whatsapp');
+  });
+
+  it('owner without a phone -> phone and whatsappNumber are null', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ phone: null });
+    const res = await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
+    expect(res).toEqual({ phone: null, whatsappNumber: null });
   });
 
   it.each([ListingStatus.DRAFT, ListingStatus.ARCHIVED, ListingStatus.SUSPENDED])(

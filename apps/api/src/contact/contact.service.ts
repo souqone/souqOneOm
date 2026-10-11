@@ -31,8 +31,6 @@ export class ContactService {
           userId: true,
           status: true,
           whatsappEnabled: true,
-          contactPhone: true,
-          whatsapp: true,
         },
       });
       if (!bus) throw new NotFoundException('الإعلان غير موجود');
@@ -40,8 +38,6 @@ export class ContactService {
       return {
         ownerId: bus.userId,
         whatsappEnabled: bus.whatsappEnabled,
-        listingPhone: bus.contactPhone,
-        listingWhatsapp: bus.whatsapp,
       };
     }
 
@@ -60,8 +56,6 @@ export class ContactService {
     return {
       ownerId: listing.sellerId,
       whatsappEnabled: listing.whatsappEnabled,
-      listingPhone: null as string | null,
-      listingWhatsapp: null as string | null,
     };
   }
 
@@ -108,11 +102,10 @@ export class ContactService {
       select: { phone: true },
     });
 
-    // Bus listings can carry their own contact numbers; fall back to the owner's profile phone.
-    const phone = normalizePhone(target.listingPhone) ?? normalizePhone(seller?.phone);
-    const whatsappNumber = listing.whatsappEnabled
-      ? normalizePhone(target.listingWhatsapp) ?? phone
-      : null;
+    // Same rule for every vertical: the owner's account phone only; WhatsApp only when enabled.
+    const normalized = normalizePhone(seller?.phone);
+    const phone = normalized;
+    const whatsappNumber = listing.whatsappEnabled ? normalized : null;
 
     return {
       phone,
