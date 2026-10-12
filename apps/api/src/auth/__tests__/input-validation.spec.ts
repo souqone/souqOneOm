@@ -199,6 +199,7 @@ describe('Auth & Input Validation Suite', () => {
         where: { id: 'user-1' },
         data: {
           isVerified: true,
+          emailVerifiedAt: expect.any(Date),
         },
       });
     });

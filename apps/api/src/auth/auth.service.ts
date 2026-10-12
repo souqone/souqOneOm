@@ -1,9 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, Optional, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
-import { OtpPurpose } from '@prisma/client';
+import { OtpPurpose, AuthProvider } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
@@ -11,6 +11,7 @@ import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 import { OtpService } from './otp.service';
+import { AccessTokenGate } from './access-token-gate.service';
 import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly tokens: AuthTokenService,
     private readonly audit: AuthAuditService,
     private readonly otp: OtpService,
+    @Optional() private readonly accessTokenGate?: AccessTokenGate,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
@@ -204,17 +206,37 @@ export class AuthService {
       user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       if (!user) {
-        // Create new user from Google
+        // Create new user from Google with dual-write to auth_identities
         const username = normalizedEmail.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex');
-        user = await this.prisma.user.create({
-          data: {
-            email: normalizedEmail,
-            username,
-            displayName: name || username,
-            googleId,
-            avatarUrl: picture,
-            isVerified: true,
-          },
+        user = await this.prisma.$transaction(async (tx) => {
+          const u = await tx.user.create({
+            data: {
+              email: normalizedEmail,
+              username,
+              displayName: name || username,
+              googleId,
+              avatarUrl: picture,
+              isVerified: true,
+              emailVerifiedAt: new Date(),
+            },
+          });
+          if (tx.authIdentity?.upsert) {
+            await tx.authIdentity.upsert({
+              where: {
+                provider_providerUserId: {
+                  provider: AuthProvider.GOOGLE,
+                  providerUserId: googleId,
+                },
+              },
+              update: { userId: u.id },
+              create: {
+                userId: u.id,
+                provider: AuthProvider.GOOGLE,
+                providerUserId: googleId,
+              },
+            });
+          }
+          return u;
         });
       } else {
         // User exists with this email
@@ -227,7 +249,7 @@ export class AuthService {
         }
 
         if (!user.isVerified) {
-          // Pre-hijacking mitigation: unverified account + authoritative Google
+          // Pre-hijacking mitigation: unverified account + authoritative Google + dual-write
           const targetUserId = user.id;
           const targetAvatarUrl = user.avatarUrl;
           user = await this.prisma.$transaction(async (tx) => {
@@ -237,9 +259,26 @@ export class AuthService {
                 passwordHash: null,
                 googleId,
                 isVerified: true,
+                emailVerifiedAt: new Date(),
                 avatarUrl: targetAvatarUrl || picture,
               },
             });
+            if (tx.authIdentity?.upsert) {
+              await tx.authIdentity.upsert({
+                where: {
+                  provider_providerUserId: {
+                    provider: AuthProvider.GOOGLE,
+                    providerUserId: googleId,
+                  },
+                },
+                update: { userId: targetUserId },
+                create: {
+                  userId: targetUserId,
+                  provider: AuthProvider.GOOGLE,
+                  providerUserId: googleId,
+                },
+              });
+            }
             await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
             await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
             await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
@@ -309,7 +348,7 @@ export class AuthService {
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { isVerified: true },
+      data: { isVerified: true, emailVerifiedAt: new Date() },
     });
 
     const accessToken = await this.tokens.signAccessToken(updated);
@@ -326,6 +365,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('المستخدم غير موجود');
     if (user.isVerified) return { message: 'البريد موثق بالفعل' };
+    if (!user.email) {
+      return { message: 'تم إرسال رمز تحقق جديد', emailSent: false };
+    }
 
     const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
@@ -342,7 +384,7 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
-    if (!user) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
+    if (!user || !user.email) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
 
     const code = await this.otp.issue(user.id, OtpPurpose.PASSWORD_RESET, OTP_TTL_SECONDS);
 
@@ -378,10 +420,17 @@ export class AuthService {
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { passwordHash },
+        data: {
+          passwordHash,
+          tokenVersion: { increment: 1 },
+        },
       });
       await this.tokens.revokeAllRefreshTokens(user.id, tx);
     });
+
+    if (this.accessTokenGate) {
+      await this.accessTokenGate.invalidate(user.id);
+    }
 
     return { message: 'تم تغيير كلمة المرور بنجاح' };
   }
