@@ -8,7 +8,7 @@ import {
   MessageBody,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Logger, Optional, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
@@ -42,7 +42,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(
     private readonly chatService: ChatService,
     private readonly redis: RedisService,
-    @Optional() private readonly accessTokenGate?: AccessTokenGate,
+    private readonly accessTokenGate: AccessTokenGate,
   ) {}
 
   async afterInit() {
@@ -62,9 +62,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       const user = verifyAccessToken<JwtPayload>(token);
       assertVerifiedAccessPayload(user);
-      if (this.accessTokenGate) {
-        await this.accessTokenGate.validate(user);
-      }
+      await this.accessTokenGate.validate(user);
       client.data.user = user;
 
       // Multi-socket: add this socket to the user's set

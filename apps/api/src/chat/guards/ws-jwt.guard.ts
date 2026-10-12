@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, Optional } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import type { Socket } from 'socket.io';
 import type { JwtPayload } from '../../auth/auth.types';
@@ -8,11 +8,9 @@ import { AccessTokenGate } from '../../auth/access-token-gate.service';
 
 @Injectable()
 export class WsJwtGuard implements CanActivate {
-  constructor(
-    @Optional() private readonly accessTokenGate?: AccessTokenGate,
-  ) {}
+  constructor(private readonly accessTokenGate: AccessTokenGate) {}
 
-  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
+  canActivate(context: ExecutionContext): Promise<boolean> {
     const client: Socket = context.switchToWs().getClient();
     const token = client.handshake?.auth?.token || client.handshake?.headers?.authorization?.replace('Bearer ', '');
 
@@ -29,20 +27,15 @@ export class WsJwtGuard implements CanActivate {
       throw new WsException(message);
     }
 
-    if (this.accessTokenGate) {
-      return this.accessTokenGate
-        .validate(payload)
-        .then(() => {
-          client.data.user = payload;
-          return true;
-        })
-        .catch((err: any) => {
-          const message = err?.response?.message || err?.message || 'غير مصرح: رمز الدخول غير صالح';
-          throw new WsException(message);
-        });
-    }
-
-    client.data.user = payload;
-    return true;
+    return this.accessTokenGate
+      .validate(payload)
+      .then(() => {
+        client.data.user = payload;
+        return true;
+      })
+      .catch((err: any) => {
+        const message = err?.response?.message || err?.message || 'غير مصرح: رمز الدخول غير صالح';
+        throw new WsException(message);
+      });
   }
 }

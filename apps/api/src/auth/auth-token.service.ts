@@ -22,7 +22,7 @@ export class AuthTokenService {
       username: user.username,
       role: user.role,
       verified: user.isVerified === true,
-      tv: user.tokenVersion,
+      tv: typeof user.tokenVersion === 'number' ? user.tokenVersion : 0,
     };
   }
 

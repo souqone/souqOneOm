@@ -123,4 +123,56 @@ describe('AccessTokenGate (Unit Tests)', () => {
       300,
     );
   });
+
+  it('fails closed with 401 UnauthorizedException if Postgres query throws an exception', async () => {
+    mockRedis.get.mockResolvedValue(null);
+    mockPrisma.user.findUnique.mockRejectedValue(new Error('Postgres connection timeout / dead pool'));
+
+    await expect(
+      gate.validate({ sub: 'user-1', role: 'USER', tv: 1 }),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('treats corrupted or unexpected Redis data as a cache miss and falls back to Postgres', async () => {
+    // 1. Corrupted primitive string instead of object
+    mockRedis.get.mockResolvedValue('corrupted-non-json-string');
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      tokenVersion: 2,
+      status: AccountStatus.ACTIVE,
+    });
+
+    const res1 = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
+    expect(res1).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { id: true, tokenVersion: true, status: true },
+    });
+
+    // 2. Unexpected object missing tv or status
+    mockPrisma.user.findUnique.mockClear();
+    mockRedis.get.mockResolvedValue({ foo: 'bar' });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      tokenVersion: 2,
+      status: AccountStatus.ACTIVE,
+    });
+
+    const res2 = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
+    expect(res2).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
+
+    // 3. Redis.get throwing an error (e.g. JSON syntax error / network exception)
+    mockPrisma.user.findUnique.mockClear();
+    mockRedis.get.mockRejectedValue(new Error('Redis syntax error'));
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      tokenVersion: 2,
+      status: AccountStatus.ACTIVE,
+    });
+
+    const res3 = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
+    expect(res3).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { AuthTokenService } from '../auth/auth-token.service';
@@ -13,7 +13,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
     private readonly authTokenService: AuthTokenService,
-    @Optional() private readonly accessTokenGate?: AccessTokenGate,
+    private readonly accessTokenGate: AccessTokenGate,
   ) {}
 
   private readonly publicSelect = {
@@ -155,7 +155,7 @@ export class UsersService {
       return u;
     });
 
-    await this.accessTokenGate?.invalidate(userId);
+    await this.accessTokenGate.invalidate(userId);
 
     const accessToken = await this.authTokenService.signAccessToken(updatedUser);
     const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
@@ -216,15 +216,18 @@ export class UsersService {
   }
 
   async revokeAllSessions(userId: string) {
-    const { count } = await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+    const { count } = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { tokenVersion: { increment: 1 } },
+      });
+      return res;
     });
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { tokenVersion: { increment: 1 } },
-    });
-    await this.accessTokenGate?.invalidate(userId);
+    await this.accessTokenGate.invalidate(userId);
     return { message: `تم إنهاء ${count} جلسة بنجاح` };
   }
 
