@@ -403,6 +403,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
+          { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
         ],
       }).compile();
 

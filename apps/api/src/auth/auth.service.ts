@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, Logger, Optional, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -29,7 +29,7 @@ export class AuthService {
     private readonly tokens: AuthTokenService,
     private readonly audit: AuthAuditService,
     private readonly otp: OtpService,
-    @Optional() private readonly accessTokenGate?: AccessTokenGate,
+    private readonly accessTokenGate: AccessTokenGate,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
@@ -428,9 +428,7 @@ export class AuthService {
       await this.tokens.revokeAllRefreshTokens(user.id, tx);
     });
 
-    if (this.accessTokenGate) {
-      await this.accessTokenGate.invalidate(user.id);
-    }
+    await this.accessTokenGate.invalidate(user.id);
 
     return { message: 'تم تغيير كلمة المرور بنجاح' };
   }
