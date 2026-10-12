@@ -222,11 +222,18 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
         safeCompare: jest.fn().mockReturnValue(true),
       };
 
+      const mockOtp = {
+        issue: jest.fn().mockResolvedValue('123456'),
+        verify: jest.fn().mockResolvedValue('OK'),
+        invalidateActive: jest.fn().mockResolvedValue(undefined),
+      };
+
       authService = new AuthService(
         mockPrisma as any,
         mockMailService as any,
         mockTokens as any,
         auditService,
+        mockOtp as any,
       );
     });
 

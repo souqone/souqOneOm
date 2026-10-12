@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthTokenService } from '../auth-token.service';
 import { AuthAuditService } from '../auth-audit.service';
+import { OtpService } from '../otp.service';
 import { UsersService } from '../../users/users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
@@ -63,12 +64,19 @@ describe('B1: Session Revocation on Password Change and Reset', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    const mockOtp = {
+      issue: jest.fn().mockResolvedValue('112233'),
+      verify: jest.fn().mockResolvedValue('OK'),
+      invalidateActive: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         AuthTokenService,
         AuthAuditService,
         UsersService,
+        { provide: OtpService, useValue: mockOtp },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },

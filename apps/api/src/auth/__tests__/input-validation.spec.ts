@@ -158,11 +158,18 @@ describe('Auth & Input Validation Suite', () => {
         clearVerifyAttempts: jest.fn().mockResolvedValue(undefined),
       };
 
+      const mockOtp = {
+        issue: jest.fn().mockResolvedValue('123456'),
+        verify: jest.fn().mockResolvedValue('OK'),
+        invalidateActive: jest.fn().mockResolvedValue(undefined),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMailService,
         mockTokens,
         mockAuditService,
+        mockOtp as any,
       );
     });
 
@@ -192,8 +199,6 @@ describe('Auth & Input Validation Suite', () => {
         where: { id: 'user-1' },
         data: {
           isVerified: true,
-          emailVerificationCode: null,
-          emailVerificationExpiry: null,
         },
       });
     });
@@ -324,12 +329,18 @@ describe('Auth & Input Validation Suite', () => {
         sanitizeUser: (u: any) => u,
       };
       const mockAudit = { recordLoginSuccess: jest.fn() };
+      const mockOtp = {
+        issue: jest.fn().mockResolvedValue('123456'),
+        verify: jest.fn().mockResolvedValue('OK'),
+        invalidateActive: jest.fn().mockResolvedValue(undefined),
+      };
 
       authService = new AuthService(
         mockPrisma,
         mockMail as any,
         mockTokens as any,
         mockAudit as any,
+        mockOtp as any,
       );
     });
 

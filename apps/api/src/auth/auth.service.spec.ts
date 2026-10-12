@@ -8,6 +8,8 @@ import { AuthAuditService } from './auth-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { RedisService } from '../redis/redis.service';
+import { OtpService } from './otp.service';
+import { OtpPurpose } from '@prisma/client';
 
 const mockPrisma = {
   user: {
@@ -54,6 +56,16 @@ function hashToken(token: string) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+const mockOtp = {
+  issue: jest.fn().mockResolvedValue('123456'),
+  verify: jest.fn().mockImplementation(async (userId: string, purpose: any, code: string) => {
+    if (code === '123456' || code === '654321') return 'OK';
+    if (code === 'expired') return 'MISSING_OR_EXPIRED';
+    return 'INVALID';
+  }),
+  invalidateActive: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
   let tokenService: AuthTokenService;
@@ -63,11 +75,19 @@ describe('AuthService', () => {
     mockRedis.get.mockResolvedValue(null);
     mockRedis.incr.mockResolvedValue(1);
 
+    mockOtp.issue.mockResolvedValue('123456');
+    mockOtp.verify.mockImplementation(async (userId: string, purpose: any, code: string) => {
+      if (code === '123456' || code === '654321') return 'OK';
+      if (code === 'expired') return 'MISSING_OR_EXPIRED';
+      return 'INVALID';
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         AuthTokenService,
         AuthAuditService,
+        { provide: OtpService, useValue: mockOtp },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
@@ -284,8 +304,6 @@ describe('AuthService', () => {
     it('should throw for wrong code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1', isVerified: false,
-        emailVerificationCode: '123456',
-        emailVerificationExpiry: new Date(Date.now() + 60000),
       });
 
       await expect(service.verifyEmail('user-1', '000000')).rejects.toThrow(BadRequestException);
@@ -294,11 +312,10 @@ describe('AuthService', () => {
     it('should throw for expired code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1', isVerified: false,
-        emailVerificationCode: '123456',
-        emailVerificationExpiry: new Date(Date.now() - 1000),
       });
+      mockOtp.verify.mockResolvedValueOnce('MISSING_OR_EXPIRED');
 
-      await expect(service.verifyEmail('user-1', '123456')).rejects.toThrow(BadRequestException);
+      await expect(service.verifyEmail('user-1', 'expired')).rejects.toThrow(BadRequestException);
     });
 
     it('should return message without session tokens if already verified', async () => {
@@ -354,10 +371,8 @@ describe('AuthService', () => {
 
         // Security check: ensure reset code is NEVER logged
         const loggedArgs = JSON.stringify(errorSpy.mock.calls);
-        const updateCall = (mockPrisma.user.update as jest.Mock).mock.calls[0][0];
-        const sentCode = updateCall.data.passwordResetCode;
-        expect(sentCode).toBeDefined();
-        expect(loggedArgs).not.toContain(sentCode);
+        expect(mockOtp.issue).toHaveBeenCalledWith('u1', 'PASSWORD_RESET', expect.any(Number));
+        expect(loggedArgs).not.toContain('123456');
       } finally {
         errorSpy.mockRestore();
       }
@@ -369,8 +384,6 @@ describe('AuthService', () => {
     it('should reset password with valid code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u1', email: 'a@b.com',
-        passwordResetCode: '654321',
-        passwordResetExpiry: new Date(Date.now() + 60000),
       });
       mockPrisma.user.update.mockResolvedValue({});
 
@@ -381,25 +394,53 @@ describe('AuthService', () => {
     it('should throw for expired reset code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u1', email: 'a@b.com',
-        passwordResetCode: '654321',
-        passwordResetExpiry: new Date(Date.now() - 1000),
       });
+      mockOtp.verify.mockResolvedValueOnce('MISSING_OR_EXPIRED');
 
       await expect(
-        service.resetPassword('a@b.com', '654321', 'NewPass1'),
+        service.resetPassword('a@b.com', 'expired', 'NewPass1'),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw for wrong reset code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u1', email: 'a@b.com',
-        passwordResetCode: '654321',
-        passwordResetExpiry: new Date(Date.now() + 60000),
       });
+      mockOtp.verify.mockResolvedValueOnce('INVALID');
 
       await expect(
         service.resetPassword('a@b.com', '000000', 'NewPass1'),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw identical exception and message for non-existent email and existing email without active challenge', async () => {
+      // 1. Non-existent email
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+      let nonExistentError: any;
+      try {
+        await service.resetPassword('nonexistent@example.com', '123456', 'NewPass123!');
+      } catch (err) {
+        nonExistentError = err;
+      }
+
+      // 2. Existing email without active challenge
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-existing',
+        email: 'existing@example.com',
+      });
+      mockOtp.verify.mockResolvedValueOnce('MISSING_OR_EXPIRED');
+      let noChallengeError: any;
+      try {
+        await service.resetPassword('existing@example.com', '123456', 'NewPass123!');
+      } catch (err) {
+        noChallengeError = err;
+      }
+
+      expect(nonExistentError).toBeInstanceOf(BadRequestException);
+      expect(noChallengeError).toBeInstanceOf(BadRequestException);
+      expect(nonExistentError.message).toBe('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
+      expect(noChallengeError.message).toBe('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
+      expect(nonExistentError.message).toBe(noChallengeError.message);
     });
   });
 

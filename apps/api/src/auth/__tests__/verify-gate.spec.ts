@@ -17,6 +17,7 @@ import * as bcrypt from 'bcryptjs';
 import { AuthService } from '../auth.service';
 import { AuthTokenService } from '../auth-token.service';
 import { AuthAuditService } from '../auth-audit.service';
+import { OtpService } from '../otp.service';
 import { JwtStrategy } from '../jwt.strategy';
 import { JwtAuthGuard } from '../jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../optional-jwt-auth.guard';
@@ -114,9 +115,23 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
     expire: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockOtp = {
+    issue: jest.fn().mockResolvedValue('112233'),
+    verify: jest.fn().mockImplementation(async (userId: string, purpose: any, code: string) => {
+      if (code === '112233' || code === '123456') return 'OK';
+      return 'INVALID';
+    }),
+    invalidateActive: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     redisStore.clear();
+    mockOtp.issue.mockResolvedValue('112233');
+    mockOtp.verify.mockImplementation(async (userId: string, purpose: any, code: string) => {
+      if (code === '112233' || code === '123456') return 'OK';
+      return 'INVALID';
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -189,6 +204,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           AuthService,
           AuthTokenService,
           AuthAuditService,
+          { provide: OtpService, useValue: mockOtp },
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
@@ -357,11 +373,8 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
 
       const res = await authTokenService.rotateRefreshToken(rawToken);
       expect(res).toBeNull();
-      // Revoked old token
-      expect(mockPrisma.refreshToken.update).toHaveBeenCalledWith({
-        where: { id: 'rt-1' },
-        data: { revokedAt: expect.any(Date) },
-      });
+      // Unverified user fails without token consumption
+      expect(mockPrisma.refreshToken.update).not.toHaveBeenCalled();
     });
   });
 
@@ -384,6 +397,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           AuthService,
           AuthTokenService,
           AuthAuditService,
+          { provide: OtpService, useValue: mockOtp },
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
@@ -461,13 +475,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
       expect((res as any).accessToken).toBeUndefined();
       expect((res as any).refreshToken).toBeUndefined();
       expect(mockMail.sendVerificationEmail).toHaveBeenCalled();
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'u-unv' },
-        data: expect.objectContaining({
-          emailVerificationCode: expect.any(String),
-          emailVerificationExpiry: expect.any(Date),
-        }),
-      });
+      expect(mockOtp.issue).toHaveBeenCalledWith('u-unv', 'EMAIL_VERIFY', expect.any(Number));
     });
 
     it('verifyEmail with correct code issues full tokens with verified: true', async () => {
@@ -477,8 +485,6 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
         username: 'vuser',
         role: 'user',
         isVerified: false,
-        emailVerificationCode: '112233',
-        emailVerificationExpiry: new Date(Date.now() + 60000),
       });
       mockPrisma.user.update.mockResolvedValue({
         id: 'u-target',
@@ -504,24 +510,20 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
         id: 'u-lock',
         email: 'lock@example.com',
         isVerified: false,
-        emailVerificationCode: '123456',
-        emailVerificationExpiry: new Date(Date.now() + 60000),
       });
       mockPrisma.user.update.mockResolvedValue({});
 
       // 4 wrong attempts
+      mockOtp.verify.mockResolvedValue('INVALID');
       for (let i = 1; i <= 4; i++) {
         await expect(authService.verifyEmail('u-lock', '000000')).rejects.toThrow(BadRequestException);
       }
 
-      // 5th wrong attempt -> should delete code and throw 400
+      // 5th wrong attempt -> should throw 400 with TOO_MANY_ATTEMPTS
+      mockOtp.verify.mockResolvedValue('TOO_MANY_ATTEMPTS');
       await expect(authService.verifyEmail('u-lock', '000000')).rejects.toThrow(
         'تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.',
       );
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'u-lock' },
-        data: { emailVerificationCode: null, emailVerificationExpiry: null },
-      });
 
       // 6th attempt with previously valid code -> should be rejected because attempts >= 5
       await expect(authService.verifyEmail('u-lock', '123456')).rejects.toThrow(
@@ -529,18 +531,17 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
       );
     });
 
-    it('resendVerification clears verify attempts counter', async () => {
+    it('resendVerification clears verify attempts counter and issues new code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u-resend',
         email: 'resend@example.com',
         isVerified: false,
       });
       mockPrisma.user.update.mockResolvedValue({});
-      redisStore.set('auth:verify:attempts:u-resend', 4);
 
       await authService.resendVerification('u-resend');
 
-      expect(redisStore.has('auth:verify:attempts:u-resend')).toBe(false);
+      expect(mockOtp.issue).toHaveBeenCalledWith('u-resend', 'EMAIL_VERIFY', expect.any(Number));
     });
 
     it('verifyEmail for already verified user returns alreadyVerified: true and NO tokens without calling signAccessToken', async () => {

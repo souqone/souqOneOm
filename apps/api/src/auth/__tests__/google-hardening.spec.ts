@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthTokenService } from '../auth-token.service';
 import { AuthAuditService } from '../auth-audit.service';
+import { OtpService } from '../otp.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
@@ -12,6 +13,7 @@ import * as bcrypt from 'bcryptjs';
 describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAuth)', () => {
   let authService: AuthService;
   let tokenService: AuthTokenService;
+  let mockOtp: any;
 
   let verifyIdTokenMock: jest.Mock;
 
@@ -56,11 +58,18 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    mockOtp = {
+      issue: jest.fn().mockResolvedValue('123456'),
+      verify: jest.fn().mockResolvedValue('OK'),
+      invalidateActive: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         AuthTokenService,
         AuthAuditService,
+        { provide: OtpService, useValue: mockOtp },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
@@ -498,7 +507,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     const loginResult = await authService.googleAuth({ credential: 'victim-google-token' });
     expect(loginResult.accessToken).toBe('jwt-access-token-123');
 
-    // 1. Transaction executed with password wiped to null, codes cleared, isVerified=true, googleId linked
+    // 1. Transaction executed with password wiped to null, active OTP challenges invalidated, isVerified=true, googleId linked
     expect(mockPrisma.$transaction).toHaveBeenCalled();
     expect(mockPrisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -507,13 +516,11 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
           passwordHash: null,
           googleId: 'victim-google-sub-999',
           isVerified: true,
-          emailVerificationCode: null,
-          emailVerificationExpiry: null,
-          passwordResetCode: null,
-          passwordResetExpiry: null,
         }),
       }),
     );
+    expect(mockOtp.invalidateActive).toHaveBeenCalledWith('u-victim', 'EMAIL_VERIFY', expect.anything());
+    expect(mockOtp.invalidateActive).toHaveBeenCalledWith('u-victim', 'PASSWORD_RESET', expect.anything());
 
     // 2. Attacker's active refresh tokens were revoked in the transaction
     expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({

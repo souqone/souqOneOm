@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { createTestApp, closeTestApp, getApp, getPrisma, uniqueId, registerUser } from './setup';
+import { createTestApp, closeTestApp, getApp, getPrisma, getMockMailService, uniqueId, registerUser } from './setup';
 
 beforeAll(async () => { await createTestApp(); });
 afterAll(async () => { await closeTestApp(); });
@@ -88,16 +88,14 @@ describe('Auth API (e2e)', () => {
     });
 
     it('should verify email with verification token and code from test DB and return session tokens', async () => {
-      const user = await getPrisma().user.findUnique({
-        where: { email: testEmail.toLowerCase() },
-      });
-      expect(user).toBeDefined();
-      expect(user!.emailVerificationCode).toBeDefined();
+      const mailService = getMockMailService();
+      const code = mailService.verificationEmails.get(testEmail.toLowerCase());
+      expect(code).toBeDefined();
 
       const res = await request(getApp().getHttpServer())
         .post('/api/auth/verify-email')
         .set('Authorization', `Bearer ${verificationToken}`)
-        .send({ code: user!.emailVerificationCode })
+        .send({ code })
         .expect(200);
 
       expect(res.body.accessToken).toBeDefined();
@@ -189,7 +187,12 @@ describe('Auth API (e2e)', () => {
         .post('/api/auth/refresh')
         .send({ refreshToken })
         .expect(201);
-      // Try again — should fail (token rotated/revoked)
+      // Advance rotatedAt past the 30s grace window to test replay rejection
+      await getPrisma().refreshToken.updateMany({
+        where: { rotatedAt: { not: null } },
+        data: { rotatedAt: new Date(Date.now() - 35000) },
+      });
+      // Try again — should fail (token rotated > 30s ago -> family revoked)
       await request(getApp().getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken })

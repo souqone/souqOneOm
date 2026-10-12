@@ -6,6 +6,9 @@ export const VERIFICATION_CODE_TTL_MS = VERIFICATION_CODE_TTL_MINUTES * 60 * 100
 export const VERIFICATION_TOKEN_TTL = '15m';
 export const MAX_VERIFY_ATTEMPTS = 5;
 
+export const OTP_TTL_SECONDS = VERIFICATION_CODE_TTL_MINUTES * 60; // 900 seconds (15 minutes)
+export const REFRESH_GRACE_SECONDS = 30;
+
 export const RESERVED_USERNAMES = [
   'admin',
   'administrator',
@@ -15,4 +18,5 @@ export const RESERVED_USERNAMES = [
   'moderator',
   'system',
 ] as const;
+
 

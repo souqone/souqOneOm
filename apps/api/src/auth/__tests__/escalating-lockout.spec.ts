@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthTokenService } from '../auth-token.service';
 import { AuthAuditService } from '../auth-audit.service';
+import { OtpService } from '../otp.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
@@ -77,11 +78,18 @@ describe('B2: Escalating Lockout (AuthAuditService & AuthService)', () => {
     redisStore.clear();
     jest.clearAllMocks();
 
+    const mockOtp = {
+      issue: jest.fn().mockResolvedValue('123456'),
+      verify: jest.fn().mockResolvedValue('OK'),
+      invalidateActive: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         AuthTokenService,
         AuthAuditService,
+        { provide: OtpService, useValue: mockOtp },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
