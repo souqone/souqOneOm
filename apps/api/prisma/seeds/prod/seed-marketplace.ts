@@ -60,6 +60,7 @@ async function main() {
         governorate: 'مسقط',
         passwordHash: hash,
         isVerified: true,
+        emailVerifiedAt: new Date(),
       },
     });
     console.log('👤 تم إنشاء مستخدم الاختبار: seed@souqone.om / Test1234!');

@@ -284,7 +284,7 @@ export async function registerUser(overrides?: {
   // Verification gate: mark account as verified in test DB then login to obtain verified session tokens
   await prisma.user.update({
     where: { email: payload.email.toLowerCase() },
-    data: { isVerified: true },
+    data: { isVerified: true, emailVerifiedAt: new Date() },
   });
 
   const loginRes = await request(app.getHttpServer())
