@@ -13,6 +13,7 @@ import {
   DEV_FALLBACK_SECRET,
 } from '../../config/jwt.config';
 import { JwtStrategy } from '../jwt.strategy';
+import { AccessTokenGate } from '../access-token-gate.service';
 import { AuthTokenService } from '../auth-token.service';
 import { JwtService } from '@nestjs/jwt';
 
@@ -137,7 +138,15 @@ describe('JWT Hardening & Rotation Suite (Task 017 / B1b Phase 2)', () => {
       const moduleRef: TestingModule = await Test.createTestingModule({
         imports: [PassportModule.register({ defaultStrategy: 'jwt' })],
         controllers: [TestProtectedController],
-        providers: [JwtStrategy],
+        providers: [
+          JwtStrategy,
+          {
+            provide: AccessTokenGate,
+            useValue: {
+              validate: jest.fn().mockResolvedValue(undefined),
+            },
+          },
+        ],
       }).compile();
 
       app = moduleRef.createNestApplication();

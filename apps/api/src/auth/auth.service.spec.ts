@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { RedisService } from '../redis/redis.service';
 import { OtpService } from './otp.service';
+import { AccessTokenGate } from './access-token-gate.service';
 import { OtpPurpose } from '@prisma/client';
 
 const mockPrisma = {
@@ -92,6 +93,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
         { provide: RedisService, useValue: mockRedis },
+        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
       ],
     }).compile();
 

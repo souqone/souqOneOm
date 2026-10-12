@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { AuthTokenService } from '../auth/auth-token.service';
+import { AccessTokenGate } from '../auth/access-token-gate.service';
 import * as bcrypt from 'bcryptjs';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -12,6 +13,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
     private readonly authTokenService: AuthTokenService,
+    private readonly accessTokenGate: AccessTokenGate,
   ) {}
 
   private readonly publicSelect = {
@@ -144,11 +146,16 @@ export class UsersService {
     const updatedUser = await this.prisma.$transaction(async (tx) => {
       const u = await tx.user.update({
         where: { id: userId },
-        data: { passwordHash },
+        data: {
+          passwordHash,
+          tokenVersion: { increment: 1 },
+        },
       });
       await this.authTokenService.revokeAllRefreshTokens(userId, tx);
       return u;
     });
+
+    await this.accessTokenGate.invalidate(userId);
 
     const accessToken = await this.authTokenService.signAccessToken(updatedUser);
     const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
@@ -209,10 +216,18 @@ export class UsersService {
   }
 
   async revokeAllSessions(userId: string) {
-    const { count } = await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+    const { count } = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { tokenVersion: { increment: 1 } },
+      });
+      return res;
     });
+    await this.accessTokenGate.invalidate(userId);
     return { message: `تم إنهاء ${count} جلسة بنجاح` };
   }
 

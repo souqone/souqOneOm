@@ -20,6 +20,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -33,6 +34,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -46,6 +48,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -59,6 +62,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -177,6 +181,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -190,6 +195,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -203,6 +209,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -216,6 +223,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       isVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 

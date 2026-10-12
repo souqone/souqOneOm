@@ -21,6 +21,7 @@ import { NOTIFICATION_EVENTS } from '../notifications/notification.events';
 import { verifyAccessToken } from '../config/jwt.config';
 import type { JwtPayload } from '../auth/auth.types';
 import { assertVerifiedAccessPayload } from '../auth/auth-token.validator';
+import { AccessTokenGate } from '../auth/access-token-gate.service';
 
 @SkipThrottle()
 @WebSocketGateway({
@@ -41,6 +42,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(
     private readonly chatService: ChatService,
     private readonly redis: RedisService,
+    private readonly accessTokenGate: AccessTokenGate,
   ) {}
 
   async afterInit() {
@@ -60,6 +62,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       const user = verifyAccessToken<JwtPayload>(token);
       assertVerifiedAccessPayload(user);
+      await this.accessTokenGate.validate(user);
       client.data.user = user;
 
       // Multi-socket: add this socket to the user's set

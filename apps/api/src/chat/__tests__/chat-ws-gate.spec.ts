@@ -3,6 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import { WsJwtGuard } from '../guards/ws-jwt.guard';
 import { ChatGateway } from '../chat.gateway';
 import { assertVerifiedAccessPayload } from '../../auth/auth-token.validator';
+import { AccessTokenGate } from '../../auth/access-token-gate.service';
 
 describe('Chat WebSocket Verification Gate Specification (AUTH-VERIFY-GATE)', () => {
   const secret = 'super-secret-key-at-least-32-chars-long-for-test!!';
@@ -54,7 +55,7 @@ describe('Chat WebSocket Verification Gate Specification (AUTH-VERIFY-GATE)', ()
     let guard: WsJwtGuard;
 
     beforeEach(() => {
-      guard = new WsJwtGuard();
+      guard = new WsJwtGuard({ validate: jest.fn().mockResolvedValue(undefined) } as any);
     });
 
     function createWsContext(token?: string) {
@@ -75,7 +76,7 @@ describe('Chat WebSocket Verification Gate Specification (AUTH-VERIFY-GATE)', ()
       };
     }
 
-    it('allows connection and attaches user when token is verified (verified: true)', () => {
+    it('allows connection and attaches user when token is verified (verified: true)', async () => {
       const token = jwt.sign(
         { sub: 'u-100', email: 'verified@souqone.om', username: 'vuser', role: 'USER', verified: true },
         secret,
@@ -83,7 +84,7 @@ describe('Chat WebSocket Verification Gate Specification (AUTH-VERIFY-GATE)', ()
       );
 
       const { context, client } = createWsContext(token);
-      const result = guard.canActivate(context);
+      const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
       expect(client.data.user).toMatchObject({
@@ -146,7 +147,11 @@ describe('Chat WebSocket Verification Gate Specification (AUTH-VERIFY-GATE)', ()
         set: jest.fn().mockResolvedValue('OK'),
         del: jest.fn().mockResolvedValue(1),
       };
-      gateway = new ChatGateway(mockChatService, mockRedis);
+      gateway = new ChatGateway(
+        mockChatService,
+        mockRedis,
+        { validate: jest.fn().mockResolvedValue(undefined) } as any,
+      );
     });
 
     function createMockSocket(token?: string) {

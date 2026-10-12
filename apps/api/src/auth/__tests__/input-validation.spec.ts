@@ -164,12 +164,18 @@ describe('Auth & Input Validation Suite', () => {
         invalidateActive: jest.fn().mockResolvedValue(undefined),
       };
 
+      const mockAccessTokenGate = {
+        invalidate: jest.fn().mockResolvedValue(undefined),
+        validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMailService,
         mockTokens,
         mockAuditService,
         mockOtp as any,
+        mockAccessTokenGate as any,
       );
     });
 
@@ -199,6 +205,7 @@ describe('Auth & Input Validation Suite', () => {
         where: { id: 'user-1' },
         data: {
           isVerified: true,
+          emailVerifiedAt: expect.any(Date),
         },
       });
     });
@@ -335,12 +342,18 @@ describe('Auth & Input Validation Suite', () => {
         invalidateActive: jest.fn().mockResolvedValue(undefined),
       };
 
+      const mockAccessTokenGate = {
+        invalidate: jest.fn().mockResolvedValue(undefined),
+        validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMail as any,
         mockTokens as any,
         mockAudit as any,
         mockOtp as any,
+        mockAccessTokenGate as any,
       );
     });
 

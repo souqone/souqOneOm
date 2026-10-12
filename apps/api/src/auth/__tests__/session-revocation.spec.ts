@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
 import { GeoService } from '../../locations/geo.service';
+import { AccessTokenGate } from '../access-token-gate.service';
 import * as bcrypt from 'bcryptjs';
 
 describe('B1: Session Revocation on Password Change and Reset', () => {
@@ -82,6 +83,7 @@ describe('B1: Session Revocation on Password Change and Reset', () => {
         { provide: MailService, useValue: mockMail },
         { provide: RedisService, useValue: mockRedis },
         { provide: GeoService, useValue: mockGeo },
+        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

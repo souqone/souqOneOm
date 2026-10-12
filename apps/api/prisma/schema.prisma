@@ -18,27 +18,34 @@ datasource db {
 // المستخدم — User
 // ──────────────────────────────────────
 model User {
-  id                      String    @id @default(cuid())
-  email                   String    @unique
-  username                String    @unique
+  id                      String         @id @default(cuid())
+  email                   String?        @unique
+  username                String         @unique
   displayName             String?
   avatarUrl               String?
   passwordHash            String?
-  googleId                String?   @unique
+  googleId                String?        @unique
   bio                     String?
   phone                   String?
+  phoneE164               String?        @unique
+  phoneVerifiedAt         DateTime?
+  emailVerifiedAt         DateTime?
+  status                  AccountStatus  @default(ACTIVE)
+  deletedAt               DateTime?
+  tokenVersion            Int            @default(0)
   country                 String?
   governorate             String?
   city                    String?
-  isVerified              Boolean   @default(false)
+  isVerified              Boolean        @default(false)
   emailVerificationCode   String?
   emailVerificationExpiry DateTime?
   passwordResetCode       String?
   passwordResetExpiry     DateTime?
-  role                    UserRole  @default(USER)
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  role                    UserRole       @default(USER)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
 
+  identities        AuthIdentity[]
   listings          Listing[]
   favorites         Favorite[]
   sentMessages      Message[]                 @relation("SentMessages")
@@ -149,6 +156,35 @@ model OtpChallenge {
   @@index([userId, purpose, consumedAt])
   @@index([expiresAt])
   @@map("otp_challenges")
+}
+
+// ──────────────────────────────────────
+// هويات المصادقة الخارجية وحالة الحساب — Auth Identities & Account Status
+// ──────────────────────────────────────
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+  FACEBOOK
+}
+
+model AuthIdentity {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       AuthProvider
+  providerUserId String
+  createdAt      DateTime     @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("auth_identities")
 }
 
 // ──────────────────────────────────────

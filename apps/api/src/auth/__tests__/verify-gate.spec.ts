@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../optional-jwt-auth.guard';
 import { VerificationGuard } from '../verification.guard';
 import { JwtVerifyStrategy } from '../jwt-verify.strategy';
+import { AccessTokenGate } from '../access-token-gate.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
@@ -139,7 +140,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
      ══════════════════════════════════════════════════════════════ */
   describe('1. JwtStrategy.validate', () => {
     beforeEach(() => {
-      jwtStrategy = new JwtStrategy();
+      jwtStrategy = new JwtStrategy({ validate: jest.fn().mockResolvedValue(undefined) } as any);
     });
 
     it('passes payload when verified: true is present', async () => {
@@ -208,6 +209,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
+          { provide: AccessTokenGate, useValue: { validate: jest.fn().mockResolvedValue(undefined) } },
         ],
       }).compile();
 
@@ -401,6 +403,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
+          { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
         ],
       }).compile();
 

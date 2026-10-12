@@ -5,6 +5,7 @@ import { UsersService } from '../../users/users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { GeoService } from '../../locations/geo.service';
+import { AccessTokenGate } from '../access-token-gate.service';
 import { REFRESH_GRACE_SECONDS } from '../auth.constants';
 
 describe('RefreshToken Rotation & Family Tracking Suite', () => {
@@ -124,6 +125,7 @@ describe('RefreshToken Rotation & Family Tracking Suite', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: GeoService, useValue: mockGeo },
+        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 
