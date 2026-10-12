@@ -360,7 +360,7 @@ export class AuthService {
   async resetPassword(email: string, code: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
     if (!user) {
-      throw new BadRequestException('رمز إعادة التعيين غير صالح');
+      throw new BadRequestException('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
     }
 
     const verifyResult = await this.otp.verify(user.id, OtpPurpose.PASSWORD_RESET, code);

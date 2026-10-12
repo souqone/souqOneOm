@@ -64,11 +64,23 @@ export class AuthTokenService {
   async revokeRefreshToken(rawToken: string): Promise<void> {
     const hashedToken = this.hashToken(rawToken);
     const stored = await this.prisma.refreshToken.findUnique({ where: { token: hashedToken } });
-    if (stored && !stored.revokedAt) {
-      await this.prisma.refreshToken.update({
-        where: { id: stored.id },
-        data: { revokedAt: new Date() },
+    if (!stored) {
+      return;
+    }
+
+    const now = new Date();
+    if (stored.familyId) {
+      await this.prisma.refreshToken.updateMany({
+        where: { familyId: stored.familyId, revokedAt: null },
+        data: { revokedAt: now },
       });
+    } else {
+      if (!stored.revokedAt) {
+        await this.prisma.refreshToken.update({
+          where: { id: stored.id },
+          data: { revokedAt: now },
+        });
+      }
     }
   }
 

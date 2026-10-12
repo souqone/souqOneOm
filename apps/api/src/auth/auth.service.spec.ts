@@ -405,13 +405,42 @@ describe('AuthService', () => {
     it('should throw for wrong reset code', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u1', email: 'a@b.com',
-        passwordResetCode: '654321',
-        passwordResetExpiry: new Date(Date.now() + 60000),
       });
+      mockOtp.verify.mockResolvedValueOnce('INVALID');
 
       await expect(
         service.resetPassword('a@b.com', '000000', 'NewPass1'),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw identical exception and message for non-existent email and existing email without active challenge', async () => {
+      // 1. Non-existent email
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+      let nonExistentError: any;
+      try {
+        await service.resetPassword('nonexistent@example.com', '123456', 'NewPass123!');
+      } catch (err) {
+        nonExistentError = err;
+      }
+
+      // 2. Existing email without active challenge
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-existing',
+        email: 'existing@example.com',
+      });
+      mockOtp.verify.mockResolvedValueOnce('MISSING_OR_EXPIRED');
+      let noChallengeError: any;
+      try {
+        await service.resetPassword('existing@example.com', '123456', 'NewPass123!');
+      } catch (err) {
+        noChallengeError = err;
+      }
+
+      expect(nonExistentError).toBeInstanceOf(BadRequestException);
+      expect(noChallengeError).toBeInstanceOf(BadRequestException);
+      expect(nonExistentError.message).toBe('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
+      expect(noChallengeError.message).toBe('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
+      expect(nonExistentError.message).toBe(noChallengeError.message);
     });
   });
 

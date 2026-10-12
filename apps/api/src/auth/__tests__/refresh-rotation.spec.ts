@@ -208,24 +208,58 @@ describe('RefreshToken Rotation & Family Tracking Suite', () => {
     });
   });
 
-  describe('4. Token after logout (explicit revocation)', () => {
-    it('fails without revoking family when token was explicitly revoked (rotatedAt is null)', async () => {
+  describe('4. Token after logout (explicit revocation of entire family)', () => {
+    it('revokes all active rows of the family after logout with one token', async () => {
       const rawToken1 = await tokenService.generateRefreshToken('u-1');
       const familyId = tokens[0].familyId;
       const rawToken2 = await tokenService.generateRefreshToken('u-1', familyId);
 
-      // Simulate explicit logout: revoke token 1 with rotatedAt remaining null
+      expect(tokens.filter((t) => t.familyId === familyId && t.revokedAt === null).length).toBe(2);
+
+      // Logout with token 1: revokes entire family
       await tokenService.revokeRefreshToken(rawToken1);
-      expect(tokens[0].revokedAt).not.toBeNull();
-      expect(tokens[0].rotatedAt).toBeNull();
 
-      // Trying to refresh with the logged out token returns null
-      const res = await tokenService.rotateRefreshToken(rawToken1);
-      expect(res).toBeNull();
+      const activeInFamily = tokens.filter((t) => t.familyId === familyId && t.revokedAt === null);
+      expect(activeInFamily.length).toBe(0);
 
-      // Token 2 in the same family was NOT affected
-      const token2Row = tokens.find((t) => t.familyId === familyId && t.id !== tokens[0].id);
-      expect(token2Row.revokedAt).toBeNull();
+      // Refresh with the logged out token fails cleanly (returns null) without unexpected exception
+      const res1 = await tokenService.rotateRefreshToken(rawToken1);
+      expect(res1).toBeNull();
+
+      // Refresh with the other token from the same family also fails
+      const res2 = await tokenService.rotateRefreshToken(rawToken2);
+      expect(res2).toBeNull();
+    });
+
+    it('after grace race (two refresh tokens in family), logging out with either token revokes both', async () => {
+      const rawToken = await tokenService.generateRefreshToken('u-1');
+      const originalFamilyId = tokens[0].familyId;
+
+      // Simulate grace race: two rotations for the same raw token
+      const res1 = await tokenService.rotateRefreshToken(rawToken);
+      const res2 = await tokenService.rotateRefreshToken(rawToken);
+
+      expect(res1).not.toBeNull();
+      expect(res2).not.toBeNull();
+      expect(res1?.refreshToken).toBeDefined();
+      expect(res2?.refreshToken).toBeDefined();
+
+      // Two active tokens now exist in the family
+      const activeBeforeLogout = tokens.filter((t) => t.familyId === originalFamilyId && t.revokedAt === null);
+      expect(activeBeforeLogout.length).toBe(2);
+
+      // Logout using one of the new tokens (e.g. res1)
+      await tokenService.revokeRefreshToken(res1!.refreshToken);
+
+      // BOTH new tokens in the family must now be revoked
+      const activeAfterLogout = tokens.filter((t) => t.familyId === originalFamilyId && t.revokedAt === null);
+      expect(activeAfterLogout.length).toBe(0);
+
+      // Both tokens fail on subsequent refresh
+      const retry1 = await tokenService.rotateRefreshToken(res1!.refreshToken);
+      const retry2 = await tokenService.rotateRefreshToken(res2!.refreshToken);
+      expect(retry1).toBeNull();
+      expect(retry2).toBeNull();
     });
   });
 
