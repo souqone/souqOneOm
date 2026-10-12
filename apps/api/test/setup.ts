@@ -86,10 +86,29 @@ class MockRedisService {
   async unsubscribe(_channel: string) {}
 }
 
-/** Mock MailService — no-op, prevents real email sends during tests */
-class MockMailService {
-  async sendVerificationEmail(_to: string, _code: string): Promise<void> {}
-  async sendPasswordResetEmail(_to: string, _code: string): Promise<void> {}
+/** Mock MailService — captures codes sent during tests without real external sends */
+export class MockMailService {
+  public lastVerificationEmail?: { to: string; code: string };
+  public lastPasswordResetEmail?: { to: string; code: string };
+  public verificationEmails = new Map<string, string>();
+  public passwordResetEmails = new Map<string, string>();
+
+  async sendVerificationEmail(to: string, code: string): Promise<void> {
+    this.lastVerificationEmail = { to, code };
+    this.verificationEmails.set(to.toLowerCase(), code);
+  }
+
+  async sendPasswordResetEmail(to: string, code: string): Promise<void> {
+    this.lastPasswordResetEmail = { to, code };
+    this.passwordResetEmails.set(to.toLowerCase(), code);
+  }
+
+  clear() {
+    this.lastVerificationEmail = undefined;
+    this.lastPasswordResetEmail = undefined;
+    this.verificationEmails.clear();
+    this.passwordResetEmails.clear();
+  }
 }
 
 /** No-op throttle guard — always allows requests */
@@ -211,6 +230,10 @@ export function getApp(): INestApplication {
 
 export function getPrisma(): PrismaService {
   return prisma;
+}
+
+export function getMockMailService(): MockMailService {
+  return app.get(MailService) as unknown as MockMailService;
 }
 
 export async function closeTestApp() {

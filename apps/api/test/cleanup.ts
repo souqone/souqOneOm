@@ -35,6 +35,7 @@ const TABLES_TO_TRUNCATE = [
   'push_tokens',
   'login_audits',
   'refresh_tokens',
+  'otp_challenges',
 
   // Profile tables
   'driver_profiles',
