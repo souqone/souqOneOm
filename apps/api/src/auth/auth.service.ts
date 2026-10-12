@@ -3,13 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
+import { OtpPurpose } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
-import { MAX_VERIFY_ATTEMPTS, VERIFICATION_CODE_TTL_MS } from './auth.constants';
+import { OtpService } from './otp.service';
+import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
@@ -25,6 +27,7 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly tokens: AuthTokenService,
     private readonly audit: AuthAuditService,
+    private readonly otp: OtpService,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
@@ -51,9 +54,6 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const code = this.tokens.generateVerificationCode();
-    const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
-
     try {
       const user = await this.prisma.user.create({
         data: {
@@ -61,10 +61,10 @@ export class AuthService {
           country: dto.country,
           governorate: dto.governorate,
           city: dto.city,
-          emailVerificationCode: code,
-          emailVerificationExpiry: expiry,
         },
       });
+
+      const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
       let emailSent = true;
       try {
@@ -126,18 +126,7 @@ export class AuthService {
       await this.audit.resetLockout(email);
       await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'EMAIL_NOT_VERIFIED', ip, userAgent });
 
-      const code = this.tokens.generateVerificationCode();
-      const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
-
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          emailVerificationCode: code,
-          emailVerificationExpiry: expiry,
-        },
-      });
-
-      await this.audit.clearVerifyAttempts(user.id);
+      const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
       let emailSent = true;
       try {
@@ -246,15 +235,13 @@ export class AuthService {
               where: { id: targetUserId },
               data: {
                 passwordHash: null,
-                emailVerificationCode: null,
-                emailVerificationExpiry: null,
-                passwordResetCode: null,
-                passwordResetExpiry: null,
                 googleId,
                 isVerified: true,
                 avatarUrl: targetAvatarUrl || picture,
               },
             });
+            await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
+            await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
             await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
             return updated;
           });
@@ -309,41 +296,21 @@ export class AuthService {
       };
     }
 
-    const attempts = await this.audit.getVerifyAttempts(userId);
-    if (attempts >= MAX_VERIFY_ATTEMPTS) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { emailVerificationCode: null, emailVerificationExpiry: null },
-      });
-      throw new BadRequestException('تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.');
-    }
-
-    if (!user.emailVerificationCode || !user.emailVerificationExpiry) {
+    const verifyResult = await this.otp.verify(userId, OtpPurpose.EMAIL_VERIFY, code);
+    if (verifyResult === 'MISSING_OR_EXPIRED') {
       throw new BadRequestException('لا يوجد رمز تحقق مرسل. اطلب رمز جديد.');
     }
-
-    if (new Date() > user.emailVerificationExpiry) {
-      throw new BadRequestException('رمز التحقق منتهي. اطلب رمز جديد.');
+    if (verifyResult === 'TOO_MANY_ATTEMPTS') {
+      throw new BadRequestException('تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.');
     }
-
-    if (!this.tokens.safeCompare(user.emailVerificationCode, code)) {
-      const currentAttempts = await this.audit.recordVerifyFailure(userId);
-      if (currentAttempts >= MAX_VERIFY_ATTEMPTS) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { emailVerificationCode: null, emailVerificationExpiry: null },
-        });
-        throw new BadRequestException('تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.');
-      }
+    if (verifyResult === 'INVALID') {
       throw new BadRequestException('رمز التحقق غير صحيح');
     }
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { isVerified: true, emailVerificationCode: null, emailVerificationExpiry: null },
+      data: { isVerified: true },
     });
-
-    await this.audit.clearVerifyAttempts(userId);
 
     const accessToken = await this.tokens.signAccessToken(updated);
     const refreshToken = await this.tokens.generateRefreshToken(updated.id);
@@ -360,15 +327,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('المستخدم غير موجود');
     if (user.isVerified) return { message: 'البريد موثق بالفعل' };
 
-    const code = this.tokens.generateVerificationCode();
-    const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { emailVerificationCode: code, emailVerificationExpiry: expiry },
-    });
-
-    await this.audit.clearVerifyAttempts(userId);
+    const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
     let emailSent = true;
     try {
@@ -385,13 +344,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
     if (!user) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
 
-    const code = this.tokens.generateVerificationCode();
-    const expiry = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { passwordResetCode: code, passwordResetExpiry: expiry },
-    });
+    const code = await this.otp.issue(user.id, OtpPurpose.PASSWORD_RESET, OTP_TTL_SECONDS);
 
     try {
       await this.mailService.sendPasswordResetEmail(user.email, code);
@@ -406,13 +359,18 @@ export class AuthService {
 
   async resetPassword(email: string, code: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
-    if (!user || !user.passwordResetCode || !user.passwordResetExpiry) {
+    if (!user) {
       throw new BadRequestException('رمز إعادة التعيين غير صالح');
     }
-    if (new Date() > user.passwordResetExpiry) {
+
+    const verifyResult = await this.otp.verify(user.id, OtpPurpose.PASSWORD_RESET, code);
+    if (verifyResult === 'MISSING_OR_EXPIRED') {
       throw new BadRequestException('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
     }
-    if (!this.tokens.safeCompare(user.passwordResetCode, code)) {
+    if (verifyResult === 'TOO_MANY_ATTEMPTS') {
+      throw new BadRequestException('تم تجاوز عدد المحاولات. اطلب رمزاً جديداً.');
+    }
+    if (verifyResult === 'INVALID') {
       throw new BadRequestException('رمز إعادة التعيين غير صحيح');
     }
 
@@ -420,7 +378,7 @@ export class AuthService {
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { passwordHash, passwordResetCode: null, passwordResetExpiry: null },
+        data: { passwordHash },
       });
       await this.tokens.revokeAllRefreshTokens(user.id, tx);
     });

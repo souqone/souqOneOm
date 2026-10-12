@@ -163,10 +163,27 @@ export class UsersService {
   async getActiveSessions(userId: string) {
     const sessions = await this.prisma.refreshToken.findMany({
       where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
-      select: { id: true, createdAt: true, expiresAt: true },
+      select: { id: true, familyId: true, createdAt: true, expiresAt: true },
       orderBy: { createdAt: 'desc' },
     });
-    return sessions;
+
+    const seenFamilies = new Set<string>();
+    const uniqueSessions: Array<{ id: string; createdAt: Date; expiresAt: Date }> = [];
+    for (const session of sessions) {
+      if (session.familyId) {
+        if (seenFamilies.has(session.familyId)) {
+          continue;
+        }
+        seenFamilies.add(session.familyId);
+      }
+      uniqueSessions.push({
+        id: session.id,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+      });
+    }
+
+    return uniqueSessions;
   }
 
   async revokeSession(userId: string, sessionId: string) {
@@ -176,10 +193,18 @@ export class UsersService {
     if (!token) {
       throw new NotFoundException('الجلسة غير موجودة أو منتهية');
     }
-    await this.prisma.refreshToken.update({
-      where: { id: sessionId },
-      data: { revokedAt: new Date() },
-    });
+    const now = new Date();
+    if (token.familyId) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId, familyId: token.familyId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    } else {
+      await this.prisma.refreshToken.update({
+        where: { id: sessionId },
+        data: { revokedAt: now },
+      });
+    }
     return { message: 'تم إنهاء الجلسة بنجاح' };
   }
 
