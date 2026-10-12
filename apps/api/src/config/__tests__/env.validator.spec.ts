@@ -79,11 +79,42 @@ describe('Environment Boot Validation (Production Safety)', () => {
     );
   });
 
+  it('should throw and reject boot in production if AUTH_PEPPER is missing', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'valid-production-jwt-secret-key-32chars';
+    delete process.env.AUTH_PEPPER;
+
+    expect(() => validateProductionEnv()).toThrow(
+      /AUTH_PEPPER is required in production/i,
+    );
+  });
+
+  it('should throw and reject boot in production if AUTH_PEPPER is a placeholder', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'valid-production-jwt-secret-key-32chars';
+    process.env.AUTH_PEPPER = 'CHANGE_ME_NOT_A_REAL_SECRET';
+
+    expect(() => validateProductionEnv()).toThrow(
+      /AUTH_PEPPER contains an unrunnable placeholder in production/i,
+    );
+  });
+
+  it('should throw and reject boot in production if AUTH_PEPPER is shorter than 32 characters', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'valid-production-jwt-secret-key-32chars';
+    process.env.AUTH_PEPPER = 'too-short-pepper-under-32';
+
+    expect(() => validateProductionEnv()).toThrow(
+      /AUTH_PEPPER must be at least 32 characters long in production/i,
+    );
+  });
+
   it('should pass validation in production when secrets are valid and not placeholders', () => {
     process.env.NODE_ENV = 'production';
     process.env.JWT_SECRET = 'real-production-secret-with-high-entropy-64bytes';
     process.env.JWT_PREVIOUS_SECRET = 'previous-production-secret-high-entropy-32b';
     process.env.JWT_REFRESH_SECRET = 'real-production-refresh-secret-high-entropy';
+    process.env.AUTH_PEPPER = 'real-production-auth-pepper-high-entropy-64b';
 
     expect(() => validateProductionEnv()).not.toThrow();
   });
@@ -92,6 +123,7 @@ describe('Environment Boot Validation (Production Safety)', () => {
     process.env.NODE_ENV = 'development';
     process.env.JWT_SECRET = 'CHANGE_ME_NOT_A_REAL_SECRET';
     process.env.JWT_REFRESH_SECRET = 'CHANGE_ME_NOT_A_REAL_SECRET';
+    process.env.AUTH_PEPPER = 'CHANGE_ME_NOT_A_REAL_SECRET';
 
     expect(() => validateProductionEnv()).not.toThrow();
   });

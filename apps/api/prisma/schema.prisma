@@ -66,6 +66,7 @@ model User {
   employerProfile   EmployerProfile?
   carrierProfile    CarrierProfile?
   transportRequests TransportRequest[]        @relation("UserTransportRequests")
+  otpChallenges     OtpChallenge[]
 
   // New Location Fields
   governorateId  Int?
@@ -108,17 +109,46 @@ model LoginAudit {
 // رمز التجديد — RefreshToken
 // ──────────────────────────────────────
 model RefreshToken {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id           String    @id @default(cuid())
+  token        String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId     String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  rotatedAt    DateTime?
+  replacedById String?
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
   @@index([token])
+  @@index([familyId])
   @@map("refresh_tokens")
+}
+
+// ──────────────────────────────────────
+// تحديات رموز التحقق — OTP Challenges
+// ──────────────────────────────────────
+enum OtpPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model OtpChallenge {
+  id          String      @id
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose     OtpPurpose
+  codeHash    String
+  attempts    Int         @default(0)
+  maxAttempts Int         @default(5)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId, purpose, consumedAt])
+  @@index([expiresAt])
+  @@map("otp_challenges")
 }
 
 // ──────────────────────────────────────

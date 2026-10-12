@@ -60,5 +60,22 @@ export function validateProductionEnv(): void {
       '[EnvValidation] JWT_REFRESH_SECRET contains an unrunnable placeholder in production. Refusing to boot.',
     );
   }
+
+  const authPepper = process.env.AUTH_PEPPER;
+  if (!authPepper || authPepper.trim() === '') {
+    throw new Error('[EnvValidation] AUTH_PEPPER is required in production');
+  }
+
+  if (isPlaceholderSecret(authPepper)) {
+    throw new Error(
+      '[EnvValidation] AUTH_PEPPER contains an unrunnable placeholder in production. Refusing to boot.',
+    );
+  }
+
+  if (authPepper.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      `[EnvValidation] AUTH_PEPPER must be at least ${MIN_SECRET_LENGTH} characters long in production`,
+    );
+  }
 }
 
