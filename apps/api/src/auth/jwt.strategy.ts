@@ -1,13 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { JwtPayload } from './auth.types';
 import { resolveJwtSecretForToken } from '../config/jwt.config';
 import { assertVerifiedAccessPayload } from './auth-token.validator';
+import { AccessTokenGate } from './access-token-gate.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(@Optional() private readonly accessTokenGate?: AccessTokenGate) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -25,6 +26,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     assertVerifiedAccessPayload(payload);
+    if (this.accessTokenGate) {
+      await this.accessTokenGate.validate(payload);
+    }
     return payload;
   }
 }

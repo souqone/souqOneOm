@@ -18,10 +18,11 @@ export class AuthTokenService {
   buildPayload(user: User): JwtPayload {
     return {
       sub: user.id,
-      email: user.email,
+      email: user.email ?? undefined,
       username: user.username,
       role: user.role,
       verified: user.isVerified === true,
+      tv: user.tokenVersion,
     };
   }
 
@@ -111,7 +112,7 @@ export class AuthTokenService {
         if (diffSeconds <= REFRESH_GRACE_SECONDS) {
           // Grace period: natural race condition
           const user = await this.prisma.user.findUnique({ where: { id: tokenRow.userId } });
-          if (!user || !user.isVerified) {
+          if (!user || !user.isVerified || (user.status ?? 'ACTIVE') !== 'ACTIVE') {
             return null;
           }
           const accessToken = await this.signAccessToken(user);
@@ -144,9 +145,9 @@ export class AuthTokenService {
       return handleRevoked(stored);
     }
 
-    // (3) If active: verify user exists and is verified before consuming token
+    // (3) If active: verify user exists, is verified, and is ACTIVE before consuming token
     const user = await this.prisma.user.findUnique({ where: { id: stored.userId } });
-    if (!user || !user.isVerified) {
+    if (!user || !user.isVerified || (user.status ?? 'ACTIVE') !== 'ACTIVE') {
       return null;
     }
 
