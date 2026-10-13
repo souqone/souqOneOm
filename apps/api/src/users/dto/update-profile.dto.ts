@@ -1,6 +1,7 @@
 import { IsOptional, IsString, MinLength, MaxLength, Matches, IsInt, IsPositive } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { cleanDisplayName } from '../../auth/auth.validators';
+import { IsValidPhone } from '../../common/validators/phone.validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -20,6 +21,7 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(20)
+  @IsValidPhone({ message: 'رقم الهاتف غير صالح' })
   phone?: string;
 
   @IsOptional()

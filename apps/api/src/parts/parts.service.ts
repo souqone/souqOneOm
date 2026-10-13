@@ -15,6 +15,7 @@ import { USER_SELECT } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 @Injectable()
 export class PartsService {
@@ -24,6 +25,7 @@ export class PartsService {
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   private generateSlug(title: string): string {
@@ -39,6 +41,7 @@ export class PartsService {
   }
 
   async create(dto: CreatePartDto, sellerId: string) {
+    await this.sellerContactGate.assertCanPublish(sellerId);
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     const slug = this.generateSlug(dto.title);
@@ -64,8 +67,7 @@ export class PartsService {
           wilayaId: dto.wilayaId,
           latitude: dto.latitude,
           longitude: dto.longitude,
-          contactPhone: dto.contactPhone,
-          whatsapp: dto.whatsapp,
+          whatsappEnabled: dto.whatsappEnabled ?? false,
           sellerId,
           hasWarranty: dto.hasWarranty,
           warrantyDuration: dto.warrantyDuration,
@@ -225,8 +227,7 @@ export class PartsService {
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
-    if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
-    if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
+    if (dto.whatsappEnabled !== undefined) data.whatsappEnabled = dto.whatsappEnabled;
     if (dto.hasWarranty !== undefined) data.hasWarranty = dto.hasWarranty;
     if (dto.warrantyDuration !== undefined) data.warrantyDuration = dto.warrantyDuration;
     if (dto.quantity !== undefined) data.quantity = dto.quantity;

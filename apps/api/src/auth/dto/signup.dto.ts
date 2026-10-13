@@ -7,6 +7,7 @@ import {
   IsNotReservedUsername,
   cleanDisplayName,
 } from '../auth.validators';
+import { IsValidPhone } from '../../common/validators/phone.validator';
 
 export class SignupDto {
   @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
@@ -38,6 +39,7 @@ export class SignupDto {
   @IsOptional()
   @IsString({ message: 'رقم الهاتف يجب أن يكون نصياً' })
   @MaxLength(20, { message: 'رقم الهاتف يجب ألا يتجاوز ٢٠ رقماً' })
+  @IsValidPhone({ message: 'رقم الهاتف غير صالح' })
   phone?: string;
 
   @IsOptional()

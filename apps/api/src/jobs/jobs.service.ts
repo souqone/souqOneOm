@@ -17,6 +17,8 @@ import { Prisma, ApplicationStatus, NotificationType } from '@prisma/client';
 import { generateSlug } from '../common/utils/entity.utils';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 
 /** Valid application status transitions — WITHDRAWN is applicant-only (via withdrawApplication) */
@@ -57,6 +59,7 @@ export class JobsService {
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsService,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   private cacheKey(suffix: string) { return `jobs:${suffix}`; }
@@ -64,6 +67,7 @@ export class JobsService {
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateJobDto) {
+    await this.sellerContactGate.assertCanPublish(userId);
     // BL-4: cross-field age validation
     if (dto.minAge !== undefined && dto.maxAge !== undefined && dto.minAge >= dto.maxAge) {
       throw new BadRequestException('minAge يجب أن يكون أصغر من maxAge');
@@ -99,9 +103,8 @@ export class JobsService {
       hasOwnVehicle: dto.hasOwnVehicle ?? false,
       governorateId: dto.governorateId,
       wilayaId: dto.wilayaId,
-      contactPhone: dto.contactPhone,
       contactEmail: dto.contactEmail,
-      whatsapp: dto.whatsapp,
+      whatsappEnabled: dto.whatsappEnabled ?? false,
       userId,
     };
 
@@ -281,7 +284,8 @@ export class JobsService {
     const DECIMAL_FIELDS = new Set(['salary']);
     const data: Record<string, unknown> = {};
 
-    for (const [key, val] of Object.entries(dto)) {
+    const cleanDto = stripDeprecatedContactFields(dto);
+    for (const [key, val] of Object.entries(cleanDto)) {
       if (val === undefined) continue;
       if (key === 'status') {
         data[key] = val;

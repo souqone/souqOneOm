@@ -1,5 +1,5 @@
 import {
-  IsString, IsOptional, MinLength, IsInt, IsPositive,
+  IsString, IsOptional, MinLength, IsInt, IsPositive, IsBoolean,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
@@ -32,11 +32,17 @@ export class CreateEmployerProfileDto {
   @Type(() => Number)
   wilayaId!: number;
 
+  /** @deprecated Read from user profile phone instead */
   @IsOptional()
   @IsString()
   contactPhone?: string;
 
+  /** @deprecated Managed via whatsappEnabled flag */
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 }

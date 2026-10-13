@@ -20,6 +20,7 @@ import { QueryOperatorListingsDto } from './dto/query-operator-listings.dto';
 import { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 @Injectable()
 export class OperatorsService {
@@ -27,9 +28,11 @@ export class OperatorsService {
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   async create(dto: CreateOperatorListingDto, userId: string) {
+    await this.sellerContactGate.assertCanPublish(userId);
     const existing = await this.prisma.operatorListing.findFirst({ where: { userId } });
     if (existing) {
       throw new ConflictException('لديك بروفايل مشغّل بالفعل، يمكنك تعديله أو طلب حذفه');
@@ -70,8 +73,7 @@ export class OperatorsService {
           wilayaId: dto.wilayaId,
           latitude: dto.latitude,
           longitude: dto.longitude,
-          contactPhone: dto.contactPhone,
-          whatsapp: dto.whatsapp,
+          whatsappEnabled: dto.whatsappEnabled ?? false,
           userId,
         },
         include: {
@@ -239,8 +241,7 @@ export class OperatorsService {
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
-    if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
-    if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
+    if (dto.whatsappEnabled !== undefined) data.whatsappEnabled = dto.whatsappEnabled;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const res = await tx.operatorListing.update({

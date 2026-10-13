@@ -17,6 +17,7 @@ import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.u
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 @Injectable()
 export class EquipmentListingsService {
@@ -26,9 +27,11 @@ export class EquipmentListingsService {
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
+    await this.sellerContactGate.assertCanPublish(userId);
     if (dto.listingType === 'EQUIPMENT_WANTED') {
       dto.price = undefined;
       dto.dailyPrice = undefined;
@@ -87,8 +90,7 @@ export class EquipmentListingsService {
           wilayaId: dto.wilayaId,
           latitude: dto.latitude,
           longitude: dto.longitude,
-          contactPhone: dto.contactPhone,
-          whatsapp: dto.whatsapp,
+          whatsappEnabled: dto.whatsappEnabled ?? false,
           userId,
           ...(dto.images && dto.images.length > 0 && {
             images: {
@@ -320,8 +322,7 @@ export class EquipmentListingsService {
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
-    if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
-    if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
+    if (dto.whatsappEnabled !== undefined) data.whatsappEnabled = dto.whatsappEnabled;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const res = await tx.equipmentListing.update({

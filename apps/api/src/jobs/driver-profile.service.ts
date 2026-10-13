@@ -10,6 +10,8 @@ import { CreateDriverProfileDto } from './dto/create-driver-profile.dto';
 import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
 import { QueryDriversDto } from './dto/query-drivers.dto';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 /** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
 const PUBLIC_USER_SELECT = {
@@ -31,10 +33,12 @@ export class DriverProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateDriverProfileDto) {
+    await this.sellerContactGate.assertCanPublish(userId);
     const existing = await this.prisma.driverProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك بروفايل سائق بالفعل');
 
@@ -52,8 +56,7 @@ export class DriverProfileService {
         bio: dto.bio,
         governorateId: dto.governorateId,
         wilayaId: dto.wilayaId,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
+        whatsappEnabled: dto.whatsappEnabled ?? false,
       },
       include: {
         user: { select: PRIVATE_USER_SELECT },
@@ -88,8 +91,9 @@ export class DriverProfileService {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
 
+    const cleanDto = stripDeprecatedContactFields(dto);
     const data: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(dto)) {
+    for (const [key, val] of Object.entries(cleanDto)) {
       if (val !== undefined) data[key] = val;
     }
 

@@ -12,9 +12,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { ContactService } from './contact.service';
-import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
-
-const CONTACT_ENTITY_TYPES: string[] = [ENTITY_TYPES.LISTING, ENTITY_TYPES.BUS_LISTING];
+import { CONTACT_ENTITY_TYPES } from './contact.registry';
 
 @ApiTags('Contact')
 @ApiBearerAuth()

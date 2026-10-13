@@ -7,6 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { CreateEmployerProfileDto } from './dto/create-employer-profile.dto';
 import { UpdateEmployerProfileDto } from './dto/update-employer-profile.dto';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 /** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
 const PUBLIC_USER_SELECT = {
@@ -28,10 +30,12 @@ export class EmployerProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateEmployerProfileDto) {
+    await this.sellerContactGate.assertCanPublish(userId);
     const existing = await this.prisma.employerProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك بروفايل صاحب عمل بالفعل');
 
@@ -46,8 +50,7 @@ export class EmployerProfileService {
         bio: dto.bio,
         governorateId: dto.governorateId,
         wilayaId: dto.wilayaId,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
+        whatsappEnabled: dto.whatsappEnabled ?? false,
       },
       include: {
         user: { select: PRIVATE_USER_SELECT },
