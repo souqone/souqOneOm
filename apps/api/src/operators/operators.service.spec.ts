@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 describe('OperatorsService', () => {
   let service: OperatorsService;
@@ -65,6 +66,7 @@ describe('OperatorsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: GeoService, useValue: geoService },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

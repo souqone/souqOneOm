@@ -3,9 +3,10 @@ import { ListingsController } from './listings.controller';
 import { ListingsService } from './listings.service';
 import { ListingsRepository } from './listings.repository';
 import { LocationsModule } from '../locations/locations.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [LocationsModule],
+  imports: [LocationsModule, PrismaModule],
   controllers: [ListingsController],
   providers: [ListingsService, ListingsRepository],
   exports: [ListingsService, ListingsRepository],

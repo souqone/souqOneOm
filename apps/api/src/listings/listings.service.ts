@@ -19,7 +19,8 @@ import { UpdateListingDto } from './dto/update-listing.dto';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { assertListingVisible } from './listing-visibility';
 import { incrementViewCount } from '../common/utils/view-count.helper';
-
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 
 @Injectable()
@@ -32,6 +33,7 @@ export class ListingsService {
     private readonly geoService: GeoService,
     private readonly repo: ListingsRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   private generateSlug(title: string): string {
@@ -81,7 +83,9 @@ export class ListingsService {
   }
 
   async create(dto: CreateListingDto, sellerId: string) {
-    if (dto.images && dto.images.length > 20) {
+    await this.sellerContactGate.assertCanPublish(sellerId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    if (cleanDto.images && cleanDto.images.length > 20) {
       throw new BadRequestException('لا يمكن تجاوز 20 صورة');
     }
 
@@ -127,11 +131,20 @@ export class ListingsService {
     }
 
     // Rental / Sale Validation
-    if (dto.listingType === 'RENTAL') {
-      if (!dto.dailyPrice || dto.dailyPrice <= 0) {
+    if (cleanDto.listingType === 'RENTAL') {
+      if (!cleanDto.dailyPrice || cleanDto.dailyPrice <= 0) {
         throw new BadRequestException('سعر الإيجار اليومي مطلوب لإعلانات الإيجار');
       }
     } else {
+      cleanDto.dailyPrice = undefined;
+      cleanDto.monthlyPrice = undefined;
+      cleanDto.withDriver = undefined;
+      cleanDto.depositAmount = undefined;
+      cleanDto.minRentalDays = undefined;
+      cleanDto.kmLimitPerDay = undefined;
+      cleanDto.cancellationPolicy = undefined;
+      cleanDto.deliveryAvailable = undefined;
+      cleanDto.insuranceIncluded = undefined;
       dto.dailyPrice = undefined;
       dto.monthlyPrice = undefined;
       dto.withDriver = undefined;
@@ -146,52 +159,52 @@ export class ListingsService {
     const slug = this.generateSlug(`${brand.name}-${carModel.name}-${dto.year}-${dto.title}`);
 
     const listing = await this.repo.create({
-        title: dto.title,
+        title: cleanDto.title,
         slug,
-        description: dto.description,
+        description: cleanDto.description,
         make: brand.name,
         model: carModel.name,
         trim: trimName,
-        year: dto.year,
-        price: new Prisma.Decimal(dto.price),
-        mileage: dto.mileage,
-        fuelType: dto.fuelType,
-        transmission: dto.transmission,
-        bodyType: dto.bodyType,
-        exteriorColor: dto.exteriorColor,
-        interior: dto.interior,
-        engineSize: dto.engineSize,
-        horsepower: dto.horsepower,
-        doors: dto.doors,
-        seats: dto.seats,
-        driveType: dto.driveType,
-        features: dto.features ?? [],
-        currency: dto.currency ?? 'OMR',
-        isPriceNegotiable: dto.isPriceNegotiable ?? false,
-        condition: dto.condition ?? 'USED',
-        listingType: dto.listingType ?? 'SALE',
-        dailyPrice: dto.dailyPrice ? new Prisma.Decimal(dto.dailyPrice) : undefined,
-        monthlyPrice: dto.monthlyPrice ? new Prisma.Decimal(dto.monthlyPrice) : undefined,
-        withDriver: dto.withDriver ?? false,
-        depositAmount: dto.depositAmount !== undefined ? new Prisma.Decimal(dto.depositAmount) : undefined,
-        minRentalDays: dto.minRentalDays,
-        kmLimitPerDay: dto.kmLimitPerDay,
-        cancellationPolicy: dto.cancellationPolicy,
-        deliveryAvailable: dto.deliveryAvailable ?? false,
-        insuranceIncluded: dto.insuranceIncluded ?? false,
-        whatsappEnabled: dto.whatsappEnabled ?? false,
-        governorateRef: { connect: { id: dto.governorateId } },
-        wilayaRef: { connect: { id: dto.wilayaId } },
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        ...(dto.brandId    && { brand:    { connect: { id: dto.brandId    } } }),
-        ...(dto.carModelId && { carModel: { connect: { id: dto.carModelId } } }),
-        ...(dto.carTrimId  && { carTrim:  { connect: { id: dto.carTrimId  } } }),
+        year: cleanDto.year,
+        price: new Prisma.Decimal(cleanDto.price),
+        mileage: cleanDto.mileage,
+        fuelType: cleanDto.fuelType,
+        transmission: cleanDto.transmission,
+        bodyType: cleanDto.bodyType,
+        exteriorColor: cleanDto.exteriorColor,
+        interior: cleanDto.interior,
+        engineSize: cleanDto.engineSize,
+        horsepower: cleanDto.horsepower,
+        doors: cleanDto.doors,
+        seats: cleanDto.seats,
+        driveType: cleanDto.driveType,
+        features: cleanDto.features ?? [],
+        currency: cleanDto.currency ?? 'OMR',
+        isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
+        condition: cleanDto.condition ?? 'USED',
+        listingType: cleanDto.listingType ?? 'SALE',
+        dailyPrice: cleanDto.dailyPrice ? new Prisma.Decimal(cleanDto.dailyPrice) : undefined,
+        monthlyPrice: cleanDto.monthlyPrice ? new Prisma.Decimal(cleanDto.monthlyPrice) : undefined,
+        withDriver: cleanDto.withDriver ?? false,
+        depositAmount: cleanDto.depositAmount !== undefined ? new Prisma.Decimal(cleanDto.depositAmount) : undefined,
+        minRentalDays: cleanDto.minRentalDays,
+        kmLimitPerDay: cleanDto.kmLimitPerDay,
+        cancellationPolicy: cleanDto.cancellationPolicy,
+        deliveryAvailable: cleanDto.deliveryAvailable ?? false,
+        insuranceIncluded: cleanDto.insuranceIncluded ?? false,
+        whatsappEnabled: cleanDto.whatsappEnabled ?? false,
+        governorateRef: { connect: { id: cleanDto.governorateId } },
+        wilayaRef: { connect: { id: cleanDto.wilayaId } },
+        latitude: cleanDto.latitude,
+        longitude: cleanDto.longitude,
+        ...(cleanDto.brandId    && { brand:    { connect: { id: cleanDto.brandId    } } }),
+        ...(cleanDto.carModelId && { carModel: { connect: { id: cleanDto.carModelId } } }),
+        ...(cleanDto.carTrimId  && { carTrim:  { connect: { id: cleanDto.carTrimId  } } }),
         status: 'ACTIVE',
         seller: { connect: { id: sellerId } },
-        ...(dto.images && dto.images.length > 0 && {
+        ...(cleanDto.images && cleanDto.images.length > 0 && {
           images: {
-            create: dto.images.map((url, i) => ({
+            create: cleanDto.images.map((url, i) => ({
               url,
               order: i,
               isPrimary: i === 0,
@@ -460,6 +473,7 @@ export class ListingsService {
   }
 
   async update(id: string, dto: UpdateListingDto, userId: string) {
+    const cleanDto = stripDeprecatedContactFields(dto);
     const listing = await this.repo.findById(id);
     if (!listing) {
       throw new NotFoundException('الإعلان غير موجود');
@@ -473,8 +487,8 @@ export class ListingsService {
       throw new ForbiddenException('لا يمكن تعديل إعلان موقوف أو مباع');
     }
 
-    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : listing.governorateId;
-    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : listing.wilayaId;
+    const nextGovId = cleanDto.governorateId !== undefined ? cleanDto.governorateId : listing.governorateId;
+    const nextWilayaId = cleanDto.wilayaId !== undefined ? cleanDto.wilayaId : listing.wilayaId;
     if (nextGovId || nextWilayaId) {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
@@ -632,6 +646,10 @@ export class ListingsService {
       throw new ForbiddenException(`لا يمكنك تغيير حالة الإعلان من ${listing.status} إلى ${targetStatus}`);
     }
 
+    if (targetStatus === 'ACTIVE') {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
+
     let updated;
     try {
       updated = await this.repo.update(id, { status: targetStatus }, expectedVersion);
@@ -651,7 +669,8 @@ export class ListingsService {
   }
 
   async submitListing(id: string, userId: string, expectedVersion: number) {
-    return this.executeStatusTransition(id, userId, 'ACTIVE', expectedVersion); // Or PENDING_REVIEW based on policy
+    await this.sellerContactGate.assertCanPublish(userId);
+    return this.executeStatusTransition(id, userId, 'ACTIVE', expectedVersion);
   }
 
   async markListingSold(id: string, userId: string, expectedVersion: number) {
@@ -663,6 +682,7 @@ export class ListingsService {
   }
 
   async restoreListing(id: string, userId: string, expectedVersion: number) {
+    await this.sellerContactGate.assertCanPublish(userId);
     return this.executeStatusTransition(id, userId, 'ACTIVE', expectedVersion);
   }
 

@@ -11,6 +11,7 @@ import { QueryServicesDto } from './dto/query-services.dto';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 @Injectable()
 export class ServicesService extends BaseListingService {
@@ -24,8 +25,12 @@ export class ServicesService extends BaseListingService {
 
   constructor(
     private readonly geoService: GeoService,
-prisma: PrismaService, redis: RedisService, eventEmitter: EventEmitter2) {
-    super(prisma, redis, eventEmitter);
+    prisma: PrismaService,
+    redis: RedisService,
+    eventEmitter: EventEmitter2,
+    sellerContactGate: SellerContactGate,
+  ) {
+    super(prisma, redis, eventEmitter, sellerContactGate);
   }
 
   protected buildCreateData(dto: CreateServiceDto, slug: string, userId: string) {
@@ -49,8 +54,7 @@ prisma: PrismaService, redis: RedisService, eventEmitter: EventEmitter2) {
       address: dto.address,
       latitude: dto.latitude,
       longitude: dto.longitude,
-      contactPhone: dto.contactPhone,
-      whatsapp: dto.whatsapp,
+      whatsappEnabled: dto.whatsappEnabled ?? false,
       website: dto.website,
       userId,
       ...(dto.images && dto.images.length > 0 && {

@@ -86,6 +86,7 @@ export class CreateJobDto {
   @Type(() => Number)
   wilayaId!: number;
 
+  /** @deprecated Read from user profile phone instead */
   @IsOptional()
   @IsString()
   contactPhone?: string;
@@ -94,9 +95,14 @@ export class CreateJobDto {
   @IsString()
   contactEmail?: string;
 
+  /** @deprecated Managed via whatsappEnabled flag */
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 
   @IsOptional()
   @IsNumber()

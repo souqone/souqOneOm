@@ -10,6 +10,7 @@ import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 const prisma: any = {
   busListing: { findUnique: jest.fn(), update: jest.fn() },
@@ -39,6 +40,7 @@ describe('BusesService.update - optimistic concurrency (version)', () => {
         { provide: RedisService, useValue: redis },
         { provide: GeoService, useValue: { validateLocationPair: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);
@@ -114,6 +116,7 @@ describe('Slug cache invalidation', () => {
         { provide: RedisService, useValue: redis },
         { provide: GeoService, useValue: { validateLocationPair: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);

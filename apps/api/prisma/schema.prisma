@@ -587,6 +587,7 @@ model DriverJob {
   contactPhone String?
   contactEmail String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   status    JobStatus @default(ACTIVE)
   expiresAt DateTime?
@@ -664,6 +665,7 @@ model DriverProfile {
 
   contactPhone String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   isAvailable Boolean @default(true)
   isVerified  Boolean @default(false)
@@ -709,6 +711,7 @@ model EmployerProfile {
   city         String?
   contactPhone String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   isVerified    Boolean @default(false)
   averageRating Float?
@@ -1058,6 +1061,7 @@ model SparePart {
   longitude         Float?
   contactPhone      String?
   whatsapp          String?
+  whatsappEnabled Boolean @default(false)
   status            ListingStatus @default(ACTIVE)
   viewCount         Int           @default(0)
 
@@ -1129,6 +1133,7 @@ model CarService {
   longitude         Float?
   contactPhone      String?
   whatsapp          String?
+  whatsappEnabled Boolean @default(false)
   website           String?
   status            ListingStatus @default(ACTIVE)
   viewCount         Int           @default(0)
@@ -1428,6 +1433,7 @@ model EquipmentListing {
 
   contactPhone String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   status        ListingStatus @default(ACTIVE)
   isPremium     Boolean       @default(false)
@@ -1501,6 +1507,7 @@ model OperatorListing {
 
   contactPhone String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   status    ListingStatus @default(ACTIVE)
   viewCount Int           @default(0)
@@ -1770,6 +1777,7 @@ model CarrierProfile {
   city         String?
   contactPhone String?
   whatsapp     String?
+  whatsappEnabled Boolean @default(false)
 
   isAvailable Boolean @default(false)
   isVerified  Boolean @default(false)

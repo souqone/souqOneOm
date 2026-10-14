@@ -12,6 +12,8 @@ import { generateSlug } from '../utils/entity.utils';
 import { incrementViewCount } from '../utils/view-count.helper';
 import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 import { USER_SELECT_PUBLIC, USER_SELECT_DETAIL } from '../constants/user-select.constant';
+import { stripDeprecatedContactFields } from '../utils/contact.utils';
+import { SellerContactGate } from './seller-contact-gate.service';
 
 export interface ListingConfig {
   /** Prisma model accessor name, e.g. 'carService' */
@@ -51,6 +53,7 @@ export abstract class BaseListingService {
     protected readonly prisma: PrismaService,
     protected readonly redis: RedisService,
     protected readonly eventEmitter: EventEmitter2,
+    protected readonly sellerContactGate?: SellerContactGate,
   ) {
     this.logger = new Logger(this.constructor.name);
   }
@@ -106,8 +109,12 @@ export abstract class BaseListingService {
   // CREATE
   // ══════════════════════════════════
   async create(dto: any, userId: string) {
-    const slug = generateSlug(dto.title);
-    const data = this.buildCreateData(dto, slug, userId);
+    if (this.sellerContactGate) {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
+    const cleanDto = stripDeprecatedContactFields(dto);
+    const slug = generateSlug(cleanDto.title);
+    const data = this.buildCreateData(cleanDto, slug, userId);
 
     const item = await this.prisma.$transaction(async (tx) => {
       const createdItem = await (tx as any)[this.config.modelName].create({
@@ -253,7 +260,11 @@ export abstract class BaseListingService {
     const decimals = new Set(this.config.decimalFields ?? []);
     const dates = new Set(this.config.dateFields ?? []);
 
-    for (const [key, val] of Object.entries(dto)) {
+    const cleanDto = stripDeprecatedContactFields(dto);
+    if (cleanDto.status === 'ACTIVE' && this.sellerContactGate) {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
+    for (const [key, val] of Object.entries(cleanDto)) {
       if (val === undefined) continue;
       if (decimals.has(key)) {
         data[key] = new Prisma.Decimal(val as number);
@@ -333,6 +344,9 @@ export abstract class BaseListingService {
       throw new ForbiddenException('غير مصرح لك بتعديل حالة هذا الإعلان');
 
     const newStatus = existing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    if (newStatus === 'ACTIVE' && this.sellerContactGate) {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
     const updated = await this.prisma.$transaction(async (tx) => {
       const res = await (tx as any)[this.config.modelName].update({
         where: { id },

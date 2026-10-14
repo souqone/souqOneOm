@@ -17,6 +17,8 @@ import { Prisma, ApplicationStatus, NotificationType } from '@prisma/client';
 import { generateSlug } from '../common/utils/entity.utils';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 
 /** Valid application status transitions — WITHDRAWN is applicant-only (via withdrawApplication) */
@@ -57,6 +59,7 @@ export class JobsService {
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsService,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   private cacheKey(suffix: string) { return `jobs:${suffix}`; }
@@ -64,44 +67,45 @@ export class JobsService {
 
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateJobDto) {
+    await this.sellerContactGate.assertCanPublish(userId);
+    const cleanDto = stripDeprecatedContactFields(dto);
     // BL-4: cross-field age validation
-    if (dto.minAge !== undefined && dto.maxAge !== undefined && dto.minAge >= dto.maxAge) {
+    if (cleanDto.minAge !== undefined && cleanDto.maxAge !== undefined && cleanDto.minAge >= cleanDto.maxAge) {
       throw new BadRequestException('minAge يجب أن يكون أصغر من maxAge');
     }
 
     // BL-5: poster must have the matching profile type
-    if (dto.jobType === 'HIRING') {
+    if (cleanDto.jobType === 'HIRING') {
       const ep = await this.prisma.employerProfile.findUnique({ where: { userId } });
       if (!ep) throw new ForbiddenException('يجب إنشاء ملف صاحب عمل قبل نشر وظيفة توظيف');
-    } else if (dto.jobType === 'OFFERING') {
+    } else if (cleanDto.jobType === 'OFFERING') {
       const dp = await this.prisma.driverProfile.findUnique({ where: { userId } });
       if (!dp) throw new ForbiddenException('يجب إنشاء ملف سائق قبل نشر عرض خدمة');
     }
 
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
-    const baseSlug = generateSlug(dto.title);
+    const baseSlug = generateSlug(cleanDto.title);
 
     const createData = {
-      title: dto.title,
-      description: dto.description,
-      jobType: dto.jobType,
-      employmentType: dto.employmentType,
-      salary: dto.salary,
-      salaryPeriod: dto.salaryPeriod,
-      licenseTypes: dto.licenseTypes ?? [],
-      experienceYears: dto.experienceYears,
-      minAge: dto.minAge,
-      maxAge: dto.maxAge,
-      languages: dto.languages ?? [],
-      nationality: dto.nationality,
-      vehicleTypes: dto.vehicleTypes ?? [],
-      hasOwnVehicle: dto.hasOwnVehicle ?? false,
-      governorateId: dto.governorateId,
-      wilayaId: dto.wilayaId,
-      contactPhone: dto.contactPhone,
-      contactEmail: dto.contactEmail,
-      whatsapp: dto.whatsapp,
+      title: cleanDto.title,
+      description: cleanDto.description,
+      jobType: cleanDto.jobType,
+      employmentType: cleanDto.employmentType,
+      salary: cleanDto.salary,
+      salaryPeriod: cleanDto.salaryPeriod,
+      licenseTypes: cleanDto.licenseTypes ?? [],
+      experienceYears: cleanDto.experienceYears,
+      minAge: cleanDto.minAge,
+      maxAge: cleanDto.maxAge,
+      languages: cleanDto.languages ?? [],
+      nationality: cleanDto.nationality,
+      vehicleTypes: cleanDto.vehicleTypes ?? [],
+      hasOwnVehicle: cleanDto.hasOwnVehicle ?? false,
+      governorateId: cleanDto.governorateId,
+      wilayaId: cleanDto.wilayaId,
+      contactEmail: cleanDto.contactEmail,
+      whatsappEnabled: cleanDto.whatsappEnabled ?? false,
       userId,
     };
 
@@ -261,6 +265,11 @@ export class JobsService {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
 
+    // Gate: transitioning or updating a job to ACTIVE requires user to have a profile phone
+    if (dto.status === 'ACTIVE') {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
+
     // AUTH-2: enforce state machine — EXPIRED is terminal, CLOSED cannot re-open
     if (dto.status !== undefined) {
       const allowed = JOB_STATUS_TRANSITIONS[job.status] ?? [];
@@ -281,7 +290,8 @@ export class JobsService {
     const DECIMAL_FIELDS = new Set(['salary']);
     const data: Record<string, unknown> = {};
 
-    for (const [key, val] of Object.entries(dto)) {
+    const cleanDto = stripDeprecatedContactFields(dto);
+    for (const [key, val] of Object.entries(cleanDto)) {
       if (val === undefined) continue;
       if (key === 'status') {
         data[key] = val;

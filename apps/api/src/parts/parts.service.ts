@@ -15,6 +15,8 @@ import { USER_SELECT } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 @Injectable()
 export class PartsService {
@@ -24,6 +26,7 @@ export class PartsService {
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   private generateSlug(title: string): string {
@@ -39,9 +42,11 @@ export class PartsService {
   }
 
   async create(dto: CreatePartDto, sellerId: string) {
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    await this.sellerContactGate.assertCanPublish(sellerId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
-    const slug = this.generateSlug(dto.title);
+    const slug = this.generateSlug(cleanDto.title);
 
     const part = await this.prisma.$transaction(async (tx) => {
       const createdPart = await tx.sparePart.create({
@@ -64,8 +69,7 @@ export class PartsService {
           wilayaId: dto.wilayaId,
           latitude: dto.latitude,
           longitude: dto.longitude,
-          contactPhone: dto.contactPhone,
-          whatsapp: dto.whatsapp,
+          whatsappEnabled: dto.whatsappEnabled ?? false,
           sellerId,
           hasWarranty: dto.hasWarranty,
           warrantyDuration: dto.warrantyDuration,
@@ -201,8 +205,10 @@ export class PartsService {
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
-    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : part.governorateId;
-    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : part.wilayaId;
+    const cleanDto = stripDeprecatedContactFields(dto);
+
+    const nextGovId = cleanDto.governorateId !== undefined ? cleanDto.governorateId : part.governorateId;
+    const nextWilayaId = cleanDto.wilayaId !== undefined ? cleanDto.wilayaId : part.wilayaId;
     if (nextGovId || nextWilayaId) {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
@@ -225,8 +231,7 @@ export class PartsService {
     if (dto.wilayaId !== undefined) data.wilayaId = dto.wilayaId;
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
-    if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
-    if (dto.whatsapp !== undefined) data.whatsapp = dto.whatsapp;
+    if (dto.whatsappEnabled !== undefined) data.whatsappEnabled = dto.whatsappEnabled;
     if (dto.hasWarranty !== undefined) data.hasWarranty = dto.hasWarranty;
     if (dto.warrantyDuration !== undefined) data.warrantyDuration = dto.warrantyDuration;
     if (dto.quantity !== undefined) data.quantity = dto.quantity;

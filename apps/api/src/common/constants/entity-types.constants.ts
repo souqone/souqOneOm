@@ -16,6 +16,7 @@ export const ENTITY_TYPES = {
   SPARE_PART:        'SPARE_PART',        // Parts
   CAR_SERVICE:       'CAR_SERVICE',       // Services
   JOB:               'JOB',               // Jobs
+  DRIVER_JOB:        'DRIVER_JOB',        // Driver Jobs alias
 
   // Supporting entities
   JOB_APPLICATION:   'JOB_APPLICATION',

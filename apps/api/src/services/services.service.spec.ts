@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { RedisService } from '../redis/redis.service';
 import { SearchService } from '../search/search.service';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 // ── Mocks ──────────────────────────────────────────
 const mockPrisma = {
@@ -86,6 +87,7 @@ describe('ServicesService', () => {
         { provide: SearchService, useValue: mockSearch },
         { provide: GeoService, useValue: mockGeoService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

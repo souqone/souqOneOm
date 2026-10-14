@@ -50,11 +50,17 @@ export class CreateDriverProfileDto {
   @Type(() => Number)
   wilayaId!: number;
 
+  /** @deprecated Read from user profile phone instead */
   @IsOptional()
   @IsString()
   contactPhone?: string;
 
+  /** @deprecated Managed via whatsappEnabled flag */
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 }

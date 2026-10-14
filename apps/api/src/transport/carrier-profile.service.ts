@@ -9,6 +9,8 @@ import { CreateCarrierProfileDto } from './dto/create-carrier-profile.dto';
 import { UpdateCarrierProfileDto } from './dto/update-carrier-profile.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
 import { Prisma } from '@prisma/client';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 const USER_SELECT = {
   id: true,
@@ -28,25 +30,27 @@ export class CarrierProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   async create(userId: string, dto: CreateCarrierProfileDto) {
+    await this.sellerContactGate.assertCanPublish(userId);
     const existing = await this.prisma.carrierProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك ملف تعريف ناقل بالفعل');
 
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     return this.prisma.carrierProfile.create({
       data: {
         userId,
-        companyName: dto.companyName,
-        bio: dto.bio,
-        vehicleTypes: dto.vehicleTypes,
-        serviceTypes: dto.serviceTypes,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        contactPhone: dto.contactPhone,
-        whatsapp: dto.whatsapp,
+        companyName: cleanDto.companyName,
+        bio: cleanDto.bio,
+        vehicleTypes: cleanDto.vehicleTypes,
+        serviceTypes: cleanDto.serviceTypes,
+        governorateId: cleanDto.governorateId,
+        wilayaId: cleanDto.wilayaId,
+        whatsappEnabled: cleanDto.whatsappEnabled ?? false,
       },
       include: {
         user: { select: USER_SELECT },
@@ -73,15 +77,16 @@ export class CarrierProfileService {
     const profile = await this.prisma.carrierProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('لم يتم العثور على ملف الناقل');
 
-    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : profile.governorateId;
-    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : profile.wilayaId;
+    const cleanDto = stripDeprecatedContactFields(dto);
+    const nextGovId = cleanDto.governorateId !== undefined ? cleanDto.governorateId : profile.governorateId;
+    const nextWilayaId = cleanDto.wilayaId !== undefined ? cleanDto.wilayaId : profile.wilayaId;
     if (nextGovId || nextWilayaId) {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
 
     return this.prisma.carrierProfile.update({
       where: { userId },
-      data: dto,
+      data: cleanDto,
       include: {
         user: { select: USER_SELECT },
         governorateRef: true,

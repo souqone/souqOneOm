@@ -73,11 +73,17 @@ export class UpdateOperatorListingDto {
   @IsString()
   profileImageUrl?: string;
 
+  /** @deprecated Read from user profile phone instead */
   @IsOptional()
   @IsString() @MinLength(8)
   contactPhone?: string;
 
+  /** @deprecated Managed via whatsappEnabled flag */
   @IsOptional()
   @IsString() @MinLength(8)
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 }

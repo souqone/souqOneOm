@@ -6,6 +6,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { SearchService } from '../../search/search.service';
 import { GeoService } from '../../locations/geo.service';
 import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import { SellerContactGate } from '../../common/services/seller-contact-gate.service';
 
 const mockGeoService = {
   validateLocationPair: jest.fn(),
@@ -67,6 +68,7 @@ const mockSearch = {
 
 describe('JobsService', () => {
   let service: JobsService;
+  let gate: SellerContactGate;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -79,10 +81,12 @@ describe('JobsService', () => {
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: SearchService, useValue: mockSearch },
         { provide: GeoService, useValue: mockGeoService },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 
     service = module.get<JobsService>(JobsService);
+    gate = module.get<SellerContactGate>(SellerContactGate);
   });
 
   // ─── findAll ───
@@ -165,6 +169,18 @@ describe('JobsService', () => {
       await expect(
         service.update('1', 'user1', { status: 'EXPIRED' } as any),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw PROFILE_PHONE_REQUIRED when updating status to ACTIVE without a phone', async () => {
+      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      (gate.assertCanPublish as jest.Mock).mockRejectedValueOnce(
+        new BadRequestException({ code: 'PROFILE_PHONE_REQUIRED' }),
+      );
+
+      await expect(
+        service.update('1', 'user1', { status: 'ACTIVE' } as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(gate.assertCanPublish).toHaveBeenCalledWith('user1');
     });
 
     it('should reject re-activating an EXPIRED job (AUTH-2)', async () => {

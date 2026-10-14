@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsEnum, MinLength, IsInt, IsPositive } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsEnum, IsBoolean, MinLength, IsInt, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 import { VehicleType, TransportServiceType } from '@prisma/client';
 
@@ -30,11 +30,17 @@ export class CreateCarrierProfileDto {
   @Type(() => Number)
   wilayaId!: number;
 
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
   @IsOptional()
   @IsString()
   contactPhone?: string;
 
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 }

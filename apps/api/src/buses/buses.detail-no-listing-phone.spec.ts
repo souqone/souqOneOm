@@ -4,6 +4,7 @@ import { BusesService, stripNeverExposedFields } from './buses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 const prisma: any = {
   busListing: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn() },
@@ -38,6 +39,7 @@ describe('Bus detail never leaks contactPhone/whatsapp, even from legacy (pre-PR
         { provide: RedisService, useValue: redis },
         { provide: GeoService, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);
@@ -122,6 +124,7 @@ describe('A current record (columns dropped) has no phone keys at all', () => {
         { provide: RedisService, useValue: redis },
         { provide: GeoService, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     const svc = mod.get(BusesService);

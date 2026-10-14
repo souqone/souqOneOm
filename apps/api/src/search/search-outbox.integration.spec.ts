@@ -13,6 +13,7 @@ import { JobsService } from '../jobs/jobs.service';
 import { AdminJobsService } from '../jobs/admin-jobs.service';
 import { JobExpiryService } from '../jobs/job-expiry.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 describe('Outbox Integration', () => {
   let mockPrisma: any;
@@ -75,6 +76,7 @@ describe('Outbox Integration', () => {
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: GeoService, useValue: mockGeo },
         { provide: NotificationsService, useValue: mockNotif },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

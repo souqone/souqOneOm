@@ -22,13 +22,19 @@ export class UpdateCarrierProfileDto {
   @IsEnum(TransportServiceType, { each: true })
   serviceTypes?: TransportServiceType[];
 
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
   @IsOptional()
   @IsString()
   contactPhone?: string;
 
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
   @IsOptional()
   @IsString()
   whatsapp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 
   @IsOptional()
   @IsBoolean()

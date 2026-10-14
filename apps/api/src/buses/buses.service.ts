@@ -19,6 +19,8 @@ import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
 import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 import { assertEntityVisible } from '../listings/listing-visibility';
 import { findSimilarListings } from '../common/utils/similar-listings.util';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 const VIEW_COOLDOWN_SECONDS = 3600; // 1 view per IP per listing per hour
 const LIST_CACHE_TTL = 300;   // 5 min
@@ -75,6 +77,7 @@ export class BusesService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sellerContactGate: SellerContactGate,
   ) {}
 
   async getManufacturers() {
@@ -95,46 +98,48 @@ export class BusesService {
 
 
   async create(dto: CreateBusListingDto, userId: string) {
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    await this.sellerContactGate.assertCanPublish(userId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
-    const slug = generateSlug(dto.title);
+    const slug = generateSlug(cleanDto.title);
 
     const bus = await this.prisma.$transaction(async (tx) => {
       const createdBus = await tx.busListing.create({
         data: {
-          title: dto.title,
+          title: cleanDto.title,
           slug,
-          description: dto.description,
-          busListingType: dto.busListingType,
-          busType: dto.busType,
-          make: dto.make,
-          model: dto.model,
-          manufacturerId: dto.manufacturerId,
-          modelId: dto.modelId,
-          year: dto.year,
-          capacity: dto.capacity,
-          mileage: dto.mileage,
-          fuelType: dto.fuelType,
-          transmission: dto.transmission,
-          condition: dto.condition ?? 'USED',
-          features: dto.features ?? [],
-          plateNumber: dto.plateNumber,
-          price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
-          currency: dto.currency ?? 'OMR',
-          isPriceNegotiable: dto.isPriceNegotiable ?? false,
-          contractType: dto.contractType,
-          contractClient: dto.contractClient,
-          contractMonthly: dto.contractMonthly != null ? new Prisma.Decimal(dto.contractMonthly) : null,
-          contractDuration: dto.contractDuration,
-          contractExpiry: dto.contractExpiry ? new Date(dto.contractExpiry) : null,
-          dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
-          monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
-          withDriver: dto.withDriver ?? false,
-          governorateId: dto.governorateId,
-          wilayaId: dto.wilayaId,
-          latitude: dto.latitude,
-          longitude: dto.longitude,
-          whatsappEnabled: dto.whatsappEnabled ?? false,
+          description: cleanDto.description,
+          busListingType: cleanDto.busListingType,
+          busType: cleanDto.busType,
+          make: cleanDto.make,
+          model: cleanDto.model,
+          manufacturerId: cleanDto.manufacturerId,
+          modelId: cleanDto.modelId,
+          year: cleanDto.year,
+          capacity: cleanDto.capacity,
+          mileage: cleanDto.mileage,
+          fuelType: cleanDto.fuelType,
+          transmission: cleanDto.transmission,
+          condition: cleanDto.condition ?? 'USED',
+          features: cleanDto.features ?? [],
+          plateNumber: cleanDto.plateNumber,
+          price: cleanDto.price != null ? new Prisma.Decimal(cleanDto.price) : null,
+          currency: cleanDto.currency ?? 'OMR',
+          isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
+          contractType: cleanDto.contractType,
+          contractClient: cleanDto.contractClient,
+          contractMonthly: cleanDto.contractMonthly != null ? new Prisma.Decimal(cleanDto.contractMonthly) : null,
+          contractDuration: cleanDto.contractDuration,
+          contractExpiry: cleanDto.contractExpiry ? new Date(cleanDto.contractExpiry) : null,
+          dailyPrice: cleanDto.dailyPrice != null ? new Prisma.Decimal(cleanDto.dailyPrice) : null,
+          monthlyPrice: cleanDto.monthlyPrice != null ? new Prisma.Decimal(cleanDto.monthlyPrice) : null,
+          withDriver: cleanDto.withDriver ?? false,
+          governorateId: cleanDto.governorateId,
+          wilayaId: cleanDto.wilayaId,
+          latitude: cleanDto.latitude,
+          longitude: cleanDto.longitude,
+          whatsappEnabled: cleanDto.whatsappEnabled ?? false,
           userId,
         },
         include: {
@@ -463,16 +468,22 @@ export class BusesService {
           `INVALID_STATUS_TRANSITION: ${bus.status} → ${dto.status}`,
         );
       }
+      // Gate: re-activating a listing requires seller to have a profile phone
+      if (dto.status === 'ACTIVE') {
+        await this.sellerContactGate.assertCanPublish(userId);
+      }
     }
 
     // Log status transition
     const statusChanged = dto.status && dto.status !== bus.status;
 
+    const cleanDto = stripDeprecatedContactFields(dto);
+
     const DECIMAL_FIELDS = ['price', 'contractMonthly', 'dailyPrice', 'monthlyPrice'];
     const DATE_FIELDS = ['contractExpiry'];
 
     const data: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(dto)) {
+    for (const [key, value] of Object.entries(cleanDto)) {
       if (value === undefined || key === 'version') continue;
       if (DECIMAL_FIELDS.includes(key)) {
         data[key] = new Prisma.Decimal(value as number);
