@@ -169,6 +169,16 @@ export class UpdateBusListingDto {
   @IsBoolean()
   whatsappEnabled?: boolean;
 
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
+
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
+  @IsOptional()
+  @IsString()
+  whatsapp?: string;
+
   // ── Status (validated by state machine in service) ──
   @IsOptional()
   @IsEnum(ListingStatus)

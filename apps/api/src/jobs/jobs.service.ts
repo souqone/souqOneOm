@@ -68,43 +68,44 @@ export class JobsService {
   /* ───── CREATE ───── */
   async create(userId: string, dto: CreateJobDto) {
     await this.sellerContactGate.assertCanPublish(userId);
+    const cleanDto = stripDeprecatedContactFields(dto);
     // BL-4: cross-field age validation
-    if (dto.minAge !== undefined && dto.maxAge !== undefined && dto.minAge >= dto.maxAge) {
+    if (cleanDto.minAge !== undefined && cleanDto.maxAge !== undefined && cleanDto.minAge >= cleanDto.maxAge) {
       throw new BadRequestException('minAge يجب أن يكون أصغر من maxAge');
     }
 
     // BL-5: poster must have the matching profile type
-    if (dto.jobType === 'HIRING') {
+    if (cleanDto.jobType === 'HIRING') {
       const ep = await this.prisma.employerProfile.findUnique({ where: { userId } });
       if (!ep) throw new ForbiddenException('يجب إنشاء ملف صاحب عمل قبل نشر وظيفة توظيف');
-    } else if (dto.jobType === 'OFFERING') {
+    } else if (cleanDto.jobType === 'OFFERING') {
       const dp = await this.prisma.driverProfile.findUnique({ where: { userId } });
       if (!dp) throw new ForbiddenException('يجب إنشاء ملف سائق قبل نشر عرض خدمة');
     }
 
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
-    const baseSlug = generateSlug(dto.title);
+    const baseSlug = generateSlug(cleanDto.title);
 
     const createData = {
-      title: dto.title,
-      description: dto.description,
-      jobType: dto.jobType,
-      employmentType: dto.employmentType,
-      salary: dto.salary,
-      salaryPeriod: dto.salaryPeriod,
-      licenseTypes: dto.licenseTypes ?? [],
-      experienceYears: dto.experienceYears,
-      minAge: dto.minAge,
-      maxAge: dto.maxAge,
-      languages: dto.languages ?? [],
-      nationality: dto.nationality,
-      vehicleTypes: dto.vehicleTypes ?? [],
-      hasOwnVehicle: dto.hasOwnVehicle ?? false,
-      governorateId: dto.governorateId,
-      wilayaId: dto.wilayaId,
-      contactEmail: dto.contactEmail,
-      whatsappEnabled: dto.whatsappEnabled ?? false,
+      title: cleanDto.title,
+      description: cleanDto.description,
+      jobType: cleanDto.jobType,
+      employmentType: cleanDto.employmentType,
+      salary: cleanDto.salary,
+      salaryPeriod: cleanDto.salaryPeriod,
+      licenseTypes: cleanDto.licenseTypes ?? [],
+      experienceYears: cleanDto.experienceYears,
+      minAge: cleanDto.minAge,
+      maxAge: cleanDto.maxAge,
+      languages: cleanDto.languages ?? [],
+      nationality: cleanDto.nationality,
+      vehicleTypes: cleanDto.vehicleTypes ?? [],
+      hasOwnVehicle: cleanDto.hasOwnVehicle ?? false,
+      governorateId: cleanDto.governorateId,
+      wilayaId: cleanDto.wilayaId,
+      contactEmail: cleanDto.contactEmail,
+      whatsappEnabled: cleanDto.whatsappEnabled ?? false,
       userId,
     };
 

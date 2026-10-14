@@ -18,6 +18,7 @@ import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.u
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 @Injectable()
 export class EquipmentListingsService {
@@ -32,69 +33,70 @@ export class EquipmentListingsService {
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
     await this.sellerContactGate.assertCanPublish(userId);
-    if (dto.listingType === 'EQUIPMENT_WANTED') {
-      dto.price = undefined;
-      dto.dailyPrice = undefined;
-      dto.monthlyPrice = undefined;
-      dto.make = undefined;
-      dto.model = undefined;
-      dto.year = undefined;
-      dto.condition = undefined;
-    } else if (dto.listingType === 'EQUIPMENT_SALE') {
-      dto.dailyPrice = undefined;
-      dto.monthlyPrice = undefined;
-      dto.budgetMin = undefined;
-      dto.budgetMax = undefined;
-      dto.quantity = undefined;
-    } else if (dto.listingType === 'EQUIPMENT_RENT') {
-      dto.price = undefined;
-      dto.budgetMin = undefined;
-      dto.budgetMax = undefined;
-      dto.quantity = undefined;
+    const cleanDto = stripDeprecatedContactFields(dto);
+    if (cleanDto.listingType === 'EQUIPMENT_WANTED') {
+      cleanDto.price = undefined;
+      cleanDto.dailyPrice = undefined;
+      cleanDto.monthlyPrice = undefined;
+      cleanDto.make = undefined;
+      cleanDto.model = undefined;
+      cleanDto.year = undefined;
+      cleanDto.condition = undefined;
+    } else if (cleanDto.listingType === 'EQUIPMENT_SALE') {
+      cleanDto.dailyPrice = undefined;
+      cleanDto.monthlyPrice = undefined;
+      cleanDto.budgetMin = undefined;
+      cleanDto.budgetMax = undefined;
+      cleanDto.quantity = undefined;
+    } else if (cleanDto.listingType === 'EQUIPMENT_RENT') {
+      cleanDto.price = undefined;
+      cleanDto.budgetMin = undefined;
+      cleanDto.budgetMax = undefined;
+      cleanDto.quantity = undefined;
     }
     
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     const item = await this.prisma.$transaction(async (tx) => {
       const createdItem = await tx.equipmentListing.create({
         data: {
-          title: dto.title,
-          slug: generateSlug(dto.title),
-          description: dto.description,
-          equipmentType: dto.equipmentType as EquipmentType,
-          listingType: dto.listingType as EquipmentListingType,
-          make: dto.make,
-          model: dto.model,
-          year: dto.year,
-          condition: (dto.condition as ItemCondition) ?? 'USED',
-          capacity: dto.capacity,
-          power: dto.power,
-          weight: dto.weight,
-          hoursUsed: dto.hoursUsed,
-          features: dto.features ?? [],
-          price: dto.price != null ? new Prisma.Decimal(dto.price) : null,
-          dailyPrice: dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null,
-          monthlyPrice: dto.monthlyPrice != null ? new Prisma.Decimal(dto.monthlyPrice) : null,
-          currency: dto.currency ?? 'OMR',
-          isPriceNegotiable: dto.isPriceNegotiable ?? false,
-          withOperator: dto.withOperator ?? false,
-          deliveryAvailable: dto.deliveryAvailable ?? false,
-          budgetMin: dto.budgetMin != null ? new Prisma.Decimal(dto.budgetMin) : null,
-          budgetMax: dto.budgetMax != null ? new Prisma.Decimal(dto.budgetMax) : null,
-          rentalDuration: dto.rentalDuration,
-          startDate: dto.startDate ? new Date(dto.startDate) : null,
-          endDate: dto.endDate ? new Date(dto.endDate) : null,
-          quantity: dto.quantity,
-          siteDetails: dto.siteDetails,
-          governorateId: dto.governorateId,
-          wilayaId: dto.wilayaId,
-          latitude: dto.latitude,
-          longitude: dto.longitude,
-          whatsappEnabled: dto.whatsappEnabled ?? false,
+          title: cleanDto.title,
+          slug: generateSlug(cleanDto.title),
+          description: cleanDto.description,
+          equipmentType: cleanDto.equipmentType as EquipmentType,
+          listingType: cleanDto.listingType as EquipmentListingType,
+          make: cleanDto.make,
+          model: cleanDto.model,
+          year: cleanDto.year,
+          condition: (cleanDto.condition as ItemCondition) ?? 'USED',
+          capacity: cleanDto.capacity,
+          power: cleanDto.power,
+          weight: cleanDto.weight,
+          hoursUsed: cleanDto.hoursUsed,
+          features: cleanDto.features ?? [],
+          price: cleanDto.price != null ? new Prisma.Decimal(cleanDto.price) : null,
+          dailyPrice: cleanDto.dailyPrice != null ? new Prisma.Decimal(cleanDto.dailyPrice) : null,
+          monthlyPrice: cleanDto.monthlyPrice != null ? new Prisma.Decimal(cleanDto.monthlyPrice) : null,
+          currency: cleanDto.currency ?? 'OMR',
+          isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
+          withOperator: cleanDto.withOperator ?? false,
+          deliveryAvailable: cleanDto.deliveryAvailable ?? false,
+          budgetMin: cleanDto.budgetMin != null ? new Prisma.Decimal(cleanDto.budgetMin) : null,
+          budgetMax: cleanDto.budgetMax != null ? new Prisma.Decimal(cleanDto.budgetMax) : null,
+          rentalDuration: cleanDto.rentalDuration,
+          startDate: cleanDto.startDate ? new Date(cleanDto.startDate) : null,
+          endDate: cleanDto.endDate ? new Date(cleanDto.endDate) : null,
+          quantity: cleanDto.quantity,
+          siteDetails: cleanDto.siteDetails,
+          governorateId: cleanDto.governorateId,
+          wilayaId: cleanDto.wilayaId,
+          latitude: cleanDto.latitude,
+          longitude: cleanDto.longitude,
+          whatsappEnabled: cleanDto.whatsappEnabled ?? false,
           userId,
-          ...(dto.images && dto.images.length > 0 && {
+          ...(cleanDto.images && cleanDto.images.length > 0 && {
             images: {
-              create: dto.images.map((url, i) => ({
+              create: cleanDto.images.map((url, i) => ({
                 url,
                 order: i,
                 isPrimary: i === 0,
@@ -265,9 +267,11 @@ export class EquipmentListingsService {
     if (!item) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
-    if (dto.governorateId || dto.wilayaId) {
-      const targetGov = dto.governorateId ?? item.governorateId;
-      const targetWilaya = dto.wilayaId ?? item.wilayaId;
+    const cleanDto = stripDeprecatedContactFields(dto);
+
+    if (cleanDto.governorateId || cleanDto.wilayaId) {
+      const targetGov = cleanDto.governorateId ?? item.governorateId;
+      const targetWilaya = cleanDto.wilayaId ?? item.wilayaId;
       if (targetGov && targetWilaya) {
         await this.geoService.validateLocationPair(targetGov, targetWilaya);
       }

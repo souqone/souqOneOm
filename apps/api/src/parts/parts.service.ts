@@ -16,6 +16,7 @@ import { USER_SELECT } from '../common/utils/entity.utils';
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 @Injectable()
 export class PartsService {
@@ -42,9 +43,10 @@ export class PartsService {
 
   async create(dto: CreatePartDto, sellerId: string) {
     await this.sellerContactGate.assertCanPublish(sellerId);
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
-    const slug = this.generateSlug(dto.title);
+    const slug = this.generateSlug(cleanDto.title);
 
     const part = await this.prisma.$transaction(async (tx) => {
       const createdPart = await tx.sparePart.create({
@@ -203,8 +205,10 @@ export class PartsService {
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
-    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : part.governorateId;
-    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : part.wilayaId;
+    const cleanDto = stripDeprecatedContactFields(dto);
+
+    const nextGovId = cleanDto.governorateId !== undefined ? cleanDto.governorateId : part.governorateId;
+    const nextWilayaId = cleanDto.wilayaId !== undefined ? cleanDto.wilayaId : part.wilayaId;
     if (nextGovId || nextWilayaId) {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }

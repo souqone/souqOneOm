@@ -3,6 +3,7 @@ import { EmployerProfileService } from '../employer-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { GeoService } from '../../locations/geo.service';
+import { SellerContactGate } from '../../common/services/seller-contact-gate.service';
 
 const mockGeoService = {
   validateLocationPair: jest.fn(),
@@ -26,6 +27,7 @@ describe('EmployerProfileService', () => {
         EmployerProfileService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GeoService, useValue: mockGeoService },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = module.get<EmployerProfileService>(EmployerProfileService);

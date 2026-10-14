@@ -21,6 +21,7 @@ import { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 @Injectable()
 export class OperatorsService {
@@ -33,6 +34,7 @@ export class OperatorsService {
 
   async create(dto: CreateOperatorListingDto, userId: string) {
     await this.sellerContactGate.assertCanPublish(userId);
+    const cleanDto = stripDeprecatedContactFields(dto);
     const existing = await this.prisma.operatorListing.findFirst({ where: { userId } });
     if (existing) {
       throw new ConflictException('لديك بروفايل مشغّل بالفعل، يمكنك تعديله أو طلب حذفه');
@@ -51,29 +53,29 @@ export class OperatorsService {
       }
     }
 
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     const item = await this.prisma.$transaction(async (tx) => {
       const createdItem = await tx.operatorListing.create({
         data: {
-          title: dto.title,
-          slug: generateSlug(dto.title),
-          description: dto.description,
-          operatorType: dto.operatorType as OperatorType,
-          specializations: dto.specializations ?? [],
-          experienceYears: dto.experienceYears,
-          equipmentTypes: (dto.equipmentTypes ?? []) as EquipmentType[],
-          certifications: dto.certifications ?? [],
-          dailyRate: dto.dailyRate != null ? new Prisma.Decimal(dto.dailyRate) : null,
-          hourlyRate: dto.hourlyRate != null ? new Prisma.Decimal(dto.hourlyRate) : null,
-          currency: dto.currency ?? 'OMR',
-          isPriceNegotiable: dto.isPriceNegotiable ?? false,
-          profileImageUrl: dto.profileImageUrl ?? null,
-          governorateId: dto.governorateId,
-          wilayaId: dto.wilayaId,
-          latitude: dto.latitude,
-          longitude: dto.longitude,
-          whatsappEnabled: dto.whatsappEnabled ?? false,
+          title: cleanDto.title,
+          slug: generateSlug(cleanDto.title),
+          description: cleanDto.description,
+          operatorType: cleanDto.operatorType as OperatorType,
+          specializations: cleanDto.specializations ?? [],
+          experienceYears: cleanDto.experienceYears,
+          equipmentTypes: (cleanDto.equipmentTypes ?? []) as EquipmentType[],
+          certifications: cleanDto.certifications ?? [],
+          dailyRate: cleanDto.dailyRate != null ? new Prisma.Decimal(cleanDto.dailyRate) : null,
+          hourlyRate: cleanDto.hourlyRate != null ? new Prisma.Decimal(cleanDto.hourlyRate) : null,
+          currency: cleanDto.currency ?? 'OMR',
+          isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
+          profileImageUrl: cleanDto.profileImageUrl ?? null,
+          governorateId: cleanDto.governorateId,
+          wilayaId: cleanDto.wilayaId,
+          latitude: cleanDto.latitude,
+          longitude: cleanDto.longitude,
+          whatsappEnabled: cleanDto.whatsappEnabled ?? false,
           userId,
         },
         include: {
@@ -217,9 +219,11 @@ export class OperatorsService {
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
-    if (dto.governorateId || dto.wilayaId) {
-      const targetGov = dto.governorateId ?? item.governorateId;
-      const targetWilaya = dto.wilayaId ?? item.wilayaId;
+    const cleanDto = stripDeprecatedContactFields(dto);
+
+    if (cleanDto.governorateId || cleanDto.wilayaId) {
+      const targetGov = cleanDto.governorateId ?? item.governorateId;
+      const targetWilaya = cleanDto.wilayaId ?? item.wilayaId;
       if (targetGov && targetWilaya) {
         await this.geoService.validateLocationPair(targetGov, targetWilaya);
       }

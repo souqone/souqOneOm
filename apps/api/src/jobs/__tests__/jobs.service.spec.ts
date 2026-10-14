@@ -6,6 +6,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { SearchService } from '../../search/search.service';
 import { GeoService } from '../../locations/geo.service';
 import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import { SellerContactGate } from '../../common/services/seller-contact-gate.service';
 
 const mockGeoService = {
   validateLocationPair: jest.fn(),
@@ -79,6 +80,7 @@ describe('JobsService', () => {
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: SearchService, useValue: mockSearch },
         { provide: GeoService, useValue: mockGeoService },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

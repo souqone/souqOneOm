@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { SearchService } from '../search/search.service';
 import { ListingsRepository } from './listings.repository';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 const mockListing = {
   id: 'listing-1',
@@ -92,6 +93,7 @@ describe('ListingsService', () => {
         { provide: GeoService, useValue: mockGeoService },
         { provide: ListingsRepository, useValue: mockRepo },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

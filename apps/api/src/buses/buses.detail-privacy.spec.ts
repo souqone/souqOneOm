@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
 import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 const prisma: any = {
   busListing: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn() },
@@ -50,6 +51,7 @@ describe('BusesService detail - visibility gate and privacy', () => {
         { provide: RedisService, useValue: redis },
         { provide: GeoService, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);

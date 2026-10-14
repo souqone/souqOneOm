@@ -261,6 +261,9 @@ export abstract class BaseListingService {
     const dates = new Set(this.config.dateFields ?? []);
 
     const cleanDto = stripDeprecatedContactFields(dto);
+    if (cleanDto.status === 'ACTIVE' && this.sellerContactGate) {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
     for (const [key, val] of Object.entries(cleanDto)) {
       if (val === undefined) continue;
       if (decimals.has(key)) {

@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { SearchService } from '../search/search.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 describe('PartsService', () => {
   let service: PartsService;
@@ -33,6 +34,7 @@ describe('PartsService', () => {
         { provide: GeoService, useValue: mockGeoService },
         { provide: SearchService, useValue: { indexDocument: jest.fn(), removeDocument: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

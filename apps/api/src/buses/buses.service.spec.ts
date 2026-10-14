@@ -7,6 +7,7 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SearchService } from '../search/search.service';
 import { GeoService } from '../locations/geo.service';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 // ── Mocks ──
 
@@ -111,6 +112,7 @@ describe('BusesService', () => {
         { provide: SearchService, useValue: mockSearch },
         { provide: GeoService, useValue: mockGeoService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = module.get<BusesService>(BusesService);

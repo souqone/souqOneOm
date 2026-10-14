@@ -152,4 +152,14 @@ export class CreateBusListingDto {
   @IsOptional()
   @IsBoolean()
   whatsappEnabled?: boolean;
+
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
+
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
+  @IsOptional()
+  @IsString()
+  whatsapp?: string;
 }

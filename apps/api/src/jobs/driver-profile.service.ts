@@ -42,21 +42,22 @@ export class DriverProfileService {
     const existing = await this.prisma.driverProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك بروفايل سائق بالفعل');
 
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     return this.prisma.driverProfile.create({
       data: {
         userId,
-        licenseTypes: dto.licenseTypes,
-        experienceYears: dto.experienceYears,
-        languages: dto.languages ?? [],
-        nationality: dto.nationality,
-        vehicleTypes: dto.vehicleTypes ?? [],
-        hasOwnVehicle: dto.hasOwnVehicle ?? false,
-        bio: dto.bio,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        whatsappEnabled: dto.whatsappEnabled ?? false,
+        licenseTypes: cleanDto.licenseTypes,
+        experienceYears: cleanDto.experienceYears,
+        languages: cleanDto.languages ?? [],
+        nationality: cleanDto.nationality,
+        vehicleTypes: cleanDto.vehicleTypes ?? [],
+        hasOwnVehicle: cleanDto.hasOwnVehicle ?? false,
+        bio: cleanDto.bio,
+        governorateId: cleanDto.governorateId,
+        wilayaId: cleanDto.wilayaId,
+        whatsappEnabled: cleanDto.whatsappEnabled ?? false,
       },
       include: {
         user: { select: PRIVATE_USER_SELECT },

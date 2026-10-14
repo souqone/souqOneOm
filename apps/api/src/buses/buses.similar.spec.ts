@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
 import { findSimilarListings, rankByPriceProximity } from '../common/utils/similar-listings.util';
+import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 
 describe('rankByPriceProximity / findSimilarListings (generic)', () => {
   const row = (id: string, price: number, createdAt: string) => ({ id, price, createdAt });
@@ -73,6 +74,7 @@ describe('BusesService.findSimilar', () => {
         { provide: RedisService, useValue: redis },
         { provide: GeoService, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);

@@ -65,7 +65,7 @@ describe('Contact endpoint - BUS_LISTING', () => {
   });
 
   it('controller still rejects unknown entity types with 404', async () => {
-    await expect(controller.getContact('JOB', 'x', viewer)).rejects.toThrow(NotFoundException);
+    await expect(controller.getContact('UNKNOWN_TYPE', 'x', viewer)).rejects.toThrow(NotFoundException);
     await expect(controller.getContact('bus_listing', 'x', viewer)).rejects.toThrow(NotFoundException);
   });
 

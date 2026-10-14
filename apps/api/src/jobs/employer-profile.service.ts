@@ -39,18 +39,19 @@ export class EmployerProfileService {
     const existing = await this.prisma.employerProfile.findUnique({ where: { userId } });
     if (existing) throw new ConflictException('لديك بروفايل صاحب عمل بالفعل');
 
-    await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+    const cleanDto = stripDeprecatedContactFields(dto);
+    await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     return this.prisma.employerProfile.create({
       data: {
         userId,
-        companyName: dto.companyName,
-        companySize: dto.companySize,
-        industry: dto.industry,
-        bio: dto.bio,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        whatsappEnabled: dto.whatsappEnabled ?? false,
+        companyName: cleanDto.companyName,
+        companySize: cleanDto.companySize,
+        industry: cleanDto.industry,
+        bio: cleanDto.bio,
+        governorateId: cleanDto.governorateId,
+        wilayaId: cleanDto.wilayaId,
+        whatsappEnabled: cleanDto.whatsappEnabled ?? false,
       },
       include: {
         user: { select: PRIVATE_USER_SELECT },
@@ -79,14 +80,15 @@ export class EmployerProfileService {
     const profile = await this.prisma.employerProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('لا يوجد بروفايل صاحب عمل');
 
-    const nextGovId = dto.governorateId !== undefined ? dto.governorateId : profile.governorateId;
-    const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : profile.wilayaId;
+    const cleanDto = stripDeprecatedContactFields(dto);
+    const nextGovId = cleanDto.governorateId !== undefined ? cleanDto.governorateId : profile.governorateId;
+    const nextWilayaId = cleanDto.wilayaId !== undefined ? cleanDto.wilayaId : profile.wilayaId;
     if (nextGovId || nextWilayaId) {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
 
     const data: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(dto)) {
+    for (const [key, val] of Object.entries(cleanDto)) {
       if (val !== undefined) data[key] = val;
     }
 

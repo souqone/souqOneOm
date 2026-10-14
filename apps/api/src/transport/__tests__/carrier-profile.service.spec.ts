@@ -3,6 +3,7 @@ import { CarrierProfileService } from '../carrier-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GeoService } from '../../locations/geo.service';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { SellerContactGate } from '../../common/services/seller-contact-gate.service';
 
 const mockPrisma = {
   carrierProfile: {
@@ -28,6 +29,7 @@ describe('CarrierProfileService', () => {
         CarrierProfileService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GeoService, useValue: mockGeoService },
+        { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

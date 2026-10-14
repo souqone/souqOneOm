@@ -130,6 +130,16 @@ export class CreateListingDto {
   @IsBoolean({ message: 'تفعيل الواتساب يجب أن يكون قيمة منطقية' })
   whatsappEnabled?: boolean;
 
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
+
+  /** @deprecated accepted from legacy clients, silently discarded — do not persist */
+  @IsOptional()
+  @IsString()
+  whatsapp?: string;
+
   @IsInt({ message: 'معرف المحافظة يجب أن يكون رقماً صحيحاً' })
   @IsPositive({ message: 'معرف المحافظة يجب أن يكون رقماً موجباً' })
   governorateId!: number;
