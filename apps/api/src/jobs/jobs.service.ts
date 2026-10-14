@@ -265,6 +265,11 @@ export class JobsService {
       await this.geoService.validateLocationPair(nextGovId ?? undefined, nextWilayaId ?? undefined);
     }
 
+    // Gate: transitioning or updating a job to ACTIVE requires user to have a profile phone
+    if (dto.status === 'ACTIVE') {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
+
     // AUTH-2: enforce state machine — EXPIRED is terminal, CLOSED cannot re-open
     if (dto.status !== undefined) {
       const allowed = JOB_STATUS_TRANSITIONS[job.status] ?? [];

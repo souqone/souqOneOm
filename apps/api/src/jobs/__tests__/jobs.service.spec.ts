@@ -68,6 +68,7 @@ const mockSearch = {
 
 describe('JobsService', () => {
   let service: JobsService;
+  let gate: SellerContactGate;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -85,6 +86,7 @@ describe('JobsService', () => {
     }).compile();
 
     service = module.get<JobsService>(JobsService);
+    gate = module.get<SellerContactGate>(SellerContactGate);
   });
 
   // ─── findAll ───
@@ -167,6 +169,18 @@ describe('JobsService', () => {
       await expect(
         service.update('1', 'user1', { status: 'EXPIRED' } as any),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw PROFILE_PHONE_REQUIRED when updating status to ACTIVE without a phone', async () => {
+      mockPrisma.driverJob.findUnique.mockResolvedValue(mockJob);
+      (gate.assertCanPublish as jest.Mock).mockRejectedValueOnce(
+        new BadRequestException({ code: 'PROFILE_PHONE_REQUIRED' }),
+      );
+
+      await expect(
+        service.update('1', 'user1', { status: 'ACTIVE' } as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(gate.assertCanPublish).toHaveBeenCalledWith('user1');
     });
 
     it('should reject re-activating an EXPIRED job (AUTH-2)', async () => {
