@@ -83,7 +83,18 @@ export class AccessTokenGate {
 
     // Account status check
     if (meta.status !== AccountStatus.ACTIVE) {
-      throw new UnauthorizedException('الحساب غير نشط أو محظور');
+      const code =
+        meta.status === AccountStatus.BANNED
+          ? 'ACCOUNT_BANNED'
+          : meta.status === AccountStatus.SUSPENDED
+            ? 'ACCOUNT_SUSPENDED'
+            : 'ACCOUNT_INACTIVE';
+
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code,
+        message: 'الحساب غير نشط أو محظور',
+      });
     }
 
     // Version check (grace transition: tokens without tv claim are accepted)

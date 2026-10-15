@@ -155,12 +155,49 @@ describe('GlobalExceptionFilter', () => {
     expect(loggerSpy).toHaveBeenCalled();
   });
 
-  it('guarantees response shape has strictly statusCode, message, and timestamp', () => {
+  it('guarantees response shape has strictly statusCode, message, and timestamp when code is absent', () => {
     filter.catch(new UnauthorizedException(), mockArgumentsHost);
 
     const responseBody = mockJson.mock.calls[0][0];
     expect(Object.keys(responseBody).sort()).toEqual(['message', 'statusCode', 'timestamp']);
     expect(typeof responseBody.message).toBe('string');
     expect(typeof responseBody.statusCode).toBe('number');
+  });
+
+  it('passes code property when exception contains structured code (e.g. ACCOUNT_BANNED or ACCOUNT_SUSPENDED)', () => {
+    filter.catch(
+      new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      }),
+      mockArgumentsHost,
+    );
+
+    expect(mockStatus).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+    expect(mockJson).toHaveBeenCalledWith({
+      statusCode: HttpStatus.FORBIDDEN,
+      message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      code: 'ACCOUNT_BANNED',
+      timestamp: expect.any(String),
+    });
+
+    // Also test 401 with ACCOUNT_SUSPENDED
+    filter.catch(
+      new UnauthorizedException({
+        statusCode: 401,
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'الحساب غير نشط أو محظور',
+      }),
+      mockArgumentsHost,
+    );
+
+    expect(mockStatus).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+    expect(mockJson).toHaveBeenCalledWith({
+      statusCode: HttpStatus.UNAUTHORIZED,
+      message: 'الحساب غير نشط أو محظور',
+      code: 'ACCOUNT_SUSPENDED',
+      timestamp: expect.any(String),
+    });
   });
 });

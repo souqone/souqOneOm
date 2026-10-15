@@ -108,6 +108,22 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }
   }
 
+  async disconnectUser(userId: string, code?: string): Promise<void> {
+    try {
+      const room = `user:${userId}`;
+      if (this.server) {
+        if (code) {
+          this.server.to(room).emit('account-status', { code });
+        }
+        this.server.in(room).disconnectSockets(true);
+      }
+      this.connectedUsers.delete(userId);
+      await this.redis.del(`user:online:${userId}`);
+    } catch (err: any) {
+      this.logger.error(`Failed to disconnect sockets for user ${userId}: ${err?.message || err}`);
+    }
+  }
+
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('join-conversation')
   async handleJoinConversation(

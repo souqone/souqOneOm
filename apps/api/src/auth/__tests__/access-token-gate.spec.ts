@@ -64,21 +64,48 @@ describe('AccessTokenGate (Unit Tests)', () => {
     expect(result).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
   });
 
-  it('rejects with 401 if user status is BANNED, SUSPENDED, or DELETED', async () => {
+  it('rejects with 401 if user status is BANNED, SUSPENDED, or DELETED with appropriate error code', async () => {
     mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.BANNED, role: UserRole.USER });
-    await expect(gate.validate({ sub: 'user-1', role: 'USER', tv: 1 })).rejects.toThrow(
-      UnauthorizedException,
-    );
+    try {
+      await gate.validate({ sub: 'user-1', role: 'USER', tv: 1 });
+      fail('Expected UnauthorizedException');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.getStatus()).toBe(401);
+      expect(err.getResponse()).toEqual({
+        statusCode: 401,
+        code: 'ACCOUNT_BANNED',
+        message: 'الحساب غير نشط أو محظور',
+      });
+    }
 
     mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.SUSPENDED, role: UserRole.USER });
-    await expect(gate.validate({ sub: 'user-1', role: 'USER', tv: 1 })).rejects.toThrow(
-      UnauthorizedException,
-    );
+    try {
+      await gate.validate({ sub: 'user-1', role: 'USER', tv: 1 });
+      fail('Expected UnauthorizedException');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.getStatus()).toBe(401);
+      expect(err.getResponse()).toEqual({
+        statusCode: 401,
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'الحساب غير نشط أو محظور',
+      });
+    }
 
     mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.DELETED, role: UserRole.USER });
-    await expect(gate.validate({ sub: 'user-1', role: 'USER', tv: 1 })).rejects.toThrow(
-      UnauthorizedException,
-    );
+    try {
+      await gate.validate({ sub: 'user-1', role: 'USER', tv: 1 });
+      fail('Expected UnauthorizedException');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.getStatus()).toBe(401);
+      expect(err.getResponse()).toEqual({
+        statusCode: 401,
+        code: 'ACCOUNT_INACTIVE',
+        message: 'الحساب غير نشط أو محظور',
+      });
+    }
   });
 
   it('falls back to Postgres on Redis cache miss / offline, and populates cache with role', async () => {

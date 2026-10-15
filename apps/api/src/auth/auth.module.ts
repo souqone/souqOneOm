@@ -11,6 +11,7 @@ import { JwtVerifyStrategy } from './jwt-verify.strategy';
 import { VerificationGuard } from './verification.guard';
 import { TokenCleanupService } from './token-cleanup.service';
 import { AccessTokenGate } from './access-token-gate.service';
+import { AccountStatusService } from './account-status.service';
 import { getJwtModuleOptions } from '../config/jwt.config';
 
 @Module({
@@ -31,7 +32,8 @@ import { getJwtModuleOptions } from '../config/jwt.config';
     VerificationGuard,
     TokenCleanupService,
     AccessTokenGate,
+    AccountStatusService,
   ],
-  exports: [AuthTokenService, VerificationGuard, OtpService, AccessTokenGate],
+  exports: [AuthTokenService, VerificationGuard, OtpService, AccessTokenGate, AccountStatusService],
 })
 export class AuthModule {}
