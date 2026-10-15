@@ -10,7 +10,6 @@ import {
   UploadedFile,
   UploadedFiles,
   Get,
-  BadRequestException,
 } from '@nestjs/common';
 import {
   FileInterceptor,
@@ -21,6 +20,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { UploadsService } from './uploads.service';
+import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 
 @Controller('uploads')
 export class UploadsController {
@@ -81,35 +81,7 @@ export class UploadsController {
     @Body() body: { url: string; isPrimary?: boolean },
     @CurrentUser() user: JwtPayload,
   ) {
-    if (!body?.url || typeof body.url !== 'string') {
-      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
-    }
-
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(body.url);
-    } catch {
-      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
-    }
-
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
-
-    // In production, if CLOUDINARY_CLOUD_NAME is unset, reject everything
-    if (isProduction && !cloudName) {
-      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
-    }
-
-    const isLocalAllowed = !isProduction;
-    const isLocalhost = isLocalAllowed && (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1');
-    const isCloudinary =
-      parsedUrl.protocol === 'https:' &&
-      parsedUrl.hostname === 'res.cloudinary.com' &&
-      Boolean(cloudName && (parsedUrl.pathname === `/${cloudName}` || parsedUrl.pathname.startsWith(`/${cloudName}/`)));
-
-    if (!isCloudinary && !isLocalhost) {
-      throw new BadRequestException('الرابط غير مدعوم أو غير موثوق');
-    }
+    validateTrustedImageUrl(body?.url);
     return this.uploadsService.addImageToListing(
       listingId,
       user.sub,
