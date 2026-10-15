@@ -7,6 +7,7 @@ export const USER_UNSUSPEND = 'USER_UNSUSPEND';
 export const USER_BAN = 'USER_BAN';
 export const USER_UNBAN = 'USER_UNBAN';
 export const ROLE_CHANGE = 'ROLE_CHANGE';
+export const BOOTSTRAP_ADMIN = 'BOOTSTRAP_ADMIN';
 
 export const ADMIN_AUDIT_ACTIONS = {
   USER_SUSPEND,
@@ -14,6 +15,7 @@ export const ADMIN_AUDIT_ACTIONS = {
   USER_BAN,
   USER_UNBAN,
   ROLE_CHANGE,
+  BOOTSTRAP_ADMIN,
 } as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[keyof typeof ADMIN_AUDIT_ACTIONS];

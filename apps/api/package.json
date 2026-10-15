@@ -20,7 +20,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "seed:marketplace": "npx tsx prisma/seed-marketplace.ts"
+    "seed:marketplace": "npx tsx prisma/seed-marketplace.ts",
+    "bootstrap:admin": "npx tsx scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@carone/types": "*",
