@@ -36,6 +36,8 @@ import { OperatorsModule } from '../src/operators/operators.module';
 import { ReviewsModule } from '../src/reviews/reviews.module';
 import { PaymentsModule } from '../src/payments/payments.module';
 import { LocationsModule } from '../src/locations/locations.module';
+import { AdminAuditModule } from '../src/admin-audit/admin-audit.module';
+import { AdminUsersModule } from '../src/admin-users/admin-users.module';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 import { MailService } from '../src/mail/mail.service';
@@ -161,6 +163,8 @@ export async function createTestApp(): Promise<INestApplication> {
       ReviewsModule,
       PaymentsModule,
       LocationsModule,
+      AdminAuditModule,
+      AdminUsersModule,
       TerminusModule,
       HttpModule,
     ],
@@ -305,6 +309,60 @@ export async function registerUser(overrides?: {
     accessToken: loginRes.body.accessToken,
     refreshToken: loginRes.body.refreshToken,
     user: loginRes.body.user,
+  };
+}
+
+/** Register a new admin user and return tokens and password */
+export async function registerAdmin(overrides?: {
+  email?: string;
+  username?: string;
+  password?: string;
+}): Promise<{ accessToken: string; refreshToken: string; user: any; password: string }> {
+  const password = overrides?.password || 'AdminPass123!';
+  const res = await registerUser({ ...overrides, password });
+  await prisma.user.update({
+    where: { id: res.user.id },
+    data: { role: 'ADMIN' },
+  });
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({
+      email: res.user.email,
+      password,
+    })
+    .expect(201);
+  return {
+    accessToken: loginRes.body.accessToken,
+    refreshToken: loginRes.body.refreshToken,
+    user: loginRes.body.user,
+    password,
+  };
+}
+
+/** Register a new moderator user and return tokens and password */
+export async function registerModerator(overrides?: {
+  email?: string;
+  username?: string;
+  password?: string;
+}): Promise<{ accessToken: string; refreshToken: string; user: any; password: string }> {
+  const password = overrides?.password || 'ModPass123!';
+  const res = await registerUser({ ...overrides, password });
+  await prisma.user.update({
+    where: { id: res.user.id },
+    data: { role: 'MODERATOR' },
+  });
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({
+      email: res.user.email,
+      password,
+    })
+    .expect(201);
+  return {
+    accessToken: loginRes.body.accessToken,
+    refreshToken: loginRes.body.refreshToken,
+    user: loginRes.body.user,
+    password,
   };
 }
 
