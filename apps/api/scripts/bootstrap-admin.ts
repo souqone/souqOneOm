@@ -4,7 +4,7 @@ dotenv.config();
 import { PrismaClient, UserRole, AccountStatus } from '@prisma/client';
 import { normalizeEmail, isValidNormalizedEmail } from '../src/auth/auth.validators';
 import { maskEmail } from '../src/admin-users/utils/pii-masker.util';
-import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../src/admin-users/admin-users.service';
+import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../src/common/constants/admin-lock.constant';
 import { ROLE_CHANGE } from '../src/admin-audit/admin-audit-actions.constant';
 import { sanitizeAuditState } from '../src/admin-audit/admin-audit.service';
 
@@ -136,18 +136,45 @@ export async function runBootstrapAdmin(
       };
     }
 
-    // 6. Apply mode (inside atomic transaction with locks)
+    // 6. Apply mode (inside atomic transaction with locks and re-validation)
     const txResult = await prisma.$transaction(async (tx) => {
       // Step A: Target Row Lock FOR UPDATE (must be first)
       const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${target.id} FOR UPDATE`;
       if (!locked || locked.length === 0) {
-        throw new Error(`User "${emailMasked}" was not found during row locking.`);
+        throw new Error(`USER_NOT_FOUND: User "${emailMasked}" was not found during row locking.`);
       }
 
-      // Step B: Advisory lock for last admin check (must be second)
+      // Step B: Advisory lock for admin concurrency control (must be second)
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(${LAST_ADMIN_ADVISORY_LOCK_ID})::text`;
 
-      // Step C: Re-verify inside locked transaction that no active admin exists
+      // Step C: Re-read target user inside the locked transaction and re-validate
+      const lockedTarget = await tx.user.findUnique({
+        where: { id: target.id },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          displayName: true,
+          role: true,
+          status: true,
+          emailVerifiedAt: true,
+          tokenVersion: true,
+        },
+      });
+
+      if (!lockedTarget) {
+        throw new Error(`USER_NOT_FOUND: User "${emailMasked}" was not found inside transaction.`);
+      }
+
+      if (lockedTarget.status !== AccountStatus.ACTIVE) {
+        throw new Error(`USER_NOT_ACTIVE: User "${emailMasked}" status changed to ${lockedTarget.status}.`);
+      }
+
+      if (!lockedTarget.emailVerifiedAt) {
+        throw new Error(`EMAIL_NOT_VERIFIED: User "${emailMasked}" email is no longer verified.`);
+      }
+
+      // Step D: Re-verify inside locked transaction that no active admin exists
       const concurrentActiveAdminCount = await tx.user.count({
         where: {
           id: { not: target.id },
@@ -157,10 +184,10 @@ export async function runBootstrapAdmin(
       });
 
       if (concurrentActiveAdminCount > 0) {
-        throw new Error('An ACTIVE administrator already exists in the system. Aborting promotion.');
+        throw new Error('ACTIVE_ADMIN_EXISTS: An ACTIVE administrator already exists in the system. Aborting promotion.');
       }
 
-      // Step D: Update user role to ADMIN and increment tokenVersion
+      // Step E: Update user role to ADMIN and increment tokenVersion
       const updated = await tx.user.update({
         where: { id: target.id },
         data: {
@@ -175,13 +202,13 @@ export async function runBootstrapAdmin(
         },
       });
 
-      // Step E: Revoke all refresh tokens
+      // Step F: Revoke all refresh tokens
       const revoked = await tx.refreshToken.updateMany({
         where: { userId: target.id, revokedAt: null },
         data: { revokedAt: new Date() },
       });
 
-      // Step F: Record audit log (reason >= 10 chars, includes "bootstrap")
+      // Step G: Record audit log (reason >= 10 chars, includes "bootstrap")
       // Since adminId is non-nullable, target user acts as self-bootstrap actor
       const auditReason = 'System bootstrap: initial active administrator account promotion';
       const auditLog = await tx.adminAuditLog.create({
@@ -191,8 +218,8 @@ export async function runBootstrapAdmin(
           targetType: 'User',
           targetId: target.id,
           beforeState: sanitizeAuditState({
-            role: target.role,
-            tokenVersion: target.tokenVersion,
+            role: lockedTarget.role,
+            tokenVersion: lockedTarget.tokenVersion,
           }),
           afterState: sanitizeAuditState({
             role: updated.role,
@@ -240,11 +267,13 @@ export async function runBootstrapAdmin(
     };
   } catch (err: any) {
     logger.error(`Error during bootstrap-admin execution: ${err?.message || err}`);
+    const codeMatch = typeof err?.message === 'string' ? err.message.match(/^(USER_NOT_FOUND|USER_NOT_ACTIVE|EMAIL_NOT_VERIFIED|ACTIVE_ADMIN_EXISTS)/) : null;
+    const errorCode = codeMatch ? codeMatch[1] : (err?.message || 'INTERNAL_ERROR');
     return {
       success: false,
       dryRun: false,
       exitCode: 1,
-      error: err?.message || 'INTERNAL_ERROR',
+      error: errorCode,
     };
   } finally {
     if (shouldDisconnect) {

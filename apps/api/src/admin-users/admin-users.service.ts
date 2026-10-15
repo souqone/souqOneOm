@@ -38,8 +38,7 @@ import {
   AdminUserMutationResponse,
 } from './admin-users.types';
 import type { JwtPayload } from '../auth/auth.types';
-
-export const LAST_ADMIN_ADVISORY_LOCK_ID = 742910385;
+import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../common/constants/admin-lock.constant';
 
 @Injectable()
 export class AdminUsersService {
