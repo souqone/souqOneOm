@@ -139,14 +139,26 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
      1. JwtStrategy.validate Unit Checks
      ══════════════════════════════════════════════════════════════ */
   describe('1. JwtStrategy.validate', () => {
+    let mockGate: any;
     beforeEach(() => {
-      jwtStrategy = new JwtStrategy({ validate: jest.fn().mockResolvedValue(undefined) } as any);
+      mockGate = {
+        validate: jest.fn().mockResolvedValue({ tv: 1, status: 'ACTIVE', role: 'USER' }),
+      };
+      jwtStrategy = new JwtStrategy(mockGate);
     });
 
-    it('passes payload when verified: true is present', async () => {
+    it('passes payload when verified: true is present and sets role from gate', async () => {
       const payload: any = { sub: 'u1', email: 'a@b.com', verified: true };
       const res = await jwtStrategy.validate(payload);
-      expect(res).toEqual(payload);
+      expect(res).toEqual({ ...payload, role: 'USER' });
+    });
+
+    it('sets request.user.role to the role from the gate even if the token payload has a different role', async () => {
+      mockGate.validate.mockResolvedValue({ tv: 1, status: 'ACTIVE', role: 'ADMIN' });
+      const payloadWithUserRole: any = { sub: 'u1', email: 'a@b.com', verified: true, role: 'USER' };
+      const res = await jwtStrategy.validate(payloadWithUserRole);
+      expect(res.role).toBe('ADMIN');
+      expect(mockGate.validate).toHaveBeenCalledWith(payloadWithUserRole);
     });
 
     it('throws UnauthorizedException with EMAIL_NOT_VERIFIED when verified is false or missing', async () => {
@@ -209,7 +221,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
-          { provide: AccessTokenGate, useValue: { validate: jest.fn().mockResolvedValue(undefined) } },
+          { provide: AccessTokenGate, useValue: { validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
         ],
       }).compile();
 
@@ -403,7 +415,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: PrismaService, useValue: mockPrisma },
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
-          { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
+          { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
         ],
       }).compile();
 

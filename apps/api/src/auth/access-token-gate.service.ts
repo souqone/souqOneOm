@@ -2,11 +2,12 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import type { JwtPayload } from './auth.types';
-import { AccountStatus } from '@prisma/client';
+import { AccountStatus, UserRole } from '@prisma/client';
 
 export interface CachedTokenMeta {
   tv: number;
   status: AccountStatus;
+  role: UserRole;
 }
 
 const TOKEN_GATE_TTL_SECONDS = 300;
@@ -41,7 +42,9 @@ export class AccessTokenGate {
       meta !== null &&
       typeof meta === 'object' &&
       typeof meta.tv === 'number' &&
-      typeof meta.status === 'string';
+      typeof meta.status === 'string' &&
+      typeof meta.role === 'string' &&
+      Object.values(UserRole).includes(meta.role as UserRole);
 
     if (!isValidMeta) {
       // Cache miss, corrupted cache, or Redis offline — query Postgres
@@ -49,7 +52,7 @@ export class AccessTokenGate {
       try {
         user = await this.prisma.user.findUnique({
           where: { id: userId },
-          select: { id: true, tokenVersion: true, status: true },
+          select: { id: true, tokenVersion: true, status: true, role: true },
         });
       } catch {
         // If Postgres query fails with exception, fail closed with 401
@@ -63,6 +66,7 @@ export class AccessTokenGate {
       meta = {
         tv: user.tokenVersion,
         status: user.status,
+        role: user.role,
       };
 
       // Best effort cache write (silently no-ops if Redis is offline)
@@ -99,10 +103,10 @@ export class AccessTokenGate {
     }
   }
 
-  async setCache(userId: string, tv: number, status: AccountStatus): Promise<void> {
+  async setCache(userId: string, tv: number, status: AccountStatus, role: UserRole): Promise<void> {
     const cacheKey = this.getCacheKey(userId);
     try {
-      await this.redis.set(cacheKey, { tv, status }, TOKEN_GATE_TTL_SECONDS);
+      await this.redis.set(cacheKey, { tv, status, role }, TOKEN_GATE_TTL_SECONDS);
     } catch {
       // Ignore cache set errors
     }

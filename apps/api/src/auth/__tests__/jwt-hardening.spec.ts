@@ -143,7 +143,7 @@ describe('JWT Hardening & Rotation Suite (Task 017 / B1b Phase 2)', () => {
           {
             provide: AccessTokenGate,
             useValue: {
-              validate: jest.fn().mockResolvedValue(undefined),
+              validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }),
             },
           },
         ],

@@ -26,7 +26,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     assertVerifiedAccessPayload(payload);
-    await this.accessTokenGate.validate(payload);
-    return payload;
+    const meta = await this.accessTokenGate.validate(payload);
+    return {
+      ...payload,
+      role: meta.role,
+    };
   }
 }

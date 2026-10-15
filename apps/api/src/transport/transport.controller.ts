@@ -243,7 +243,10 @@ export class TransportController {
 
   @UseGuards(JwtAuthGuard)
   @Get('bookings/:id/review')
-  getBookingReview(@Param('id') id: string) {
-    return this.transportReviewService.getBookingReview(id);
+  getBookingReview(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.transportReviewService.getBookingReview(id, user.sub);
   }
 }

@@ -6,12 +6,44 @@ import {
   ServiceUnavailableException,
   ConflictException,
 } from '@nestjs/common';
-import { PaymentStatus, Prisma, SubscriptionPlan } from '@prisma/client';
+import { PaymentStatus, Prisma, SubscriptionPlan, ListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ThawaniService } from './thawani.service';
 import { CreateFeaturedPaymentDto } from './dto/create-featured-payment.dto';
 import { CreateSubscriptionPaymentDto } from './dto/create-subscription-payment.dto';
 import { PaymentActivationService } from './payment-activation.service';
+
+interface FeaturedTarget {
+  ownerId: string;
+  status: ListingStatus;
+  isDeleted?: boolean;
+}
+
+type FeaturedEntityLoader = (prisma: PrismaService, entityId: string) => Promise<FeaturedTarget | null>;
+
+export const FEATURED_REGISTRY: Record<string, FeaturedEntityLoader> = {
+  LISTING: async (prisma, id) => {
+    const item = await prisma.listing.findUnique({
+      where: { id },
+      select: { sellerId: true, status: true },
+    });
+    return item ? { ownerId: item.sellerId, status: item.status } : null;
+  },
+  BUS_LISTING: async (prisma, id) => {
+    const item = await prisma.busListing.findUnique({
+      where: { id },
+      select: { userId: true, status: true, deletedAt: true },
+    });
+    return item ? { ownerId: item.userId, status: item.status, isDeleted: item.deletedAt !== null } : null;
+  },
+  EQUIPMENT_LISTING: async (prisma, id) => {
+    const item = await prisma.equipmentListing.findUnique({
+      where: { id },
+      select: { userId: true, status: true },
+    });
+    return item ? { ownerId: item.userId, status: item.status } : null;
+  },
+};
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING:    ['PROCESSING', 'FAILED', 'EXPIRED'],
@@ -121,11 +153,24 @@ export class PaymentsService {
     }
   }
 
+  async assertFeaturedEntityEligible(entityType: string, entityId: string, userId: string): Promise<void> {
+    const loader = FEATURED_REGISTRY[entityType];
+    if (!loader) {
+      throw new NotFoundException('الكيان غير موجود');
+    }
+
+    const entity = await loader(this.prisma, entityId);
+    if (!entity || entity.isDeleted || entity.ownerId !== userId || entity.status !== ListingStatus.ACTIVE) {
+      throw new NotFoundException('الكيان غير موجود');
+    }
+  }
+
   // ── Featured listing payment ──
 
   async createFeaturedPayment(dto: CreateFeaturedPaymentDto, userId: string, ip?: string, idempotencyKey?: string) {
     this.assertEnabled();
     await this.checkFraud(userId, ip);
+    await this.assertFeaturedEntityEligible(dto.entityType, dto.entityId, userId);
 
     // Idempotency: return existing payment for same key
     if (idempotencyKey) {
