@@ -233,6 +233,10 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
         validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }),
       };
 
+      const mockAccountStatusService = {
+        assertCanAuthenticate: jest.fn().mockResolvedValue(undefined),
+      };
+
       authService = new AuthService(
         mockPrisma as any,
         mockMailService as any,
@@ -240,6 +244,7 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
         auditService,
         mockOtp as any,
         mockAccessTokenGate as any,
+        mockAccountStatusService as any,
       );
     });
 

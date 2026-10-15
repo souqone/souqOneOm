@@ -7,6 +7,7 @@ import { AuthTokenService } from '../auth-token.service';
 import { AuthAuditService } from '../auth-audit.service';
 import { OtpService } from '../otp.service';
 import { AccessTokenGate } from '../access-token-gate.service';
+import { AccountStatusService } from '../account-status.service';
 import { JwtStrategy } from '../jwt.strategy';
 import { UsersService } from '../../users/users.service';
 import { ChatGateway } from '../../chat/chat.gateway';
@@ -128,6 +129,7 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
         { provide: OtpService, useValue: mockOtp },
         { provide: ChatService, useValue: mockChatService },
         { provide: GeoService, useValue: mockGeo },
+        { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

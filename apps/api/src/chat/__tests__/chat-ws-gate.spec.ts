@@ -254,4 +254,62 @@ describe('Chat WebSocket Verification Gate Specification (AUTH-VERIFY-GATE)', ()
       expect(mockRedis.set).not.toHaveBeenCalled();
     });
   });
+
+  describe('4. ChatGateway.disconnectUser specification', () => {
+    let gateway: ChatGateway;
+    let mockChatService: any;
+    let mockRedis: any;
+    let mockServer: any;
+    let mockRoomEmitter: any;
+    let mockRoomSockets: any;
+
+    beforeEach(() => {
+      mockChatService = { getConversationIds: jest.fn().mockResolvedValue([]) };
+      mockRedis = { del: jest.fn().mockResolvedValue(1) };
+      gateway = new ChatGateway(
+        mockChatService,
+        mockRedis,
+        { validate: jest.fn().mockResolvedValue(undefined) } as any,
+      );
+
+      mockRoomEmitter = { emit: jest.fn() };
+      mockRoomSockets = { disconnectSockets: jest.fn() };
+      mockServer = {
+        to: jest.fn().mockReturnValue(mockRoomEmitter),
+        in: jest.fn().mockReturnValue(mockRoomSockets),
+      };
+      gateway.server = mockServer;
+    });
+
+    it('emits account-status to user room, disconnects sockets, cleans map and redis', async () => {
+      // Simulate connected user
+      (gateway as any).connectedUsers.set('u-target', new Set(['sock-1', 'sock-2']));
+
+      await gateway.disconnectUser('u-target', 'ACCOUNT_BANNED');
+
+      expect(mockServer.to).toHaveBeenCalledWith('user:u-target');
+      expect(mockRoomEmitter.emit).toHaveBeenCalledWith('account-status', { code: 'ACCOUNT_BANNED' });
+      expect(mockServer.in).toHaveBeenCalledWith('user:u-target');
+      expect(mockRoomSockets.disconnectSockets).toHaveBeenCalledWith(true);
+      expect((gateway as any).connectedUsers.has('u-target')).toBe(false);
+      expect(mockRedis.del).toHaveBeenCalledWith('user:online:u-target');
+    });
+
+    it('disconnects sockets and cleans up when called without code', async () => {
+      (gateway as any).connectedUsers.set('u-nocode', new Set(['sock-3']));
+
+      await gateway.disconnectUser('u-nocode');
+
+      expect(mockServer.to).not.toHaveBeenCalled();
+      expect(mockRoomSockets.disconnectSockets).toHaveBeenCalledWith(true);
+      expect((gateway as any).connectedUsers.has('u-nocode')).toBe(false);
+      expect(mockRedis.del).toHaveBeenCalledWith('user:online:u-nocode');
+    });
+
+    it('catches and logs errors without throwing when an exception occurs during disconnect', async () => {
+      mockRedis.del.mockRejectedValueOnce(new Error('Redis connection lost'));
+
+      await expect(gateway.disconnectUser('u-err', 'ACCOUNT_SUSPENDED')).resolves.toBeUndefined();
+    });
+  });
 });

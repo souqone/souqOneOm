@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import { AuthService } from './auth.service';
@@ -10,6 +10,7 @@ import { MailService } from '../mail/mail.service';
 import { RedisService } from '../redis/redis.service';
 import { OtpService } from './otp.service';
 import { AccessTokenGate } from './access-token-gate.service';
+import { AccountStatusService } from './account-status.service';
 import { OtpPurpose } from '@prisma/client';
 
 const mockPrisma = {
@@ -70,6 +71,7 @@ const mockOtp = {
 describe('AuthService', () => {
   let service: AuthService;
   let tokenService: AuthTokenService;
+  let mockAccountStatusService: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -83,6 +85,36 @@ describe('AuthService', () => {
       return 'INVALID';
     });
 
+    mockAccountStatusService = {
+      assertCanAuthenticate: jest.fn().mockImplementation(async (user: any) => {
+        if (user.status === 'BANNED') {
+          throw new ForbiddenException({
+            statusCode: 403,
+            code: 'ACCOUNT_BANNED',
+            message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+          });
+        }
+        if (user.status === 'SUSPENDED') {
+          const now = new Date();
+          const until = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+          if (!until || until.getTime() > now.getTime()) {
+            throw new ForbiddenException({
+              statusCode: 403,
+              code: 'ACCOUNT_SUSPENDED',
+              message: 'تم إيقاف حسابك مؤقتاً',
+              suspendedUntil: until ? until.toISOString() : null,
+            });
+          }
+          user.status = 'ACTIVE';
+          user.suspendedUntil = null;
+          return;
+        }
+        if (user.status === 'DELETED') {
+          throw new UnauthorizedException('بيانات الدخول غير صحيحة');
+        }
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -94,6 +126,7 @@ describe('AuthService', () => {
         { provide: MailService, useValue: mockMail },
         { provide: RedisService, useValue: mockRedis },
         { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
+        { provide: AccountStatusService, useValue: mockAccountStatusService },
       ],
     }).compile();
 
@@ -571,6 +604,239 @@ describe('AuthService', () => {
       expect(sanitized.passwordResetExpiry).toBeUndefined();
       expect(sanitized.id).toBe('u-100');
       expect(sanitized.email).toBe('user@test.com');
+    });
+  });
+
+  /* ═══════ PART 6B PR2-A ACCOUNT STATUS ENFORCEMENT ═══════ */
+  describe('Part 6b PR2-A Account Status Enforcement (login, googleAuth, verifyEmail)', () => {
+    const bcrypt = require('bcryptjs');
+
+    describe('login status enforcement', () => {
+      it('rejects BANNED user on login with 403 ACCOUNT_BANNED and records loginAudit before error throws', async () => {
+        const hash = await bcrypt.hash('CorrectPassword1!', 10);
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-banned',
+          email: 'banned@test.com',
+          username: 'banned_user',
+          role: 'USER',
+          status: 'BANNED',
+          passwordHash: hash,
+          isVerified: true,
+        });
+
+        try {
+          await service.login({ email: 'banned@test.com', password: 'CorrectPassword1!' }, '1.2.3.4', 'TestAgent');
+          fail('Expected ForbiddenException');
+        } catch (err: any) {
+          expect(err).toBeInstanceOf(ForbiddenException);
+          expect(err.getStatus()).toBe(403);
+          expect(err.getResponse()).toEqual({
+            statusCode: 403,
+            code: 'ACCOUNT_BANNED',
+            message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+          });
+
+          // Must write audit log with reason ACCOUNT_BANNED before throwing
+          expect(mockPrisma.loginAudit.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+              email: 'banned@test.com',
+              userId: 'u-banned',
+              success: false,
+              reason: 'ACCOUNT_BANNED',
+              ipAddress: '1.2.3.4',
+              userAgent: 'TestAgent',
+            }),
+          });
+        }
+      });
+
+      it('rejects wrong password on BANNED account with generic 401 without leaking status', async () => {
+        const hash = await bcrypt.hash('CorrectPassword1!', 10);
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-banned',
+          email: 'banned@test.com',
+          username: 'banned_user',
+          role: 'USER',
+          status: 'BANNED',
+          passwordHash: hash,
+          isVerified: true,
+        });
+
+        try {
+          await service.login({ email: 'banned@test.com', password: 'WrongPassword123' }, '1.2.3.4', 'TestAgent');
+          fail('Expected UnauthorizedException');
+        } catch (err: any) {
+          expect(err).toBeInstanceOf(UnauthorizedException);
+          expect(err.getStatus()).toBe(401);
+          expect(err.message).toBe('بيانات الدخول غير صحيحة');
+          expect(err.getResponse()).not.toHaveProperty('code');
+
+          // Log reason must be WRONG_PASSWORD, not ACCOUNT_BANNED
+          expect(mockPrisma.loginAudit.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+              email: 'banned@test.com',
+              userId: 'u-banned',
+              success: false,
+              reason: 'WRONG_PASSWORD',
+            }),
+          });
+
+          // assertCanAuthenticate must NOT be called when password was wrong
+          expect(mockAccountStatusService.assertCanAuthenticate).not.toHaveBeenCalled();
+        }
+      });
+
+      it('rejects active SUSPENDED user on login with 403 ACCOUNT_SUSPENDED and records audit', async () => {
+        const hash = await bcrypt.hash('CorrectPassword1!', 10);
+        const future = new Date(Date.now() + 86400000);
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-suspended',
+          email: 'suspended@test.com',
+          username: 'suspended_user',
+          role: 'USER',
+          status: 'SUSPENDED',
+          suspendedUntil: future,
+          passwordHash: hash,
+          isVerified: true,
+        });
+
+        try {
+          await service.login({ email: 'suspended@test.com', password: 'CorrectPassword1!' }, '1.2.3.4', 'TestAgent');
+          fail('Expected ForbiddenException');
+        } catch (err: any) {
+          expect(err).toBeInstanceOf(ForbiddenException);
+          expect(err.getStatus()).toBe(403);
+          expect(err.getResponse()).toEqual({
+            statusCode: 403,
+            code: 'ACCOUNT_SUSPENDED',
+            message: 'تم إيقاف حسابك مؤقتاً',
+            suspendedUntil: future.toISOString(),
+          });
+
+          expect(mockPrisma.loginAudit.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+              email: 'suspended@test.com',
+              userId: 'u-suspended',
+              success: false,
+              reason: 'ACCOUNT_SUSPENDED',
+            }),
+          });
+        }
+      });
+
+      it('allows expired SUSPENDED user to login after lazy un-suspension', async () => {
+        const hash = await bcrypt.hash('CorrectPassword1!', 10);
+        const past = new Date(Date.now() - 3600000);
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-expired',
+          email: 'expired@test.com',
+          username: 'expired_user',
+          role: 'USER',
+          status: 'SUSPENDED',
+          suspendedUntil: past,
+          passwordHash: hash,
+          isVerified: true,
+        });
+        mockPrisma.refreshToken.create.mockResolvedValue({ token: 'mock-rf' });
+
+        const result = await service.login({ email: 'expired@test.com', password: 'CorrectPassword1!' });
+        expect(result.accessToken).toBe('mock-access-token');
+        expect(result.refreshToken).toBeDefined();
+        expect(mockPrisma.loginAudit.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({
+            email: 'expired@test.com',
+            userId: 'u-expired',
+            success: true,
+          }),
+        });
+      });
+
+      it('rejects DELETED user on login with generic 401 without leakage', async () => {
+        const hash = await bcrypt.hash('CorrectPassword1!', 10);
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-deleted',
+          email: 'deleted@test.com',
+          username: 'deleted_user',
+          role: 'USER',
+          status: 'DELETED',
+          passwordHash: hash,
+          isVerified: true,
+        });
+
+        await expect(
+          service.login({ email: 'deleted@test.com', password: 'CorrectPassword1!' }),
+        ).rejects.toThrow(UnauthorizedException);
+      });
+    });
+
+    describe('googleAuth status enforcement', () => {
+      it('rejects BANNED user on googleAuth before issuing tokens', async () => {
+        // Mock googleClient verifyIdToken
+        (service as any).googleClient = {
+          verifyIdToken: jest.fn().mockResolvedValue({
+            getPayload: () => ({
+              email: 'banned@gmail.com',
+              email_verified: true,
+              sub: 'google-sub-banned',
+              name: 'Banned Person',
+            }),
+          }),
+        };
+
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-google-banned',
+          email: 'banned@gmail.com',
+          googleId: 'google-sub-banned',
+          status: 'BANNED',
+          isVerified: true,
+        });
+
+        await expect(
+          service.googleAuth({ idToken: 'valid-google-token' }),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(mockAccountStatusService.assertCanAuthenticate).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'u-google-banned', status: 'BANNED' }),
+        );
+      });
+    });
+
+    describe('verifyEmail status enforcement', () => {
+      it('rejects BANNED user on verifyEmail and does NOT call user.update', async () => {
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-verify-banned',
+          isVerified: false,
+          status: 'BANNED',
+        });
+
+        await expect(
+          service.verifyEmail('u-verify-banned', '123456'),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(mockAccountStatusService.assertCanAuthenticate).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'u-verify-banned', status: 'BANNED' }),
+        );
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      });
+
+      it('rejects SUSPENDED user on verifyEmail and does NOT call user.update', async () => {
+        const futureDate = new Date(Date.now() + 86400000).toISOString();
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-verify-suspended',
+          isVerified: false,
+          status: 'SUSPENDED',
+          suspendedUntil: futureDate,
+        });
+
+        await expect(
+          service.verifyEmail('u-verify-suspended', '123456'),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(mockAccountStatusService.assertCanAuthenticate).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'u-verify-suspended', status: 'SUSPENDED' }),
+        );
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      });
     });
   });
 });

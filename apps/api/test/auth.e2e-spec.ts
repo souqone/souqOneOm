@@ -131,6 +131,22 @@ describe('Auth API (e2e)', () => {
       expect(res.body.accessToken).toBeUndefined();
       expect(res.body.refreshToken).toBeUndefined();
     });
+
+    it('should reject login for BANNED account with 403 and code ACCOUNT_BANNED', async () => {
+      const { user } = await registerUser();
+      await getPrisma().user.update({
+        where: { id: user.id },
+        data: { status: 'BANNED' },
+      });
+
+      const res = await request(getApp().getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: user.email, password: 'Password123!' })
+        .expect(403);
+
+      expect(res.body.code).toBe('ACCOUNT_BANNED');
+      expect(res.body.message).toBe('تم حظر حسابك لمخالفة شروط الاستخدام');
+    });
   });
 
   // ─── Me ───

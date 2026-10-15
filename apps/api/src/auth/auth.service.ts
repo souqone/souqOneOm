@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -12,6 +12,7 @@ import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 import { OtpService } from './otp.service';
 import { AccessTokenGate } from './access-token-gate.service';
+import { AccountStatusService } from './account-status.service';
 import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly audit: AuthAuditService,
     private readonly otp: OtpService,
     private readonly accessTokenGate: AccessTokenGate,
+    private readonly accountStatusService: AccountStatusService,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
@@ -121,6 +123,17 @@ export class AuthService {
       await this.audit.recordFailedAttempt(email);
       await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'WRONG_PASSWORD', ip, userAgent });
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
+    }
+
+    try {
+      await this.accountStatusService.assertCanAuthenticate(user);
+    } catch (err: any) {
+      if (err instanceof ForbiddenException) {
+        const res = err.getResponse() as any;
+        const reason = res?.code === 'ACCOUNT_BANNED' ? 'ACCOUNT_BANNED' : 'ACCOUNT_SUSPENDED';
+        await this.audit.logAudit({ email, userId: user.id, success: false, reason, ip, userAgent });
+      }
+      throw err;
     }
 
     // Check if user is verified before issuing session tokens
@@ -316,6 +329,8 @@ export class AuthService {
       throw new UnauthorizedException('فشل تسجيل الدخول بواسطة Google');
     }
 
+    await this.accountStatusService.assertCanAuthenticate(user);
+
     await this.audit.logAudit({ email: normalizedEmail, userId: user.id, success: true, method: 'GOOGLE', ip, userAgent });
 
     const accessToken = await this.tokens.signAccessToken(user);
@@ -345,6 +360,8 @@ export class AuthService {
     if (verifyResult === 'INVALID') {
       throw new BadRequestException('رمز التحقق غير صحيح');
     }
+
+    await this.accountStatusService.assertCanAuthenticate(user);
 
     const updated = await this.prisma.user.update({
       where: { id: userId },

@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
 import { AccessTokenGate } from '../access-token-gate.service';
+import { AccountStatusService } from '../account-status.service';
 import * as bcrypt from 'bcryptjs';
 
 describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAuth)', () => {
@@ -76,6 +77,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
         { provide: MailService, useValue: mockMail },
         { provide: RedisService, useValue: mockRedis },
         { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
+        { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 
