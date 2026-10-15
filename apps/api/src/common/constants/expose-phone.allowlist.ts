@@ -257,6 +257,20 @@ export const EXPOSE_PHONE_ALLOWLIST: readonly ExposePhoneEntry[] = [
     handler: 'deleteCarrier',
     justification: 'لوحة تحكم الإدارة لحذف ناقل مخالف',
   },
+
+  // ─── Admin Users Controller ───
+  {
+    routeKey: 'GET /admin/users',
+    controller: 'AdminUsersController',
+    handler: 'listUsers',
+    justification: 'لوحة تحكم الإدارة لمراجعة المستخدمين مع إخفاء بيانات الاتصال جزئياً (Masked)',
+  },
+  {
+    routeKey: 'GET /admin/users/:id',
+    controller: 'AdminUsersController',
+    handler: 'getUserDetail',
+    justification: 'لوحة تحكم الإدارة لمراجعة تفاصيل المستخدم مع إخفاء بيانات الاتصال جزئياً (Masked)',
+  },
 ] as const;
 
 export const EXPOSE_PHONE_ROUTE_KEYS: readonly string[] = EXPOSE_PHONE_ALLOWLIST.map(
