@@ -34,6 +34,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
 import { LocationsModule } from './locations/locations.module';
 import { ListingNotificationListener } from './common/listeners/listing-notification.listener';
+import { AdminAuditModule } from './admin-audit/admin-audit.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
     TransportModule,
     LocationsModule,
     ContactModule,
+    AdminAuditModule,
   ],
   controllers: [AppController],
   providers: [
