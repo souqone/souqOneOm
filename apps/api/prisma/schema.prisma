@@ -31,6 +31,10 @@ model User {
   phoneVerifiedAt         DateTime?
   emailVerifiedAt         DateTime?
   status                  AccountStatus  @default(ACTIVE)
+  suspendedUntil          DateTime?
+  statusReason            String?
+  statusChangedAt         DateTime?
+  statusChangedById       String?
   deletedAt               DateTime?
   tokenVersion            Int            @default(0)
   country                 String?
@@ -69,6 +73,7 @@ model User {
   pushSubscriptions PushSubscription[]
   pushTokens        PushToken[]
   loginAudits       LoginAudit[]
+  adminActions      AdminAuditLog[]           @relation("AdminActions")
   driverProfile     DriverProfile?
   employerProfile   EmployerProfile?
   carrierProfile    CarrierProfile?
@@ -88,7 +93,33 @@ model User {
 
   @@index([email])
   @@index([username])
+  @@index([status])
   @@map("users")
+}
+
+// ──────────────────────────────────────
+// سجل تدقيق المشرفين — AdminAuditLog
+// ──────────────────────────────────────
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  admin      User     @relation("AdminActions", fields: [adminId], references: [id], onDelete: Restrict)
+  action     String
+  targetType String
+  targetId   String
+  beforeState Json?
+  afterState  Json?
+  reason     String
+  ipAddress  String?
+  userAgent  String?
+  requestId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }
 
 // ──────────────────────────────────────

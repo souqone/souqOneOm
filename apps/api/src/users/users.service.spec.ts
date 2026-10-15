@@ -397,4 +397,76 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       expect(errors[0].property).toBe('displayName');
     });
   });
+
+  describe('Profile Role Privacy (GET /users/:id vs GET /users/me)', () => {
+    it('getPublicProfile (GET /users/:id) MUST NOT select or return role', async () => {
+      mockPrisma.user.findUnique.mockImplementation(async ({ select }) => {
+        const result: Record<string, any> = {
+          id: 'user-uuid-1',
+          username: 'ahmed99',
+          displayName: 'أحمد العماني',
+          avatarUrl: null,
+          bio: 'نبذة',
+          country: 'OM',
+          governorateId: 1,
+          wilayaId: 101,
+          governorateRef: { id: 1, nameAr: 'مسقط' },
+          wilayaRef: { id: 101, nameAr: 'السيب' },
+          isVerified: true,
+          createdAt: new Date('2026-01-01'),
+          _count: {
+            listings: 0,
+            busListings: 0,
+            equipmentListings: 0,
+            operatorListings: 0,
+            spareParts: 0,
+            carServices: 0,
+            driverJobs: 0,
+          },
+        };
+        if (select?.role) {
+          result.role = 'USER';
+        }
+        return result;
+      });
+
+      const profile = await service.getPublicProfile('user-uuid-1');
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-uuid-1' },
+          select: expect.not.objectContaining({ role: true }),
+        }),
+      );
+      expect((profile as any).role).toBeUndefined();
+      expect('role' in profile).toBe(false);
+    });
+
+    it('getProfile (GET /users/me) MUST select and return role for current user', async () => {
+      mockPrisma.user.findUnique.mockImplementation(async ({ select }) => {
+        const result: Record<string, any> = {
+          id: 'user-uuid-1',
+          username: 'ahmed99',
+          email: 'ahmed@example.com',
+          phone: '91234567',
+          updatedAt: new Date(),
+        };
+        if (select?.role) {
+          result.role = 'USER';
+        }
+        return result;
+      });
+
+      const profile = await service.getProfile('user-uuid-1');
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-uuid-1' },
+          select: expect.objectContaining({ role: true }),
+        }),
+      );
+      expect((profile as any).role).toBe('USER');
+    });
+  });
 });
+

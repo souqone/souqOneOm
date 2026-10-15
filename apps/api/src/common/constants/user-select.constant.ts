@@ -48,13 +48,13 @@ export const USER_SELECT_PROFILE_PUBLIC = {
   governorateRef: true,
   wilayaRef: true,
   isVerified: true,
-  role: true,
   createdAt: true,
 } as const satisfies Prisma.UserSelect;
 
 /** Private user profile for current authenticated user (e.g. GET /users/me, PATCH /users/me) */
 export const USER_SELECT_PROFILE_PRIVATE = {
   ...USER_SELECT_PROFILE_PUBLIC,
+  role: true,
   email: true,
   phone: true,
   updatedAt: true,
