@@ -34,6 +34,7 @@ const TABLES_TO_TRUNCATE = [
   'push_subscriptions',
   'push_tokens',
   'login_audits',
+  'admin_audit_logs',
   'refresh_tokens',
   'otp_challenges',
 
