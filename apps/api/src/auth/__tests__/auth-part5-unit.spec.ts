@@ -4,6 +4,7 @@ import { AuthTokenService } from '../auth-token.service';
 import { AuthAuditService } from '../auth-audit.service';
 import { OtpService } from '../otp.service';
 import { AccessTokenGate } from '../access-token-gate.service';
+import { AccountStatusService } from '../account-status.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
@@ -77,6 +78,7 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
         { provide: OtpService, useValue: mockOtp },
         { provide: AccessTokenGate, useValue: mockGate },
         { provide: RedisService, useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() } },
+        { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

@@ -11,6 +11,7 @@ import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
 import { GeoService } from '../../locations/geo.service';
 import { AccessTokenGate } from '../access-token-gate.service';
+import { AccountStatusService } from '../account-status.service';
 import * as bcrypt from 'bcryptjs';
 
 describe('B1: Session Revocation on Password Change and Reset', () => {
@@ -84,6 +85,7 @@ describe('B1: Session Revocation on Password Change and Reset', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: GeoService, useValue: mockGeo },
         { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined) } },
+        { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

@@ -24,6 +24,7 @@ import { OptionalJwtAuthGuard } from '../optional-jwt-auth.guard';
 import { VerificationGuard } from '../verification.guard';
 import { JwtVerifyStrategy } from '../jwt-verify.strategy';
 import { AccessTokenGate } from '../access-token-gate.service';
+import { AccountStatusService } from '../account-status.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
@@ -222,6 +223,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
           { provide: AccessTokenGate, useValue: { validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
+          { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
         ],
       }).compile();
 
@@ -416,6 +418,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: MailService, useValue: mockMail },
           { provide: RedisService, useValue: mockRedis },
           { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
+          { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
         ],
       }).compile();
 

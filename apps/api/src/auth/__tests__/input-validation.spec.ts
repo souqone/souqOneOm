@@ -169,6 +169,10 @@ describe('Auth & Input Validation Suite', () => {
         validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }),
       };
 
+      const mockAccountStatusService = {
+        assertCanAuthenticate: jest.fn().mockResolvedValue(undefined),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMailService,
@@ -176,6 +180,7 @@ describe('Auth & Input Validation Suite', () => {
         mockAuditService,
         mockOtp as any,
         mockAccessTokenGate as any,
+        mockAccountStatusService as any,
       );
     });
 
@@ -347,6 +352,10 @@ describe('Auth & Input Validation Suite', () => {
         validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }),
       };
 
+      const mockAccountStatusService = {
+        assertCanAuthenticate: jest.fn().mockResolvedValue(undefined),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMail as any,
@@ -354,6 +363,7 @@ describe('Auth & Input Validation Suite', () => {
         mockAudit as any,
         mockOtp as any,
         mockAccessTokenGate as any,
+        mockAccountStatusService as any,
       );
     });
 

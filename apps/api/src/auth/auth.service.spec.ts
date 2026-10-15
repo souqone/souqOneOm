@@ -802,15 +802,10 @@ describe('AuthService', () => {
     });
 
     describe('verifyEmail status enforcement', () => {
-      it('rejects BANNED user on verifyEmail before issuing session tokens', async () => {
+      it('rejects BANNED user on verifyEmail and does NOT call user.update', async () => {
         mockPrisma.user.findUnique.mockResolvedValue({
           id: 'u-verify-banned',
           isVerified: false,
-          status: 'BANNED',
-        });
-        mockPrisma.user.update.mockResolvedValue({
-          id: 'u-verify-banned',
-          isVerified: true,
           status: 'BANNED',
         });
 
@@ -821,6 +816,26 @@ describe('AuthService', () => {
         expect(mockAccountStatusService.assertCanAuthenticate).toHaveBeenCalledWith(
           expect.objectContaining({ id: 'u-verify-banned', status: 'BANNED' }),
         );
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      });
+
+      it('rejects SUSPENDED user on verifyEmail and does NOT call user.update', async () => {
+        const futureDate = new Date(Date.now() + 86400000).toISOString();
+        mockPrisma.user.findUnique.mockResolvedValue({
+          id: 'u-verify-suspended',
+          isVerified: false,
+          status: 'SUSPENDED',
+          suspendedUntil: futureDate,
+        });
+
+        await expect(
+          service.verifyEmail('u-verify-suspended', '123456'),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(mockAccountStatusService.assertCanAuthenticate).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'u-verify-suspended', status: 'SUSPENDED' }),
+        );
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
       });
     });
   });
