@@ -35,3 +35,29 @@ export const USER_SELECT_ADMIN_VERIFICATION = {
   phone: true,
 } as const satisfies Prisma.UserSelect;
 
+/** Full user profile for public view (e.g. GET /users/:id) */
+export const USER_SELECT_PROFILE_PUBLIC = {
+  id: true,
+  username: true,
+  displayName: true,
+  avatarUrl: true,
+  bio: true,
+  country: true,
+  governorateId: true,
+  wilayaId: true,
+  governorateRef: true,
+  wilayaRef: true,
+  isVerified: true,
+  role: true,
+  createdAt: true,
+} as const satisfies Prisma.UserSelect;
+
+/** Private user profile for current authenticated user (e.g. GET /users/me, PATCH /users/me) */
+export const USER_SELECT_PROFILE_PRIVATE = {
+  ...USER_SELECT_PROFILE_PUBLIC,
+  email: true,
+  phone: true,
+  updatedAt: true,
+} as const satisfies Prisma.UserSelect;
+
+

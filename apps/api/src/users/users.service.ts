@@ -6,6 +6,11 @@ import { AccessTokenGate } from '../auth/access-token-gate.service';
 import * as bcrypt from 'bcryptjs';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import {
+  USER_SELECT_PROFILE_PUBLIC,
+  USER_SELECT_PROFILE_PRIVATE,
+} from '../common/constants/user-select.constant';
+import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 
 @Injectable()
 export class UsersService {
@@ -16,33 +21,10 @@ export class UsersService {
     private readonly accessTokenGate: AccessTokenGate,
   ) {}
 
-  private readonly publicSelect = {
-    id: true,
-    username: true,
-    displayName: true,
-    avatarUrl: true,
-    bio: true,
-    country: true,
-    governorateId: true,
-    wilayaId: true,
-    governorateRef: true,
-    wilayaRef: true,
-    isVerified: true,
-    role: true,
-    createdAt: true,
-  };
-
-  private readonly privateSelect = {
-    ...this.publicSelect,
-    email: true,
-    phone: true,
-    updatedAt: true,
-  };
-
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: this.privateSelect,
+      select: USER_SELECT_PROFILE_PRIVATE,
     });
 
     if (!user) {
@@ -57,7 +39,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
-        ...this.publicSelect,
+        ...USER_SELECT_PROFILE_PUBLIC,
         _count: {
           select: {
             listings: activeWhere,
@@ -95,26 +77,66 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
+    // 1. Display name validation: cannot be null
+    if (dto.displayName === null) {
+      throw new BadRequestException('الاسم المعروض مطلوب ولا يمكن حذفه');
+    }
+
+    // 2. Phone validation: cannot be deleted (null or empty string)
+    if (dto.phone !== undefined) {
+      if (dto.phone === null || (typeof dto.phone === 'string' && dto.phone.trim() === '')) {
+        throw new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه');
+      }
+    }
+
+    // 3. Location validation: governorateId and wilayaId cannot be null
+    if (dto.governorateId === null || dto.wilayaId === null) {
+      throw new BadRequestException('المحافظة والولاية لا يمكن حذفهما');
+    }
+
     const nextGovId = dto.governorateId !== undefined ? dto.governorateId : user.governorateId;
     const nextWilayaId = dto.wilayaId !== undefined ? dto.wilayaId : user.wilayaId;
     if (nextGovId && nextWilayaId) {
       await this.geoService.validateLocationPair(nextGovId, nextWilayaId);
     }
 
+    // 4. Bio handling: null or empty string resets bio to null in DB
+    let nextBio: string | null | undefined = undefined;
+    if (dto.bio !== undefined) {
+      if (dto.bio === null || (typeof dto.bio === 'string' && dto.bio.trim() === '')) {
+        nextBio = null;
+      } else {
+        nextBio = dto.bio.trim();
+      }
+    }
+
+    // 5. Avatar URL handling: null or empty string clears avatar; new URL must be trusted; unchanged stored URL allowed
+    let nextAvatarUrl: string | null | undefined = undefined;
+    if (dto.avatarUrl !== undefined) {
+      if (dto.avatarUrl === null || dto.avatarUrl === '') {
+        nextAvatarUrl = null;
+      } else {
+        if (dto.avatarUrl !== user.avatarUrl) {
+          validateTrustedImageUrl(dto.avatarUrl);
+        }
+        nextAvatarUrl = dto.avatarUrl;
+      }
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        displayName: dto.displayName,
-        bio: dto.bio,
-        phone: dto.phone,
-        country: dto.country,
-        governorateId: dto.governorateId,
-        wilayaId: dto.wilayaId,
-        avatarUrl: dto.avatarUrl,
+        ...(dto.displayName !== undefined && { displayName: dto.displayName }),
+        ...(nextBio !== undefined && { bio: nextBio }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.country !== undefined && { country: dto.country }),
+        ...(dto.governorateId !== undefined && { governorateId: dto.governorateId }),
+        ...(dto.wilayaId !== undefined && { wilayaId: dto.wilayaId }),
+        ...(nextAvatarUrl !== undefined && { avatarUrl: nextAvatarUrl }),
         ...(dto.latitude !== undefined && { latitude: dto.latitude }),
         ...(dto.longitude !== undefined && { longitude: dto.longitude }),
       },
-      select: this.privateSelect,
+      select: USER_SELECT_PROFILE_PRIVATE,
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
