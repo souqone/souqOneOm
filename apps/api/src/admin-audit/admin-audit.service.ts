@@ -26,14 +26,32 @@ export const SENSITIVE_AUDIT_KEYS: ReadonlySet<string> = new Set([
 
 /**
  * Recursively sanitizes any value (object/array/primitive), stripping sensitive keys.
+ * Correctly serializes Date instances to ISO strings (or null if invalid),
+ * and converts bigint or Prisma.Decimal to string representations.
  */
-export function sanitizeAuditState<T = any>(value: T): T {
+export function sanitizeAuditState<T = any>(value: T): any {
   if (value === null || value === undefined) {
     return value;
   }
 
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value.toISOString();
+  }
+
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    (Prisma.Decimal.isDecimal(value) || (value as any)?._isDecimal)
+  ) {
+    return value.toString();
+  }
+
   if (Array.isArray(value)) {
-    return value.map((item) => sanitizeAuditState(item)) as unknown as T;
+    return value.map((item) => sanitizeAuditState(item));
   }
 
   if (typeof value === 'object') {
@@ -44,7 +62,7 @@ export function sanitizeAuditState<T = any>(value: T): T {
       }
       sanitized[key] = sanitizeAuditState(val);
     }
-    return sanitized as T;
+    return sanitized;
   }
 
   return value;

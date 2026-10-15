@@ -108,6 +108,108 @@ describe('AdminAuditService', () => {
       expect(sanitizeAuditState(null)).toBeNull();
       expect(sanitizeAuditState(undefined)).toBeUndefined();
     });
+
+    it('should serialize valid Date to ISO string inside objects', () => {
+      const date = new Date('2026-11-15T12:00:00.000Z');
+      const input = {
+        status: 'SUSPENDED',
+        suspendedUntil: date,
+      };
+
+      const result = sanitizeAuditState(input);
+
+      expect(result).toEqual({
+        status: 'SUSPENDED',
+        suspendedUntil: '2026-11-15T12:00:00.000Z',
+      });
+    });
+
+    it('should serialize Date inside arrays and nested objects to ISO strings', () => {
+      const d1 = new Date('2026-10-01T00:00:00.000Z');
+      const d2 = new Date('2026-10-02T00:00:00.000Z');
+      const input = {
+        nested: {
+          scheduledAt: d1,
+          history: [d2, { changedAt: d1 }],
+        },
+      };
+
+      const result = sanitizeAuditState(input);
+
+      expect(result).toEqual({
+        nested: {
+          scheduledAt: '2026-10-01T00:00:00.000Z',
+          history: ['2026-10-02T00:00:00.000Z', { changedAt: '2026-10-01T00:00:00.000Z' }],
+        },
+      });
+    });
+
+    it('should return null for invalid Date instances without throwing', () => {
+      const invalidDate = new Date('invalid-date-string');
+      const input = {
+        status: 'SUSPENDED',
+        suspendedUntil: invalidDate,
+      };
+
+      const result = sanitizeAuditState(input);
+
+      expect(result).toEqual({
+        status: 'SUSPENDED',
+        suspendedUntil: null,
+      });
+    });
+
+    it('should still strip sensitive keys when Date is present in state', () => {
+      const date = new Date('2026-11-01T10:00:00.000Z');
+      const input = {
+        status: 'SUSPENDED',
+        suspendedUntil: date,
+        password: 'plain_password',
+        token: 'active_token',
+        email: 'user@example.com',
+        nested: {
+          date,
+          secret: 'api_secret',
+        },
+      };
+
+      const result = sanitizeAuditState(input);
+
+      expect(result).toEqual({
+        status: 'SUSPENDED',
+        suspendedUntil: '2026-11-01T10:00:00.000Z',
+        nested: {
+          date: '2026-11-01T10:00:00.000Z',
+        },
+      });
+      expect('password' in result).toBe(false);
+      expect('token' in result).toBe(false);
+      expect('email' in result).toBe(false);
+      expect('secret' in result.nested).toBe(false);
+    });
+
+    it('should not mutate original input object', () => {
+      const date = new Date('2026-11-15T00:00:00.000Z');
+      const originalInput = {
+        status: 'SUSPENDED',
+        suspendedUntil: date,
+        email: 'test@example.com',
+        nested: { count: 1 },
+      };
+
+      const copyOfOriginal = {
+        status: 'SUSPENDED',
+        suspendedUntil: date,
+        email: 'test@example.com',
+        nested: { count: 1 },
+      };
+
+      sanitizeAuditState(originalInput);
+
+      expect(originalInput).toEqual(copyOfOriginal);
+      expect(originalInput.suspendedUntil).toBeInstanceOf(Date);
+      expect(originalInput.email).toBe('test@example.com');
+    });
   });
 
   describe('3. Successful Audit Log Recording', () => {
@@ -200,6 +302,40 @@ describe('AdminAuditService', () => {
           userAgent: null,
           requestId: null,
         },
+      });
+    });
+
+    it('should record afterState with suspendedUntil as ISO string', async () => {
+      const mockClient = {
+        adminAuditLog: {
+          create: jest.fn().mockResolvedValue({ id: 'audit-log-date-test' }),
+        },
+      } as unknown as Prisma.TransactionClient;
+
+      const suspendedDate = new Date('2026-12-01T00:00:00.000Z');
+      const entry: AdminAuditEntry = {
+        adminId: 'admin-uuid-1',
+        action: USER_SUSPEND,
+        targetType: 'User',
+        targetId: 'user-uuid-suspended',
+        afterState: {
+          status: 'SUSPENDED',
+          suspendedUntil: suspendedDate,
+          statusReason: 'مخالفة معلقة',
+        },
+        reason: 'إيقاف الحساب لمدة شهر بسبب مخالفات متكررة',
+      };
+
+      await service.record(mockClient, entry);
+
+      expect(mockClient.adminAuditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          afterState: {
+            status: 'SUSPENDED',
+            suspendedUntil: '2026-12-01T00:00:00.000Z',
+            statusReason: 'مخالفة معلقة',
+          },
+        }),
       });
     });
   });
