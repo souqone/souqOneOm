@@ -7,7 +7,7 @@ import { AccessTokenGate } from '../access-token-gate.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
-import { AuthProvider, AccountStatus } from '@prisma/client';
+import { AuthProvider, AccountStatus, UserRole } from '@prisma/client';
 
 describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
   let authService: AuthService;
@@ -62,7 +62,7 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
     };
 
     mockGate = {
-      validate: jest.fn().mockResolvedValue({ tv: 0, status: AccountStatus.ACTIVE }),
+      validate: jest.fn().mockResolvedValue({ tv: 0, status: AccountStatus.ACTIVE, role: UserRole.USER }),
       invalidate: jest.fn().mockResolvedValue(undefined),
       setCache: jest.fn().mockResolvedValue(undefined),
     };

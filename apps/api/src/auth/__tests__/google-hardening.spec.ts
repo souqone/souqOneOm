@@ -75,7 +75,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
         { provide: RedisService, useValue: mockRedis },
-        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
+        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
       ],
     }).compile();
 

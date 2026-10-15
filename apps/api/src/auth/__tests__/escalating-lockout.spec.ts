@@ -95,7 +95,7 @@ describe('B2: Escalating Lockout (AuthAuditService & AuthService)', () => {
         { provide: JwtService, useValue: mockJwt },
         { provide: MailService, useValue: mockMail },
         { provide: RedisService, useValue: fakeRedis },
-        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
+        { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
       ],
     }).compile();
 

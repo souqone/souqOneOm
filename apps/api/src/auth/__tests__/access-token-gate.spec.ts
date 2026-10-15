@@ -4,6 +4,7 @@ import { AccessTokenGate } from '../access-token-gate.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { AccountStatus, UserRole } from '@prisma/client';
+import { JwtStrategy } from '../jwt.strategy';
 
 describe('AccessTokenGate (Unit Tests)', () => {
   let gate: AccessTokenGate;
@@ -236,4 +237,32 @@ describe('AccessTokenGate (Unit Tests)', () => {
     expect(res3).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
     expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
   });
+
+  describe('JwtStrategy role sourcing from gate', () => {
+    it('sets request.user.role to the live role from the gate even if the token payload has a different role', async () => {
+      const mockGate: any = {
+        validate: jest.fn().mockResolvedValue({
+          tv: 1,
+          status: AccountStatus.ACTIVE,
+          role: UserRole.ADMIN,
+        }),
+      };
+      const strategy = new JwtStrategy(mockGate);
+
+      // Incoming JWT payload claims role: 'USER'
+      const payload: any = {
+        sub: 'user-1',
+        email: 'user@example.com',
+        role: UserRole.USER,
+        verified: true,
+      };
+
+      const user = await strategy.validate(payload);
+
+      // request.user.role must match the gate's live role (ADMIN), overriding the token
+      expect(user.role).toBe(UserRole.ADMIN);
+      expect(mockGate.validate).toHaveBeenCalledWith(payload);
+    });
+  });
 });
+

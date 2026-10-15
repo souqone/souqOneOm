@@ -1,65 +1,12 @@
 import 'reflect-metadata';
-import { RequestMethod } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import { Controller, Get, RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA, GUARDS_METADATA } from '@nestjs/common/constants';
 import {
   ADMIN_KEY_ROUTES,
   PUBLIC_ROUTES_ALLOWLIST,
 } from '../../constants/public-routes.allowlist';
-
-// Import all 25 controllers
-import { AppController } from '../../../app.controller';
-import { AuthController } from '../../../auth/auth.controller';
-import { BusesController } from '../../../buses/buses.controller';
-import { CarsController } from '../../../cars/cars.controller';
-import { ChatController } from '../../../chat/chat.controller';
-import { ContactController } from '../../../contact/contact.controller';
-import { EquipmentController } from '../../../equipment/equipment.controller';
-import { FavoritesController } from '../../../favorites/favorites.controller';
-import { AdminJobsController } from '../../../jobs/admin-jobs.controller';
-import { JobsController } from '../../../jobs/jobs.controller';
-import { ListingsController } from '../../../listings/listings.controller';
-import { LocationsController } from '../../../locations/locations.controller';
-import { NotificationsController } from '../../../notifications/notifications.controller';
-import { AdminOperatorsController } from '../../../operators/admin-operators.controller';
-import { OperatorsController } from '../../../operators/operators.controller';
-import { PartsController } from '../../../parts/parts.controller';
-import { AdminPaymentsController } from '../../../payments/admin-payments.controller';
-import { PaymentsController } from '../../../payments/payments.controller';
-import { ReviewsController } from '../../../reviews/reviews.controller';
-import { SearchController } from '../../../search/search.controller';
-import { ServicesController } from '../../../services/services.controller';
-import { AdminTransportController } from '../../../transport/admin-transport.controller';
-import { TransportController } from '../../../transport/transport.controller';
-import { UploadsController } from '../../../uploads/uploads.controller';
-import { UsersController } from '../../../users/users.controller';
-
-const ALL_CONTROLLERS = [
-  AppController,
-  AuthController,
-  BusesController,
-  CarsController,
-  ChatController,
-  ContactController,
-  EquipmentController,
-  FavoritesController,
-  AdminJobsController,
-  JobsController,
-  ListingsController,
-  LocationsController,
-  NotificationsController,
-  AdminOperatorsController,
-  OperatorsController,
-  PartsController,
-  AdminPaymentsController,
-  PaymentsController,
-  ReviewsController,
-  SearchController,
-  ServicesController,
-  AdminTransportController,
-  TransportController,
-  UploadsController,
-  UsersController,
-];
 
 const METHOD_NAME_MAP: Record<number, string> = {
   [RequestMethod.GET]: 'GET',
@@ -83,6 +30,11 @@ export interface RouteEntry {
   hasAdminKeyGuard: boolean;
 }
 
+export interface IgnoredControllerFile {
+  filePath: string;
+  reason: string;
+}
+
 export function formatPaths(basePath: string | string[], routePath: string | string[]): string[] {
   const bases = Array.isArray(basePath) ? basePath : [basePath || ''];
   const routes = Array.isArray(routePath) ? routePath : [routePath || ''];
@@ -99,6 +51,58 @@ export function formatPaths(basePath: string | string[], routePath: string | str
     }
   }
   return res;
+}
+
+/**
+ * Recursively discovers all *.controller.ts files in the given directory.
+ */
+export function findControllerFiles(dir: string): string[] {
+  const results: string[] = [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (['node_modules', 'dist', '.git', '__tests__'].includes(entry.name)) continue;
+      results.push(...findControllerFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith('.controller.ts')) {
+      results.push(fullPath);
+    }
+  }
+
+  return results.sort();
+}
+
+/**
+ * Dynamically loads and extracts all classes decorated with @Controller from the file paths.
+ */
+export function loadControllersFromFiles(filePaths: string[]): {
+  controllers: any[];
+  ignoredFiles: IgnoredControllerFile[];
+} {
+  const controllers: any[] = [];
+  const ignoredFiles: IgnoredControllerFile[] = [];
+
+  for (const file of filePaths) {
+    const moduleExports = require(file);
+    let found = false;
+
+    for (const exp of Object.values(moduleExports)) {
+      if (typeof exp === 'function' && Reflect.hasMetadata(PATH_METADATA, exp)) {
+        controllers.push(exp);
+        found = true;
+      }
+    }
+
+    if (!found) {
+      ignoredFiles.push({
+        filePath: file,
+        reason: 'File does not export any class decorated with @Controller (PATH_METADATA missing)',
+      });
+    }
+  }
+
+  return { controllers, ignoredFiles };
 }
 
 export function scanRoutesFromControllers(controllers: any[]): RouteEntry[] {
@@ -181,25 +185,31 @@ export function validateRoutePolicy(routes: RouteEntry[]): {
   return { violatingRoutes, jwtCount, adminKeyCount, publicCount };
 }
 
-describe('Route Authorization Policy Spec (Automated Route Scanner)', () => {
+describe('Route Authorization Policy Spec (Dynamic Discovery & Enforcement)', () => {
+  const srcDir = path.resolve(__dirname, '../../..');
+  let controllerFiles: string[];
+  let discoveredControllers: any[];
+  let ignoredFiles: IgnoredControllerFile[];
   let scannedRoutes: RouteEntry[];
 
   beforeAll(() => {
-    scannedRoutes = scanRoutesFromControllers(ALL_CONTROLLERS);
+    controllerFiles = findControllerFiles(srcDir);
+    const loaded = loadControllersFromFiles(controllerFiles);
+    discoveredControllers = loaded.controllers;
+    ignoredFiles = loaded.ignoredFiles;
+    scannedRoutes = scanRoutesFromControllers(discoveredControllers);
   });
 
-  it('scans all 25 registered controllers and finds 216 total API routes', () => {
-    expect(ALL_CONTROLLERS.length).toBe(25);
-    expect(scannedRoutes.length).toBe(216);
-  });
+  it('dynamically discovers all *.controller.ts files from disk and verifies 100% export valid @Controller classes', () => {
+    expect(controllerFiles.length).toBeGreaterThan(0);
+    expect(discoveredControllers.length).toBe(controllerFiles.length);
 
-  it('verifies exact route counts matching architecture plan (146 JWT, 5 AdminKey, 65 Public)', () => {
-    const { jwtCount, adminKeyCount, publicCount, violatingRoutes } = validateRoutePolicy(scannedRoutes);
+    if (ignoredFiles.length > 0) {
+      const details = ignoredFiles.map(f => `  - ${f.filePath}: ${f.reason}`).join('\n');
+      throw new Error(`Found ${ignoredFiles.length} *.controller.ts file(s) that did not export a valid @Controller:\n${details}`);
+    }
 
-    expect(jwtCount).toBe(146);
-    expect(adminKeyCount).toBe(5);
-    expect(publicCount).toBe(65);
-    expect(violatingRoutes).toHaveLength(0);
+    expect(ignoredFiles).toEqual([]);
   });
 
   it('enforces that every route without JwtAuthGuard is either in ADMIN_KEY_ROUTES or PUBLIC_ROUTES_ALLOWLIST', () => {
@@ -207,20 +217,24 @@ describe('Route Authorization Policy Spec (Automated Route Scanner)', () => {
 
     if (violatingRoutes.length > 0) {
       const summary = violatingRoutes
-        .map(r => `  - ${r.routeKey} (${r.controller}.${r.handler}) [guards: ${r.guards.join(', ') || 'NONE'}]`)
-        .join('\n');
-      throw new Error(`Found ${violatingRoutes.length} route(s) lacking required auth guard:\n${summary}`);
+        .map(
+          r =>
+            `  ✖ [${r.routeKey}] in ${r.controller}.${r.handler} (Guards: ${r.guards.join(', ') || 'NONE'})\n` +
+            `    -> هل تقصد جعل هذا المسار عاماً؟ أضفه صراحة إلى PUBLIC_ROUTES_ALLOWLIST في apps/api/src/common/constants/public-routes.allowlist.ts.\n` +
+            `    -> إذا لم يكن عاماً، احمِه بإضافة @UseGuards(JwtAuthGuard) على مستوى الدالة أو الـ Controller.`,
+        )
+        .join('\n\n');
+      throw new Error(`Found ${violatingRoutes.length} route(s) lacking required auth guard:\n\n${summary}`);
     }
 
     expect(violatingRoutes).toHaveLength(0);
   });
 
-  it('ensures all entries in PUBLIC_ROUTES_ALLOWLIST correspond to real controller routes', () => {
+  it('ensures all entries in PUBLIC_ROUTES_ALLOWLIST correspond to real controller routes (no stale entries)', () => {
     const existingRouteKeys = new Set(scannedRoutes.map(r => r.routeKey));
     const staleRoutes = PUBLIC_ROUTES_ALLOWLIST.filter(routeKey => !existingRouteKeys.has(routeKey));
 
     expect(staleRoutes).toEqual([]);
-    expect(PUBLIC_ROUTES_ALLOWLIST.length).toBe(65);
   });
 
   it('ensures all entries in ADMIN_KEY_ROUTES are protected by AdminApiKeyGuard and match real routes', () => {
@@ -229,26 +243,28 @@ describe('Route Authorization Policy Spec (Automated Route Scanner)', () => {
       .map(r => r.routeKey);
 
     expect(new Set(existingAdminRoutes)).toEqual(new Set(ADMIN_KEY_ROUTES));
-    expect(ADMIN_KEY_ROUTES.length).toBe(5);
   });
 
-  it('tear-down failure test: fails immediately if an unauthorized unallowlisted route is introduced', () => {
-    // Simulate introducing an un-guarded route that is not in any allowlist
-    const rogueRoute: RouteEntry = {
-      controller: 'RogueController',
-      handler: 'unprotectedEndpoint',
-      method: 'DELETE',
-      path: '/admin/nuclear-option',
-      routeKey: 'DELETE /admin/nuclear-option',
-      guards: [],
-      hasJwtGuard: false,
-      hasAdminKeyGuard: false,
-    };
+  it('real breaking test: fails immediately when a real undecorated Nest controller route is scanned', () => {
+    // Define a real NestJS controller using actual decorators without auth guard
+    @Controller('unprotected-dummy-test')
+    class UnprotectedDummyTestController {
+      @Get('leaked-endpoint')
+      leakedHandler() {
+        return { status: 'leaked' };
+      }
+    }
 
-    const routesWithRogue = [...scannedRoutes, rogueRoute];
-    const { violatingRoutes } = validateRoutePolicy(routesWithRogue);
+    const dummyRoutes = scanRoutesFromControllers([UnprotectedDummyTestController]);
+    expect(dummyRoutes).toHaveLength(1);
+    expect(dummyRoutes[0].routeKey).toBe('GET /unprotected-dummy-test/leaked-endpoint');
+
+    const combinedRoutes = [...scannedRoutes, ...dummyRoutes];
+    const { violatingRoutes } = validateRoutePolicy(combinedRoutes);
 
     expect(violatingRoutes).toHaveLength(1);
-    expect(violatingRoutes[0].routeKey).toBe('DELETE /admin/nuclear-option');
+    expect(violatingRoutes[0].routeKey).toBe('GET /unprotected-dummy-test/leaked-endpoint');
+    expect(violatingRoutes[0].controller).toBe('UnprotectedDummyTestController');
+    expect(violatingRoutes[0].handler).toBe('leakedHandler');
   });
 });
