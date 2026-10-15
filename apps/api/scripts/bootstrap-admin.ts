@@ -5,8 +5,31 @@ import { PrismaClient, UserRole, AccountStatus } from '@prisma/client';
 import { normalizeEmail, isValidNormalizedEmail } from '../src/auth/auth.validators';
 import { maskEmail } from '../src/admin-users/utils/pii-masker.util';
 import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../src/common/constants/admin-lock.constant';
-import { ROLE_CHANGE } from '../src/admin-audit/admin-audit-actions.constant';
+import { BOOTSTRAP_ADMIN } from '../src/admin-audit/admin-audit-actions.constant';
 import { sanitizeAuditState } from '../src/admin-audit/admin-audit.service';
+
+/**
+ * Safely parses the target database from a connection URL,
+ * returning "host:port/dbname" without username, password, or query string.
+ * Returns "(unparsed)" if input is invalid or missing.
+ */
+export function formatDatabaseTarget(databaseUrl?: string): string {
+  if (!databaseUrl || typeof databaseUrl !== 'string') {
+    return '(unparsed)';
+  }
+  try {
+    const parsed = new URL(databaseUrl);
+    const host = parsed.hostname;
+    if (!host) {
+      return '(unparsed)';
+    }
+    const port = parsed.port ? `:${parsed.port}` : '';
+    const dbname = parsed.pathname ? parsed.pathname.replace(/^\//, '') : '';
+    return `${host}${port}${dbname ? `/${dbname}` : ''}`;
+  } catch {
+    return '(unparsed)';
+  }
+}
 
 export interface BootstrapAdminOptions {
   email?: string;
@@ -105,12 +128,14 @@ export async function runBootstrapAdmin(
     }
 
     const isApply = Boolean(options.apply);
+    const dbTarget = formatDatabaseTarget(process.env.DATABASE_URL);
 
     // 5. Dry-run mode
     if (!isApply) {
       logger.log(`\n======================================================`);
       logger.log(`[DRY-RUN] Bootstrap Admin Preview (No changes made)`);
       logger.log(`======================================================`);
+      logger.log(`- Database:          ${dbTarget}`);
       logger.log(`- Target User ID:    ${target.id}`);
       logger.log(`- Target Email:      ${emailMasked}`);
       logger.log(`- Current Role:      ${target.role} -> Proposed Role: ADMIN`);
@@ -214,7 +239,7 @@ export async function runBootstrapAdmin(
       const auditLog = await tx.adminAuditLog.create({
         data: {
           adminId: target.id,
-          action: ROLE_CHANGE,
+          action: BOOTSTRAP_ADMIN,
           targetType: 'User',
           targetId: target.id,
           beforeState: sanitizeAuditState({
@@ -239,6 +264,7 @@ export async function runBootstrapAdmin(
     logger.log(`\n======================================================`);
     logger.log(`✔ SUCCESS: User successfully promoted to ADMIN!`);
     logger.log(`======================================================`);
+    logger.log(`- Database:              ${dbTarget}`);
     logger.log(`- Target User ID:        ${txResult.updated.id}`);
     logger.log(`- Target Email:          ${emailMasked}`);
     logger.log(`- New Role:              ${txResult.updated.role}`);
@@ -300,10 +326,7 @@ function parseCliArgs(): BootstrapAdminOptions {
   return { email, apply };
 }
 
-if (
-  require.main === module ||
-  (typeof process !== 'undefined' && process.argv[1]?.includes('bootstrap-admin'))
-) {
+if (require.main === module) {
   const options = parseCliArgs();
   runBootstrapAdmin(options)
     .then((result) => {

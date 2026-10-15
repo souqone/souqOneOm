@@ -83,6 +83,7 @@ describe('Bootstrap Admin Script (e2e)', () => {
     });
     expect(auditLog).toBeDefined();
     expect(auditLog?.adminId).toBe(candidate.user.id);
+    expect(auditLog?.action).toBe('BOOTSTRAP_ADMIN');
     expect(auditLog?.reason).toContain('bootstrap');
 
     // 4. Old access token has outdated tokenVersion (0) - AccessTokenGate rejects it
@@ -110,6 +111,19 @@ describe('Bootstrap Admin Script (e2e)', () => {
       .expect(200);
 
     expect(adminRes.body.users).toBeDefined();
+
+    // 7. Verify GET /admin/users/audit-logs accepts and filters by action=BOOTSTRAP_ADMIN
+    const auditLogsRes = await request(getApp().getHttpServer())
+      .get('/api/admin/users/audit-logs?action=BOOTSTRAP_ADMIN')
+      .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+      .expect(200);
+
+    expect(auditLogsRes.body.logs).toBeDefined();
+    expect(
+      auditLogsRes.body.logs.some(
+        (l: any) => l.action === 'BOOTSTRAP_ADMIN' && l.targetId === candidate.user.id,
+      ),
+    ).toBe(true);
   });
 
   it('rejects subsequent bootstrap attempts once an ACTIVE ADMIN already exists', async () => {

@@ -1,7 +1,7 @@
 import { UserRole, AccountStatus } from '@prisma/client';
-import { runBootstrapAdmin } from '../../scripts/bootstrap-admin';
+import { runBootstrapAdmin, formatDatabaseTarget } from '../../scripts/bootstrap-admin';
 import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../common/constants/admin-lock.constant';
-import { ROLE_CHANGE } from '../admin-audit/admin-audit-actions.constant';
+import { BOOTSTRAP_ADMIN } from '../admin-audit/admin-audit-actions.constant';
 
 describe('bootstrap-admin script (Unit Tests)', () => {
   let mockPrisma: any;
@@ -142,7 +142,7 @@ describe('bootstrap-admin script (Unit Tests)', () => {
       expect(mockPrisma.adminAuditLog.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           adminId: validTargetUser.id, // Self-actor
-          action: ROLE_CHANGE,
+          action: BOOTSTRAP_ADMIN,
           targetType: 'User',
           targetId: validTargetUser.id,
           reason: expect.stringMatching(/bootstrap/i),
@@ -499,6 +499,89 @@ describe('bootstrap-admin script (Unit Tests)', () => {
       const errorLogs = mockLogger.error.mock.calls.map((c) => c[0]).join('\n');
       expect(errorLogs).toContain('s***@example.test');
       expect(errorLogs).not.toContain('secret_user@example.test');
+    });
+  });
+
+  describe('6. Database Sanitization & Credential Safety', () => {
+    it('correctly extracts host:port/dbname and strips user, password, and query string', () => {
+      const sensitiveUrl =
+        'postgresql://admin_user:super_secret_password_123@db.internal.souqone.app:5432/souqone_production?schema=public&sslmode=require';
+      const formatted = formatDatabaseTarget(sensitiveUrl);
+
+      expect(formatted).toBe('db.internal.souqone.app:5432/souqone_production');
+      expect(formatted).not.toContain('admin_user');
+      expect(formatted).not.toContain('super_secret_password_123');
+      expect(formatted).not.toContain('schema=public');
+    });
+
+    it('returns (unparsed) on invalid or missing connection string without crashing or leaking', () => {
+      expect(formatDatabaseTarget(undefined)).toBe('(unparsed)');
+      expect(formatDatabaseTarget('')).toBe('(unparsed)');
+      expect(formatDatabaseTarget('not-a-valid-url')).toBe('(unparsed)');
+    });
+
+    it('ensures logs never contain database credentials in dry-run mode', async () => {
+      const originalDbUrl = process.env.DATABASE_URL;
+      process.env.DATABASE_URL =
+        'postgresql://secret_db_user:ultra_secret_pw_999@10.0.1.20:5432/souqone_test?schema=public';
+
+      try {
+        mockPrisma.user.findUnique.mockResolvedValue({ ...validTargetUser });
+        mockPrisma.user.findFirst.mockResolvedValue(null);
+
+        await runBootstrapAdmin(
+          {
+            email: 'target_candidate@example.test',
+            apply: false,
+            prisma: mockPrisma,
+          },
+          mockLogger,
+        );
+
+        const allLogs = mockLogger.log.mock.calls.map((c) => c[0]).join('\n');
+        expect(allLogs).toContain('10.0.1.20:5432/souqone_test');
+        expect(allLogs).not.toContain('secret_db_user');
+        expect(allLogs).not.toContain('ultra_secret_pw_999');
+      } finally {
+        if (originalDbUrl !== undefined) {
+          process.env.DATABASE_URL = originalDbUrl;
+        } else {
+          delete process.env.DATABASE_URL;
+        }
+      }
+    });
+  });
+
+  describe('7. Import Isolation & Auto-Run Guard', () => {
+    it('does NOT trigger auto-run or call process.exit when imported, even if process.argv[1] contains bootstrap-admin and BOOTSTRAP_ADMIN_EMAIL is set', () => {
+      const originalArgv = [...process.argv];
+      const originalEmailEnv = process.env.BOOTSTRAP_ADMIN_EMAIL;
+
+      // Simulate a test execution or external script import where argv contains bootstrap-admin
+      process.argv[1] = 'C:\\workspace\\node_modules\\jest\\bin\\jest-runner-bootstrap-admin.js';
+      process.env.BOOTSTRAP_ADMIN_EMAIL = 'accidental_auto_run@example.test';
+
+      const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+
+      try {
+        let importedModule: any;
+        jest.isolateModules(() => {
+          importedModule = require('../../scripts/bootstrap-admin');
+        });
+
+        expect(importedModule).toBeDefined();
+        expect(typeof importedModule.runBootstrapAdmin).toBe('function');
+        // process.exit MUST NOT have been called on require/import
+        expect(exitSpy).not.toHaveBeenCalled();
+      } finally {
+        exitSpy.mockRestore();
+        process.argv = originalArgv;
+        if (originalEmailEnv !== undefined) {
+          process.env.BOOTSTRAP_ADMIN_EMAIL = originalEmailEnv;
+        } else {
+          delete process.env.BOOTSTRAP_ADMIN_EMAIL;
+        }
+      }
     });
   });
 });
