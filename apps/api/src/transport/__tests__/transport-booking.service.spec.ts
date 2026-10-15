@@ -121,4 +121,64 @@ describe('TransportBookingService', () => {
       expect(mockNotifications.create).toHaveBeenCalled();
     });
   });
+
+  describe('getBooking', () => {
+    const acceptedBooking = {
+      id: 'b1',
+      status: 'ACCEPTED',
+      requestId: 'r1',
+      request: {
+        userId: 'shipper-1',
+        user: { id: 'shipper-1', displayName: 'Shipper One', phone: '+96891111111' },
+      },
+      quote: {
+        carrier: {
+          userId: 'carrier-1',
+          user: { id: 'carrier-1', displayName: 'Carrier One', phone: '+96892222222' },
+        },
+      },
+    };
+
+    it('should throw ForbiddenException if caller is neither shipper nor carrier', async () => {
+      mockPrisma.transportBooking.findUnique.mockResolvedValue(acceptedBooking);
+      await expect(service.getBooking('b1', 'intruder-user')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should return booking with counterpart phone when called by shipper on accepted booking', async () => {
+      mockPrisma.transportBooking.findUnique.mockResolvedValue({ ...acceptedBooking });
+      const res = await service.getBooking('b1', 'shipper-1');
+      expect(res.id).toBe('b1');
+      expect(res.quote.carrier.user.phone).toBe('+96892222222');
+    });
+
+    it('should return booking with counterpart phone when called by carrier on accepted booking', async () => {
+      mockPrisma.transportBooking.findUnique.mockResolvedValue({ ...acceptedBooking });
+      const res = await service.getBooking('b1', 'carrier-1');
+      expect(res.id).toBe('b1');
+      expect(res.request.user.phone).toBe('+96891111111');
+    });
+
+    it('should strip phone numbers when booking status is CANCELLED', async () => {
+      const cancelledBooking = {
+        ...acceptedBooking,
+        status: 'CANCELLED',
+        request: {
+          userId: 'shipper-1',
+          user: { id: 'shipper-1', displayName: 'Shipper One', phone: '+96891111111' },
+        },
+        quote: {
+          carrier: {
+            userId: 'carrier-1',
+            user: { id: 'carrier-1', displayName: 'Carrier One', phone: '+96892222222' },
+          },
+        },
+      };
+
+      mockPrisma.transportBooking.findUnique.mockResolvedValue(cancelledBooking);
+      const res = await service.getBooking('b1', 'shipper-1');
+      expect(res.status).toBe('CANCELLED');
+      expect((res.request.user as any).phone).toBeUndefined();
+      expect((res.quote.carrier.user as any).phone).toBeUndefined();
+    });
+  });
 });

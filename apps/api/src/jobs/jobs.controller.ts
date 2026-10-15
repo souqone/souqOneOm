@@ -24,6 +24,7 @@ import { CreateEmployerProfileDto } from './dto/create-employer-profile.dto';
 import { UpdateEmployerProfileDto } from './dto/update-employer-profile.dto';
 import { QueryDriversDto } from './dto/query-drivers.dto';
 import { ApplicationStatus } from '@prisma/client';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
 @Controller('jobs')
 export class JobsController {
@@ -64,6 +65,7 @@ export class JobsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Get('driver-profile/me')
   getMyDriverProfile(@CurrentUser() user: JwtPayload) {
     return this.driverProfileService.getMyProfile(user.sub);
@@ -98,6 +100,7 @@ export class JobsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Get('employer-profile/me')
   getMyEmployerProfile(@CurrentUser() user: JwtPayload) {
     return this.employerProfileService.getMyProfile(user.sub);
@@ -132,6 +135,7 @@ export class JobsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
+  @ExposePhone()
   @Get('admin/verifications')
   adminListVerifications(
     @Query('status') status?: string,
@@ -142,6 +146,7 @@ export class JobsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
+  @ExposePhone()
   @Patch('admin/verifications/:id')
   adminReviewVerification(
     @Param('id') id: string,
@@ -204,6 +209,7 @@ export class JobsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Get(':id/applications')
   getApplications(
     @Param('id') jobId: string,

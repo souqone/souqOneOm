@@ -15,7 +15,9 @@ import type { JwtPayload } from '../auth/auth.types';
 import { OperatorsService } from './operators.service';
 import { AdminReviewDeletionDto } from './dto/admin-review-deletion.dto';
 import { AdminListDeletionRequestsDto } from './dto/admin-list-deletion-requests.dto';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
+@ExposePhone()
 @Controller('admin/operators')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')

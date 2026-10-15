@@ -11,6 +11,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerificationGuard } from './verification.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 import type { JwtPayload } from './auth.types';
 
 @Controller('auth')
@@ -18,24 +19,28 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @ExposePhone()
   @Post(['signup', 'register'])
   signup(@Body() dto: SignupDto) {
     return this.authService.signup(dto);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @ExposePhone()
   @Post('login')
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.authService.login(dto, req.ip, req.headers['user-agent']);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @ExposePhone()
   @Post('google')
   googleAuth(@Body() dto: GoogleAuthDto, @Req() req: Request) {
     return this.authService.googleAuth(dto, req.ip, req.headers['user-agent']);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 20 } })
+  @ExposePhone()
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);

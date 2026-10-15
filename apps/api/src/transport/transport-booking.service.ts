@@ -16,6 +16,11 @@ const USER_SELECT = {
   isVerified: true,
 };
 
+const USER_SELECT_WITH_PHONE = {
+  ...USER_SELECT,
+  phone: true,
+};
+
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 
@@ -219,8 +224,8 @@ export class TransportBookingService {
     const booking = await this.prisma.transportBooking.findUnique({
       where: { id: bookingId },
       include: {
-        request: { include: { user: { select: USER_SELECT } } },
-        quote: { include: { carrier: { include: { user: { select: USER_SELECT } } } } },
+        request: { include: { user: { select: USER_SELECT_WITH_PHONE } } },
+        quote: { include: { carrier: { include: { user: { select: USER_SELECT_WITH_PHONE } } } } },
       },
     });
     if (!booking) throw new NotFoundException('الحجز غير موجود');
@@ -228,6 +233,18 @@ export class TransportBookingService {
     const isShipper = booking.request.userId === userId;
     const isCarrier = booking.quote.carrier.userId === userId;
     if (!isShipper && !isCarrier) throw new ForbiddenException('ليس لديك صلاحية لعرض هذا الحجز');
+
+    const isAccepted = booking.status !== 'CANCELLED';
+
+    // Both parties see counterpart phone only after booking acceptance (not cancelled)
+    if (!isAccepted) {
+      if (booking.request?.user) {
+        delete (booking.request.user as any).phone;
+      }
+      if (booking.quote?.carrier?.user) {
+        delete (booking.quote.carrier.user as any).phone;
+      }
+    }
 
     return booking;
   }

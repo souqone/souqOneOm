@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 import { json, urlencoded } from 'express';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
@@ -59,7 +59,8 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   // حماية شاملة ضد تسريب البيانات الحساسة
-  app.useGlobalInterceptors(new SanitizeInterceptor(), new NormalizeImagesInterceptor());
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new SanitizeInterceptor(reflector), new NormalizeImagesInterceptor());
 
   // Serve uploaded files statically at /uploads/*
   app.useStaticAssets(path.join(__dirname, '..', 'uploads'), {
