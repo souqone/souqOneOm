@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
 import { SanitizeInterceptor } from '../../common/interceptors/sanitize.interceptor';
+import { Reflector } from '@nestjs/core';
 
 describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)', () => {
   let app: INestApplication;
@@ -74,7 +75,8 @@ describe('Auth Endpoints with SanitizeInterceptor (Contract & E2E Verification)'
     // Replicate main.ts exact configuration: prefix, global pipes, and SanitizeInterceptor
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-    app.useGlobalInterceptors(new SanitizeInterceptor());
+    const reflector = app.get(Reflector);
+    app.useGlobalInterceptors(new SanitizeInterceptor(reflector));
 
     await app.init();
   });

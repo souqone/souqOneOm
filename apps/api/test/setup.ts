@@ -6,7 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env.test'), override: true
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, Reflector } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
@@ -41,6 +41,8 @@ import { AppService } from '../src/app.service';
 import { MailService } from '../src/mail/mail.service';
 import { MEILI_CLIENT } from '../src/search/meili.provider';
 import { cleanDatabase } from './cleanup';
+import { SanitizeInterceptor } from '../src/common/interceptors/sanitize.interceptor';
+import { NormalizeImagesInterceptor } from '../src/common/interceptors/normalize-images.interceptor';
 import request from 'supertest';
 
 /** Mock RedisService so tests don't need a running Redis instance */
@@ -201,6 +203,10 @@ export async function createTestApp(): Promise<INestApplication> {
       forbidNonWhitelisted: true,
     }),
   );
+
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new SanitizeInterceptor(reflector), new NormalizeImagesInterceptor());
+
   app.setGlobalPrefix('api', {
     exclude: ['health/(.*)', ''],
   });

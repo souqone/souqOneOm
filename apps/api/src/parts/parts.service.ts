@@ -176,7 +176,7 @@ export class PartsService {
     const part = await this.prisma.sparePart.findUnique({
       where: { id },
       include: {
-        seller: { select: { id: true, username: true, displayName: true, avatarUrl: true, phone: true, isVerified: true, createdAt: true } },
+        seller: { select: USER_SELECT },
         images: { orderBy: { order: 'asc' } },
         governorateRef: true,
         wilayaRef: true,

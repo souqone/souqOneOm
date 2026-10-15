@@ -19,6 +19,7 @@ import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
 import { Request } from 'express';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
 @Controller('transport')
 export class TransportController {
@@ -39,6 +40,7 @@ export class TransportController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Get('carrier-profile/me')
   getMyCarrierProfile(@CurrentUser() user: JwtPayload) {
     return this.carrierProfileService.getMyProfile(user.sub);
@@ -223,6 +225,7 @@ export class TransportController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Get('bookings/:id')
   getBooking(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportBookingService.getBooking(id, user.sub);

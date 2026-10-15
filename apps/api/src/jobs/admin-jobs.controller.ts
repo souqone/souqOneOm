@@ -9,7 +9,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { AdminJobsService } from './admin-jobs.service';
 import { DriverVerificationService } from './driver-verification.service';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
+@ExposePhone()
 @Controller('admin/jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')

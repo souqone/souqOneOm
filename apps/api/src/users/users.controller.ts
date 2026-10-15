@@ -8,6 +8,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { ExpoPushService } from '../notifications/expo-push.service';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -17,12 +18,14 @@ export class UsersController {
   ) {}
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Get('me')
   getProfile(@CurrentUser() user: JwtPayload) {
     return this.usersService.getProfile(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
+  @ExposePhone()
   @Patch('me')
   updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.sub, dto);

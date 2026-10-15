@@ -2,7 +2,7 @@
  * Shared utilities used across multiple modules.
  */
 
-export { USER_SELECT_DETAIL as USER_SELECT } from '../constants/user-select.constant';
+export { USER_SELECT_LISTING_PUBLIC as USER_SELECT } from '../constants/user-select.constant';
 
 /**
  * Generate a URL-safe slug that supports Arabic characters.

@@ -11,7 +11,7 @@ import { RedisService } from '../../redis/redis.service';
 import { generateSlug } from '../utils/entity.utils';
 import { incrementViewCount } from '../utils/view-count.helper';
 import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
-import { USER_SELECT_PUBLIC, USER_SELECT_DETAIL } from '../constants/user-select.constant';
+import { USER_SELECT_PUBLIC, USER_SELECT_LISTING_PUBLIC } from '../constants/user-select.constant';
 import { stripDeprecatedContactFields } from '../utils/contact.utils';
 import { SellerContactGate } from './seller-contact-gate.service';
 
@@ -89,7 +89,7 @@ export abstract class BaseListingService {
 
   protected getDetailInclude(): any {
     return {
-      user: { select: USER_SELECT_DETAIL },
+      user: { select: USER_SELECT_LISTING_PUBLIC },
       images: { orderBy: { order: 'asc' } },
       governorateRef: true,
       wilayaRef: true,

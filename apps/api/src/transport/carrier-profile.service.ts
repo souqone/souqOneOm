@@ -12,14 +12,20 @@ import { Prisma } from '@prisma/client';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
-const USER_SELECT = {
+/** Public profile — no phone number exposed to unauthenticated callers */
+const PUBLIC_USER_SELECT = {
   id: true,
   username: true,
   displayName: true,
   avatarUrl: true,
-  phone: true,
   isVerified: true,
   createdAt: true,
+};
+
+/** Private profile — returned only to the carrier profile owner */
+const PRIVATE_USER_SELECT = {
+  ...PUBLIC_USER_SELECT,
+  phone: true,
 };
 
 const DEFAULT_LIMIT = 12;
@@ -53,7 +59,7 @@ export class CarrierProfileService {
         whatsappEnabled: cleanDto.whatsappEnabled ?? false,
       },
       include: {
-        user: { select: USER_SELECT },
+        user: { select: PRIVATE_USER_SELECT },
         governorateRef: true,
         wilayaRef: true,
       },
@@ -64,7 +70,7 @@ export class CarrierProfileService {
     const profile = await this.prisma.carrierProfile.findUnique({
       where: { userId },
       include: {
-        user: { select: USER_SELECT },
+        user: { select: PRIVATE_USER_SELECT },
         governorateRef: true,
         wilayaRef: true,
       },
@@ -88,7 +94,7 @@ export class CarrierProfileService {
       where: { userId },
       data: cleanDto,
       include: {
-        user: { select: USER_SELECT },
+        user: { select: PRIVATE_USER_SELECT },
         governorateRef: true,
         wilayaRef: true,
       },
@@ -99,7 +105,7 @@ export class CarrierProfileService {
     const profile = await this.prisma.carrierProfile.findUnique({
       where: { id },
       include: {
-        user: { select: USER_SELECT },
+        user: { select: PUBLIC_USER_SELECT },
         governorateRef: true,
         wilayaRef: true,
       },
@@ -135,7 +141,7 @@ export class CarrierProfileService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: { select: USER_SELECT },
+          user: { select: PUBLIC_USER_SELECT },
           governorateRef: true,
           wilayaRef: true,
         },
@@ -166,7 +172,7 @@ export class CarrierProfileService {
       where: { userId },
       data: { isAvailable },
       include: {
-        user: { select: USER_SELECT },
+        user: { select: PRIVATE_USER_SELECT },
         governorateRef: true,
         wilayaRef: true,
       },

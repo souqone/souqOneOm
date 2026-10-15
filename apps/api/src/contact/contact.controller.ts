@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { ContactService } from './contact.service';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 import { CONTACT_ENTITY_TYPES } from './contact.registry';
 
 @ApiTags('Contact')
@@ -24,6 +25,7 @@ export class ContactController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Get contact details for an entity (owner phone / whatsapp)' })
+  @ExposePhone()
   @Get(':entityType/:entityId')
   async getContact(
     @Param('entityType') entityType: string,

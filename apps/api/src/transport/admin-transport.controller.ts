@@ -9,9 +9,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { QueryCarriersDto } from './dto/query-carriers.dto';
 import { TransportRequestStatus } from '@prisma/client';
+import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
 const VALID_REQUEST_STATUSES = new Set(Object.values(TransportRequestStatus));
 
+@ExposePhone()
 @Controller('admin/transport')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
