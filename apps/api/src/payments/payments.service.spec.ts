@@ -9,6 +9,7 @@ import { PaymentActivationService } from './payment-activation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ThawaniService } from './thawani.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ListingStatus } from '@prisma/client';
 
 // ── Mock Factories ──
 
@@ -25,9 +26,18 @@ const createMockPrisma = () => {
       count: jest.fn(),
     },
     paymentEvent: { create: jest.fn() },
-    listing: { update: jest.fn() },
-    busListing: { update: jest.fn() },
-    equipmentListing: { update: jest.fn() },
+    listing: {
+      update: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue({ id: 'e1', sellerId: 'u1', status: 'ACTIVE' }),
+    },
+    busListing: {
+      update: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue({ id: 'e1', userId: 'u1', status: 'ACTIVE', deletedAt: null }),
+    },
+    equipmentListing: {
+      update: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue({ id: 'e1', userId: 'u1', status: 'ACTIVE' }),
+    },
     subscription: {
       upsert: jest.fn(),
       findUnique: jest.fn(),
@@ -103,6 +113,9 @@ describe('PaymentsService', () => {
     prisma.payment.findUnique.mockResolvedValue(null);
     prisma.payment.create.mockResolvedValue({ id: 'pay-new', status: 'PENDING' });
     prisma.payment.update.mockResolvedValue({ id: 'pay-new', status: 'PROCESSING' });
+    prisma.listing.findUnique.mockResolvedValue({ id: 'e1', sellerId: 'u1', status: ListingStatus.ACTIVE });
+    prisma.busListing.findUnique.mockResolvedValue({ id: 'e1', userId: 'u1', status: ListingStatus.ACTIVE, deletedAt: null });
+    prisma.equipmentListing.findUnique.mockResolvedValue({ id: 'e1', userId: 'u1', status: ListingStatus.ACTIVE });
   };
 
   // ═══════════════════════════════════════
@@ -594,4 +607,85 @@ describe('PaymentsService', () => {
       }
     });
   });
+
+  // ═══════════════════════════════════════
+  // 13. Featured Payment Entity Ownership & Validation
+  // ═══════════════════════════════════════
+
+  describe('Featured Payment Entity Ownership & Validation', () => {
+    beforeEach(() => {
+      process.env.PAYMENTS_ENABLED = 'true';
+      setupCleanCreate();
+    });
+
+    it('T_FEAT_01 — should throw NotFoundException (404) if entity does not exist', async () => {
+      prisma.listing.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.createFeaturedPayment({ entityType: 'LISTING', entityId: 'missing-id' }, 'u1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('T_FEAT_02 — should throw NotFoundException (404) if entity belongs to another owner', async () => {
+      prisma.listing.findUnique.mockResolvedValue({
+        id: 'list-1',
+        sellerId: 'other-user',
+        status: ListingStatus.ACTIVE,
+      });
+
+      await expect(
+        service.createFeaturedPayment({ entityType: 'LISTING', entityId: 'list-1' }, 'u1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('T_FEAT_03 — should throw NotFoundException (404) if entity status is not ACTIVE (DRAFT, SUSPENDED, SOLD, ARCHIVED)', async () => {
+      const nonActiveStatuses = [
+        ListingStatus.DRAFT,
+        ListingStatus.SUSPENDED,
+        ListingStatus.SOLD,
+        ListingStatus.ARCHIVED,
+      ];
+
+      for (const st of nonActiveStatuses) {
+        prisma.listing.findUnique.mockResolvedValue({
+          id: 'list-1',
+          sellerId: 'u1',
+          status: st,
+        });
+
+        await expect(
+          service.createFeaturedPayment({ entityType: 'LISTING', entityId: 'list-1' }, 'u1'),
+        ).rejects.toThrow(NotFoundException);
+      }
+    });
+
+    it('T_FEAT_04 — should throw NotFoundException (404) if entity is soft-deleted (deletedAt !== null) (كيان محذوف)', async () => {
+      prisma.busListing.findUnique.mockResolvedValue({
+        id: 'bus-1',
+        userId: 'u1',
+        status: ListingStatus.ACTIVE,
+        deletedAt: new Date(), // soft-deleted!
+      });
+
+      await expect(
+        service.createFeaturedPayment({ entityType: 'BUS_LISTING', entityId: 'bus-1' }, 'u1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('T_FEAT_05 — should succeed for valid owned ACTIVE equipment listing', async () => {
+      prisma.equipmentListing.findUnique.mockResolvedValue({
+        id: 'equip-1',
+        userId: 'u1',
+        status: ListingStatus.ACTIVE,
+      });
+
+      const res = await service.createFeaturedPayment(
+        { entityType: 'EQUIPMENT_LISTING', entityId: 'equip-1' },
+        'u1',
+      );
+
+      expect(res.paymentId).toBe('pay-new');
+    });
+  });
 });
+

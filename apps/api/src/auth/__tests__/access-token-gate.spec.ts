@@ -3,7 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { AccessTokenGate } from '../access-token-gate.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
-import { AccountStatus } from '@prisma/client';
+import { AccountStatus, UserRole } from '@prisma/client';
 
 describe('AccessTokenGate (Unit Tests)', () => {
   let gate: AccessTokenGate;
@@ -41,15 +41,15 @@ describe('AccessTokenGate (Unit Tests)', () => {
   });
 
   it('accepts token without tv claim (grace period transition)', async () => {
-    mockRedis.get.mockResolvedValue({ tv: 3, status: AccountStatus.ACTIVE });
+    mockRedis.get.mockResolvedValue({ tv: 3, status: AccountStatus.ACTIVE, role: UserRole.USER });
 
     const result = await gate.validate({ sub: 'user-1', role: 'USER' });
-    expect(result).toEqual({ tv: 3, status: AccountStatus.ACTIVE });
+    expect(result).toEqual({ tv: 3, status: AccountStatus.ACTIVE, role: UserRole.USER });
     expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
   });
 
   it('rejects with 401 if payload.tv is less than current tokenVersion', async () => {
-    mockRedis.get.mockResolvedValue({ tv: 2, status: AccountStatus.ACTIVE });
+    mockRedis.get.mockResolvedValue({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
 
     await expect(
       gate.validate({ sub: 'user-1', role: 'USER', tv: 1 }),
@@ -57,48 +57,115 @@ describe('AccessTokenGate (Unit Tests)', () => {
   });
 
   it('accepts token if payload.tv matches current tokenVersion', async () => {
-    mockRedis.get.mockResolvedValue({ tv: 2, status: AccountStatus.ACTIVE });
+    mockRedis.get.mockResolvedValue({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
 
     const result = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
-    expect(result).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(result).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
   });
 
   it('rejects with 401 if user status is BANNED, SUSPENDED, or DELETED', async () => {
-    mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.BANNED });
+    mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.BANNED, role: UserRole.USER });
     await expect(gate.validate({ sub: 'user-1', role: 'USER', tv: 1 })).rejects.toThrow(
       UnauthorizedException,
     );
 
-    mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.SUSPENDED });
+    mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.SUSPENDED, role: UserRole.USER });
     await expect(gate.validate({ sub: 'user-1', role: 'USER', tv: 1 })).rejects.toThrow(
       UnauthorizedException,
     );
 
-    mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.DELETED });
+    mockRedis.get.mockResolvedValue({ tv: 1, status: AccountStatus.DELETED, role: UserRole.USER });
     await expect(gate.validate({ sub: 'user-1', role: 'USER', tv: 1 })).rejects.toThrow(
       UnauthorizedException,
     );
   });
 
-  it('falls back to Postgres on Redis cache miss / offline, and populates cache', async () => {
+  it('falls back to Postgres on Redis cache miss / offline, and populates cache with role', async () => {
     mockRedis.get.mockResolvedValue(null);
     mockPrisma.user.findUnique.mockResolvedValue({
       id: 'user-1',
       tokenVersion: 4,
       status: AccountStatus.ACTIVE,
+      role: UserRole.USER,
     });
 
     const result = await gate.validate({ sub: 'user-1', role: 'USER', tv: 4 });
-    expect(result).toEqual({ tv: 4, status: AccountStatus.ACTIVE });
+    expect(result).toEqual({ tv: 4, status: AccountStatus.ACTIVE, role: UserRole.USER });
     expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      select: { id: true, tokenVersion: true, status: true },
+      select: { id: true, tokenVersion: true, status: true, role: true },
     });
     expect(mockRedis.set).toHaveBeenCalledWith(
       'auth:tv:user-1',
-      { tv: 4, status: AccountStatus.ACTIVE },
+      { tv: 4, status: AccountStatus.ACTIVE, role: UserRole.USER },
       300,
     );
+  });
+
+  it('treats legacy cache entry missing role as a cache miss and falls back to Postgres', async () => {
+    // Legacy Redis payload before Part 6c lacked the role field
+    mockRedis.get.mockResolvedValue({ tv: 2, status: AccountStatus.ACTIVE });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      tokenVersion: 2,
+      status: AccountStatus.ACTIVE,
+      role: UserRole.ADMIN,
+    });
+
+    const result = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
+    expect(result).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.ADMIN });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { id: true, tokenVersion: true, status: true, role: true },
+    });
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      'auth:tv:user-1',
+      { tv: 2, status: AccountStatus.ACTIVE, role: UserRole.ADMIN },
+      300,
+    );
+  });
+
+  it('treats unknown role string as a cache miss and falls back to Postgres (دور غير معروف في الكاش)', async () => {
+    mockRedis.get.mockResolvedValue({ tv: 2, status: AccountStatus.ACTIVE, role: 'NON_EXISTENT_ROLE' });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      tokenVersion: 2,
+      status: AccountStatus.ACTIVE,
+      role: UserRole.USER,
+    });
+
+    const result = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
+    expect(result).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { id: true, tokenVersion: true, status: true, role: true },
+    });
+  });
+
+  it('falls back to Postgres when Redis is offline / throws error (Redis واقع)', async () => {
+    mockRedis.get.mockRejectedValue(new Error('Redis connection refused / ECONNREFUSED'));
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      tokenVersion: 2,
+      status: AccountStatus.ACTIVE,
+      role: UserRole.USER,
+    });
+
+    const result = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
+    expect(result).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { id: true, tokenVersion: true, status: true, role: true },
+    });
+  });
+
+  it('fails closed with 401 UnauthorizedException if Postgres query throws an exception when Redis is down', async () => {
+    mockRedis.get.mockRejectedValue(new Error('Redis offline'));
+    mockPrisma.user.findUnique.mockRejectedValue(new Error('Postgres connection timeout / dead pool'));
+
+    await expect(
+      gate.validate({ sub: 'user-1', role: 'USER', tv: 1 }),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('rejects with 401 on cache miss if user is not found in database', async () => {
@@ -115,22 +182,13 @@ describe('AccessTokenGate (Unit Tests)', () => {
     expect(mockRedis.del).toHaveBeenCalledWith('auth:tv:user-1');
   });
 
-  it('setCache writes tokenVersion and status to redis with 300s TTL', async () => {
-    await gate.setCache('user-1', 5, AccountStatus.ACTIVE);
+  it('setCache writes tokenVersion, status, and role to redis with 300s TTL', async () => {
+    await gate.setCache('user-1', 5, AccountStatus.ACTIVE, UserRole.ADMIN);
     expect(mockRedis.set).toHaveBeenCalledWith(
       'auth:tv:user-1',
-      { tv: 5, status: AccountStatus.ACTIVE },
+      { tv: 5, status: AccountStatus.ACTIVE, role: UserRole.ADMIN },
       300,
     );
-  });
-
-  it('fails closed with 401 UnauthorizedException if Postgres query throws an exception', async () => {
-    mockRedis.get.mockResolvedValue(null);
-    mockPrisma.user.findUnique.mockRejectedValue(new Error('Postgres connection timeout / dead pool'));
-
-    await expect(
-      gate.validate({ sub: 'user-1', role: 'USER', tv: 1 }),
-    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('treats corrupted or unexpected Redis data as a cache miss and falls back to Postgres', async () => {
@@ -140,26 +198,28 @@ describe('AccessTokenGate (Unit Tests)', () => {
       id: 'user-1',
       tokenVersion: 2,
       status: AccountStatus.ACTIVE,
+      role: UserRole.USER,
     });
 
     const res1 = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
-    expect(res1).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(res1).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
     expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      select: { id: true, tokenVersion: true, status: true },
+      select: { id: true, tokenVersion: true, status: true, role: true },
     });
 
-    // 2. Unexpected object missing tv or status
+    // 2. Unexpected object missing tv or status or role
     mockPrisma.user.findUnique.mockClear();
     mockRedis.get.mockResolvedValue({ foo: 'bar' });
     mockPrisma.user.findUnique.mockResolvedValue({
       id: 'user-1',
       tokenVersion: 2,
       status: AccountStatus.ACTIVE,
+      role: UserRole.USER,
     });
 
     const res2 = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
-    expect(res2).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(res2).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
     expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
 
     // 3. Redis.get throwing an error (e.g. JSON syntax error / network exception)
@@ -169,10 +229,11 @@ describe('AccessTokenGate (Unit Tests)', () => {
       id: 'user-1',
       tokenVersion: 2,
       status: AccountStatus.ACTIVE,
+      role: UserRole.USER,
     });
 
     const res3 = await gate.validate({ sub: 'user-1', role: 'USER', tv: 2 });
-    expect(res3).toEqual({ tv: 2, status: AccountStatus.ACTIVE });
+    expect(res3).toEqual({ tv: 2, status: AccountStatus.ACTIVE, role: UserRole.USER });
     expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
   });
 });

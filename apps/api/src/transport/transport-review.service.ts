@@ -107,7 +107,34 @@ export class TransportReviewService {
     return review;
   }
 
-  async getBookingReview(bookingId: string) {
+  async getBookingReview(bookingId: string, userId: string) {
+    const booking = await this.prisma.transportBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        request: { select: { userId: true } },
+        quote: {
+          include: {
+            carrier: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('الحجز غير موجود');
+    }
+
+    const isCustomer = booking.request?.userId === userId;
+    const isCarrier = booking.quote?.carrier?.userId === userId;
+
+    if (!isCustomer && !isCarrier) {
+      throw new NotFoundException('الحجز غير موجود');
+    }
+
     return this.prisma.review.findFirst({
       where: {
         entityType: ENTITY_TYPES.CARRIER_PROFILE,
