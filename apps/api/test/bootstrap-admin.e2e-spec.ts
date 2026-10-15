@@ -150,4 +150,59 @@ describe('Bootstrap Admin Script (e2e)', () => {
     });
     expect(user?.role).toBe('USER');
   });
+
+  it('handles concurrent executions on the same user gracefully with row/advisory locking', async () => {
+    const prisma = getPrisma();
+
+    // Reset any existing active admins so bootstrap is permitted
+    await prisma.user.updateMany({
+      where: { role: 'ADMIN', status: 'ACTIVE' },
+      data: { role: 'USER' },
+    });
+
+    const candidate = await registerUser({
+      email: 'concurrent_target@example.test',
+      username: 'concurrent_target',
+    });
+
+    // Run two bootstrap attempts concurrently targeting the exact same user
+    const [res1, res2] = await Promise.all([
+      runBootstrapAdmin({
+        email: 'concurrent_target@example.test',
+        apply: true,
+        prisma,
+      }),
+      runBootstrapAdmin({
+        email: 'concurrent_target@example.test',
+        apply: true,
+        prisma,
+      }),
+    ]);
+
+    const successfulRuns = [res1, res2].filter((r) => r.success);
+    const failedRuns = [res1, res2].filter((r) => !r.success);
+
+    // Exactly one run succeeds, and exactly one run fails
+    expect(successfulRuns).toHaveLength(1);
+    expect(failedRuns).toHaveLength(1);
+
+    // The failed run rejected either inside the transaction (ALREADY_ADMIN) or pre-transaction (ACTIVE_ADMIN_EXISTS)
+    expect(['ALREADY_ADMIN', 'ACTIVE_ADMIN_EXISTS']).toContain(failedRuns[0].error);
+
+    // Verify audit log has exactly 1 BOOTSTRAP_ADMIN record for this user
+    const auditLogs = await prisma.adminAuditLog.findMany({
+      where: {
+        targetId: candidate.user.id,
+        action: 'BOOTSTRAP_ADMIN',
+      },
+    });
+    expect(auditLogs).toHaveLength(1);
+
+    // Verify tokenVersion incremented exactly once (0 -> 1)
+    const userAfter = await prisma.user.findUnique({
+      where: { id: candidate.user.id },
+    });
+    expect(userAfter?.role).toBe('ADMIN');
+    expect(userAfter?.tokenVersion).toBe(1);
+  });
 });

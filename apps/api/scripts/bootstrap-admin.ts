@@ -199,6 +199,10 @@ export async function runBootstrapAdmin(
         throw new Error(`EMAIL_NOT_VERIFIED: User "${emailMasked}" email is no longer verified.`);
       }
 
+      if (lockedTarget.role === UserRole.ADMIN) {
+        throw new Error('ALREADY_ADMIN: Target user is already an administrator. Aborting promotion.');
+      }
+
       // Step D: Re-verify inside locked transaction that no active admin exists
       const concurrentActiveAdminCount = await tx.user.count({
         where: {
@@ -293,7 +297,7 @@ export async function runBootstrapAdmin(
     };
   } catch (err: any) {
     logger.error(`Error during bootstrap-admin execution: ${err?.message || err}`);
-    const codeMatch = typeof err?.message === 'string' ? err.message.match(/^(USER_NOT_FOUND|USER_NOT_ACTIVE|EMAIL_NOT_VERIFIED|ACTIVE_ADMIN_EXISTS)/) : null;
+    const codeMatch = typeof err?.message === 'string' ? err.message.match(/^(USER_NOT_FOUND|USER_NOT_ACTIVE|EMAIL_NOT_VERIFIED|ALREADY_ADMIN|ACTIVE_ADMIN_EXISTS)/) : null;
     const errorCode = codeMatch ? codeMatch[1] : (err?.message || 'INTERNAL_ERROR');
     return {
       success: false,

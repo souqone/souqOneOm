@@ -458,6 +458,32 @@ describe('bootstrap-admin script (Unit Tests)', () => {
       expect(mockPrisma.adminAuditLog.create).not.toHaveBeenCalled();
     });
 
+    it('aborts transaction if target user was already promoted to ADMIN concurrently (ALREADY_ADMIN)', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ ...validTargetUser, role: UserRole.USER })
+        .mockResolvedValueOnce({ ...validTargetUser, role: UserRole.ADMIN });
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.$queryRaw
+        .mockResolvedValueOnce([{ id: validTargetUser.id }])
+        .mockResolvedValueOnce([{ pg_advisory_xact_lock: null }]);
+
+      const res = await runBootstrapAdmin(
+        {
+          email: 'target_candidate@example.test',
+          apply: true,
+          prisma: mockPrisma,
+        },
+        mockLogger,
+      );
+
+      expect(res.success).toBe(false);
+      expect(res.exitCode).toBe(1);
+      expect(res.error).toBe('ALREADY_ADMIN');
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.adminAuditLog.create).not.toHaveBeenCalled();
+      expect(mockPrisma.refreshToken.updateMany).not.toHaveBeenCalled();
+    });
+
     it('aborts transaction if an active admin was created concurrently before advisory lock acquired', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ ...validTargetUser });
       mockPrisma.user.findFirst.mockResolvedValue(null); // Looked clear initially
