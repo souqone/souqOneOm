@@ -279,4 +279,30 @@ describe('Admin Users API (e2e)', () => {
     expect(res.body.logs).toBeDefined();
     expect(Array.isArray(res.body.logs)).toBe(true);
   });
+
+  it('should reject role change on BANNED user with 409 INVALID_TRANSITION', async () => {
+    const admin = await registerAdmin({ password: 'AdminPassword123!' });
+    const target = await registerUser({ email: 'target_banned_role@example.test' });
+
+    // Ban user first
+    await request(getApp().getHttpServer())
+      .post(`/api/admin/users/${target.user.id}/ban`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ reason: 'Banned before role change attempt' })
+      .expect(200);
+
+    // Attempt role change on banned user -> 409 INVALID_TRANSITION
+    const res = await request(getApp().getHttpServer())
+      .patch(`/api/admin/users/${target.user.id}/role`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({
+        role: 'MODERATOR',
+        reason: 'Illegal promotion of banned user',
+        adminPassword: 'AdminPassword123!',
+      })
+      .expect(409);
+
+    expect(res.body.code).toBe('INVALID_TRANSITION');
+  });
 });
+

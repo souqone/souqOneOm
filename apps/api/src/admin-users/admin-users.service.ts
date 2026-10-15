@@ -316,6 +316,12 @@ export class AdminUsersService {
     let previousStatus: AccountStatus = AccountStatus.ACTIVE;
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Row lock on target to prevent concurrent mutation race conditions
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${targetId} FOR UPDATE`;
+      if (!locked || locked.length === 0) {
+        throw new NotFoundException('المستخدم غير موجود');
+      }
+
       const target = await tx.user.findUnique({
         where: { id: targetId },
         select: {
@@ -443,6 +449,12 @@ export class AdminUsersService {
     let previousStatus: AccountStatus = AccountStatus.SUSPENDED;
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Row lock on target to prevent concurrent mutation race conditions
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${targetId} FOR UPDATE`;
+      if (!locked || locked.length === 0) {
+        throw new NotFoundException('المستخدم غير موجود');
+      }
+
       const target = await tx.user.findUnique({
         where: { id: targetId },
         select: {
@@ -560,6 +572,12 @@ export class AdminUsersService {
     let previousStatus: AccountStatus = AccountStatus.ACTIVE;
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Row lock on target to prevent concurrent mutation race conditions
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${targetId} FOR UPDATE`;
+      if (!locked || locked.length === 0) {
+        throw new NotFoundException('المستخدم غير موجود');
+      }
+
       const target = await tx.user.findUnique({
         where: { id: targetId },
         select: {
@@ -681,6 +699,12 @@ export class AdminUsersService {
     let previousStatus: AccountStatus = AccountStatus.BANNED;
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Row lock on target to prevent concurrent mutation race conditions
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${targetId} FOR UPDATE`;
+      if (!locked || locked.length === 0) {
+        throw new NotFoundException('المستخدم غير موجود');
+      }
+
       const target = await tx.user.findUnique({
         where: { id: targetId },
         select: {
@@ -814,11 +838,16 @@ export class AdminUsersService {
       });
     }
 
-    const now = new Date();
     let isNoOp = false;
     let previousStatus: AccountStatus = AccountStatus.ACTIVE;
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Row lock on target to prevent concurrent mutation race conditions
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${targetId} FOR UPDATE`;
+      if (!locked || locked.length === 0) {
+        throw new NotFoundException('المستخدم غير موجود');
+      }
+
       const target = await tx.user.findUnique({
         where: { id: targetId },
         select: {
@@ -833,6 +862,15 @@ export class AdminUsersService {
 
       if (!target) {
         throw new NotFoundException('المستخدم غير موجود');
+      }
+
+      // Block role change on BANNED or DELETED accounts
+      if (target.status === AccountStatus.BANNED || target.status === AccountStatus.DELETED) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'INVALID_TRANSITION',
+          message: 'لا يمكن تغيير دور حساب محظور أو محذوف',
+        });
       }
 
       if (target.role === dto.role) {
@@ -858,9 +896,6 @@ export class AdminUsersService {
         where: { id: targetId },
         data: {
           role: dto.role,
-          statusReason: trimmedReason,
-          statusChangedAt: now,
-          statusChangedById: admin.sub,
           tokenVersion: { increment: 1 },
         },
         select: {
@@ -1006,8 +1041,8 @@ export class AdminUsersService {
         await this.chatGateway.disconnectUser(userId);
       }
 
-      // Event emission
-      if (this.eventEmitter) {
+      // Event emission (only for actions that change account status)
+      if (this.eventEmitter && action !== 'role_change') {
         this.eventEmitter.emit(USER_STATUS_CHANGED, {
           userId,
           previousStatus,

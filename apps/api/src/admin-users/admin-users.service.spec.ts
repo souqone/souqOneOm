@@ -40,7 +40,7 @@ describe('AdminUsersService', () => {
     adminAuditLog: {
       findMany: jest.fn(),
     },
-    $queryRaw: jest.fn().mockResolvedValue([{ pg_advisory_xact_lock: null }]),
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'mock-user-id', pg_advisory_xact_lock: null }]),
     $transaction: jest.fn().mockImplementation(async (cb: any) => {
       if (typeof cb === 'function') {
         return cb(mockPrisma);
@@ -83,6 +83,7 @@ describe('AdminUsersService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.$queryRaw.mockResolvedValue([{ id: 'mock-user-id', pg_advisory_xact_lock: null }]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -845,6 +846,495 @@ describe('AdminUsersService', () => {
           adminPassword: 'CorrectPass123!',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('does not pass statusReason, statusChangedAt, or statusChangedById in user.update during role change', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash })
+        .mockResolvedValueOnce({
+          id: 'u-target',
+          role: UserRole.USER,
+          status: AccountStatus.ACTIVE,
+          suspendedUntil: null,
+          tokenVersion: 2,
+        });
+
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target',
+        role: UserRole.MODERATOR,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 3,
+      });
+
+      await service.changeUserRole(adminJwt, 'u-target', {
+        role: UserRole.MODERATOR,
+        reason: 'Promoted to support lead',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'u-target' },
+        data: {
+          role: UserRole.MODERATOR,
+          tokenVersion: { increment: 1 },
+        },
+        select: expect.any(Object),
+      });
+
+      const updateData = mockPrisma.user.update.mock.calls[0][0].data;
+      expect(updateData.statusReason).toBeUndefined();
+      expect(updateData.statusChangedAt).toBeUndefined();
+      expect(updateData.statusChangedById).toBeUndefined();
+    });
+
+    it('rejects role change on BANNED account with 409 INVALID_TRANSITION without DB write', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash })
+        .mockResolvedValueOnce({
+          id: 'u-banned',
+          role: UserRole.USER,
+          status: AccountStatus.BANNED,
+          suspendedUntil: null,
+          tokenVersion: 2,
+        });
+
+      const promise = service.changeUserRole(adminJwt, 'u-banned', {
+        role: UserRole.MODERATOR,
+        reason: 'Attempt to promote banned user',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      await expect(promise).rejects.toThrow(ConflictException);
+      await expect(promise).rejects.toMatchObject({
+        response: {
+          code: 'INVALID_TRANSITION',
+        },
+      });
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockAdminAuditService.record).not.toHaveBeenCalled();
+    });
+
+    it('rejects role change on DELETED account with 409 INVALID_TRANSITION without DB write', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash })
+        .mockResolvedValueOnce({
+          id: 'u-deleted',
+          role: UserRole.USER,
+          status: AccountStatus.DELETED,
+          suspendedUntil: null,
+          tokenVersion: 2,
+        });
+
+      const promise = service.changeUserRole(adminJwt, 'u-deleted', {
+        role: UserRole.MODERATOR,
+        reason: 'Attempt to promote deleted user',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      await expect(promise).rejects.toThrow(ConflictException);
+      await expect(promise).rejects.toMatchObject({
+        response: {
+          code: 'INVALID_TRANSITION',
+        },
+      });
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockAdminAuditService.record).not.toHaveBeenCalled();
+    });
+
+    it('allows role change on SUSPENDED account and retains suspended status', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash })
+        .mockResolvedValueOnce({
+          id: 'u-suspended',
+          role: UserRole.USER,
+          status: AccountStatus.SUSPENDED,
+          suspendedUntil: new Date(),
+          tokenVersion: 2,
+        });
+
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-suspended',
+        role: UserRole.MODERATOR,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: new Date(),
+        statusChangedAt: new Date(),
+        tokenVersion: 3,
+      });
+
+      const res = await service.changeUserRole(adminJwt, 'u-suspended', {
+        role: UserRole.MODERATOR,
+        reason: 'Promotion during suspension',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      expect(res.role).toBe(UserRole.MODERATOR);
+      expect(res.status).toBe(AccountStatus.SUSPENDED);
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+    });
+
+    it('skips USER_STATUS_CHANGED event emission on role_change while suspend and ban emit it', async () => {
+      // 1. Role change does NOT emit USER_STATUS_CHANGED
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash })
+        .mockResolvedValueOnce({
+          id: 'u-target',
+          role: UserRole.USER,
+          status: AccountStatus.ACTIVE,
+          suspendedUntil: null,
+          tokenVersion: 1,
+        });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target',
+        role: UserRole.MODERATOR,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 2,
+      });
+
+      await service.changeUserRole(adminJwt, 'u-target', {
+        role: UserRole.MODERATOR,
+        reason: 'Role change without status change',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
+        USER_STATUS_CHANGED,
+        expect.anything(),
+      );
+
+      // 2. Suspend DOES emit USER_STATUS_CHANGED
+      jest.clearAllMocks();
+      mockPrisma.$queryRaw.mockResolvedValue([{ id: 'u-target', pg_advisory_xact_lock: null }]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-target',
+        role: UserRole.USER,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        tokenVersion: 2,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target',
+        role: UserRole.USER,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: new Date(),
+        statusChangedAt: new Date(),
+        tokenVersion: 3,
+      });
+
+      await service.suspendUser(adminJwt, 'u-target', { reason: 'Policy suspension' });
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        USER_STATUS_CHANGED,
+        expect.objectContaining({ userId: 'u-target', status: AccountStatus.SUSPENDED }),
+      );
+
+      // 3. Ban DOES emit USER_STATUS_CHANGED
+      jest.clearAllMocks();
+      mockPrisma.$queryRaw.mockResolvedValue([{ id: 'u-target', pg_advisory_xact_lock: null }]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-target',
+        role: UserRole.USER,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        tokenVersion: 3,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target',
+        role: UserRole.USER,
+        status: AccountStatus.BANNED,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 4,
+      });
+
+      await service.banUser(adminJwt, 'u-target', { reason: 'Permanent ban' });
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        USER_STATUS_CHANGED,
+        expect.objectContaining({ userId: 'u-target', status: AccountStatus.BANNED }),
+      );
+    });
+  });
+
+  describe('Row-Level Locking (SELECT ... FOR UPDATE)', () => {
+    it('suspendUser executes row lock before reading or updating target', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-target-1',
+        role: UserRole.USER,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        tokenVersion: 1,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target-1',
+        status: AccountStatus.SUSPENDED,
+        role: UserRole.USER,
+        suspendedUntil: new Date(),
+        statusChangedAt: new Date(),
+        tokenVersion: 2,
+      });
+
+      await service.suspendUser(adminJwt, 'u-target-1', { reason: 'Test lock ordering' });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
+      const rawCall = mockPrisma.$queryRaw.mock.calls[0];
+      const sqlStrings = rawCall[0];
+      expect(sqlStrings.join(' ')).toContain('SELECT id FROM users WHERE id =');
+      expect(sqlStrings.join(' ')).toContain('FOR UPDATE');
+      expect(rawCall[1]).toBe('u-target-1');
+
+      // Assert lock was invoked before read (findUnique) and before write (update)
+      const lockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[0];
+      const findUniqueOrder = mockPrisma.user.findUnique.mock.invocationCallOrder[0];
+      const updateOrder = mockPrisma.user.update.mock.invocationCallOrder[0];
+      expect(lockOrder).toBeLessThan(findUniqueOrder);
+      expect(lockOrder).toBeLessThan(updateOrder);
+    });
+
+    it('suspendUser throws 404 when target row is not found during FOR UPDATE', async () => {
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]); // Row lock finds nothing
+
+      await expect(
+        service.suspendUser(adminJwt, 'u-nonexistent', { reason: 'Not found test' }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('unsuspendUser executes row lock before reading or updating target', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-target-2',
+        role: UserRole.USER,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: new Date(),
+        tokenVersion: 1,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target-2',
+        status: AccountStatus.ACTIVE,
+        role: UserRole.USER,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 1,
+      });
+
+      await service.unsuspendUser(adminJwt, 'u-target-2', { reason: 'Unsuspend test lock' });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
+      const rawCall = mockPrisma.$queryRaw.mock.calls[0];
+      expect(rawCall[0].join(' ')).toContain('FOR UPDATE');
+      expect(rawCall[1]).toBe('u-target-2');
+
+      const lockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[0];
+      const findUniqueOrder = mockPrisma.user.findUnique.mock.invocationCallOrder[0];
+      const updateOrder = mockPrisma.user.update.mock.invocationCallOrder[0];
+      expect(lockOrder).toBeLessThan(findUniqueOrder);
+      expect(lockOrder).toBeLessThan(updateOrder);
+    });
+
+    it('unsuspendUser throws 404 when target row is not found during FOR UPDATE', async () => {
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(
+        service.unsuspendUser(adminJwt, 'u-nonexistent', { reason: 'Not found test' }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('banUser executes row lock before reading or updating target', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-target-3',
+        role: UserRole.USER,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        tokenVersion: 1,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target-3',
+        status: AccountStatus.BANNED,
+        role: UserRole.USER,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 2,
+      });
+
+      await service.banUser(adminJwt, 'u-target-3', { reason: 'Ban test lock' });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
+      const rawCall = mockPrisma.$queryRaw.mock.calls[0];
+      expect(rawCall[0].join(' ')).toContain('FOR UPDATE');
+      expect(rawCall[1]).toBe('u-target-3');
+
+      const lockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[0];
+      const findUniqueOrder = mockPrisma.user.findUnique.mock.invocationCallOrder[0];
+      const updateOrder = mockPrisma.user.update.mock.invocationCallOrder[0];
+      expect(lockOrder).toBeLessThan(findUniqueOrder);
+      expect(lockOrder).toBeLessThan(updateOrder);
+    });
+
+    it('banUser throws 404 when target row is not found during FOR UPDATE', async () => {
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(
+        service.banUser(adminJwt, 'u-nonexistent', { reason: 'Not found test' }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('unbanUser executes row lock before reading or updating target', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-target-4',
+        role: UserRole.USER,
+        status: AccountStatus.BANNED,
+        suspendedUntil: null,
+        tokenVersion: 1,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target-4',
+        status: AccountStatus.ACTIVE,
+        role: UserRole.USER,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 1,
+      });
+
+      await service.unbanUser(adminJwt, 'u-target-4', { reason: 'Unban test lock' });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
+      const rawCall = mockPrisma.$queryRaw.mock.calls[0];
+      expect(rawCall[0].join(' ')).toContain('FOR UPDATE');
+      expect(rawCall[1]).toBe('u-target-4');
+
+      const lockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[0];
+      const findUniqueOrder = mockPrisma.user.findUnique.mock.invocationCallOrder[0];
+      const updateOrder = mockPrisma.user.update.mock.invocationCallOrder[0];
+      expect(lockOrder).toBeLessThan(findUniqueOrder);
+      expect(lockOrder).toBeLessThan(updateOrder);
+    });
+
+    it('unbanUser throws 404 when target row is not found during FOR UPDATE', async () => {
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(
+        service.unbanUser(adminJwt, 'u-nonexistent', { reason: 'Not found test' }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('changeUserRole executes row lock before reading target in transaction and before updating', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash }) // admin check
+        .mockResolvedValueOnce({
+          id: 'u-target-5',
+          role: UserRole.USER,
+          status: AccountStatus.ACTIVE,
+          suspendedUntil: null,
+          tokenVersion: 1,
+        }); // target user in tx
+
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'u-target-5',
+        role: UserRole.MODERATOR,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 2,
+      });
+
+      await service.changeUserRole(adminJwt, 'u-target-5', {
+        role: UserRole.MODERATOR,
+        reason: 'Change role test lock',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
+      const rawCall = mockPrisma.$queryRaw.mock.calls[0];
+      expect(rawCall[0].join(' ')).toContain('FOR UPDATE');
+      expect(rawCall[1]).toBe('u-target-5');
+
+      const lockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[0];
+      // Target findUnique is the 2nd findUnique call
+      const targetFindUniqueOrder = mockPrisma.user.findUnique.mock.invocationCallOrder[1];
+      const updateOrder = mockPrisma.user.update.mock.invocationCallOrder[0];
+      expect(lockOrder).toBeLessThan(targetFindUniqueOrder);
+      expect(lockOrder).toBeLessThan(updateOrder);
+    });
+
+    it('changeUserRole throws 404 when target row is not found during FOR UPDATE', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique.mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash });
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(
+        service.changeUserRole(adminJwt, 'u-nonexistent', {
+          role: UserRole.MODERATOR,
+          reason: 'Not found test',
+          adminPassword: 'CorrectPass123!',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      // Only the admin check findUnique was called
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('changeUserRole maintains lock order: target row lock first, then advisory lock on admin demotion', async () => {
+      const hash = await bcrypt.hash('CorrectPass123!', 10);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: adminJwt.sub, passwordHash: hash })
+        .mockResolvedValueOnce({
+          id: 'admin-target-to-demote',
+          role: UserRole.ADMIN,
+          status: AccountStatus.ACTIVE,
+          suspendedUntil: null,
+          tokenVersion: 1,
+        });
+
+      mockPrisma.user.count.mockResolvedValue(1); // 1 other active admin exists
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'admin-target-to-demote',
+        role: UserRole.MODERATOR,
+        status: AccountStatus.ACTIVE,
+        suspendedUntil: null,
+        statusChangedAt: new Date(),
+        tokenVersion: 2,
+      });
+
+      await service.changeUserRole(adminJwt, 'admin-target-to-demote', {
+        role: UserRole.MODERATOR,
+        reason: 'Demoting secondary admin',
+        adminPassword: 'CorrectPass123!',
+      });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(2);
+      // Call 1: row lock on target
+      const call1 = mockPrisma.$queryRaw.mock.calls[0];
+      expect(call1[0].join(' ')).toContain('FOR UPDATE');
+      expect(call1[1]).toBe('admin-target-to-demote');
+
+      // Call 2: advisory lock for last admin check
+      const call2 = mockPrisma.$queryRaw.mock.calls[1];
+      expect(call2[0].join(' ')).toContain('pg_advisory_xact_lock');
+
+      const rowLockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[0];
+      const advisoryLockOrder = mockPrisma.$queryRaw.mock.invocationCallOrder[1];
+      expect(rowLockOrder).toBeLessThan(advisoryLockOrder);
     });
   });
 
