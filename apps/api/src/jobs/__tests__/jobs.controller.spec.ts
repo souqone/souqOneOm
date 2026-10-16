@@ -33,7 +33,7 @@ describe('JobsController — IP resolution hardening (Task B1e)', () => {
     await controller.findOne('job-123', fakeReq);
 
     // Verify jobsService.findOne was called with req.ip ('203.0.113.195') and NOT the first spoofed header entry ('10.99.99.99')
-    expect(mockJobsService.findOne).toHaveBeenCalledWith('job-123', realClientIp);
+    expect(mockJobsService.findOne).toHaveBeenCalledWith('job-123', realClientIp, undefined);
     expect(mockJobsService.findOne).not.toHaveBeenCalledWith('job-123', '10.99.99.99');
   });
 
@@ -49,7 +49,7 @@ describe('JobsController — IP resolution hardening (Task B1e)', () => {
       } as unknown as Request;
 
       await controller.findOne('job-slug-abc', fakeReq);
-      expect(mockJobsService.findOne).toHaveBeenLastCalledWith('job-slug-abc', realClientIp);
+      expect(mockJobsService.findOne).toHaveBeenLastCalledWith('job-slug-abc', realClientIp, undefined);
     }
   });
 });
