@@ -32,6 +32,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let message = DEFAULT_ARABIC_MESSAGES[HttpStatus.INTERNAL_SERVER_ERROR];
 
     let extractedCode: string | undefined;
+    let extractedSuspendedUntil: string | null | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -49,6 +50,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ) {
           extractedCode = res.code;
         }
+
+        if (extractedCode === 'ACCOUNT_SUSPENDED') {
+          if (res.suspendedUntil === null) {
+            extractedSuspendedUntil = null;
+          } else if (
+            typeof res.suspendedUntil === 'string' &&
+            !isNaN(Date.parse(res.suspendedUntil))
+          ) {
+            extractedSuspendedUntil = res.suspendedUntil;
+          }
+        }
+
         if (typeof res.message === 'string') {
           extractedMessage = res.message;
         } else if (Array.isArray(res.message) && res.message.length > 0) {
@@ -97,6 +110,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message,
       timestamp: new Date().toISOString(),
       ...(extractedCode ? { code: extractedCode } : {}),
+      ...(extractedCode === 'ACCOUNT_SUSPENDED' && extractedSuspendedUntil !== undefined
+        ? { suspendedUntil: extractedSuspendedUntil }
+        : {}),
     });
   }
 }

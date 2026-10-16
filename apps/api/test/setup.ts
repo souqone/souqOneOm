@@ -47,6 +47,7 @@ import { MEILI_CLIENT } from '../src/search/meili.provider';
 import { cleanDatabase } from './cleanup';
 import { SanitizeInterceptor } from '../src/common/interceptors/sanitize.interceptor';
 import { NormalizeImagesInterceptor } from '../src/common/interceptors/normalize-images.interceptor';
+import { GlobalExceptionFilter } from '../src/common/filters/http-exception.filter';
 import request from 'supertest';
 
 /** Mock RedisService so tests don't need a running Redis instance */
@@ -145,7 +146,7 @@ class TestThrottlerGuard extends ThrottlerGuard {
   }
 }
 
-export async function createTestApp(): Promise<INestApplication> {
+export async function createTestApp(options?: { useGlobalFilters?: boolean }): Promise<INestApplication> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [
       EventEmitterModule.forRoot(),
@@ -222,6 +223,10 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(new SanitizeInterceptor(reflector), new NormalizeImagesInterceptor());
+
+  if (options?.useGlobalFilters) {
+    app.useGlobalFilters(new GlobalExceptionFilter());
+  }
 
   app.setGlobalPrefix('api', {
     exclude: ['health/(.*)', ''],

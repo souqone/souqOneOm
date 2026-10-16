@@ -214,7 +214,24 @@ export class AuthService {
     // Check if user exists by googleId
     let user = await this.prisma.user.findUnique({ where: { googleId } });
 
-    if (!user) {
+    if (user) {
+      if (!user.isVerified && isGoogleAuthoritative && (user.status ?? 'ACTIVE') === 'ACTIVE') {
+        const targetUserId = user.id;
+        user = await this.prisma.$transaction(async (tx) => {
+          const res = await tx.user.updateMany({
+            where: { id: targetUserId, isVerified: false },
+            data: {
+              isVerified: true,
+              emailVerifiedAt: new Date(),
+            },
+          });
+          if (res.count > 0) {
+            await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
+          }
+          return tx.user.findUnique({ where: { id: targetUserId } });
+        });
+      }
+    } else {
       // Check if user exists by email
       user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
 
