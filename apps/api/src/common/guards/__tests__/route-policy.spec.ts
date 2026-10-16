@@ -4,7 +4,6 @@ import * as path from 'path';
 import { Controller, Get, RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA, GUARDS_METADATA } from '@nestjs/common/constants';
 import {
-  ADMIN_KEY_ROUTES,
   PUBLIC_ROUTES_ALLOWLIST,
 } from '../../constants/public-routes.allowlist';
 
@@ -27,6 +26,7 @@ export interface RouteEntry {
   routeKey: string; // e.g. 'GET /listings/:id'
   guards: string[];
   hasJwtGuard: boolean;
+  hasRolesGuard: boolean;
   hasAdminKeyGuard: boolean;
 }
 
@@ -130,6 +130,7 @@ export function scanRoutesFromControllers(controllers: any[]): RouteEntry[] {
       const guardNames = combinedGuards.map((g: any) => g.name || g.constructor?.name || String(g));
 
       const hasJwtGuard = guardNames.includes('JwtAuthGuard');
+      const hasRolesGuard = guardNames.includes('RolesGuard');
       const hasAdminKeyGuard = guardNames.includes('AdminApiKeyGuard');
 
       const method = METHOD_NAME_MAP[requestMethod] || 'UNKNOWN';
@@ -144,6 +145,7 @@ export function scanRoutesFromControllers(controllers: any[]): RouteEntry[] {
           routeKey: `${method} ${p}`,
           guards: guardNames,
           hasJwtGuard,
+          hasRolesGuard,
           hasAdminKeyGuard,
         });
       }
@@ -156,25 +158,17 @@ export function scanRoutesFromControllers(controllers: any[]): RouteEntry[] {
 export function validateRoutePolicy(routes: RouteEntry[]): {
   violatingRoutes: RouteEntry[];
   jwtCount: number;
-  adminKeyCount: number;
   publicCount: number;
 } {
   const publicAllowlistSet = new Set<string>(PUBLIC_ROUTES_ALLOWLIST);
-  const adminKeySet = new Set<string>(ADMIN_KEY_ROUTES);
   const violatingRoutes: RouteEntry[] = [];
 
   let jwtCount = 0;
-  let adminKeyCount = 0;
   let publicCount = 0;
 
   for (const route of routes) {
     if (route.hasJwtGuard) {
       jwtCount++;
-    } else if (route.hasAdminKeyGuard) {
-      adminKeyCount++;
-      if (!adminKeySet.has(route.routeKey)) {
-        violatingRoutes.push(route);
-      }
     } else if (publicAllowlistSet.has(route.routeKey)) {
       publicCount++;
     } else {
@@ -182,7 +176,7 @@ export function validateRoutePolicy(routes: RouteEntry[]): {
     }
   }
 
-  return { violatingRoutes, jwtCount, adminKeyCount, publicCount };
+  return { violatingRoutes, jwtCount, publicCount };
 }
 
 describe('Route Authorization Policy Spec (Dynamic Discovery & Enforcement)', () => {
@@ -212,7 +206,7 @@ describe('Route Authorization Policy Spec (Dynamic Discovery & Enforcement)', ()
     expect(ignoredFiles).toEqual([]);
   });
 
-  it('enforces that every route without JwtAuthGuard is either in ADMIN_KEY_ROUTES or PUBLIC_ROUTES_ALLOWLIST', () => {
+  it('enforces that every route without JwtAuthGuard is in PUBLIC_ROUTES_ALLOWLIST', () => {
     const { violatingRoutes } = validateRoutePolicy(scannedRoutes);
 
     if (violatingRoutes.length > 0) {
@@ -237,12 +231,27 @@ describe('Route Authorization Policy Spec (Dynamic Discovery & Enforcement)', ()
     expect(staleRoutes).toEqual([]);
   });
 
-  it('ensures all entries in ADMIN_KEY_ROUTES are protected by AdminApiKeyGuard and match real routes', () => {
-    const existingAdminRoutes = scannedRoutes
-      .filter(r => r.hasAdminKeyGuard)
-      .map(r => r.routeKey);
+  it('enforces that no route in the application uses retired AdminApiKeyGuard', () => {
+    const routesWithAdminKey = scannedRoutes.filter(r => r.hasAdminKeyGuard);
+    expect(routesWithAdminKey).toHaveLength(0);
+  });
 
-    expect(new Set(existingAdminRoutes)).toEqual(new Set(ADMIN_KEY_ROUTES));
+  it('enforces that all /admin/* routes are strictly protected by JwtAuthGuard and RolesGuard', () => {
+    const adminRoutes = scannedRoutes.filter(r => r.path.startsWith('/admin'));
+    expect(adminRoutes.length).toBeGreaterThan(0);
+
+    const unprotectedAdminRoutes = adminRoutes.filter(
+      r => !r.hasJwtGuard || !r.hasRolesGuard,
+    );
+
+    if (unprotectedAdminRoutes.length > 0) {
+      const details = unprotectedAdminRoutes
+        .map(r => `  ✖ [${r.routeKey}] in ${r.controller}.${r.handler} (Guards: ${r.guards.join(', ') || 'NONE'})`)
+        .join('\n');
+      throw new Error(`Found /admin/* routes missing JwtAuthGuard or RolesGuard:\n${details}`);
+    }
+
+    expect(unprotectedAdminRoutes).toHaveLength(0);
   });
 
   it('real breaking test: fails immediately when a real undecorated Nest controller route is scanned', () => {

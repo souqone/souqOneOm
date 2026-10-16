@@ -240,7 +240,7 @@ module-name/
 
 \- `decorators/` — `@CurrentUser()`, `@Roles()`
 
-\- `guards/` — `RolesGuard`, `AdminApiKeyGuard`
+\- `guards/` — `RolesGuard`
 
 \- `interceptors/` — `SanitizeInterceptor`, `NormalizeImagesInterceptor`
 

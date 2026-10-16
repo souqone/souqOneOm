@@ -1,18 +1,4 @@
 /**
- * Temporary registry of routes protected exclusively by AdminApiKeyGuard.
- * These routes are secured via the X-Admin-API-Key header.
- * Note: Scheduled to be removed/deprecated when unified RBAC is introduced in Part 6b.
- * Count: 5 routes.
- */
-export const ADMIN_KEY_ROUTES = [
-  'GET /admin/payments',
-  'GET /admin/payments/stats',
-  'GET /admin/payments/metrics',
-  'GET /admin/payments/dlq',
-  'GET /admin/payments/:paymentId/events',
-] as const;
-
-/**
  * Comprehensive allowlist of public API endpoints that do not require mandatory JWT authentication.
  * Includes:
  * - Completely un-guarded public endpoints (54 routes)
@@ -88,5 +74,4 @@ export const PUBLIC_ROUTES_ALLOWLIST = [
   'GET /users/:id',
 ] as const;
 
-export type AdminKeyRoute = (typeof ADMIN_KEY_ROUTES)[number];
 export type PublicRoute = (typeof PUBLIC_ROUTES_ALLOWLIST)[number];
