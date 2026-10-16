@@ -39,6 +39,7 @@ import { LocationsModule } from '../src/locations/locations.module';
 import { AdminAuditModule } from '../src/admin-audit/admin-audit.module';
 import { AdminUsersModule } from '../src/admin-users/admin-users.module';
 import { VisibilityModule } from '../src/common/visibility.module';
+import { ContactModule } from '../src/contact/contact.module';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 import { MailService } from '../src/mail/mail.service';
@@ -175,6 +176,7 @@ export async function createTestApp(): Promise<INestApplication> {
       AdminAuditModule,
       AdminUsersModule,
       VisibilityModule,
+      ContactModule,
       TerminusModule,
       HttpModule,
     ],
