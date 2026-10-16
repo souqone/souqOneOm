@@ -134,7 +134,7 @@ export class EquipmentListingsService {
   async findAll(q: QueryEquipmentListingsDto) {
     const page = q.page ?? 1;
     const limit = Math.min(q.limit ?? 20, 50);
-    const where: Prisma.EquipmentListingWhereInput = { status: 'ACTIVE' };
+    const where: Prisma.EquipmentListingWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
 
     // ─── Existing filters ────────────────────────────────────────────────────
     if (q.equipmentType) where.equipmentType = q.equipmentType as EquipmentType;

@@ -197,7 +197,7 @@ export class BusesService {
     const cached = await this.redis.get<any>(cKey);
     if (cached) return cached;
 
-    const where: Prisma.BusListingWhereInput = { status: 'ACTIVE', deletedAt: null };
+    const where: Prisma.BusListingWhereInput = { status: 'ACTIVE', deletedAt: null, hiddenByOwnerStatus: false };
     const andConditions: Prisma.BusListingWhereInput[] = [];
 
     if (query.search) {
@@ -378,6 +378,7 @@ export class BusesService {
       baseWhere: {
         status: 'ACTIVE',
         deletedAt: null,
+        hiddenByOwnerStatus: false,
         busListingType: original.busListingType,
         busType: original.busType,
       },

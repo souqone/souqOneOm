@@ -164,7 +164,7 @@ export class JobsService {
     const cached = await this.redis.get<any>(cacheKey);
     if (cached) return cached;
 
-    const where: Prisma.DriverJobWhereInput = {};
+    const where: Prisma.DriverJobWhereInput = { hiddenByOwnerStatus: false };
     where.status = (query.status as any) || 'ACTIVE';
 
     if (query.jobType) where.jobType = query.jobType;

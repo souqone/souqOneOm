@@ -189,7 +189,7 @@ export class TransportRequestService {
       const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(query.limit || String(DEFAULT_LIMIT), 10)));
       const skip = (page - 1) * limit;
 
-      const where: Prisma.TransportRequestWhereInput = {};
+      const where: Prisma.TransportRequestWhereInput = { hiddenByOwnerStatus: false };
 
       where.status = (query.status as any) || 'OPEN';
       if (query.serviceType) where.serviceType = query.serviceType as any;

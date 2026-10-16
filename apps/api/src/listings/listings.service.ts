@@ -60,6 +60,7 @@ export class ListingsService {
           { model: { contains: q, mode: 'insensitive' } },
         ],
         status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
       },
       select: {
         title: true,
@@ -276,6 +277,7 @@ export class ListingsService {
     if (query.sellerId) where.sellerId = query.sellerId;
     if (query.listingType) where.listingType = query.listingType;
     where.status = effectiveStatus;
+    where.hiddenByOwnerStatus = false;
 
     if (query.yearMin || query.yearMax) {
       where.year = {};
@@ -413,6 +415,7 @@ export class ListingsService {
     const narrowWhere: Prisma.ListingWhereInput = {
       id: { not: id },
       status: 'ACTIVE',
+      hiddenByOwnerStatus: false,
       listingType: original.listingType,
       make: { equals: original.make, mode: 'insensitive' },
       model: { equals: original.model, mode: 'insensitive' },
@@ -453,6 +456,7 @@ export class ListingsService {
       const broaderWhere: Prisma.ListingWhereInput = {
         id: { notIn: excludedIds },
         status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
         listingType: original.listingType,
         make: { equals: original.make, mode: 'insensitive' },
       };

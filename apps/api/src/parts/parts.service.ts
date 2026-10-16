@@ -120,7 +120,7 @@ export class PartsService {
     const limit = Math.min(parseInt(query.limit ?? '20'), 50);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE' };
+    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
 
     if (query.search) {
       where.OR = [

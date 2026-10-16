@@ -106,7 +106,7 @@ export class OperatorsService {
   async findAll(q: QueryOperatorListingsDto) {
     const page = q.page ?? 1;
     const limit = Math.min(q.limit ?? 20, 50);
-    const where: Prisma.OperatorListingWhereInput = { status: 'ACTIVE' };
+    const where: Prisma.OperatorListingWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
     if (q.operatorType) where.operatorType = q.operatorType as OperatorType;
     if (q.governorateId) where.governorateId = q.governorateId;
     if (q.wilayaId) where.wilayaId = q.wilayaId;

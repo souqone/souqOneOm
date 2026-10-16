@@ -157,7 +157,7 @@ export abstract class BaseListingService {
     const cached = await this.redis.get<any>(cacheKey);
     if (cached) return cached;
 
-    const where = { status: 'ACTIVE', ...this.buildWhereFilter(query) };
+    const where = { status: 'ACTIVE', hiddenByOwnerStatus: false, ...this.buildWhereFilter(query) };
 
     const [items, total] = await Promise.all([
       this.model.findMany({

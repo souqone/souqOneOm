@@ -119,7 +119,7 @@ export class CarrierProfileService {
     const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(query.limit || String(DEFAULT_LIMIT), 10)));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.CarrierProfileWhereInput = {};
+    const where: Prisma.CarrierProfileWhereInput = { hiddenByOwnerStatus: false };
 
     if (query.governorateId) where.governorateId = parseInt(query.governorateId);
     if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
@@ -157,8 +157,8 @@ export class CarrierProfileService {
 
   async getPublicStats() {
     const [activeRequests, verifiedCarriers, completedTrips] = await this.prisma.$transaction([
-      this.prisma.transportRequest.count({ where: { status: 'OPEN' } }),
-      this.prisma.carrierProfile.count({ where: { isVerified: true } }),
+      this.prisma.transportRequest.count({ where: { status: 'OPEN', hiddenByOwnerStatus: false } }),
+      this.prisma.carrierProfile.count({ where: { isVerified: true, hiddenByOwnerStatus: false } }),
       this.prisma.transportBooking.count({ where: { status: 'COMPLETED' } }),
     ]);
     return { activeRequests, verifiedCarriers, completedTrips };
