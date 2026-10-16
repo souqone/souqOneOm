@@ -67,7 +67,15 @@ class MockRedisService {
     if (ttl) this.ttls.set(key, ttl);
   }
   async del(key: string) { this.store.delete(key); this.ttls.delete(key); }
-  async delPattern(_pattern: string) {}
+  async delPattern(pattern: string) {
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    for (const key of Array.from(this.store.keys())) {
+      if (regex.test(key)) {
+        this.store.delete(key);
+        this.ttls.delete(key);
+      }
+    }
+  }
   async exists(key: string) { return this.store.has(key); }
   async expire(key: string, seconds: number) { this.ttls.set(key, seconds); }
   async incr(key: string, ttl?: number): Promise<number> {
