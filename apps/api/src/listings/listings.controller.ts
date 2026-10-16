@@ -56,7 +56,7 @@ export class ListingsController {
     @Req() req: Request,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.listingsService.findOne(id, user?.sub, req.ip);
+    return this.listingsService.findOne(id, user, req.ip);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -66,7 +66,7 @@ export class ListingsController {
     @Query() query: SimilarListingsQueryDto,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.listingsService.findSimilar(id, query.limit, user?.sub);
+    return this.listingsService.findSimilar(id, query.limit, user);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -76,7 +76,7 @@ export class ListingsController {
     @Req() req: Request,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.listingsService.findBySlug(slug, user?.sub, req.ip);
+    return this.listingsService.findBySlug(slug, user, req.ip);
   }
 
   @UseGuards(JwtAuthGuard)

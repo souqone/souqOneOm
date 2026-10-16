@@ -5,6 +5,7 @@ import {
 import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
@@ -87,9 +88,10 @@ export class JobsController {
     return this.driverProfileService.getReviews(id, query);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('drivers/:id')
-  findDriver(@Param('id') id: string) {
-    return this.driverProfileService.findOne(id);
+  findDriver(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
+    return this.driverProfileService.findOne(id, user);
   }
 
   // ─── Employer Profile ───
@@ -112,9 +114,10 @@ export class JobsController {
     return this.employerProfileService.update(user.sub, dto);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('employers/:id')
-  findEmployer(@Param('id') id: string) {
-    return this.employerProfileService.findOne(id);
+  findEmployer(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
+    return this.employerProfileService.findOne(id, user);
   }
 
   // ─── Verification ───
@@ -181,12 +184,13 @@ export class JobsController {
     return this.jobsService.withdrawApplication(applicationId, user.sub);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
+  findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
     // Use req.ip directly — behind Railway reverse proxy (trust proxy = 1), Express resolves
     // the real client IP from the rightmost untrusted hop, preventing client-spoofed X-Forwarded-For prefixes.
     const clientIp = req.ip;
-    return this.jobsService.findOne(decodeURIComponent(id), clientIp);
+    return this.jobsService.findOne(decodeURIComponent(id), clientIp, user);
   }
 
   @UseGuards(JwtAuthGuard)

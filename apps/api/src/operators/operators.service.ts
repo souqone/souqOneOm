@@ -22,6 +22,7 @@ import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 @Injectable()
 export class OperatorsService {
@@ -162,7 +163,7 @@ export class OperatorsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string, userId?: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const item = await this.prisma.operatorListing.findUnique({
       where: { id },
       include: {
@@ -172,10 +173,12 @@ export class OperatorsService {
       },
     });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
+    assertPublicOrOwner('operatorListing', item, item.userId, viewer, 'إعلان المشغل غير موجود');
     this.prisma.operatorListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
 
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
     let pendingDeletionRequest = null;
-    if (userId && item.userId === userId) {
+    if (viewerId && item.userId === viewerId) {
       const pendingRequest = await this.prisma.operatorDeletionRequest.findFirst({
         where: { operatorListingId: item.id, status: OperatorDeletionStatus.PENDING },
         select: { id: true, createdAt: true, status: true },

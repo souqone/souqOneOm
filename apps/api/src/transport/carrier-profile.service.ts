@@ -11,6 +11,7 @@ import { QueryCarriersDto } from './dto/query-carriers.dto';
 import { Prisma } from '@prisma/client';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 /** Public profile — no phone number exposed to unauthenticated callers */
 const PUBLIC_USER_SELECT = {
@@ -101,7 +102,7 @@ export class CarrierProfileService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const profile = await this.prisma.carrierProfile.findUnique({
       where: { id },
       include: {
@@ -111,6 +112,7 @@ export class CarrierProfileService {
       },
     });
     if (!profile) throw new NotFoundException('الناقل غير موجود');
+    assertPublicOrOwner('carrierProfile', profile, profile.userId, viewer, 'الناقل غير موجود');
     return profile;
   }
 

@@ -13,6 +13,7 @@ import { UpdateTransportRequestDto } from './dto/update-transport-request.dto';
 import { QueryTransportRequestsDto } from './dto/query-transport-requests.dto';
 import { Prisma } from '@prisma/client';
 import { incrementViewCount } from '../common/utils/view-count.helper';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 const USER_SELECT = {
   id: true,
@@ -236,9 +237,10 @@ export class TransportRequestService {
     }
   }
 
-  async findOne(id: string, ip?: string, userId?: string) {
+  async findOne(id: string, ip?: string, viewer?: VisibilityViewer | string | null) {
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
     // Separate cache keys so anonymous responses never contain booking data
-    const cacheKey = userId ? `transport:request:${id}:auth` : `transport:request:${id}`;
+    const cacheKey = viewerId ? `transport:request:${id}:auth` : `transport:request:${id}`;
     const cached = await this.redis.get<any>(cacheKey);
 
     let request = cached;
@@ -264,7 +266,7 @@ export class TransportRequestService {
             toGovernorateRef: true,
             toWilayaRef: true,
             _count: { select: { quotes: true } },
-            ...(userId ? { booking: true } : {}),
+            ...(viewerId ? { booking: true } : {}),
           },
         });
         if (request) await this.redis.set(cacheKey, request, DETAIL_CACHE_TTL);
@@ -274,6 +276,7 @@ export class TransportRequestService {
     }
 
     if (!request) throw new NotFoundException('طلب النقل غير موجود');
+    assertPublicOrOwner('transportRequest', request, request.userId, viewer, 'طلب النقل غير موجود');
 
     // Issue 2 fix: fire-and-forget — view count is analytical, must not block
     // the user-facing response. Rate-limiting (1/IP/hour) is handled by the helper.

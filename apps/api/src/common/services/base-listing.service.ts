@@ -14,6 +14,7 @@ import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 import { USER_SELECT_PUBLIC, USER_SELECT_LISTING_PUBLIC } from '../constants/user-select.constant';
 import { stripDeprecatedContactFields } from '../utils/contact.utils';
 import { SellerContactGate } from './seller-contact-gate.service';
+import { assertPublicOrOwner, VisibilityViewer } from '../public-visibility';
 
 export interface ListingConfig {
   /** Prisma model accessor name, e.g. 'carService' */
@@ -178,7 +179,7 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   // FIND ONE (with rate-limited viewCount + cache)
   // ══════════════════════════════════
-  async findOne(id: string, ip?: string) {
+  async findOne(id: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const cacheKey = this.cacheKey(`detail:${id}`);
     const cached = await this.redis.get<any>(cacheKey);
 
@@ -194,6 +195,8 @@ export abstract class BaseListingService {
       await this.redis.set(cacheKey, item, DETAIL_CACHE_TTL);
     }
 
+    assertPublicOrOwner(this.config.modelName as any, item, item.userId, viewer, this.config.notFoundMsg);
+
     // Rate-limited view increment
     const shouldCount = await incrementViewCount(
       this.redis, this.config.entityType, id, ip,
@@ -208,12 +211,14 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   // FIND BY SLUG
   // ══════════════════════════════════
-  async findBySlug(slug: string, ip?: string) {
+  async findBySlug(slug: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const item = await this.model.findUnique({
       where: { slug },
       include: this.getDetailInclude(),
     });
     if (!item) throw new NotFoundException(this.config.notFoundMsg);
+
+    assertPublicOrOwner(this.config.modelName as any, item, item.userId, viewer, this.config.notFoundMsg);
 
     // Rate-limited view increment
     const shouldCount = await incrementViewCount(

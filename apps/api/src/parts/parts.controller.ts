@@ -3,6 +3,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { PartsService } from './parts.service';
@@ -31,9 +32,10 @@ export class PartsController {
     return this.partsService.myParts(user.sub);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.partsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
+    return this.partsService.findOne(id, user);
   }
 
   @UseGuards(JwtAuthGuard)

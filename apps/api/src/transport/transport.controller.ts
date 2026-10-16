@@ -63,9 +63,10 @@ export class TransportController {
     return this.carrierProfileService.findAll(query);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('carriers/:id')
-  findOneCarrier(@Param('id') id: string) {
-    return this.carrierProfileService.findOne(id);
+  findOneCarrier(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
+    return this.carrierProfileService.findOne(id, user);
   }
 
   @Get('carriers/:id/reviews')
@@ -113,7 +114,7 @@ export class TransportController {
     @Req() req: Request,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.transportRequestService.findOne(id, req.ip, user?.sub);
+    return this.transportRequestService.findOne(id, req.ip, user);
   }
 
   @UseGuards(JwtAuthGuard)

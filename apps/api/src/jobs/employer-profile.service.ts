@@ -9,6 +9,7 @@ import { CreateEmployerProfileDto } from './dto/create-employer-profile.dto';
 import { UpdateEmployerProfileDto } from './dto/update-employer-profile.dto';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 /** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
 const PUBLIC_USER_SELECT = {
@@ -104,7 +105,7 @@ export class EmployerProfileService {
   }
 
   /* ───── FIND ONE BY ID (public — no phone) ───── */
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const profile = await this.prisma.employerProfile.findUnique({
       where: { id },
       include: {
@@ -114,6 +115,7 @@ export class EmployerProfileService {
       },
     });
     if (!profile) throw new NotFoundException('بروفايل صاحب العمل غير موجود');
+    assertPublicOrOwner('employerProfile', profile, profile.userId, viewer, 'بروفايل صاحب العمل غير موجود');
     return profile;
   }
 }

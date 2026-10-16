@@ -19,6 +19,7 @@ import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 @Injectable()
 export class EquipmentListingsService {
@@ -208,7 +209,7 @@ export class EquipmentListingsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const item = await this.prisma.equipmentListing.findUnique({
       where: { id },
       include: {
@@ -219,12 +220,13 @@ export class EquipmentListingsService {
       },
     });
     if (!item) throw new NotFoundException('الإعلان غير موجود');
+    assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
     // TODO: migrate viewCount to Redis INCR + periodic sync for high traffic
     this.prisma.equipmentListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
     return item;
   }
 
-  async findBySlug(slug: string) {
+  async findBySlug(slug: string, viewer?: VisibilityViewer | string | null) {
     const item = await this.prisma.equipmentListing.findUnique({
       where: { slug },
       include: {
@@ -235,6 +237,7 @@ export class EquipmentListingsService {
       },
     });
     if (!item) throw new NotFoundException('الإعلان غير موجود');
+    assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
     this.prisma.equipmentListing.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
     return item;
   }

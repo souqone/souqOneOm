@@ -18,6 +18,7 @@ import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
 import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
 import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 import { assertEntityVisible } from '../listings/listing-visibility';
+import { VisibilityViewer } from '../common/public-visibility';
 import { findSimilarListings } from '../common/utils/similar-listings.util';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
@@ -293,14 +294,15 @@ export class BusesService {
   }
 
   /** Applies the visibility gate + viewer-dependent field stripping, then counts the view. */
-  private async serveDetail(bus: any, ip?: string, viewerId?: string) {
+  private async serveDetail(bus: any, ip?: string, viewer?: VisibilityViewer | string | null) {
     if (!bus || bus.deletedAt) throw new NotFoundException('إعلان الحافلة غير موجود');
-    assertEntityVisible(bus, bus.userId, viewerId, 'إعلان الحافلة غير موجود');
+    assertEntityVisible(bus, bus.userId, viewer, 'إعلان الحافلة غير موجود');
     await this.incrementViewIfAllowed(bus.id, ip);
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
     return viewerId ? stripNeverExposedFields(bus) : stripMembersOnlyFields(bus);
   }
 
-  async findOne(id: string, ip?: string, viewerId?: string) {
+  async findOne(id: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const cKey = this.cacheKey(`detail:${id}`);
     let bus = await this.redis.get<any>(cKey);
 
@@ -319,10 +321,10 @@ export class BusesService {
       await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
     }
 
-    return this.serveDetail(bus, ip, viewerId);
+    return this.serveDetail(bus, ip, viewer);
   }
 
-  async findBySlug(slug: string, ip?: string, viewerId?: string) {
+  async findBySlug(slug: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const cKey = this.cacheKey(`slug:${slug}`);
     let bus = await this.redis.get<any>(cKey);
 
@@ -340,23 +342,23 @@ export class BusesService {
       await this.redis.set(cKey, bus, DETAIL_CACHE_TTL);
     }
 
-    return this.serveDetail(bus, ip, viewerId);
+    return this.serveDetail(bus, ip, viewer);
   }
 
-  async findSimilar(id: string, limit = 8, viewerId?: string) {
+  async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
     const safeLimit = Math.min(Math.max(Math.trunc(limit) || 8, 1), 20);
 
     // Gate first: a hidden listing must not leak through its "similar" list (or its cache).
     const original = await this.prisma.busListing.findFirst({
       where: { id, deletedAt: null },
       select: {
-        id: true, status: true, userId: true,
+        id: true, status: true, userId: true, hiddenByOwnerStatus: true, deletedAt: true,
         busListingType: true, busType: true, make: true, year: true,
         price: true, dailyPrice: true,
       },
     });
     if (!original) throw new NotFoundException('إعلان الحافلة غير موجود');
-    assertEntityVisible(original, original.userId, viewerId, 'إعلان الحافلة غير موجود');
+    assertEntityVisible(original, original.userId, viewer, 'إعلان الحافلة غير موجود');
 
     const cKey = this.cacheKey(`similar:${id}:${safeLimit}`);
     const cached = await this.redis.get<any[]>(cKey);

@@ -1,28 +1,39 @@
-import { NotFoundException } from '@nestjs/common';
 import { ListingStatus } from '@prisma/client';
-
-const PUBLIC_STATUSES: ListingStatus[] = ['ACTIVE', 'SOLD', 'RENTED'];
+import {
+  assertPublicOrOwner,
+  VisibilityViewer,
+} from '../common/public-visibility';
 
 /**
- * Vertical-agnostic visibility gate. Public statuses are visible to everyone;
- * any other status is visible only to its owner. Throws 404 otherwise
- * (never 403, so the existence of hidden listings is not revealed).
+ * Vertical-agnostic visibility gate delegating to the shared public-visibility engine.
+ * Public statuses (ACTIVE, SOLD, RENTED) with hiddenByOwnerStatus === false are visible to everyone;
+ * any other status or hidden listing is visible only to its owner, ADMIN, or MODERATOR.
+ * Throws 404 otherwise (never 403, so the existence of hidden listings is not revealed).
  */
 export function assertEntityVisible(
-  entity: { status: ListingStatus },
+  entity: {
+    status: ListingStatus;
+    hiddenByOwnerStatus?: boolean | null;
+    deletedAt?: Date | null;
+    [key: string]: any;
+  },
   ownerId: string,
-  viewerId?: string,
+  viewer?: VisibilityViewer | string | null,
   message = 'الإعلان غير موجود',
 ): void {
-  if (PUBLIC_STATUSES.includes(entity.status)) return;
-  if (viewerId && viewerId === ownerId) return;
-  throw new NotFoundException(message);
+  const model = 'deletedAt' in entity ? 'busListing' : 'listing';
+  assertPublicOrOwner(model, entity, ownerId, viewer, message);
 }
 
-/** Cars: owner field is `sellerId`. Behaviour unchanged. */
+/** Cars: owner field is `sellerId`. */
 export function assertListingVisible(
-  listing: { status: ListingStatus; sellerId: string },
-  viewerId?: string,
+  listing: {
+    status: ListingStatus;
+    sellerId: string;
+    hiddenByOwnerStatus?: boolean | null;
+    [key: string]: any;
+  },
+  viewer?: VisibilityViewer | string | null,
 ): void {
-  assertEntityVisible(listing, listing.sellerId, viewerId);
+  assertEntityVisible(listing, listing.sellerId, viewer);
 }

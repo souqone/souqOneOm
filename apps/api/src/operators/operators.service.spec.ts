@@ -404,7 +404,7 @@ describe('OperatorsService', () => {
     });
 
     it('should NOT include pendingDeletionRequest at all if requested by someone else (public view)', async () => {
-      prisma.operatorListing.findUnique.mockResolvedValue({ id: 'op-1', userId: 'owner-id' });
+      prisma.operatorListing.findUnique.mockResolvedValue({ id: 'op-1', userId: 'owner-id', status: 'ACTIVE', hiddenByOwnerStatus: false });
       // Call with no userId or a different userId
       const res = await service.findOne('op-1', 'other-user');
       expect(res.pendingDeletionRequest).toBeUndefined();
