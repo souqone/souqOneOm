@@ -1,13 +1,16 @@
 import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query, UseGuards, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { AdminApiKeyGuard } from '../common/guards/admin-api-key.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { PAYMENT_DLQ } from './payment-webhook.processor';
 import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
 @ExposePhone()
-@UseGuards(AdminApiKeyGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('admin/payments')
 export class AdminPaymentsController {
   private readonly logger = new Logger(AdminPaymentsController.name);
