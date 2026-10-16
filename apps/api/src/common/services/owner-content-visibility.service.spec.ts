@@ -32,7 +32,9 @@ describe('OwnerContentVisibilityService', () => {
     for (const config of OWNER_VISIBILITY_REGISTRY) {
       mockPrisma[config.prismaDelegate] = {
         findMany: jest.fn().mockResolvedValue([]),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        updateMany: jest.fn().mockImplementation((args: any) =>
+          Promise.resolve({ count: args?.where?.id?.in?.length ?? 1 }),
+        ),
       };
     }
 
@@ -49,9 +51,18 @@ describe('OwnerContentVisibilityService', () => {
 
   describe('hideAllForUser', () => {
     it('should find rows with hiddenByOwnerStatus: false, update to true, create DELETE OutboxEvents, and clear Redis cache', async () => {
-      mockPrisma.listing.findMany.mockResolvedValueOnce([{ id: 'car-1' }, { id: 'car-2' }]);
-      mockPrisma.driverJob.findMany.mockResolvedValueOnce([{ id: 'job-1' }]);
-      mockPrisma.driverProfile.findMany.mockResolvedValueOnce([{ id: 'prof-1' }]);
+      // Outer read + inner transaction re-read
+      mockPrisma.listing.findMany
+        .mockResolvedValueOnce([{ id: 'car-1' }, { id: 'car-2' }])
+        .mockResolvedValueOnce([{ id: 'car-1' }, { id: 'car-2' }]);
+
+      mockPrisma.driverJob.findMany
+        .mockResolvedValueOnce([{ id: 'job-1' }])
+        .mockResolvedValueOnce([{ id: 'job-1' }]);
+
+      mockPrisma.driverProfile.findMany
+        .mockResolvedValueOnce([{ id: 'prof-1' }])
+        .mockResolvedValueOnce([{ id: 'prof-1' }]);
 
       const result = await service.hideAllForUser('user-123');
 
@@ -61,9 +72,13 @@ describe('OwnerContentVisibilityService', () => {
       expect(result.affectedCounts[ENTITY_TYPES.DRIVER_PROFILE]).toBe(1);
       expect(result.totalAffected).toBe(4);
 
-      // Verify listing update
+      // Verify listing update with all 3 conditions
       expect(mockPrisma.listing.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: ['car-1', 'car-2'] } },
+        where: {
+          id: { in: ['car-1', 'car-2'] },
+          sellerId: 'user-123',
+          hiddenByOwnerStatus: false,
+        },
         data: { hiddenByOwnerStatus: true },
       });
 
@@ -97,18 +112,33 @@ describe('OwnerContentVisibilityService', () => {
       expect(mockRedis.delPattern).not.toHaveBeenCalled();
     });
 
+    it('should re-check candidate ids inside transaction and skip outbox events if state changed concurrently', async () => {
+      // Outer query finds car-1, but inner transaction re-check returns [] because status changed concurrently
+      mockPrisma.listing.findMany
+        .mockResolvedValueOnce([{ id: 'car-1' }])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.hideAllForUser('user-123');
+
+      expect(result.affectedCounts[ENTITY_TYPES.LISTING]).toBe(0);
+      expect(mockPrisma.listing.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.outboxEvent.createMany).not.toHaveBeenCalled();
+    });
+
     it('should process in chunks of 500 when items exceed VISIBILITY_BATCH_CHUNK_SIZE', async () => {
       const chunk1 = Array.from({ length: 500 }, (_, i) => ({ id: `bus-${i}` }));
       const chunk2 = [{ id: 'bus-500' }, { id: 'bus-501' }];
 
       mockPrisma.busListing.findMany
-        .mockResolvedValueOnce(chunk1)
-        .mockResolvedValueOnce(chunk2);
+        .mockResolvedValueOnce(chunk1) // outer read 1
+        .mockResolvedValueOnce(chunk1) // inner read 1
+        .mockResolvedValueOnce(chunk2) // outer read 2
+        .mockResolvedValueOnce(chunk2); // inner read 2
 
       const result = await service.hideAllForUser('user-123');
 
       expect(result.affectedCounts[ENTITY_TYPES.BUS_LISTING]).toBe(502);
-      expect(mockPrisma.busListing.findMany).toHaveBeenCalledTimes(2);
+      expect(mockPrisma.busListing.findMany).toHaveBeenCalledTimes(4);
       expect(mockPrisma.busListing.updateMany).toHaveBeenCalledTimes(2);
       expect(mockPrisma.outboxEvent.createMany).toHaveBeenCalledTimes(2);
     });
@@ -116,8 +146,13 @@ describe('OwnerContentVisibilityService', () => {
 
   describe('restoreAllForUser', () => {
     it('should find rows with hiddenByOwnerStatus: true, update to false, create UPSERT OutboxEvents, and clear Redis cache', async () => {
-      mockPrisma.sparePart.findMany.mockResolvedValueOnce([{ id: 'part-1' }]);
-      mockPrisma.carService.findMany.mockResolvedValueOnce([{ id: 'srv-1' }]);
+      mockPrisma.sparePart.findMany
+        .mockResolvedValueOnce([{ id: 'part-1' }])
+        .mockResolvedValueOnce([{ id: 'part-1' }]);
+
+      mockPrisma.carService.findMany
+        .mockResolvedValueOnce([{ id: 'srv-1' }])
+        .mockResolvedValueOnce([{ id: 'srv-1' }]);
 
       const result = await service.restoreAllForUser('user-123');
 
@@ -125,9 +160,13 @@ describe('OwnerContentVisibilityService', () => {
       expect(result.affectedCounts[ENTITY_TYPES.CAR_SERVICE]).toBe(1);
       expect(result.totalAffected).toBe(2);
 
-      // Verify update to false
+      // Verify update to false with all 3 conditions
       expect(mockPrisma.sparePart.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: ['part-1'] } },
+        where: {
+          id: { in: ['part-1'] },
+          sellerId: 'user-123',
+          hiddenByOwnerStatus: true,
+        },
         data: { hiddenByOwnerStatus: false },
       });
 
@@ -147,7 +186,9 @@ describe('OwnerContentVisibilityService', () => {
   describe('Cross-vertical error isolation and aggregation', () => {
     it('should continue executing other verticals when one vertical fails, and throw VisibilityCrossVerticalError at end', async () => {
       mockPrisma.listing.findMany.mockRejectedValue(new Error('Postgres connection drop on listings'));
-      mockPrisma.busListing.findMany.mockResolvedValueOnce([{ id: 'bus-1' }]);
+      mockPrisma.busListing.findMany
+        .mockResolvedValueOnce([{ id: 'bus-1' }])
+        .mockResolvedValueOnce([{ id: 'bus-1' }]);
 
       await expect(service.hideAllForUser('user-123')).rejects.toThrow(
         VisibilityCrossVerticalError,
@@ -155,7 +196,11 @@ describe('OwnerContentVisibilityService', () => {
 
       // Bus listing was still processed despite listing failure
       expect(mockPrisma.busListing.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: ['bus-1'] } },
+        where: {
+          id: { in: ['bus-1'] },
+          userId: 'user-123',
+          hiddenByOwnerStatus: false,
+        },
         data: { hiddenByOwnerStatus: true },
       });
     });

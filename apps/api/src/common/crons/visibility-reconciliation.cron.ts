@@ -34,17 +34,25 @@ export class VisibilityReconciliationCron {
     restoredOwnersCount: number;
     skippedDueToLock?: boolean;
   }> {
-    const lockAcquired = await this.redis.setNX(
-      RECONCILIATION_LOCK_KEY,
-      'locked',
-      RECONCILIATION_LOCK_TTL_SECONDS,
-    );
+    let lockAcquired = false;
 
-    if (!lockAcquired) {
-      this.logger.debug(
-        'VisibilityReconciliationCron: another replica holds the lock, skipping this run',
+    if (this.redis.isReady()) {
+      lockAcquired = await this.redis.setNX(
+        RECONCILIATION_LOCK_KEY,
+        'locked',
+        RECONCILIATION_LOCK_TTL_SECONDS,
       );
-      return { hiddenOwnersCount: 0, restoredOwnersCount: 0, skippedDueToLock: true };
+
+      if (!lockAcquired) {
+        this.logger.debug(
+          'VisibilityReconciliationCron: another replica holds the lock, skipping this run',
+        );
+        return { hiddenOwnersCount: 0, restoredOwnersCount: 0, skippedDueToLock: true };
+      }
+    } else {
+      this.logger.warn(
+        'VisibilityReconciliationCron: Redis is not ready, proceeding without lock (operations are idempotent)',
+      );
     }
 
     try {
@@ -142,10 +150,12 @@ export class VisibilityReconciliationCron {
         restoredOwnersCount: ownersToRestore.size,
       };
     } finally {
-      try {
-        await this.redis.del(RECONCILIATION_LOCK_KEY);
-      } catch (err: any) {
-        this.logger.warn(`Failed releasing reconciliation lock: ${err.message}`);
+      if (lockAcquired) {
+        try {
+          await this.redis.del(RECONCILIATION_LOCK_KEY);
+        } catch (err: any) {
+          this.logger.warn(`Failed releasing reconciliation lock: ${err.message}`);
+        }
       }
     }
   }

@@ -99,6 +99,17 @@ describe('SearchSyncWorker', () => {
       await worker.handleSync(createJob(ENTITY_TYPES.BUS_LISTING, '123', 'UPSERT'));
       expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.BUSES, '123');
     });
+
+    it('should remove from index if bus has deletedAt (soft deleted)', async () => {
+      mockPrisma.busListing.findUnique.mockResolvedValueOnce({
+        id: '123',
+        deletedAt: new Date(),
+        price: 1000,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.BUS_LISTING, '123', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.BUSES, '123');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
   });
 
   describe('EQUIPMENT_LISTING', () => {

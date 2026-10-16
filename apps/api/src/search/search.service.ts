@@ -356,7 +356,10 @@ export class SearchService implements OnModuleInit {
     
     const model = modelMap[indexName];
     if (model) {
-      const where: Record<string, any> = { status: 'ACTIVE' };
+      const where: Record<string, any> = {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+      };
       if (q && q.trim()) {
         const words = q.trim().split(/\s+/).filter(Boolean);
         const hasMakeModel = (indexName === 'listings' || indexName === 'equipment' || indexName === 'buses');
@@ -509,17 +512,17 @@ export class SearchService implements OnModuleInit {
 
     const [listings, parts, services] = await Promise.all([
       this.prisma.listing.findMany({
-        where: { status: 'ACTIVE', AND: searchConditions },
+        where: { status: 'ACTIVE', hiddenByOwnerStatus: false, AND: searchConditions },
         select: { id: true, title: true },
         take: limit,
       }),
       this.prisma.sparePart.findMany({
-        where: { status: 'ACTIVE', AND: searchConditions },
+        where: { status: 'ACTIVE', hiddenByOwnerStatus: false, AND: searchConditions },
         select: { id: true, title: true },
         take: limit,
       }),
       this.prisma.carService.findMany({
-        where: { status: 'ACTIVE', AND: searchConditions },
+        where: { status: 'ACTIVE', hiddenByOwnerStatus: false, AND: searchConditions },
         select: { id: true, title: true },
         take: limit,
       }),

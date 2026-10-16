@@ -29,8 +29,32 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
   afterAll(async () => {
     await closeTestApp();
   });
+  const waitFor = async <T>(
+    predicate: () => Promise<T> | T,
+    options: { timeoutMs?: number; intervalMs?: number; description?: string } = {},
+  ): Promise<T> => {
+    const timeoutMs = options.timeoutMs ?? 5000;
+    const intervalMs = options.intervalMs ?? 50;
+    const description = options.description ?? 'condition to be met';
+    const startTime = Date.now();
 
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    while (true) {
+      try {
+        const result = await predicate();
+        if (result) {
+          return result;
+        }
+      } catch {
+        // Retry until timeout
+      }
+
+      if (Date.now() - startTime >= timeoutMs) {
+        throw new Error(`Timed out after ${timeoutMs}ms waiting for: ${description}`);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  };
 
   describe('User Ban and Unban Lifecycle Event Trigger', () => {
     it('should hide all owner content across verticals on ban and restore on unban', async () => {
@@ -147,8 +171,14 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
         .send({ reason: 'Terms of service violation' })
         .expect(200);
 
-      // Allow async event listener to finish execution
-      await sleep(250);
+      // Wait until async event listener completes and entities are hidden
+      await waitFor(
+        async () => {
+          const profile = await prisma.driverProfile.findUnique({ where: { id: driverProfile.id } });
+          return profile?.hiddenByOwnerStatus === true;
+        },
+        { timeoutMs: 5000, intervalMs: 50, description: 'driverProfile hiddenByOwnerStatus === true after ban' },
+      );
 
       // Verify all entities in DB have hiddenByOwnerStatus: true
       const bCars = await prisma.listing.findMany({ where: { sellerId: targetId } });
@@ -203,7 +233,14 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
         .send({ reason: 'Reinstated upon review' })
         .expect(200);
 
-      await sleep(250);
+      // Wait until async event listener completes and entities are restored
+      await waitFor(
+        async () => {
+          const profile = await prisma.driverProfile.findUnique({ where: { id: driverProfile.id } });
+          return profile?.hiddenByOwnerStatus === false;
+        },
+        { timeoutMs: 5000, intervalMs: 50, description: 'driverProfile hiddenByOwnerStatus === false after unban' },
+      );
 
       // Verify all entities in DB restored to hiddenByOwnerStatus: false
       const rCars = await prisma.listing.findMany({ where: { sellerId: targetId } });
@@ -280,7 +317,13 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
         .send({ reason: 'Investigation in progress' })
         .expect(200);
 
-      await sleep(250);
+      await waitFor(
+        async () => {
+          const suspended = await prisma.listing.findUnique({ where: { id: car.id } });
+          return suspended?.hiddenByOwnerStatus === true;
+        },
+        { timeoutMs: 5000, intervalMs: 50, description: 'car hiddenByOwnerStatus === true after suspend' },
+      );
 
       const suspendedCar = await prisma.listing.findUnique({ where: { id: car.id } });
       expect(suspendedCar?.hiddenByOwnerStatus).toBe(true);
@@ -292,7 +335,13 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
         .send({ reason: 'Investigation cleared' })
         .expect(200);
 
-      await sleep(250);
+      await waitFor(
+        async () => {
+          const unsuspended = await prisma.listing.findUnique({ where: { id: car.id } });
+          return unsuspended?.hiddenByOwnerStatus === false;
+        },
+        { timeoutMs: 5000, intervalMs: 50, description: 'car hiddenByOwnerStatus === false after unsuspend' },
+      );
 
       const unsuspendedCar = await prisma.listing.findUnique({ where: { id: car.id } });
       expect(unsuspendedCar?.hiddenByOwnerStatus).toBe(false);

@@ -156,16 +156,42 @@ export class OwnerContentVisibilityService {
 
       const ids: string[] = batch.map((item: any) => item.id);
 
+      let updatedCount = 0;
+
       await this.prisma.$transaction(async (tx: any) => {
         const txDelegate = tx[config.prismaDelegate];
-        await txDelegate.updateMany({
-          where: { id: { in: ids } },
+
+        // Re-read candidate ids inside transaction to guarantee state consistency
+        const matchingRecords = await txDelegate.findMany({
+          where: {
+            id: { in: ids },
+            [config.ownerField]: userId,
+            hiddenByOwnerStatus: options.fromStatus,
+          },
+          select: { id: true },
+        });
+
+        const validIds: string[] = (matchingRecords || []).map((item: any) => item.id);
+
+        // If no records still match (e.g. state changed concurrently), skip without outbox events
+        if (validIds.length === 0) {
+          return;
+        }
+
+        const updateResult = await txDelegate.updateMany({
+          where: {
+            id: { in: validIds },
+            [config.ownerField]: userId,
+            hiddenByOwnerStatus: options.fromStatus,
+          },
           data: { hiddenByOwnerStatus: options.toStatus },
         });
 
-        if (config.indexedInMeili) {
+        updatedCount = updateResult?.count ?? validIds.length;
+
+        if (config.indexedInMeili && validIds.length > 0) {
           await tx.outboxEvent.createMany({
-            data: ids.map((id) => ({
+            data: validIds.map((id) => ({
               entityType: config.entityType,
               entityId: id,
               action: options.outboxAction,
@@ -174,7 +200,7 @@ export class OwnerContentVisibilityService {
         }
       });
 
-      verticalCount += ids.length;
+      verticalCount += updatedCount;
 
       // Invalidate Redis caches after transaction commit
       if (config.cachePatterns && config.cachePatterns.length > 0) {

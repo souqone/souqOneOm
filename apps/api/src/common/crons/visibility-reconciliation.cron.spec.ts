@@ -16,6 +16,7 @@ describe('VisibilityReconciliationCron', () => {
 
   beforeEach(async () => {
     mockRedis = {
+      isReady: jest.fn().mockReturnValue(true),
       setNX: jest.fn().mockResolvedValue(true),
       del: jest.fn().mockResolvedValue(undefined),
     };
@@ -44,18 +45,34 @@ describe('VisibilityReconciliationCron', () => {
     cron = module.get<VisibilityReconciliationCron>(VisibilityReconciliationCron);
   });
 
-  it('should skip execution if lock is not acquired', async () => {
+  it('Case 1 (Redis not ready): should proceed without lock and NOT release lock in finally when redis.isReady() is false', async () => {
+    mockRedis.isReady.mockReturnValue(false);
+
+    const result = await cron.reconcile();
+
+    expect(result.skippedDueToLock).toBeUndefined();
+    expect(mockRedis.setNX).not.toHaveBeenCalled();
+    expect(mockRedis.del).not.toHaveBeenCalled();
+    expect(mockPrisma.listing.findMany).toHaveBeenCalled();
+  });
+
+  it('Case 2 (Redis ready, lock taken): should skip execution when redis is ready but setNX returns false', async () => {
+    mockRedis.isReady.mockReturnValue(true);
     mockRedis.setNX.mockResolvedValueOnce(false);
 
     const result = await cron.reconcile();
 
     expect(result.skippedDueToLock).toBe(true);
+    expect(mockRedis.setNX).toHaveBeenCalledWith(RECONCILIATION_LOCK_KEY, 'locked', 240);
     expect(mockPrisma.listing.findMany).not.toHaveBeenCalled();
     expect(mockVisibilityService.hideAllForUser).not.toHaveBeenCalled();
     expect(mockRedis.del).not.toHaveBeenCalled();
   });
 
-  it('should acquire lock, reconcile misaligned owners, and release lock in finally', async () => {
+  it('Case 3 (Redis ready, lock available): should acquire lock, execute scan, and release lock in finally', async () => {
+    mockRedis.isReady.mockReturnValue(true);
+    mockRedis.setNX.mockResolvedValueOnce(true);
+
     // Listing has owner-1 (sellerId) who should be hidden (banned/suspended)
     mockPrisma.listing.findMany.mockImplementation(async (args: any) => {
       if (args.where.hiddenByOwnerStatus === false) {
@@ -84,7 +101,9 @@ describe('VisibilityReconciliationCron', () => {
     expect(mockRedis.del).toHaveBeenCalledWith(RECONCILIATION_LOCK_KEY);
   });
 
-  it('should always release lock even if an unexpected error occurs during reconciliation', async () => {
+  it('should always release lock even if an unexpected error occurs during reconciliation when lock was acquired', async () => {
+    mockRedis.isReady.mockReturnValue(true);
+    mockRedis.setNX.mockResolvedValueOnce(true);
     mockPrisma.listing.findMany.mockRejectedValueOnce(new Error('Fatal DB crash'));
 
     await expect(cron.reconcile()).rejects.toThrow('Fatal DB crash');
