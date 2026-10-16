@@ -183,19 +183,19 @@ describe('Auth Part 5 E2E Tests (Live Docker Postgres 18 & TokenVersion Gate)', 
       const prisma = getPrisma();
       const testEmail = `suspended_fixed_${uniqueId()}@example.test`;
       const testPassword = 'TestPassword123!';
-      const fixedSuspendedUntil = new Date('2026-11-15T10:30:00.000Z');
+      const futureSuspendedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       const { user } = await registerUser({
         email: testEmail,
         password: testPassword,
       });
 
-      // Suspend user with exact fixed date
+      // Suspend user with dynamic future date (now + 30 days)
       await prisma.user.update({
         where: { id: user.id },
         data: {
           status: AccountStatus.SUSPENDED,
-          suspendedUntil: fixedSuspendedUntil,
+          suspendedUntil: futureSuspendedUntil,
         },
       });
 
@@ -210,7 +210,7 @@ describe('Auth Part 5 E2E Tests (Live Docker Postgres 18 & TokenVersion Gate)', 
       expect(res.body).toMatchObject({
         statusCode: 403,
         code: 'ACCOUNT_SUSPENDED',
-        suspendedUntil: fixedSuspendedUntil.toISOString(),
+        suspendedUntil: futureSuspendedUntil.toISOString(),
       });
       expect(res.body.timestamp).toBeDefined();
     });
@@ -254,18 +254,19 @@ describe('Auth Part 5 E2E Tests (Live Docker Postgres 18 & TokenVersion Gate)', 
       const prisma = getPrisma();
       const testEmail = `suspended_rf_${uniqueId()}@example.test`;
       const testPassword = 'TestPassword123!';
+      const refreshSuspendedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       const { refreshToken, user } = await registerUser({
         email: testEmail,
         password: testPassword,
       });
 
-      // Suspend user after obtaining valid refresh token
+      // Suspend user after obtaining valid refresh token with dynamic future date
       await prisma.user.update({
         where: { id: user.id },
         data: {
           status: AccountStatus.SUSPENDED,
-          suspendedUntil: new Date('2026-12-01T00:00:00.000Z'),
+          suspendedUntil: refreshSuspendedUntil,
         },
       });
 
