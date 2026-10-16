@@ -86,19 +86,63 @@ describe('FavoritesService', () => {
   });
 
   describe('getUserFavorites', () => {
-    it('should return paginated favorites', async () => {
+    it('should return paginated favorites with visible items', async () => {
       const mockItems = [{
         id: 'fav-1',
         entityType: 'LISTING',
         entityId: 'listing-1',
         createdAt: new Date(),
-        listing: { id: 'listing-1', title: 'Car', images: [{ url: 'img.jpg' }], seller: { id: 's1', username: 'test', displayName: 'Test', avatarUrl: null } },
+        listing: {
+          id: 'listing-1',
+          title: 'Car',
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          images: [{ url: 'img.jpg' }],
+          seller: { id: 's1', username: 'test', displayName: 'Test', avatarUrl: null },
+        },
       }];
       mockPrisma.$transaction.mockResolvedValue([mockItems, 1]);
 
       const result = await service.getUserFavorites('user-1', undefined, 1, 10);
       expect(result.items).toHaveLength(1);
       expect(result.meta.total).toBe(1);
+    });
+
+    it('should filter out items with hiddenByOwnerStatus: true or draft status', async () => {
+      const mockItems = [
+        {
+          id: 'fav-1',
+          entityType: 'LISTING',
+          entityId: 'listing-1',
+          createdAt: new Date(),
+          listing: {
+            id: 'listing-1',
+            title: 'Car 1',
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: true,
+            images: [],
+            seller: { id: 's1', username: 'test', displayName: 'Test', avatarUrl: null },
+          },
+        },
+        {
+          id: 'fav-2',
+          entityType: 'LISTING',
+          entityId: 'listing-2',
+          createdAt: new Date(),
+          listing: {
+            id: 'listing-2',
+            title: 'Car 2',
+            status: 'DRAFT',
+            hiddenByOwnerStatus: false,
+            images: [],
+            seller: { id: 's1', username: 'test', displayName: 'Test', avatarUrl: null },
+          },
+        },
+      ];
+      mockPrisma.$transaction.mockResolvedValue([mockItems, 2]);
+
+      const result = await service.getUserFavorites('user-1', undefined, 1, 10);
+      expect(result.items).toHaveLength(0);
     });
   });
 });

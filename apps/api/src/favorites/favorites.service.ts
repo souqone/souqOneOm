@@ -3,10 +3,27 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { USER_SELECT } from '../common/utils/entity.utils';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { isEntityPubliclyVisible } from '../common/public-visibility';
+import { VisibilityPrismaDelegateName } from '../common/constants/owner-visibility.registry';
 
 const IMAGES_INCLUDE = { images: { orderBy: { order: 'asc' as const }, take: 5 } } as const;
 const USER_INCLUDE = { user: { select: USER_SELECT } } as const;
 const SELLER_INCLUDE = { seller: { select: USER_SELECT } } as const;
+
+const ENTITY_TYPE_TO_MODEL: Record<string, VisibilityPrismaDelegateName> = {
+  [ENTITY_TYPES.LISTING]: 'listing',
+  [ENTITY_TYPES.BUS_LISTING]: 'busListing',
+  [ENTITY_TYPES.EQUIPMENT_LISTING]: 'equipmentListing',
+  [ENTITY_TYPES.OPERATOR_LISTING]: 'operatorListing',
+  [ENTITY_TYPES.SPARE_PART]: 'sparePart',
+  [ENTITY_TYPES.CAR_SERVICE]: 'carService',
+  [ENTITY_TYPES.JOB]: 'driverJob',
+  [ENTITY_TYPES.DRIVER_JOB]: 'driverJob',
+  [ENTITY_TYPES.TRANSPORT_REQUEST]: 'transportRequest',
+  [ENTITY_TYPES.DRIVER_PROFILE]: 'driverProfile',
+  [ENTITY_TYPES.EMPLOYER_PROFILE]: 'employerProfile',
+  [ENTITY_TYPES.CARRIER_PROFILE]: 'carrierProfile',
+};
 
 @Injectable()
 export class FavoritesService {
@@ -108,7 +125,10 @@ export class FavoritesService {
           createdAt: fav.createdAt,
         };
 
-        if (fav.entityType === ENTITY_TYPES.LISTING && fav.listing) {
+        if (fav.entityType === ENTITY_TYPES.LISTING) {
+          if (!fav.listing || !isEntityPubliclyVisible('listing', fav.listing)) {
+            return null;
+          }
           return {
             ...base,
             listing: fav.listing,
@@ -120,8 +140,17 @@ export class FavoritesService {
           };
         }
 
+        const model = ENTITY_TYPE_TO_MODEL[fav.entityType];
+        if (!model) {
+          return null;
+        }
+
         // Fetch full entity data so frontend can show badges/chips/details
         const fullEntity = await this.resolveFullEntity(fav.entityType, fav.entityId);
+        if (!fullEntity || !isEntityPubliclyVisible(model, fullEntity)) {
+          return null;
+        }
+
         const entity = await this.resolveEntity(fav.entityType, fav.entityId);
 
         return {
@@ -139,8 +168,10 @@ export class FavoritesService {
       }),
     );
 
+    const visibleFavorites = enriched.filter((item): item is NonNullable<typeof item> => item !== null);
+
     return {
-      items: enriched,
+      items: visibleFavorites,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -198,6 +229,10 @@ export class FavoritesService {
           const r = await this.prisma.driverJob.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
           return r ? { ownerId: r.userId, title: r.title } : null;
         }
+        case 'TRANSPORT_REQUEST': {
+          const r = await this.prisma.transportRequest.findUnique({ where: { id: entityId }, select: { userId: true, cargoDescription: true } });
+          return r ? { ownerId: r.userId, title: r.cargoDescription } : null;
+        }
         default:
           return null;
       }
@@ -239,6 +274,10 @@ export class FavoritesService {
         case 'OPERATOR_LISTING': {
           const r = await this.prisma.operatorListing.findUnique({ where: { id: entityId }, select: { title: true } });
           return r?.title || null;
+        }
+        case 'TRANSPORT_REQUEST': {
+          const r = await this.prisma.transportRequest.findUnique({ where: { id: entityId }, select: { cargoDescription: true } });
+          return r?.cargoDescription || null;
         }
         default:
           return null;
@@ -293,6 +332,13 @@ export class FavoritesService {
           });
           return r ? { id: r.id, title: r.title, image: null } : null;
         }
+        case 'TRANSPORT_REQUEST': {
+          const r = await this.prisma.transportRequest.findUnique({
+            where: { id: entityId },
+            select: { id: true, cargoDescription: true },
+          });
+          return r ? { id: r.id, title: r.cargoDescription, image: null } : null;
+        }
         default:
           return null;
       }
@@ -344,6 +390,12 @@ export class FavoritesService {
         }
         case 'JOB': {
           return this.prisma.driverJob.findUnique({
+            where: { id: entityId },
+            include: USER_INCLUDE,
+          });
+        }
+        case 'TRANSPORT_REQUEST': {
+          return this.prisma.transportRequest.findUnique({
             where: { id: entityId },
             include: USER_INCLUDE,
           });

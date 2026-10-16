@@ -26,6 +26,7 @@ const mockMessage = {
 
 const mockPrisma = {
   listing: { findUnique: jest.fn() },
+  user: { findUnique: jest.fn() },
   conversation: {
     findFirst: jest.fn(),
     findMany: jest.fn(),
@@ -69,8 +70,15 @@ describe('ChatService', () => {
   });
 
   describe('createOrGetConversation', () => {
-    it('should create a new conversation', async () => {
-      mockPrisma.listing.findUnique.mockResolvedValue({ id: 'listing-1', sellerId: 'seller-1', title: 'Car' });
+    it('should create a new conversation when entity is visible and owner active', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValue({
+        id: 'listing-1',
+        sellerId: 'seller-1',
+        title: 'Car',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'seller-1', status: 'ACTIVE' });
       mockPrisma.conversation.findFirst.mockResolvedValue(null);
       mockPrisma.conversation.create.mockResolvedValue(mockConversation);
 
@@ -80,14 +88,51 @@ describe('ChatService', () => {
       expect(mockPrisma.conversation.create).toHaveBeenCalledTimes(1);
     });
 
-    it('should return existing conversation', async () => {
-      mockPrisma.listing.findUnique.mockResolvedValue({ id: 'listing-1', sellerId: 'seller-1', title: 'Car' });
+    it('should return existing conversation without re-checking active status', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValue({
+        id: 'listing-1',
+        sellerId: 'seller-1',
+        title: 'Car',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: true,
+      });
       mockPrisma.conversation.findFirst.mockResolvedValue(mockConversation);
 
       const result = await service.createOrGetConversation({ entityType: 'LISTING', entityId: 'listing-1' }, 'buyer-1');
 
       expect(result.id).toBe('conv-1');
       expect(mockPrisma.conversation.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if new conversation target entity is hidden', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValue({
+        id: 'listing-1',
+        sellerId: 'seller-1',
+        title: 'Car',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: true,
+      });
+      mockPrisma.conversation.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createOrGetConversation({ entityType: 'LISTING', entityId: 'listing-1' }, 'buyer-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if new conversation target owner is not ACTIVE', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValue({
+        id: 'listing-1',
+        sellerId: 'seller-1',
+        title: 'Car',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+      });
+      mockPrisma.conversation.findFirst.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'seller-1', status: 'BANNED' });
+
+      await expect(
+        service.createOrGetConversation({ entityType: 'LISTING', entityId: 'listing-1' }, 'buyer-1'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw if listing not found', async () => {
@@ -99,7 +144,13 @@ describe('ChatService', () => {
     });
 
     it('should throw if seller tries to message themselves', async () => {
-      mockPrisma.listing.findUnique.mockResolvedValue({ id: 'listing-1', sellerId: 'seller-1', title: 'Car' });
+      mockPrisma.listing.findUnique.mockResolvedValue({
+        id: 'listing-1',
+        sellerId: 'seller-1',
+        title: 'Car',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+      });
 
       await expect(
         service.createOrGetConversation({ entityType: 'LISTING', entityId: 'listing-1' }, 'seller-1'),
