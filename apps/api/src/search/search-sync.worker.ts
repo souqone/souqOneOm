@@ -66,6 +66,11 @@ export class SearchSyncWorker {
           return;
         }
 
+        if (listing.hiddenByOwnerStatus) {
+          await this.searchService.removeDocument(INDEXES.LISTINGS, entityId).catch(() => {});
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.LISTINGS, {
           id: listing.id,
           title: listing.title,
@@ -97,6 +102,11 @@ export class SearchSyncWorker {
           include: { images: { orderBy: { order: 'asc' }, take: 1 } },
         });
         if (!bus) {
+          await this.searchService.removeDocument(INDEXES.BUSES, entityId).catch(() => {});
+          return;
+        }
+
+        if (bus.hiddenByOwnerStatus) {
           await this.searchService.removeDocument(INDEXES.BUSES, entityId).catch(() => {});
           return;
         }
@@ -133,6 +143,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.EQUIPMENT, entityId).catch(() => {});
           return;
         }
+
+        if (equipment.hiddenByOwnerStatus) {
+          await this.searchService.removeDocument(INDEXES.EQUIPMENT, entityId).catch(() => {});
+          return;
+        }
         await this.searchService.indexDocument(INDEXES.EQUIPMENT, {
           id: equipment.id,
           title: equipment.title,
@@ -164,6 +179,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.OPERATORS, entityId).catch(() => {});
           return;
         }
+
+        if (operator.hiddenByOwnerStatus) {
+          await this.searchService.removeDocument(INDEXES.OPERATORS, entityId).catch(() => {});
+          return;
+        }
         await this.searchService.indexDocument(INDEXES.OPERATORS, {
           id: operator.id,
           title: operator.title,
@@ -188,6 +208,11 @@ export class SearchSyncWorker {
           include: { images: { orderBy: { order: 'asc' }, take: 1 } },
         });
         if (!part) {
+          await this.searchService.removeDocument(INDEXES.PARTS, entityId).catch(() => {});
+          return;
+        }
+
+        if (part.hiddenByOwnerStatus) {
           await this.searchService.removeDocument(INDEXES.PARTS, entityId).catch(() => {});
           return;
         }
@@ -224,6 +249,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.SERVICES, entityId).catch(() => {});
           return;
         }
+
+        if (service.hiddenByOwnerStatus) {
+          await this.searchService.removeDocument(INDEXES.SERVICES, entityId).catch(() => {});
+          return;
+        }
         await this.searchService.indexDocument(INDEXES.SERVICES, {
           id: service.id,
           title: service.title,
@@ -248,6 +278,11 @@ export class SearchSyncWorker {
           where: { id: entityId },
         });
         if (!jobEntity) {
+          await this.searchService.removeDocument(INDEXES.JOBS, entityId).catch(() => {});
+          return;
+        }
+
+        if (jobEntity.hiddenByOwnerStatus) {
           await this.searchService.removeDocument(INDEXES.JOBS, entityId).catch(() => {});
           return;
         }

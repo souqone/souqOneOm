@@ -241,4 +241,76 @@ describe('SearchSyncWorker', () => {
       await expect(worker.handleSync(createJob('UNKNOWN_TYPE', '123', 'DELETE'))).resolves.not.toThrow();
     });
   });
+
+  describe('hiddenByOwnerStatus handling on UPSERT', () => {
+    it('should delete document and skip indexing for LISTING if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValueOnce({
+        id: 'car-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.LISTING, 'car-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.LISTINGS, 'car-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+
+    it('should delete document and skip indexing for BUS_LISTING if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.busListing.findUnique.mockResolvedValueOnce({
+        id: 'bus-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.BUS_LISTING, 'bus-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.BUSES, 'bus-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+
+    it('should delete document and skip indexing for EQUIPMENT_LISTING if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.equipmentListing.findUnique.mockResolvedValueOnce({
+        id: 'eq-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.EQUIPMENT_LISTING, 'eq-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.EQUIPMENT, 'eq-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+
+    it('should delete document and skip indexing for OPERATOR_LISTING if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.operatorListing.findUnique.mockResolvedValueOnce({
+        id: 'op-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.OPERATOR_LISTING, 'op-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.OPERATORS, 'op-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+
+    it('should delete document and skip indexing for SPARE_PART if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.sparePart.findUnique.mockResolvedValueOnce({
+        id: 'part-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.SPARE_PART, 'part-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.PARTS, 'part-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+
+    it('should delete document and skip indexing for CAR_SERVICE if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.carService.findUnique.mockResolvedValueOnce({
+        id: 'srv-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.CAR_SERVICE, 'srv-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.SERVICES, 'srv-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+
+    it('should delete document and skip indexing for JOB if hiddenByOwnerStatus is true', async () => {
+      mockPrisma.driverJob.findUnique.mockResolvedValueOnce({
+        id: 'job-hidden',
+        hiddenByOwnerStatus: true,
+      });
+      await worker.handleSync(createJob(ENTITY_TYPES.JOB, 'job-hidden', 'UPSERT'));
+      expect(mockSearchService.removeDocument).toHaveBeenCalledWith(INDEXES.JOBS, 'job-hidden');
+      expect(mockSearchService.indexDocument).not.toHaveBeenCalled();
+    });
+  });
 });

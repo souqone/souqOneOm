@@ -329,6 +329,7 @@ model Listing {
   // الحالة والعرض
   condition     ItemCondition @default(USED)
   status        ListingStatus @default(DRAFT)
+  hiddenByOwnerStatus Boolean @default(false)
   isPremium     Boolean       @default(false)
   featuredUntil DateTime?
 
@@ -621,6 +622,7 @@ model DriverJob {
   whatsappEnabled Boolean @default(false)
 
   status    JobStatus @default(ACTIVE)
+  hiddenByOwnerStatus Boolean @default(false)
   expiresAt DateTime?
   viewCount Int       @default(0)
 
@@ -699,6 +701,7 @@ model DriverProfile {
   whatsappEnabled Boolean @default(false)
 
   isAvailable Boolean @default(true)
+  hiddenByOwnerStatus Boolean @default(false)
   isVerified  Boolean @default(false)
 
   averageRating Float?
@@ -744,6 +747,7 @@ model EmployerProfile {
   whatsapp     String?
   whatsappEnabled Boolean @default(false)
 
+  hiddenByOwnerStatus Boolean @default(false)
   isVerified    Boolean @default(false)
   averageRating Float?
   reviewCount   Int     @default(0)
@@ -1094,6 +1098,7 @@ model SparePart {
   whatsapp          String?
   whatsappEnabled Boolean @default(false)
   status            ListingStatus @default(ACTIVE)
+  hiddenByOwnerStatus Boolean @default(false)
   viewCount         Int           @default(0)
 
   hasWarranty            Boolean?
@@ -1167,6 +1172,7 @@ model CarService {
   whatsappEnabled Boolean @default(false)
   website           String?
   status            ListingStatus @default(ACTIVE)
+  hiddenByOwnerStatus Boolean @default(false)
   viewCount         Int           @default(0)
 
   userId String
@@ -1305,6 +1311,7 @@ model BusListing {
   whatsappEnabled Boolean @default(false)
 
   status        ListingStatus @default(ACTIVE)
+  hiddenByOwnerStatus Boolean @default(false)
   isPremium     Boolean       @default(false)
   featuredUntil DateTime?
   viewCount     Int           @default(0)
@@ -1467,6 +1474,7 @@ model EquipmentListing {
   whatsappEnabled Boolean @default(false)
 
   status        ListingStatus @default(ACTIVE)
+  hiddenByOwnerStatus Boolean @default(false)
   isPremium     Boolean       @default(false)
   featuredUntil DateTime?
   viewCount     Int           @default(0)
@@ -1541,6 +1549,7 @@ model OperatorListing {
   whatsappEnabled Boolean @default(false)
 
   status    ListingStatus @default(ACTIVE)
+  hiddenByOwnerStatus Boolean @default(false)
   viewCount Int           @default(0)
 
   userId String
@@ -1811,6 +1820,7 @@ model CarrierProfile {
   whatsappEnabled Boolean @default(false)
 
   isAvailable Boolean @default(false)
+  hiddenByOwnerStatus Boolean @default(false)
   isVerified  Boolean @default(false)
 
   completedTrips Int   @default(0)
@@ -1843,6 +1853,7 @@ model TransportRequest {
 
   serviceType TransportServiceType
   status      TransportRequestStatus @default(OPEN)
+  hiddenByOwnerStatus Boolean @default(false)
 
   fromGovernorate String?
   fromCity        String?

@@ -549,7 +549,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Listings ──
     const listings = await this.prisma.listing.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const listingDocs = listings.map(l => this.serializeDocument({
@@ -582,7 +582,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Parts ──
     const parts = await this.prisma.sparePart.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const partDocs = parts.map(p => this.serializeDocument({
@@ -614,7 +614,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Services ──
     const services = await this.prisma.carService.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const serviceDocs = services.map(s => this.serializeDocument({
@@ -641,7 +641,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Jobs ──
     const jobs = await this.prisma.driverJob.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
     });
     const jobDocs = jobs.map(j => this.serializeDocument({
       id: j.id,
@@ -666,7 +666,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Buses ──
     const buses = await this.prisma.busListing.findMany({
-      where: { status: 'ACTIVE', deletedAt: null },
+      where: { status: 'ACTIVE', deletedAt: null, hiddenByOwnerStatus: false },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const busDocs = buses.map(b => this.serializeDocument({
@@ -697,7 +697,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Equipment ──
     const equipment = await this.prisma.equipmentListing.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const equipmentDocs = equipment.map(e => this.serializeDocument({
@@ -728,7 +728,7 @@ export class SearchService implements OnModuleInit {
 
     // ── Operators ──
     const operators = await this.prisma.operatorListing.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
     });
     const operatorDocs = operators.map(o => this.serializeDocument({
       id: o.id,
