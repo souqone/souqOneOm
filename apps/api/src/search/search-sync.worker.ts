@@ -2,8 +2,9 @@ import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
-import { SearchService, INDEXES } from './search.service';
-import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { SearchService, INDEXES, IndexName } from './search.service';
+import { ENTITY_TYPES, EntityType } from '../common/constants/entity-types.constants';
+import { OWNER_VISIBILITY_REGISTRY } from '../common/constants/owner-visibility.registry';
 
 @Processor('search-sync')
 export class SearchSyncWorker {
@@ -13,6 +14,33 @@ export class SearchSyncWorker {
     private readonly prisma: PrismaService,
     private readonly searchService: SearchService,
   ) {}
+
+  private async ensureOwnerActive(
+    entityType: EntityType,
+    entity: any,
+    indexName: IndexName,
+    entityId: string,
+  ): Promise<boolean> {
+    const config = OWNER_VISIBILITY_REGISTRY.find((c) => c.entityType === entityType);
+    if (!config) return false;
+    const ownerId = entity[config.ownerField];
+    if (!ownerId) {
+      await this.searchService.removeDocument(indexName, entityId).catch(() => {});
+      return false;
+    }
+
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { status: true },
+    });
+
+    if (!owner || owner.status !== 'ACTIVE') {
+      await this.searchService.removeDocument(indexName, entityId).catch(() => {});
+      return false;
+    }
+
+    return true;
+  }
 
   @Process('sync-entity')
   async handleSync(job: Job) {
@@ -71,6 +99,10 @@ export class SearchSyncWorker {
           return;
         }
 
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.LISTING, listing, INDEXES.LISTINGS, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.LISTINGS, {
           id: listing.id,
           title: listing.title,
@@ -110,6 +142,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.BUSES, entityId).catch(() => {});
           return;
         }
+
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.BUS_LISTING, bus, INDEXES.BUSES, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.BUSES, {
           id: bus.id,
           title: bus.title,
@@ -148,6 +185,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.EQUIPMENT, entityId).catch(() => {});
           return;
         }
+
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.EQUIPMENT_LISTING, equipment, INDEXES.EQUIPMENT, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.EQUIPMENT, {
           id: equipment.id,
           title: equipment.title,
@@ -184,6 +226,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.OPERATORS, entityId).catch(() => {});
           return;
         }
+
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.OPERATOR_LISTING, operator, INDEXES.OPERATORS, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.OPERATORS, {
           id: operator.id,
           title: operator.title,
@@ -216,6 +263,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.PARTS, entityId).catch(() => {});
           return;
         }
+
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.SPARE_PART, part, INDEXES.PARTS, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.PARTS, {
           id: part.id,
           title: part.title,
@@ -254,6 +306,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.SERVICES, entityId).catch(() => {});
           return;
         }
+
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.CAR_SERVICE, service, INDEXES.SERVICES, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.SERVICES, {
           id: service.id,
           title: service.title,
@@ -286,6 +343,11 @@ export class SearchSyncWorker {
           await this.searchService.removeDocument(INDEXES.JOBS, entityId).catch(() => {});
           return;
         }
+
+        if (!(await this.ensureOwnerActive(ENTITY_TYPES.JOB, jobEntity, INDEXES.JOBS, entityId))) {
+          return;
+        }
+
         await this.searchService.indexDocument(INDEXES.JOBS, {
           id: jobEntity.id,
           title: jobEntity.title,

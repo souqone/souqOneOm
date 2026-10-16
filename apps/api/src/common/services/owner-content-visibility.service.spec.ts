@@ -72,12 +72,13 @@ describe('OwnerContentVisibilityService', () => {
       expect(result.affectedCounts[ENTITY_TYPES.DRIVER_PROFILE]).toBe(1);
       expect(result.totalAffected).toBe(4);
 
-      // Verify listing update with all 3 conditions
+      // Verify listing update with all conditions including owner status
       expect(mockPrisma.listing.updateMany).toHaveBeenCalledWith({
         where: {
           id: { in: ['car-1', 'car-2'] },
           sellerId: 'user-123',
           hiddenByOwnerStatus: false,
+          seller: { status: { not: 'ACTIVE' } },
         },
         data: { hiddenByOwnerStatus: true },
       });
@@ -125,6 +126,19 @@ describe('OwnerContentVisibilityService', () => {
       expect(mockPrisma.outboxEvent.createMany).not.toHaveBeenCalled();
     });
 
+    it('should no-op without outbox events on hide if owner became ACTIVE concurrently', async () => {
+      // Outer read found car-1, but owner became ACTIVE so transaction re-check with { status: { not: 'ACTIVE' } } returns []
+      mockPrisma.listing.findMany
+        .mockResolvedValueOnce([{ id: 'car-1' }])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.hideAllForUser('user-123');
+
+      expect(result.affectedCounts[ENTITY_TYPES.LISTING]).toBe(0);
+      expect(mockPrisma.listing.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.outboxEvent.createMany).not.toHaveBeenCalled();
+    });
+
     it('should process in chunks of 500 when items exceed VISIBILITY_BATCH_CHUNK_SIZE', async () => {
       const chunk1 = Array.from({ length: 500 }, (_, i) => ({ id: `bus-${i}` }));
       const chunk2 = [{ id: 'bus-500' }, { id: 'bus-501' }];
@@ -160,12 +174,13 @@ describe('OwnerContentVisibilityService', () => {
       expect(result.affectedCounts[ENTITY_TYPES.CAR_SERVICE]).toBe(1);
       expect(result.totalAffected).toBe(2);
 
-      // Verify update to false with all 3 conditions
+      // Verify update to false with all conditions including owner status
       expect(mockPrisma.sparePart.updateMany).toHaveBeenCalledWith({
         where: {
           id: { in: ['part-1'] },
           sellerId: 'user-123',
           hiddenByOwnerStatus: true,
+          seller: { status: 'ACTIVE' },
         },
         data: { hiddenByOwnerStatus: false },
       });
@@ -180,6 +195,19 @@ describe('OwnerContentVisibilityService', () => {
 
       // Verify redis delPattern for carService
       expect(mockRedis.delPattern).toHaveBeenCalledWith('carService:list:*');
+    });
+
+    it('should no-op without outbox events on restore if owner became non-ACTIVE concurrently', async () => {
+      // Outer query finds part-1, but inner transaction re-check returns [] because owner is no longer ACTIVE
+      mockPrisma.sparePart.findMany
+        .mockResolvedValueOnce([{ id: 'part-1' }])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.restoreAllForUser('user-123');
+
+      expect(result.affectedCounts[ENTITY_TYPES.SPARE_PART]).toBe(0);
+      expect(mockPrisma.sparePart.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.outboxEvent.createMany).not.toHaveBeenCalled();
     });
   });
 
@@ -200,6 +228,7 @@ describe('OwnerContentVisibilityService', () => {
           id: { in: ['bus-1'] },
           userId: 'user-123',
           hiddenByOwnerStatus: false,
+          user: { status: { not: 'ACTIVE' } },
         },
         data: { hiddenByOwnerStatus: true },
       });

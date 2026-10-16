@@ -374,6 +374,12 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
         },
       });
 
+      // Set user status to BANNED to match hide requirement (not ACTIVE)
+      await prisma.user.update({
+        where: { id: user.user.id },
+        data: { status: 'BANNED' },
+      });
+
       // First hide
       const hide1 = await visibilityService.hideAllForUser(user.user.id);
       expect(hide1.affectedCounts[ENTITY_TYPES.LISTING]).toBe(1);
@@ -386,6 +392,12 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
 
       const checkHidden = await prisma.listing.findUnique({ where: { id: car.id } });
       expect(checkHidden?.hiddenByOwnerStatus).toBe(true);
+
+      // Set user status to ACTIVE to match restore requirement (ACTIVE)
+      await prisma.user.update({
+        where: { id: user.user.id },
+        data: { status: 'ACTIVE' },
+      });
 
       // First restore
       const restore1 = await visibilityService.restoreAllForUser(user.user.id);

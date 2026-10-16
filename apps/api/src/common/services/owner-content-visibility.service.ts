@@ -137,6 +137,10 @@ export class OwnerContentVisibilityService {
       throw new Error(`Prisma delegate "${config.prismaDelegate}" not found on PrismaService`);
     }
 
+    const ownerStatusCondition = options.toStatus
+      ? { status: { not: 'ACTIVE' } }
+      : { status: 'ACTIVE' };
+
     let verticalCount = 0;
 
     // Process in batches of 500 to protect memory and transaction limits
@@ -145,6 +149,7 @@ export class OwnerContentVisibilityService {
         where: {
           [config.ownerField]: userId,
           hiddenByOwnerStatus: options.fromStatus,
+          [config.ownerRelation]: ownerStatusCondition,
         },
         select: { id: true },
         take: VISIBILITY_BATCH_CHUNK_SIZE,
@@ -167,6 +172,7 @@ export class OwnerContentVisibilityService {
             id: { in: ids },
             [config.ownerField]: userId,
             hiddenByOwnerStatus: options.fromStatus,
+            [config.ownerRelation]: ownerStatusCondition,
           },
           select: { id: true },
         });
@@ -183,6 +189,7 @@ export class OwnerContentVisibilityService {
             id: { in: validIds },
             [config.ownerField]: userId,
             hiddenByOwnerStatus: options.fromStatus,
+            [config.ownerRelation]: ownerStatusCondition,
           },
           data: { hiddenByOwnerStatus: options.toStatus },
         });

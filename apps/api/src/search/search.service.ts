@@ -3,6 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MEILI_CLIENT } from './meili.provider';
 import { buildSynonymsMap } from './synonyms';
 import { SearchQueryDto } from './dto/search-query.dto';
+import {
+  OWNER_VISIBILITY_REGISTRY,
+  VisibilityPrismaDelegateName,
+} from '../common/constants/owner-visibility.registry';
 
 // Meilisearch is ESM-only — client injected via provider, typed as any
 type MeiliClient = any;
@@ -18,7 +22,25 @@ export const INDEXES = {
   OPERATORS: 'operators',
 } as const;
 
-type IndexName = (typeof INDEXES)[keyof typeof INDEXES];
+export type IndexName = (typeof INDEXES)[keyof typeof INDEXES];
+
+export function getOwnerRelationForDelegate(delegate: VisibilityPrismaDelegateName): 'user' | 'seller' {
+  const config = OWNER_VISIBILITY_REGISTRY.find((c) => c.prismaDelegate === delegate);
+  if (!config) {
+    throw new Error(`Owner relation not found in OWNER_VISIBILITY_REGISTRY for delegate "${delegate}"`);
+  }
+  return config.ownerRelation;
+}
+
+export const INDEX_TO_DELEGATE: Record<string, VisibilityPrismaDelegateName> = {
+  listings: 'listing',
+  parts: 'sparePart',
+  services: 'carService',
+  jobs: 'driverJob',
+  buses: 'busListing',
+  equipment: 'equipmentListing',
+  operators: 'operatorListing',
+};
 
 // ── Index configuration per entity ──
 interface IndexConfig {
@@ -356,6 +378,12 @@ export class SearchService implements OnModuleInit {
     
     const model = modelMap[indexName];
     if (model) {
+      const delegateName = INDEX_TO_DELEGATE[indexName];
+      if (!delegateName) {
+        throw new Error(`Prisma delegate mapping not found for index "${indexName}"`);
+      }
+      const ownerRelation = getOwnerRelationForDelegate(delegateName);
+
       const where: Record<string, any> = {
         status: 'ACTIVE',
         hiddenByOwnerStatus: false,
@@ -376,6 +404,11 @@ export class SearchService implements OnModuleInit {
           ],
         }));
       }
+
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        { [ownerRelation]: { status: 'ACTIVE' } },
+      ];
       if (dto.governorateId !== undefined) {
         where.governorateId = dto.governorateId;
       }
@@ -510,19 +543,38 @@ export class SearchService implements OnModuleInit {
       title: { contains: w, mode: 'insensitive' as const },
     }));
 
+    const listingOwnerRel = getOwnerRelationForDelegate('listing');
+    const partOwnerRel = getOwnerRelationForDelegate('sparePart');
+    const serviceOwnerRel = getOwnerRelationForDelegate('carService');
+
     const [listings, parts, services] = await Promise.all([
       this.prisma.listing.findMany({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false, AND: searchConditions },
+        where: {
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          [listingOwnerRel]: { status: 'ACTIVE' },
+          AND: searchConditions,
+        },
         select: { id: true, title: true },
         take: limit,
       }),
       this.prisma.sparePart.findMany({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false, AND: searchConditions },
+        where: {
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          [partOwnerRel]: { status: 'ACTIVE' },
+          AND: searchConditions,
+        },
         select: { id: true, title: true },
         take: limit,
       }),
       this.prisma.carService.findMany({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false, AND: searchConditions },
+        where: {
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          [serviceOwnerRel]: { status: 'ACTIVE' },
+          AND: searchConditions,
+        },
         select: { id: true, title: true },
         take: limit,
       }),
@@ -552,7 +604,11 @@ export class SearchService implements OnModuleInit {
 
     // ── Listings ──
     const listings = await this.prisma.listing.findMany({
-      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('listing')]: { status: 'ACTIVE' },
+      },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const listingDocs = listings.map(l => this.serializeDocument({
@@ -585,7 +641,11 @@ export class SearchService implements OnModuleInit {
 
     // ── Parts ──
     const parts = await this.prisma.sparePart.findMany({
-      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('sparePart')]: { status: 'ACTIVE' },
+      },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const partDocs = parts.map(p => this.serializeDocument({
@@ -617,7 +677,11 @@ export class SearchService implements OnModuleInit {
 
     // ── Services ──
     const services = await this.prisma.carService.findMany({
-      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('carService')]: { status: 'ACTIVE' },
+      },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const serviceDocs = services.map(s => this.serializeDocument({
@@ -644,7 +708,11 @@ export class SearchService implements OnModuleInit {
 
     // ── Jobs ──
     const jobs = await this.prisma.driverJob.findMany({
-      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('driverJob')]: { status: 'ACTIVE' },
+      },
     });
     const jobDocs = jobs.map(j => this.serializeDocument({
       id: j.id,
@@ -669,7 +737,12 @@ export class SearchService implements OnModuleInit {
 
     // ── Buses ──
     const buses = await this.prisma.busListing.findMany({
-      where: { status: 'ACTIVE', deletedAt: null, hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('busListing')]: { status: 'ACTIVE' },
+      },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const busDocs = buses.map(b => this.serializeDocument({
@@ -700,7 +773,11 @@ export class SearchService implements OnModuleInit {
 
     // ── Equipment ──
     const equipment = await this.prisma.equipmentListing.findMany({
-      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('equipmentListing')]: { status: 'ACTIVE' },
+      },
       include: { images: { take: 1, orderBy: { order: 'asc' } } },
     });
     const equipmentDocs = equipment.map(e => this.serializeDocument({
@@ -731,7 +808,11 @@ export class SearchService implements OnModuleInit {
 
     // ── Operators ──
     const operators = await this.prisma.operatorListing.findMany({
-      where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
+      where: {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        [getOwnerRelationForDelegate('operatorListing')]: { status: 'ACTIVE' },
+      },
     });
     const operatorDocs = operators.map(o => this.serializeDocument({
       id: o.id,

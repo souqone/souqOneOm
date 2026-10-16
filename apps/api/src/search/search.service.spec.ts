@@ -1,9 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SearchService, INDEXES } from './search.service';
+import {
+  SearchService,
+  INDEXES,
+  getOwnerRelationForDelegate,
+  INDEX_TO_DELEGATE,
+} from './search.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MEILI_CLIENT } from './meili.provider';
 
-describe('SearchService - reindexAll', () => {
+describe('SearchService - Owner Relation & Visibility Filters', () => {
   let service: SearchService;
   let mockPrisma: any;
   let mockMeili: any;
@@ -36,57 +41,113 @@ describe('SearchService - reindexAll', () => {
     service = module.get<SearchService>(SearchService);
   });
 
-  it('should query all 7 verticals with hiddenByOwnerStatus: false and status: ACTIVE', async () => {
-    await service.reindexAll();
+  describe('getOwnerRelationForDelegate helper', () => {
+    it('should correctly resolve relation for all 7 search entity delegates matching the registry', () => {
+      const expectations = [
+        { index: 'listings', delegate: INDEX_TO_DELEGATE['listings'], expected: 'seller' },
+        { index: 'parts', delegate: INDEX_TO_DELEGATE['parts'], expected: 'seller' },
+        { index: 'services', delegate: INDEX_TO_DELEGATE['services'], expected: 'user' },
+        { index: 'jobs', delegate: INDEX_TO_DELEGATE['jobs'], expected: 'user' },
+        { index: 'buses', delegate: INDEX_TO_DELEGATE['buses'], expected: 'user' },
+        { index: 'equipment', delegate: INDEX_TO_DELEGATE['equipment'], expected: 'user' },
+        { index: 'operators', delegate: INDEX_TO_DELEGATE['operators'], expected: 'user' },
+      ];
 
-    expect(mockPrisma.listing.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
-      }),
-    );
+      for (const { index, delegate, expected } of expectations) {
+        expect(delegate).toBeDefined();
+        const rel = getOwnerRelationForDelegate(delegate);
+        expect(rel).toBe(expected);
+      }
+    });
 
-    expect(mockPrisma.sparePart.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
-      }),
-    );
+    it('should throw clear error when delegate is not found in OWNER_VISIBILITY_REGISTRY', () => {
+      expect(() => getOwnerRelationForDelegate('unknownDelegate' as any)).toThrow(
+        'Owner relation not found in OWNER_VISIBILITY_REGISTRY for delegate "unknownDelegate"',
+      );
+    });
+  });
 
-    expect(mockPrisma.carService.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
-      }),
-    );
+  describe('reindexAll', () => {
+    it('should query all 7 verticals with hiddenByOwnerStatus: false, status: ACTIVE, and ownerRelation: ACTIVE', async () => {
+      await service.reindexAll();
 
-    expect(mockPrisma.driverJob.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
-      }),
-    );
+      expect(mockPrisma.listing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            seller: { status: 'ACTIVE' },
+          },
+        }),
+      );
 
-    expect(mockPrisma.busListing.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', deletedAt: null, hiddenByOwnerStatus: false },
-      }),
-    );
+      expect(mockPrisma.sparePart.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            seller: { status: 'ACTIVE' },
+          },
+        }),
+      );
 
-    expect(mockPrisma.equipmentListing.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
-      }),
-    );
+      expect(mockPrisma.carService.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            user: { status: 'ACTIVE' },
+          },
+        }),
+      );
 
-    expect(mockPrisma.operatorListing.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: 'ACTIVE', hiddenByOwnerStatus: false },
-      }),
-    );
+      expect(mockPrisma.driverJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            user: { status: 'ACTIVE' },
+          },
+        }),
+      );
+
+      expect(mockPrisma.busListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            deletedAt: null,
+            hiddenByOwnerStatus: false,
+            user: { status: 'ACTIVE' },
+          },
+        }),
+      );
+
+      expect(mockPrisma.equipmentListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            user: { status: 'ACTIVE' },
+          },
+        }),
+      );
+
+      expect(mockPrisma.operatorListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            user: { status: 'ACTIVE' },
+          },
+        }),
+      );
+    });
   });
 
   describe('fallbackSearch', () => {
     let fallbackService: SearchService;
 
     beforeEach(async () => {
-      // Create service without Meilisearch (meili = null)
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           SearchService,
@@ -98,41 +159,64 @@ describe('SearchService - reindexAll', () => {
       fallbackService = module.get<SearchService>(SearchService);
     });
 
-    it('should include hiddenByOwnerStatus: false in where clause for all 7 indexes', async () => {
+    it('should include ownerRelation: { status: "ACTIVE" } inside where.AND for all 7 indexes', async () => {
       const indexDelegates = [
-        { index: 'listings', delegate: mockPrisma.listing },
-        { index: 'parts', delegate: mockPrisma.sparePart },
-        { index: 'services', delegate: mockPrisma.carService },
-        { index: 'jobs', delegate: mockPrisma.driverJob },
-        { index: 'buses', delegate: mockPrisma.busListing },
-        { index: 'equipment', delegate: mockPrisma.equipmentListing },
-        { index: 'operators', delegate: mockPrisma.operatorListing },
+        { index: 'listings', delegate: mockPrisma.listing, expectedRel: 'seller' },
+        { index: 'parts', delegate: mockPrisma.sparePart, expectedRel: 'seller' },
+        { index: 'services', delegate: mockPrisma.carService, expectedRel: 'user' },
+        { index: 'jobs', delegate: mockPrisma.driverJob, expectedRel: 'user' },
+        { index: 'buses', delegate: mockPrisma.busListing, expectedRel: 'user' },
+        { index: 'equipment', delegate: mockPrisma.equipmentListing, expectedRel: 'user' },
+        { index: 'operators', delegate: mockPrisma.operatorListing, expectedRel: 'user' },
       ];
 
-      for (const { index, delegate } of indexDelegates) {
+      for (const { index, delegate, expectedRel } of indexDelegates) {
         delegate.findMany.mockResolvedValue([]);
         delegate.count = jest.fn().mockResolvedValue(0);
 
-        await (fallbackService as any).fallbackSearch(index, 'test', { q: 'test' }, 1, 10);
+        await (fallbackService as any).fallbackSearch(index, '', { q: '' }, 1, 10);
 
         expect(delegate.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
               status: 'ACTIVE',
               hiddenByOwnerStatus: false,
-            }),
-          }),
-        );
-
-        expect(delegate.count).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: expect.objectContaining({
-              status: 'ACTIVE',
-              hiddenByOwnerStatus: false,
+              AND: expect.arrayContaining([{ [expectedRel]: { status: 'ACTIVE' } }]),
             }),
           }),
         );
       }
+    });
+
+    it('should preserve existing search filters in where.AND alongside ownerRelation filter', async () => {
+      mockPrisma.listing.findMany.mockResolvedValue([]);
+      mockPrisma.listing.count = jest.fn().mockResolvedValue(0);
+
+      await (fallbackService as any).fallbackSearch('listings', 'toyota camry', { q: 'toyota camry' }, 1, 10);
+
+      expect(mockPrisma.listing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            AND: expect.arrayContaining([
+              // Keyword filters for 'toyota' and 'camry'
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({ title: { contains: 'toyota', mode: 'insensitive' } }),
+                ]),
+              }),
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({ title: { contains: 'camry', mode: 'insensitive' } }),
+                ]),
+              }),
+              // Owner active relation filter
+              { seller: { status: 'ACTIVE' } },
+            ]),
+          }),
+        }),
+      );
     });
   });
 
@@ -151,7 +235,7 @@ describe('SearchService - reindexAll', () => {
       fallbackService = module.get<SearchService>(SearchService);
     });
 
-    it('should include hiddenByOwnerStatus: false in where clause for listing, sparePart, and carService', async () => {
+    it('should include hiddenByOwnerStatus: false and ownerRelation: { status: ACTIVE } in where clause for listing, sparePart, and carService', async () => {
       mockPrisma.listing.findMany.mockResolvedValue([]);
       mockPrisma.sparePart.findMany.mockResolvedValue([]);
       mockPrisma.carService.findMany.mockResolvedValue([]);
@@ -163,6 +247,7 @@ describe('SearchService - reindexAll', () => {
           where: expect.objectContaining({
             status: 'ACTIVE',
             hiddenByOwnerStatus: false,
+            seller: { status: 'ACTIVE' },
           }),
         }),
       );
@@ -172,6 +257,7 @@ describe('SearchService - reindexAll', () => {
           where: expect.objectContaining({
             status: 'ACTIVE',
             hiddenByOwnerStatus: false,
+            seller: { status: 'ACTIVE' },
           }),
         }),
       );
@@ -181,10 +267,10 @@ describe('SearchService - reindexAll', () => {
           where: expect.objectContaining({
             status: 'ACTIVE',
             hiddenByOwnerStatus: false,
+            user: { status: 'ACTIVE' },
           }),
         }),
       );
     });
   });
 });
-
