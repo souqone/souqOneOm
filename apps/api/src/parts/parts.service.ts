@@ -17,6 +17,7 @@ import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 @Injectable()
 export class PartsService {
@@ -120,7 +121,7 @@ export class PartsService {
     const limit = Math.min(parseInt(query.limit ?? '20'), 50);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE' };
+    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
 
     if (query.search) {
       where.OR = [
@@ -172,7 +173,7 @@ export class PartsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const part = await this.prisma.sparePart.findUnique({
       where: { id },
       include: {
@@ -183,6 +184,8 @@ export class PartsService {
       },
     });
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+
+    assertPublicOrOwner('sparePart', part, part.sellerId, viewer, 'قطعة الغيار غير موجودة');
 
     await this.prisma.sparePart.update({ where: { id }, data: { viewCount: { increment: 1 } } });
     return part;

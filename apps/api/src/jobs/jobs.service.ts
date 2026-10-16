@@ -19,6 +19,7 @@ import { incrementViewCount } from '../common/utils/view-count.helper';
 import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 
 /** Valid application status transitions — WITHDRAWN is applicant-only (via withdrawApplication) */
@@ -164,7 +165,7 @@ export class JobsService {
     const cached = await this.redis.get<any>(cacheKey);
     if (cached) return cached;
 
-    const where: Prisma.DriverJobWhereInput = {};
+    const where: Prisma.DriverJobWhereInput = { hiddenByOwnerStatus: false };
     where.status = (query.status as any) || 'ACTIVE';
 
     if (query.jobType) where.jobType = query.jobType;
@@ -224,7 +225,7 @@ export class JobsService {
   }
 
   /* ───── FIND ONE (cached + rate-limited viewCount) ───── */
-  async findOne(id: string, ip?: string) {
+  async findOne(id: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const cKey = this.cacheKey(`detail:${id}`);
     const cached = await this.redis.get<any>(cKey);
 
@@ -239,6 +240,8 @@ export class JobsService {
     });
 
     if (!job) throw new NotFoundException('الوظيفة غير موجودة');
+
+    assertPublicOrOwner('driverJob', job, job.userId, viewer, 'الوظيفة غير موجودة');
 
     if (!cached) await this.redis.set(cKey, job, DETAIL_CACHE_TTL);
 

@@ -3,6 +3,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
@@ -32,14 +33,16 @@ export class EquipmentController {
     return this.svc.my(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
-    return this.svc.findBySlug(slug);
+  findBySlug(@Param('slug') slug: string, @CurrentUser() user?: JwtPayload) {
+    return this.svc.findBySlug(slug, user);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.svc.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
+    return this.svc.findOne(id, user);
   }
 
   @UseGuards(JwtAuthGuard)

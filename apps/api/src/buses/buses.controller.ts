@@ -48,7 +48,7 @@ export class BusesController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
-    return this.busesService.findBySlug(slug, req.ip, user?.sub);
+    return this.busesService.findBySlug(slug, req.ip, user);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -58,13 +58,13 @@ export class BusesController {
     @Query('limit') limit?: string,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.busesService.findSimilar(id, limit ? parseInt(limit, 10) : 8, user?.sub);
+    return this.busesService.findSimilar(id, limit ? parseInt(limit, 10) : 8, user);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
-    return this.busesService.findOne(id, req.ip, user?.sub);
+    return this.busesService.findOne(id, req.ip, user);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -36,7 +36,7 @@ export class OperatorsController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
-    return this.svc.findOne(id, user?.sub);
+    return this.svc.findOne(id, user);
   }
 
   @UseGuards(JwtAuthGuard)

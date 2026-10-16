@@ -157,7 +157,7 @@ export class TransportReviewService {
       where: { id: carrierId },
     });
 
-    if (!carrier) throw new NotFoundException('الناقل غير موجود');
+    if (!carrier || carrier.hiddenByOwnerStatus) throw new NotFoundException('الناقل غير موجود');
 
     const skip = (page - 1) * limit;
 

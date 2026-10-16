@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import type { JwtPayload } from '../auth/auth.types';
@@ -33,14 +34,16 @@ export class ServicesController {
     return this.servicesService.myListings(user.sub, query.page ?? 1, query.limit ?? 20);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string, @Req() req: Request) {
-    return this.servicesService.findBySlug(slug, req.ip);
+  findBySlug(@Param('slug') slug: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.servicesService.findBySlug(slug, req.ip, user);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: Request) {
-    return this.servicesService.findOne(id, req.ip);
+  findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.servicesService.findOne(id, req.ip, user);
   }
 
   @UseGuards(JwtAuthGuard)

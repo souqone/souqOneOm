@@ -249,10 +249,12 @@ describe('Part 6a: Contact Gate Coverage & Registry Unit Tests', () => {
         sellerId: 'owner-1',
         status: ListingStatus.ACTIVE,
         whatsappEnabled: false,
+        hiddenByOwnerStatus: false,
       });
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'owner-1',
         phone: '+96891234567',
+        status: 'ACTIVE',
       });
 
       const res = await service.getContact('LISTING', 'listing-2', 'viewer-2');
@@ -266,10 +268,12 @@ describe('Part 6a: Contact Gate Coverage & Registry Unit Tests', () => {
         sellerId: 'owner-1',
         status: ListingStatus.ACTIVE,
         whatsappEnabled: true,
+        hiddenByOwnerStatus: false,
       });
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'owner-1',
         phone: '+96891234567',
+        status: 'ACTIVE',
       });
 
       const res = await service.getContact('LISTING', 'listing-3', 'viewer-2');
@@ -283,10 +287,12 @@ describe('Part 6a: Contact Gate Coverage & Registry Unit Tests', () => {
         sellerId: 'owner-1',
         status: ListingStatus.ACTIVE,
         whatsappEnabled: true,
+        hiddenByOwnerStatus: false,
       });
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'owner-1',
         phone: '+96891234567',
+        status: 'ACTIVE',
       });
 
       // Simulate redis get returning 50 (reached cap)

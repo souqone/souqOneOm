@@ -39,6 +39,7 @@ import { LocationsModule } from '../src/locations/locations.module';
 import { AdminAuditModule } from '../src/admin-audit/admin-audit.module';
 import { AdminUsersModule } from '../src/admin-users/admin-users.module';
 import { VisibilityModule } from '../src/common/visibility.module';
+import { ContactModule } from '../src/contact/contact.module';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 import { MailService } from '../src/mail/mail.service';
@@ -67,7 +68,15 @@ class MockRedisService {
     if (ttl) this.ttls.set(key, ttl);
   }
   async del(key: string) { this.store.delete(key); this.ttls.delete(key); }
-  async delPattern(_pattern: string) {}
+  async delPattern(pattern: string) {
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    for (const key of Array.from(this.store.keys())) {
+      if (regex.test(key)) {
+        this.store.delete(key);
+        this.ttls.delete(key);
+      }
+    }
+  }
   async exists(key: string) { return this.store.has(key); }
   async expire(key: string, seconds: number) { this.ttls.set(key, seconds); }
   async incr(key: string, ttl?: number): Promise<number> {
@@ -167,6 +176,7 @@ export async function createTestApp(): Promise<INestApplication> {
       AdminAuditModule,
       AdminUsersModule,
       VisibilityModule,
+      ContactModule,
       TerminusModule,
       HttpModule,
     ],

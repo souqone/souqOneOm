@@ -11,6 +11,7 @@ import { QueryCarriersDto } from './dto/query-carriers.dto';
 import { Prisma } from '@prisma/client';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 /** Public profile — no phone number exposed to unauthenticated callers */
 const PUBLIC_USER_SELECT = {
@@ -101,7 +102,7 @@ export class CarrierProfileService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const profile = await this.prisma.carrierProfile.findUnique({
       where: { id },
       include: {
@@ -111,6 +112,7 @@ export class CarrierProfileService {
       },
     });
     if (!profile) throw new NotFoundException('الناقل غير موجود');
+    assertPublicOrOwner('carrierProfile', profile, profile.userId, viewer, 'الناقل غير موجود');
     return profile;
   }
 
@@ -119,7 +121,7 @@ export class CarrierProfileService {
     const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(query.limit || String(DEFAULT_LIMIT), 10)));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.CarrierProfileWhereInput = {};
+    const where: Prisma.CarrierProfileWhereInput = { hiddenByOwnerStatus: false };
 
     if (query.governorateId) where.governorateId = parseInt(query.governorateId);
     if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
@@ -157,8 +159,8 @@ export class CarrierProfileService {
 
   async getPublicStats() {
     const [activeRequests, verifiedCarriers, completedTrips] = await this.prisma.$transaction([
-      this.prisma.transportRequest.count({ where: { status: 'OPEN' } }),
-      this.prisma.carrierProfile.count({ where: { isVerified: true } }),
+      this.prisma.transportRequest.count({ where: { status: 'OPEN', hiddenByOwnerStatus: false } }),
+      this.prisma.carrierProfile.count({ where: { isVerified: true, hiddenByOwnerStatus: false } }),
       this.prisma.transportBooking.count({ where: { status: 'COMPLETED' } }),
     ]);
     return { activeRequests, verifiedCarriers, completedTrips };

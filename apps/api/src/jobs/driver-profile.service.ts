@@ -12,6 +12,7 @@ import { QueryDriversDto } from './dto/query-drivers.dto';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
+import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
 /** Public profile — no phone number exposed to unauthenticated callers (LEAK-2) */
 const PUBLIC_USER_SELECT = {
@@ -110,7 +111,7 @@ export class DriverProfileService {
   }
 
   /* ───── FIND ONE BY ID (public — no phone) ───── */
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
     const profile = await this.prisma.driverProfile.findUnique({
       where: { id },
       include: {
@@ -120,6 +121,7 @@ export class DriverProfileService {
       },
     });
     if (!profile) throw new NotFoundException('بروفايل السائق غير موجود');
+    assertPublicOrOwner('driverProfile', profile, profile.userId, viewer, 'بروفايل السائق غير موجود');
     return profile;
   }
 
@@ -129,7 +131,7 @@ export class DriverProfileService {
     const limit = Math.min(50, Math.max(1, parseInt(query.limit || '12', 10)));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.DriverProfileWhereInput = {};
+    const where: Prisma.DriverProfileWhereInput = { hiddenByOwnerStatus: false };
 
     if (query.governorateId) where.governorateId = parseInt(query.governorateId);
     if (query.wilayaId) where.wilayaId = parseInt(query.wilayaId);
@@ -169,7 +171,7 @@ export class DriverProfileService {
   /* ───── GET DRIVER REVIEWS ───── */
   async getReviews(profileId: string, query: { page?: string; limit?: string }) {
     const profile = await this.prisma.driverProfile.findUnique({ where: { id: profileId } });
-    if (!profile) throw new NotFoundException('بروفايل السائق غير موجود');
+    if (!profile || profile.hiddenByOwnerStatus) throw new NotFoundException('بروفايل السائق غير موجود');
 
     const page = Math.max(1, parseInt(query.page || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt(query.limit || '20', 10)));

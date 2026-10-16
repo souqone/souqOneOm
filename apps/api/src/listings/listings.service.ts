@@ -18,6 +18,7 @@ import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { assertListingVisible } from './listing-visibility';
+import { VisibilityViewer } from '../common/public-visibility';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
@@ -60,6 +61,7 @@ export class ListingsService {
           { model: { contains: q, mode: 'insensitive' } },
         ],
         status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
       },
       select: {
         title: true,
@@ -276,6 +278,7 @@ export class ListingsService {
     if (query.sellerId) where.sellerId = query.sellerId;
     if (query.listingType) where.listingType = query.listingType;
     where.status = effectiveStatus;
+    where.hiddenByOwnerStatus = false;
 
     if (query.yearMin || query.yearMax) {
       where.year = {};
@@ -340,7 +343,7 @@ export class ListingsService {
     };
   }
 
-  async findOne(id: string, viewerId?: string, ip?: string) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const cacheKey = `listing:${id}`;
     
     let listing = await this.redis.get<any>(cacheKey);
@@ -354,8 +357,9 @@ export class ListingsService {
       await this.redis.set(cacheKey, listing, 600); // 10 minutes
     }
 
-    assertListingVisible(listing, viewerId);
+    assertListingVisible(listing, viewer);
 
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
     if (!viewerId || viewerId !== listing.sellerId) {
       const shouldCount = await incrementViewCount(this.redis, 'LISTING', listing.id, ip);
       if (shouldCount) {
@@ -366,15 +370,16 @@ export class ListingsService {
     return listing;
   }
 
-  async findBySlug(slug: string, viewerId?: string, ip?: string) {
+  async findBySlug(slug: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const listing = await this.repo.findBySlug(slug);
 
     if (!listing) {
       throw new NotFoundException('الإعلان غير موجود');
     }
 
-    assertListingVisible(listing, viewerId);
+    assertListingVisible(listing, viewer);
 
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
     if (!viewerId || viewerId !== listing.sellerId) {
       const shouldCount = await incrementViewCount(this.redis, 'LISTING', listing.id, ip);
       if (shouldCount) {
@@ -385,17 +390,17 @@ export class ListingsService {
     return listing;
   }
 
-  async findSimilar(id: string, limit = 8, viewerId?: string) {
-    const cacheKey = `listings:similar:${id}:${limit}`;
-    const cached = await this.redis.get<any>(cacheKey);
-    if (cached) return cached;
-
+  async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
     const original = await this.repo.findById(id);
     if (!original) {
       throw new NotFoundException('الإعلان غير موجود');
     }
 
-    assertListingVisible(original, viewerId);
+    assertListingVisible(original, viewer);
+
+    const cacheKey = `listings:similar:${id}:${limit}`;
+    const cached = await this.redis.get<any>(cacheKey);
+    if (cached) return cached;
 
     const referencePrice = original.listingType === 'RENTAL' ? original.dailyPrice : original.price;
     const toNum = (val: any): number => {
@@ -413,6 +418,7 @@ export class ListingsService {
     const narrowWhere: Prisma.ListingWhereInput = {
       id: { not: id },
       status: 'ACTIVE',
+      hiddenByOwnerStatus: false,
       listingType: original.listingType,
       make: { equals: original.make, mode: 'insensitive' },
       model: { equals: original.model, mode: 'insensitive' },
@@ -453,6 +459,7 @@ export class ListingsService {
       const broaderWhere: Prisma.ListingWhereInput = {
         id: { notIn: excludedIds },
         status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
         listingType: original.listingType,
         make: { equals: original.make, mode: 'insensitive' },
       };

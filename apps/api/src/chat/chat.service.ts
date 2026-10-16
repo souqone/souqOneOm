@@ -13,6 +13,8 @@ import { GetMessagesDto } from './dto/get-messages.dto';
 import { CHAT_EVENTS } from './chat.events';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { isEntityPubliclyVisible } from '../common/public-visibility';
+import { VisibilityPrismaDelegateName } from '../common/constants/owner-visibility.registry';
 
 @Injectable()
 export class ChatService {
@@ -25,42 +27,77 @@ export class ChatService {
   ) {}
 
   /* ───── RESOLVE ENTITY OWNER ───── */
-  private async resolveEntityOwner(entityType: string, entityId: string): Promise<{ ownerId: string; title: string }> {
+  private async resolveEntityOwner(entityType: string, entityId: string): Promise<{
+    ownerId: string;
+    title: string;
+    entity: any;
+    model: VisibilityPrismaDelegateName;
+  }> {
     switch (entityType) {
       case 'LISTING': {
-        const e = await this.prisma.listing.findUnique({ where: { id: entityId }, select: { sellerId: true, title: true } });
+        const e = await this.prisma.listing.findUnique({
+          where: { id: entityId },
+          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true },
+        });
         if (!e) throw new NotFoundException('الإعلان غير موجود');
-        return { ownerId: e.sellerId, title: e.title };
+        return { ownerId: e.sellerId, title: e.title, entity: e, model: 'listing' };
       }
       case 'BUS_LISTING': {
-        const e = await this.prisma.busListing.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+        const e = await this.prisma.busListing.findUnique({
+          where: { id: entityId },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
+        });
         if (!e) throw new NotFoundException('الحافلة غير موجودة');
-        return { ownerId: e.userId, title: e.title };
+        return { ownerId: e.userId, title: e.title, entity: e, model: 'busListing' };
       }
       case 'SPARE_PART': {
-        const e = await this.prisma.sparePart.findUnique({ where: { id: entityId }, select: { sellerId: true, title: true } });
+        const e = await this.prisma.sparePart.findUnique({
+          where: { id: entityId },
+          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true },
+        });
         if (!e) throw new NotFoundException('قطعة الغيار غير موجودة');
-        return { ownerId: e.sellerId, title: e.title };
+        return { ownerId: e.sellerId, title: e.title, entity: e, model: 'sparePart' };
       }
       case 'CAR_SERVICE': {
-        const e = await this.prisma.carService.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+        const e = await this.prisma.carService.findUnique({
+          where: { id: entityId },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+        });
         if (!e) throw new NotFoundException('الخدمة غير موجودة');
-        return { ownerId: e.userId, title: e.title };
+        return { ownerId: e.userId, title: e.title, entity: e, model: 'carService' };
       }
-      case 'JOB': {
-        const e = await this.prisma.driverJob.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+      case 'JOB':
+      case 'DRIVER_JOB': {
+        const e = await this.prisma.driverJob.findUnique({
+          where: { id: entityId },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+        });
         if (!e) throw new NotFoundException('الوظيفة غير موجودة');
-        return { ownerId: e.userId, title: e.title };
+        return { ownerId: e.userId, title: e.title, entity: e, model: 'driverJob' };
       }
       case 'EQUIPMENT_LISTING': {
-        const e = await this.prisma.equipmentListing.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+        const e = await this.prisma.equipmentListing.findUnique({
+          where: { id: entityId },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+        });
         if (!e) throw new NotFoundException('إعلان المعدة غير موجود');
-        return { ownerId: e.userId, title: e.title };
+        return { ownerId: e.userId, title: e.title, entity: e, model: 'equipmentListing' };
       }
       case 'OPERATOR_LISTING': {
-        const e = await this.prisma.operatorListing.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+        const e = await this.prisma.operatorListing.findUnique({
+          where: { id: entityId },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+        });
         if (!e) throw new NotFoundException('إعلان المشغل غير موجود');
-        return { ownerId: e.userId, title: e.title };
+        return { ownerId: e.userId, title: e.title, entity: e, model: 'operatorListing' };
+      }
+      case 'TRANSPORT_REQUEST': {
+        const e = await this.prisma.transportRequest.findUnique({
+          where: { id: entityId },
+          select: { userId: true, cargoDescription: true, status: true, hiddenByOwnerStatus: true },
+        });
+        if (!e) throw new NotFoundException('طلب النقل غير موجود');
+        return { ownerId: e.userId, title: e.cargoDescription, entity: e, model: 'transportRequest' };
       }
       default:
         throw new BadRequestException('نوع كيان غير معروف');
@@ -85,7 +122,7 @@ export class ChatService {
 
     if (!entityId) throw new BadRequestException('معرف الكيان مطلوب');
 
-    const { ownerId } = await this.resolveEntityOwner(entityType, entityId);
+    const { ownerId, entity, model } = await this.resolveEntityOwner(entityType, entityId);
 
     if (ownerId === userId) {
       throw new BadRequestException('لا يمكنك بدء محادثة مع نفسك');
@@ -114,6 +151,20 @@ export class ChatService {
         entityId,
         participants: existing.participants.map(p => p.user),
       };
+    }
+
+    // للمحادثة الجديدة: التحقق من ظهور الكيان ومن حالة نشاط المالك
+    if (!isEntityPubliclyVisible(model, entity)) {
+      throw new NotFoundException('الكيان غير متاح لبدء محادثة');
+    }
+
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { status: true },
+    });
+
+    if (!owner || owner.status !== 'ACTIVE') {
+      throw new BadRequestException('لا يمكن بدء محادثة لأن صاحب الإعلان غير نشط');
     }
 
     // إنشاء محادثة جديدة

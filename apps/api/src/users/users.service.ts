@@ -35,7 +35,8 @@ export class UsersService {
   }
 
   async getPublicProfile(userId: string) {
-    const activeWhere = { where: { status: 'ACTIVE' as const } };
+    const activeWhere = { where: { status: 'ACTIVE' as const, hiddenByOwnerStatus: false } };
+    const busActiveWhere = { where: { status: 'ACTIVE' as const, hiddenByOwnerStatus: false, deletedAt: null } };
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -43,7 +44,7 @@ export class UsersService {
         _count: {
           select: {
             listings: activeWhere,
-            busListings: activeWhere,
+            busListings: busActiveWhere,
             equipmentListings: activeWhere,
             operatorListings: activeWhere,
             spareParts: activeWhere,
