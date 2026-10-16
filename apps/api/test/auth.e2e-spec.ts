@@ -141,7 +141,7 @@ describe('Auth API (e2e)', () => {
 
       const res = await request(getApp().getHttpServer())
         .post('/api/auth/login')
-        .send({ email: user.email, password: 'Password123!' })
+        .send({ email: user.email, password: 'TestPass123!' })
         .expect(403);
 
       expect(res.body.code).toBe('ACCOUNT_BANNED');

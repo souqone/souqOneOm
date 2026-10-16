@@ -52,8 +52,53 @@ describe('Part 6a: Contact Gate Coverage & Registry Unit Tests', () => {
       expect(phone).toBe('+96891234567');
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        select: { phone: true },
+        select: { id: true, phone: true, status: true, suspendedUntil: true },
       });
+    });
+
+    it('throws ACCOUNT_BANNED (ForbiddenException) when user is BANNED', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-banned',
+        phone: '91234567',
+        status: 'BANNED',
+      });
+
+      await expect(gate.assertCanPublish('user-banned')).rejects.toMatchObject({
+        response: {
+          code: 'ACCOUNT_BANNED',
+          message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+        },
+      });
+    });
+
+    it('throws ACCOUNT_SUSPENDED (ForbiddenException) when user is active SUSPENDED', async () => {
+      const futureDate = new Date(Date.now() + 86400000);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-suspended',
+        phone: '91234567',
+        status: 'SUSPENDED',
+        suspendedUntil: futureDate,
+      });
+
+      await expect(gate.assertCanPublish('user-suspended')).rejects.toMatchObject({
+        response: {
+          code: 'ACCOUNT_SUSPENDED',
+          message: 'تم إيقاف حسابك مؤقتاً',
+          suspendedUntil: futureDate.toISOString(),
+        },
+      });
+    });
+
+    it('throws UnauthorizedException when user status is DELETED', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-deleted',
+        phone: '91234567',
+        status: 'DELETED',
+      });
+
+      await expect(gate.assertCanPublish('user-deleted')).rejects.toThrow(
+        'بيانات الدخول غير صحيحة',
+      );
     });
 
     it('throws PROFILE_PHONE_REQUIRED (BadRequestException) when user has no phone', async () => {

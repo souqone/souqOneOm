@@ -36,9 +36,11 @@ import { LocationsModule } from './locations/locations.module';
 import { ListingNotificationListener } from './common/listeners/listing-notification.listener';
 import { AdminAuditModule } from './admin-audit/admin-audit.module';
 import { AdminUsersModule } from './admin-users/admin-users.module';
+import { VisibilityModule } from './common/visibility.module';
 
 @Module({
   imports: [
+    VisibilityModule,
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     BullModule.forRoot({
