@@ -8,6 +8,7 @@ import {
   registerAdmin,
   registerModerator,
 } from './setup';
+import { AdminUsersService } from '../src/admin-users/admin-users.service';
 
 beforeAll(async () => {
   await createTestApp();
@@ -258,6 +259,69 @@ describe('Admin Users API (e2e)', () => {
       .expect(403);
 
     expect(selfDemoteRes.body.code).toBe('ADMIN_SELF_ACTION');
+  });
+
+  it('should successfully demote admin when multiple active admins exist, but reject demoting the last active admin with 409 LAST_ADMIN', async () => {
+    const adminA = await registerAdmin({ email: 'admin_a_demote@example.test', password: 'AdminAPassword123!' });
+    const adminB = await registerAdmin({ email: 'admin_b_demote@example.test', password: 'AdminBPassword123!' });
+
+    const prisma = getPrisma();
+    // Ensure adminA and adminB are the only active admins in the database
+    await prisma.user.updateMany({
+      where: {
+        role: 'ADMIN',
+        id: { notIn: [adminA.user.id, adminB.user.id] },
+      },
+      data: { role: 'MODERATOR' },
+    });
+
+    // 1. Admin A demotes Admin B to MODERATOR -> SUT executes pg_advisory_xact_lock with ::text cast and succeeds (200)
+    const demoteBRes = await request(getApp().getHttpServer())
+      .patch(`/api/admin/users/${adminB.user.id}/role`)
+      .set('Authorization', `Bearer ${adminA.accessToken}`)
+      .send({
+        role: 'MODERATOR',
+        reason: 'Demoting Admin B to MODERATOR as requested',
+        adminPassword: 'AdminAPassword123!',
+      })
+      .expect(200);
+
+    expect(demoteBRes.body.role).toBe('MODERATOR');
+
+    // Verify Admin B is now MODERATOR in database
+    const userBAfter = await prisma.user.findUnique({ where: { id: adminB.user.id } });
+    expect(userBAfter?.role).toBe('MODERATOR');
+
+    // 2. Now Admin A is the sole remaining active admin in the system.
+    // An attempt to demote Admin A must trigger checkLastAdminProtection and fail with 409 LAST_ADMIN
+    const adminUsersService = getApp().get(AdminUsersService);
+    let lastAdminError: any;
+    try {
+      await adminUsersService.changeUserRole(
+        { sub: adminB.user.id, role: 'ADMIN', tokenVersion: 0 } as any,
+        adminA.user.id,
+        {
+          role: 'MODERATOR' as any,
+          reason: 'Attempting to demote the sole remaining active admin',
+          adminPassword: 'AdminBPassword123!',
+        },
+      );
+    } catch (err) {
+      lastAdminError = err;
+    }
+
+    expect(lastAdminError).toBeDefined();
+    expect(lastAdminError.getStatus()).toBe(409);
+    expect(lastAdminError.getResponse().code).toBe('LAST_ADMIN');
+
+    // Confirm that exactly one ACTIVE admin remains in the system
+    const activeAdminsCount = await prisma.user.count({
+      where: {
+        role: 'ADMIN',
+        status: 'ACTIVE',
+      },
+    });
+    expect(activeAdminsCount).toBe(1);
   });
 
   it('should query audit logs for ADMIN and reject MODERATOR', async () => {

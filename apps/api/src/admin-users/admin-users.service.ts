@@ -38,8 +38,7 @@ import {
   AdminUserMutationResponse,
 } from './admin-users.types';
 import type { JwtPayload } from '../auth/auth.types';
-
-const LAST_ADMIN_ADVISORY_LOCK_ID = 742910385;
+import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../common/constants/admin-lock.constant';
 
 @Injectable()
 export class AdminUsersService {
@@ -989,7 +988,7 @@ export class AdminUsersService {
     if (targetRole === UserRole.ADMIN) {
       // Postgres transactional advisory lock prevents race conditions
       // when multiple admins are concurrently modified.
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${LAST_ADMIN_ADVISORY_LOCK_ID})`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${LAST_ADMIN_ADVISORY_LOCK_ID})::text`;
 
       const otherActiveAdminsCount = await tx.user.count({
         where: {
