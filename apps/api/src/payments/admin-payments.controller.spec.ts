@@ -142,7 +142,11 @@ describe('AdminPaymentsController (Unit)', () => {
 
   describe('getPaymentEvents', () => {
     it('returns payment events for a specific paymentId', async () => {
-      const mockEvents = [{ id: 'e1', paymentId: 'p1', event: 'CREATED', createdAt: new Date() }];
+      const now = Date.now();
+      const mockEvents = [
+        { id: 'e1', paymentId: 'p1', event: 'CREATED', createdAt: new Date(now - 2000) },
+        { id: 'e2', paymentId: 'p1', event: 'PAID', createdAt: new Date(now) },
+      ];
       prisma.paymentEvent.findMany.mockResolvedValue(mockEvents);
 
       const result = await controller.getPaymentEvents('p1');

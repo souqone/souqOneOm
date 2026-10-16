@@ -54,7 +54,11 @@ describe('Admin Payments API (e2e) - RBAC & Guard Retirement', () => {
     });
     userToken = user.accessToken;
 
-    // Seed test payment with events
+    // Seed test payment with events with explicit timestamps to guarantee deterministic ordering
+    const now = Date.now();
+    const createdEventTime = new Date(now - 2000);
+    const paidEventTime = new Date(now);
+
     const payment = await prisma.payment.create({
       data: {
         userId: user.user.id,
@@ -62,11 +66,11 @@ describe('Admin Payments API (e2e) - RBAC & Guard Retirement', () => {
         currency: 'OMR',
         type: 'FEATURED',
         status: 'PAID',
-        paidAt: new Date(),
+        paidAt: paidEventTime,
         events: {
           create: [
-            { event: 'CREATED', data: { initiatedBy: user.user.id } },
-            { event: 'PAID', data: { method: 'TEST_CARD' } },
+            { event: 'CREATED', data: { initiatedBy: user.user.id }, createdAt: createdEventTime },
+            { event: 'PAID', data: { method: 'TEST_CARD' }, createdAt: paidEventTime },
           ],
         },
       },
