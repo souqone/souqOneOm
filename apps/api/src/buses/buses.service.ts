@@ -296,7 +296,7 @@ export class BusesService {
   /** Applies the visibility gate + viewer-dependent field stripping, then counts the view. */
   private async serveDetail(bus: any, ip?: string, viewer?: VisibilityViewer | string | null) {
     if (!bus || bus.deletedAt) throw new NotFoundException('إعلان الحافلة غير موجود');
-    assertEntityVisible(bus, bus.userId, viewer, 'إعلان الحافلة غير موجود');
+    assertEntityVisible('busListing', bus, bus.userId, viewer, 'إعلان الحافلة غير موجود');
     await this.incrementViewIfAllowed(bus.id, ip);
     const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
     return viewerId ? stripNeverExposedFields(bus) : stripMembersOnlyFields(bus);
@@ -358,7 +358,7 @@ export class BusesService {
       },
     });
     if (!original) throw new NotFoundException('إعلان الحافلة غير موجود');
-    assertEntityVisible(original, original.userId, viewer, 'إعلان الحافلة غير موجود');
+    assertEntityVisible('busListing', original, original.userId, viewer, 'إعلان الحافلة غير موجود');
 
     const cKey = this.cacheKey(`similar:${id}:${safeLimit}`);
     const cached = await this.redis.get<any[]>(cKey);

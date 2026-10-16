@@ -391,16 +391,16 @@ export class ListingsService {
   }
 
   async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
-    const cacheKey = `listings:similar:${id}:${limit}`;
-    const cached = await this.redis.get<any>(cacheKey);
-    if (cached) return cached;
-
     const original = await this.repo.findById(id);
     if (!original) {
       throw new NotFoundException('الإعلان غير موجود');
     }
 
     assertListingVisible(original, viewer);
+
+    const cacheKey = `listings:similar:${id}:${limit}`;
+    const cached = await this.redis.get<any>(cacheKey);
+    if (cached) return cached;
 
     const referencePrice = original.listingType === 'RENTAL' ? original.dailyPrice : original.price;
     const toNum = (val: any): number => {

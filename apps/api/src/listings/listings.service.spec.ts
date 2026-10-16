@@ -512,14 +512,20 @@ describe('ListingsService', () => {
   });
 
   describe('findSimilar', () => {
-    it('returns cached results if present in Redis', async () => {
+    it('returns cached results if present in Redis and listing is publicly visible', async () => {
+      mockRepo.findById.mockResolvedValueOnce({
+        ...mockListing,
+        id: 'listing-1',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+      });
       const cached = [{ id: 'cached-1' }];
       mockRedis.get.mockResolvedValueOnce(cached);
 
       const res = await service.findSimilar('listing-1', 8);
 
       expect(res).toBe(cached);
-      expect(mockRepo.findById).not.toHaveBeenCalled();
+      expect(mockRepo.findById).toHaveBeenCalledWith('listing-1');
     });
 
     it('throws NotFoundException if listing does not exist', async () => {
@@ -673,6 +679,7 @@ describe('ListingsService', () => {
       expect(broaderCall[0]).toEqual({
         id: { notIn: ['orig-1', 'narrow-1'] },
         status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
         listingType: 'SALE',
         make: { equals: 'Toyota', mode: 'insensitive' },
       });
@@ -708,6 +715,30 @@ describe('ListingsService', () => {
 
       expect(res[0].id).toBe('close-1');
       expect(res[1].id).toBe('far-1');
+    });
+
+    it('throws NotFoundException for hidden or non-public listing even if cached similar result exists', async () => {
+      mockRedis.get.mockResolvedValueOnce([{ id: 'cached-similar-1' }]);
+      mockRepo.findById.mockResolvedValueOnce({
+        ...mockListing,
+        id: 'orig-hidden',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: true,
+      });
+
+      await expect(service.findSimilar('orig-hidden', 8)).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException for DRAFT listing even if cached similar result exists', async () => {
+      mockRedis.get.mockResolvedValueOnce([{ id: 'cached-similar-1' }]);
+      mockRepo.findById.mockResolvedValueOnce({
+        ...mockListing,
+        id: 'orig-draft',
+        status: 'DRAFT',
+        hiddenByOwnerStatus: false,
+      });
+
+      await expect(service.findSimilar('orig-draft', 8)).rejects.toThrow(NotFoundException);
     });
   });
 });
