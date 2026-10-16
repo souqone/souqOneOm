@@ -37,7 +37,7 @@ describe('Contact endpoint - BUS_LISTING', () => {
     mockRedis.set.mockResolvedValue(undefined);
     mockRedis.incr.mockResolvedValue(1);
     mockPrisma.busListing.findFirst.mockResolvedValue(bus);
-    mockPrisma.user.findUnique.mockResolvedValue({ phone: '+96893333333' });
+    mockPrisma.user.findUnique.mockResolvedValue({ phone: '+96893333333', status: 'ACTIVE' });
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ContactController],
@@ -79,11 +79,11 @@ describe('Contact endpoint - BUS_LISTING', () => {
   it('selects only ownership/visibility/whatsappEnabled from the bus (no phone columns)', async () => {
     await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
     const select = mockPrisma.busListing.findFirst.mock.calls[0][0].select;
-    expect(Object.keys(select).sort()).toEqual(['id', 'status', 'userId', 'whatsappEnabled']);
+    expect(Object.keys(select).sort()).toEqual(['deletedAt', 'hiddenByOwnerStatus', 'id', 'status', 'userId', 'whatsappEnabled']);
   });
 
   it('owner without a phone -> phone and whatsappNumber are null', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ phone: null });
+    mockPrisma.user.findUnique.mockResolvedValue({ phone: null, status: 'ACTIVE' });
     const res = await service.getContact('BUS_LISTING', 'bus-1', 'viewer-1');
     expect(res).toEqual({ phone: null, whatsappNumber: null });
   });
@@ -118,9 +118,9 @@ describe('Contact endpoint - BUS_LISTING', () => {
 
   it('cars LISTING path is unchanged (still reads prisma.listing, seller phone)', async () => {
     mockPrisma.listing.findUnique.mockResolvedValue({
-      id: 'l1', sellerId: 'seller-1', status: ListingStatus.ACTIVE, whatsappEnabled: true,
+      id: 'l1', sellerId: 'seller-1', status: ListingStatus.ACTIVE, whatsappEnabled: true, hiddenByOwnerStatus: false,
     });
-    mockPrisma.user.findUnique.mockResolvedValue({ phone: '+96891234567' });
+    mockPrisma.user.findUnique.mockResolvedValue({ phone: '+96891234567', status: 'ACTIVE' });
     const res = await service.getContact('LISTING', 'l1', 'viewer-1');
     expect(res).toEqual({ phone: '+96891234567', whatsappNumber: '+96891234567' });
     expect(mockPrisma.busListing.findFirst).not.toHaveBeenCalled();

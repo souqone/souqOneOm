@@ -31,6 +31,16 @@ export class ContactService {
       throw new BadRequestException('لا يمكنك عرض بيانات التواصل لإعلانك الخاص');
     }
 
+    // 3b. Verify owner exists and is ACTIVE before any reveal recording or counter increment
+    const seller = await this.prisma.user.findUnique({
+      where: { id: target.ownerId },
+      select: { phone: true, status: true },
+    });
+
+    if (!seller || seller.status !== 'ACTIVE') {
+      throw new NotFoundException('جهة الاتصال غير موجودة');
+    }
+
     // 4. Daily distinct-listing reveal cap check
     const date = new Date().toISOString().split('T')[0];
     const memberKey = `contact-cap:${viewerId}:${date}:${entityId}`;
@@ -54,13 +64,8 @@ export class ContactService {
       await this.redis.incr(counterKey, 86400);
     }
 
-    // 6. Load seller phone and normalize
-    const seller = await this.prisma.user.findUnique({
-      where: { id: target.ownerId },
-      select: { phone: true },
-    });
-
-    const normalized = normalizePhone(seller?.phone);
+    // 6. Normalize seller phone
+    const normalized = normalizePhone(seller.phone);
     const phone = normalized;
     const whatsappNumber = target.whatsappEnabled ? normalized : null;
 

@@ -31,11 +31,13 @@ describe('ContactService & ContactController', () => {
     sellerId: 'seller-user-1',
     status: ListingStatus.ACTIVE,
     whatsappEnabled: true,
+    hiddenByOwnerStatus: false,
   };
 
   const sampleSeller = {
     id: 'seller-user-1',
     phone: '+96891234567',
+    status: 'ACTIVE',
   };
 
   beforeEach(async () => {
@@ -107,6 +109,32 @@ describe('ContactService & ContactController', () => {
         service.getContact('LISTING', 'listing-101', 'seller-user-1'),
       ).rejects.toThrow('لا يمكنك عرض بيانات التواصل لإعلانك الخاص');
     });
+
+    it('throws NotFoundException and does not consume daily quota when seller status is not ACTIVE', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'seller-user-1',
+        phone: '+96891234567',
+        status: 'BANNED',
+      });
+
+      await expect(
+        service.getContact('LISTING', 'listing-101', 'other-viewer'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockRedis.incr).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when seller does not exist in User table', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.getContact('LISTING', 'listing-101', 'other-viewer'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockRedis.incr).not.toHaveBeenCalled();
+    });
   });
 
   describe('WhatsApp flag and phone normalization', () => {
@@ -137,6 +165,7 @@ describe('ContactService & ContactController', () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce({
         id: 'seller-user-1',
         phone: null,
+        status: 'ACTIVE',
       });
 
       const result = await service.getContact('LISTING', 'listing-101', 'viewer-2');
