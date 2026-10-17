@@ -26,6 +26,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
   const mockPrisma: any = {
     user: {
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -67,6 +68,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     mockPrisma.user.findUnique = jest.fn();
     mockPrisma.user.create = jest.fn();
     mockPrisma.user.update = jest.fn();
+    mockPrisma.user.findUniqueOrThrow = jest.fn();
     mockPrisma.user.updateMany = jest.fn().mockResolvedValue({ count: 1 });
 
     mockBanBlacklistService = {
@@ -288,6 +290,12 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
       .mockResolvedValueOnce(unverifiedAccount); // by email
 
     mockPrisma.user.update.mockResolvedValue({
+      ...unverifiedAccount,
+      passwordHash: null,
+      googleId: 'google-sub-company',
+      isVerified: true,
+    });
+    mockPrisma.user.findUniqueOrThrow.mockResolvedValueOnce({
       ...unverifiedAccount,
       passwordHash: null,
       googleId: 'google-sub-company',
@@ -515,6 +523,16 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
       .mockResolvedValueOnce(unverifiedVictimAccount); // by email
 
     mockPrisma.user.update.mockResolvedValue({
+      ...unverifiedVictimAccount,
+      passwordHash: null,
+      googleId: 'victim-google-sub-999',
+      isVerified: true,
+      emailVerificationCode: null,
+      emailVerificationExpiry: null,
+      passwordResetCode: null,
+      passwordResetExpiry: null,
+    });
+    mockPrisma.user.findUniqueOrThrow.mockResolvedValueOnce({
       ...unverifiedVictimAccount,
       passwordHash: null,
       googleId: 'victim-google-sub-999',

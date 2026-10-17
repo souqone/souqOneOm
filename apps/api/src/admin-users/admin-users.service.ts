@@ -777,14 +777,9 @@ export class AdminUsersService {
         },
       });
 
-      await this.banBlacklistService.removeForUser(
-        tx,
-        {
-          id: target.id,
-          phoneE164: target.phoneE164,
-          googleId: target.googleId,
-        },
-      );
+      await this.banBlacklistService.removeForUser(tx, {
+        id: target.id,
+      });
 
       await this.adminAuditService.record(tx, {
         adminId: admin.sub,

@@ -69,12 +69,25 @@ describe('BanBlacklistService', () => {
   });
 
   describe('addForUser', () => {
+    it('throws an error if user.id is missing or empty', async () => {
+      const mockTx = {} as any;
+      await expect(service.addForUser(mockTx, null as any, 'reason')).rejects.toThrow(
+        'user.id is required for addForUser',
+      );
+      await expect(service.addForUser(mockTx, {} as any, 'reason')).rejects.toThrow(
+        'user.id is required for addForUser',
+      );
+      await expect(service.addForUser(mockTx, { id: '   ' } as any, 'reason')).rejects.toThrow(
+        'user.id is required for addForUser',
+      );
+    });
+
     it('creates blacklist entries for both phone and google identities idempotently', async () => {
       const mockTx = {
         authIdentity: {
-          findMany: jest.fn().mockResolvedValue([
-            { providerUserId: 'google-sub-from-auth-ident' },
-          ]),
+          findFirst: jest.fn().mockResolvedValue({
+            providerUserId: 'google-sub-from-auth-ident',
+          }),
         },
         banBlacklistEntry: {
           createMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -105,12 +118,16 @@ describe('BanBlacklistService', () => {
         ]),
         skipDuplicates: true,
       });
+      expect(mockTx.authIdentity.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'u-123', provider: AuthProvider.GOOGLE },
+        select: { providerUserId: true },
+      });
     });
 
     it('returns 0 when user has neither phoneE164 nor googleId nor auth identities', async () => {
       const mockTx = {
         authIdentity: {
-          findMany: jest.fn().mockResolvedValue([]),
+          findFirst: jest.fn().mockResolvedValue(null),
         },
         banBlacklistEntry: {
           createMany: jest.fn(),
@@ -131,6 +148,19 @@ describe('BanBlacklistService', () => {
   });
 
   describe('removeForUser', () => {
+    it('throws an error if user.id is missing or empty to prevent unconstrained deletion', async () => {
+      const mockTx = {} as any;
+      await expect(service.removeForUser(mockTx, null as any)).rejects.toThrow(
+        'user.id is required for removeForUser',
+      );
+      await expect(service.removeForUser(mockTx, {} as any)).rejects.toThrow(
+        'user.id is required for removeForUser',
+      );
+      await expect(service.removeForUser(mockTx, { id: '' } as any)).rejects.toThrow(
+        'user.id is required for removeForUser',
+      );
+    });
+
     it('removes entries where userId matches, and leaves userId: null intact', async () => {
       const mockTx = {
         banBlacklistEntry: {

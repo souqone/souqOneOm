@@ -35,8 +35,12 @@ export class BanBlacklistService {
   async addForUser(
     tx: Prisma.TransactionClient,
     user: { id: string; phoneE164?: string | null; googleId?: string | null },
-    reason?: string,
+    reason?: string | null,
   ): Promise<number> {
+    if (!user?.id || typeof user.id !== 'string' || user.id.trim() === '') {
+      throw new Error('user.id is required for addForUser');
+    }
+
     const entriesToCreate: Array<{
       kind: BanBlacklistKind;
       hash: string;
@@ -60,14 +64,12 @@ export class BanBlacklistService {
       googleSubs.add(user.googleId.trim());
     }
 
-    const identities = await tx.authIdentity.findMany({
+    const identity = await tx.authIdentity.findFirst({
       where: { userId: user.id, provider: AuthProvider.GOOGLE },
       select: { providerUserId: true },
     });
-    for (const ident of identities) {
-      if (ident.providerUserId && ident.providerUserId.trim() !== '') {
-        googleSubs.add(ident.providerUserId.trim());
-      }
+    if (identity?.providerUserId && identity.providerUserId.trim() !== '') {
+      googleSubs.add(identity.providerUserId.trim());
     }
 
     for (const sub of googleSubs) {
@@ -98,8 +100,12 @@ export class BanBlacklistService {
    */
   async removeForUser(
     tx: Prisma.TransactionClient,
-    user: { id: string; phoneE164?: string | null; googleId?: string | null },
+    user: { id: string },
   ): Promise<number> {
+    if (!user?.id || typeof user.id !== 'string' || user.id.trim() === '') {
+      throw new Error('user.id is required for removeForUser');
+    }
+
     const result = await tx.banBlacklistEntry.deleteMany({
       where: {
         userId: user.id,

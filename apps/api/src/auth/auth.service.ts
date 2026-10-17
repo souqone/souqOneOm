@@ -376,18 +376,7 @@ export class AuthService {
             await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
             await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
             await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
-            const freshUser = await tx.user.findUnique({ where: { id: targetUserId } });
-            return (
-              freshUser ||
-              ({
-                ...user!,
-                googleId,
-                isVerified: true,
-                emailVerifiedAt: new Date(),
-                avatarUrl: targetAvatarUrl || picture,
-                passwordHash: null,
-              } as any)
-            );
+            return tx.user.findUniqueOrThrow({ where: { id: targetUserId } });
           });
         } else if (user.passwordHash) {
           // Verified user with existing password
