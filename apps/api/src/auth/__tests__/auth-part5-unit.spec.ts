@@ -5,6 +5,7 @@ import { AuthAuditService } from '../auth-audit.service';
 import { OtpService } from '../otp.service';
 import { AccessTokenGate } from '../access-token-gate.service';
 import { AccountStatusService } from '../account-status.service';
+import { BanBlacklistService } from '../../ban-blacklist/ban-blacklist.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
@@ -23,7 +24,9 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
     mockPrisma = {
       user: {
         findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         create: jest.fn(),
       },
       authIdentity: {
@@ -79,6 +82,15 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
         { provide: AccessTokenGate, useValue: mockGate },
         { provide: RedisService, useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() } },
         { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
+        {
+          provide: BanBlacklistService,
+          useValue: {
+            isGoogleBlocked: jest.fn().mockResolvedValue(false),
+            isPhoneBlocked: jest.fn().mockResolvedValue(false),
+            addForUser: jest.fn().mockResolvedValue(0),
+            removeForUser: jest.fn().mockResolvedValue(0),
+          },
+        },
       ],
     }).compile();
 
@@ -208,7 +220,8 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
         .mockResolvedValueOnce(null) // by googleId
         .mockResolvedValueOnce(existingUnverifiedUser); // by email
 
-      mockPrisma.user.update.mockResolvedValue({
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
         ...existingUnverifiedUser,
         googleId: 'google-sub-victim',
         isVerified: true,
@@ -217,7 +230,7 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
 
       const result = await authService.googleAuth('valid-token-2', '127.0.0.1', 'jest');
 
-      expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).toHaveBeenCalled();
       expect(mockPrisma.authIdentity.upsert).toHaveBeenCalledWith({
         where: {
           provider_providerUserId: {

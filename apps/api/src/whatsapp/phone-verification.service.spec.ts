@@ -5,6 +5,7 @@ describe('PhoneVerificationService', () => {
   let service: PhoneVerificationService;
   let mockPrisma: any;
   let mockPhoneOtpService: any;
+  let mockBanBlacklistService: any;
 
   const mockUser = {
     id: 'user_1',
@@ -25,7 +26,7 @@ describe('PhoneVerificationService', () => {
           }
           return Promise.resolve(null);
         }),
-        update: jest.fn().mockImplementation(({ where, data }) => {
+        update: jest.fn().mockImplementation(({ data }) => {
           return Promise.resolve({
             ...mockUser,
             ...data,
@@ -40,9 +41,15 @@ describe('PhoneVerificationService', () => {
       verify: jest.fn().mockResolvedValue({ verified: true }),
     };
 
+    mockBanBlacklistService = {
+      isPhoneBlocked: jest.fn().mockResolvedValue(false),
+      isGoogleBlocked: jest.fn().mockResolvedValue(false),
+    };
+
     service = new PhoneVerificationService(
       mockPrisma,
       mockPhoneOtpService,
+      mockBanBlacklistService,
     );
   });
 
@@ -233,7 +240,7 @@ describe('PhoneVerificationService', () => {
 
       expect(res).toEqual({ phoneVerified: true });
       expect(mockPhoneOtpService.verify).not.toHaveBeenCalled();
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it('throws 409 PHONE_ALREADY_VERIFIED when phone is claimed by another user and does not burn OTP', async () => {
@@ -340,7 +347,7 @@ describe('PhoneVerificationService', () => {
       });
 
       expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
-        where: { id: 'user_1', phone: '+96891234567' },
+        where: { id: 'user_1', phone: '+96891234567', status: { not: 'BANNED' } },
         data: {
           phoneE164: '+96891234567',
           phoneVerifiedAt: expect.any(Date),
@@ -379,6 +386,77 @@ describe('PhoneVerificationService', () => {
             statusCode: 409,
             code: 'PHONE_ALREADY_VERIFIED',
             message: 'رقم الهاتف هذا موثق بالفعل لحساب آخر',
+          }),
+        }),
+      );
+    });
+
+    it('throws 403 PHONE_NOT_ALLOWED when phone is in ban blacklist (checked AFTER OTP verification)', async () => {
+      mockBanBlacklistService.isPhoneBlocked.mockResolvedValueOnce(true);
+
+      await expect(
+        service.verifyPhone('user_1', '123456'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 403,
+            code: 'PHONE_NOT_ALLOWED',
+            message: 'رقم الهاتف غير متاح للتوثيق',
+          }),
+        }),
+      );
+
+      // Crucial: OTP was verified before blacklist check
+      expect(mockPhoneOtpService.verify).toHaveBeenCalled();
+      // Database update is never reached
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('verifies OTP challenge before checking blacklist to prevent enumeration attacks', async () => {
+      mockPhoneOtpService.verify.mockRejectedValueOnce(
+        new HttpException(
+          { statusCode: 400, code: 'INVALID_OTP', message: 'رمز التحقق غير صحيح' },
+          HttpStatus.BAD_REQUEST,
+        ),
+      );
+
+      await expect(
+        service.verifyPhone('user_1', '000000'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 400,
+            code: 'INVALID_OTP',
+          }),
+        }),
+      );
+
+      expect(mockPhoneOtpService.verify).toHaveBeenCalled();
+      expect(mockBanBlacklistService.isPhoneBlocked).not.toHaveBeenCalled();
+    });
+
+    it('throws 403 ACCOUNT_BANNED when user status becomes BANNED concurrently during verification', async () => {
+      mockPrisma.user.updateMany.mockResolvedValueOnce({ count: 0 });
+      let findUniqueCount = 0;
+      mockPrisma.user.findUnique.mockImplementation(({ where }: any) => {
+        if (where.id === 'user_1') {
+          findUniqueCount++;
+          if (findUniqueCount === 1) {
+            return Promise.resolve({ ...mockUser });
+          }
+          return Promise.resolve({ id: 'user_1', status: 'BANNED' });
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(
+        service.verifyPhone('user_1', '123456'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 403,
+            code: 'ACCOUNT_BANNED',
+            message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
           }),
         }),
       );

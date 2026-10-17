@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
-import { OtpPurpose, AuthProvider } from '@prisma/client';
+import { OtpPurpose, AuthProvider, AccountStatus } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
@@ -13,6 +13,7 @@ import { AuthAuditService } from './auth-audit.service';
 import { OtpService } from './otp.service';
 import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 import { normalizePhoneStrict } from '../common/utils/normalize-phone';
@@ -33,6 +34,7 @@ export class AuthService {
     private readonly otp: OtpService,
     private readonly accessTokenGate: AccessTokenGate,
     private readonly accountStatusService: AccountStatusService,
+    private readonly banBlacklistService: BanBlacklistService,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
@@ -224,6 +226,26 @@ export class AuthService {
     // Check if user exists by googleId
     let user = await this.prisma.user.findUnique({ where: { googleId } });
 
+    if (!user || user.googleId !== googleId) {
+      const isBlocked = await this.banBlacklistService.isGoogleBlocked(googleId);
+      if (isBlocked) {
+        await this.audit.logAudit({
+          email: normalizedEmail,
+          userId: user?.id,
+          success: false,
+          reason: 'ACCOUNT_BANNED',
+          method: 'GOOGLE',
+          ip,
+          userAgent,
+        });
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'ACCOUNT_BANNED',
+          message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+        });
+      }
+    }
+
     if (user) {
       if (
         !user.isVerified &&
@@ -234,12 +256,29 @@ export class AuthService {
         const targetUserId = user.id;
         user = await this.prisma.$transaction(async (tx) => {
           const res = await tx.user.updateMany({
-            where: { id: targetUserId, isVerified: false },
+            where: {
+              id: targetUserId,
+              isVerified: false,
+              status: { not: AccountStatus.BANNED },
+            },
             data: {
               isVerified: true,
               emailVerifiedAt: new Date(),
             },
           });
+          if (res.count === 0) {
+            const fresh = await tx.user.findUnique({
+              where: { id: targetUserId },
+              select: { status: true },
+            });
+            if (fresh?.status === AccountStatus.BANNED) {
+              throw new ForbiddenException({
+                statusCode: 403,
+                code: 'ACCOUNT_BANNED',
+                message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+              });
+            }
+          }
           if (res.count > 0) {
             await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
           }
@@ -298,8 +337,11 @@ export class AuthService {
           const targetUserId = user.id;
           const targetAvatarUrl = user.avatarUrl;
           user = await this.prisma.$transaction(async (tx) => {
-            const updated = await tx.user.update({
-              where: { id: targetUserId },
+            const res = await tx.user.updateMany({
+              where: {
+                id: targetUserId,
+                status: { not: AccountStatus.BANNED },
+              },
               data: {
                 passwordHash: null,
                 googleId,
@@ -308,6 +350,13 @@ export class AuthService {
                 avatarUrl: targetAvatarUrl || picture,
               },
             });
+            if (res.count === 0) {
+              throw new ForbiddenException({
+                statusCode: 403,
+                code: 'ACCOUNT_BANNED',
+                message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+              });
+            }
             if (tx.authIdentity?.upsert) {
               await tx.authIdentity.upsert({
                 where: {
@@ -327,7 +376,7 @@ export class AuthService {
             await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
             await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
             await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
-            return updated;
+            return tx.user.findUniqueOrThrow({ where: { id: targetUserId } });
           });
         } else if (user.passwordHash) {
           // Verified user with existing password

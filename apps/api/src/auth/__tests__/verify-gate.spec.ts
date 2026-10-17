@@ -31,6 +31,14 @@ import { RedisService } from '../../redis/redis.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { GlobalExceptionFilter } from '../../common/filters/http-exception.filter';
 import { VERIFICATION_TOKEN_TTL } from '../auth.constants';
+import { BanBlacklistService } from '../../ban-blacklist/ban-blacklist.service';
+
+const mockBanBlacklistService = {
+  isGoogleBlocked: jest.fn().mockResolvedValue(false),
+  isPhoneBlocked: jest.fn().mockResolvedValue(false),
+  addForUser: jest.fn().mockResolvedValue(0),
+  removeForUser: jest.fn().mockResolvedValue(0),
+};
 
 const JWT_SECRET = 'super-secret-key-at-least-32-chars-long-for-test!!';
 
@@ -224,6 +232,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: RedisService, useValue: mockRedis },
           { provide: AccessTokenGate, useValue: { validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
           { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
+          { provide: BanBlacklistService, useValue: mockBanBlacklistService },
         ],
       }).compile();
 
@@ -419,6 +428,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
           { provide: RedisService, useValue: mockRedis },
           { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
           { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
+          { provide: BanBlacklistService, useValue: mockBanBlacklistService },
         ],
       }).compile();
 

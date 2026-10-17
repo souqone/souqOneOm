@@ -79,6 +79,7 @@ model User {
   carrierProfile    CarrierProfile?
   transportRequests TransportRequest[]        @relation("UserTransportRequests")
   otpChallenges     OtpChallenge[]
+  blacklistEntries  BanBlacklistEntry[]
 
   // New Location Fields
   governorateId  Int?
@@ -248,6 +249,30 @@ model AuthIdentity {
   @@unique([provider, providerUserId])
   @@index([userId])
   @@map("auth_identities")
+}
+
+// ──────────────────────────────────────
+// القائمة السوداء المجزأة للحسابات المحظورة — Ban Blacklist
+// ──────────────────────────────────────
+enum BanBlacklistKind {
+  PHONE
+  GOOGLE
+}
+
+model BanBlacklistEntry {
+  id        String           @id @default(cuid())
+  kind      BanBlacklistKind
+  hash      String
+  userId    String?
+  reason    String?
+  createdAt DateTime         @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([kind, hash])
+  @@index([hash])
+  @@index([userId])
+  @@map("ban_blacklist_entries")
 }
 
 // ──────────────────────────────────────

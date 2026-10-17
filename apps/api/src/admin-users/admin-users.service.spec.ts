@@ -23,9 +23,17 @@ import {
 } from '../admin-audit/admin-audit-actions.constant';
 import { USER_STATUS_CHANGED } from '../common/events/user-status.events';
 import type { JwtPayload } from '../auth/auth.types';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 
 describe('AdminUsersService', () => {
   let service: AdminUsersService;
+
+  const mockBanBlacklistService: any = {
+    addForUser: jest.fn().mockResolvedValue(1),
+    removeForUser: jest.fn().mockResolvedValue(1),
+    isPhoneBlocked: jest.fn().mockResolvedValue(false),
+    isGoogleBlocked: jest.fn().mockResolvedValue(false),
+  };
 
   const mockPrisma: any = {
     user: {
@@ -93,6 +101,7 @@ describe('AdminUsersService', () => {
         { provide: AccessTokenGate, useValue: mockAccessTokenGate },
         { provide: ChatGateway, useValue: mockChatGateway },
         { provide: AdminAuditService, useValue: mockAdminAuditService },
+        { provide: BanBlacklistService, useValue: mockBanBlacklistService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
@@ -633,6 +642,11 @@ describe('AdminUsersService', () => {
 
       expect(res.status).toBe(AccountStatus.BANNED);
       expect(mockTokenService.revokeAllRefreshTokens).toHaveBeenCalledWith('u-to-ban', mockPrisma);
+      expect(mockBanBlacklistService.addForUser).toHaveBeenCalledWith(
+        mockPrisma,
+        expect.objectContaining({ id: 'u-to-ban' }),
+        'Fraudulent transactions detected across multiple cards',
+      );
       expect(mockChatGateway.disconnectUser).toHaveBeenCalledWith('u-to-ban', 'ACCOUNT_BANNED');
       expect(mockAdminAuditService.record).toHaveBeenCalledWith(
         mockPrisma,
@@ -696,6 +710,10 @@ describe('AdminUsersService', () => {
 
       expect(res.status).toBe(AccountStatus.ACTIVE);
       expect(mockTokenService.revokeAllRefreshTokens).not.toHaveBeenCalled();
+      expect(mockBanBlacklistService.removeForUser).toHaveBeenCalledWith(
+        mockPrisma,
+        expect.objectContaining({ id: 'u-banned' }),
+      );
       expect(mockAdminAuditService.record).toHaveBeenCalledWith(
         mockPrisma,
         expect.objectContaining({ action: USER_UNBAN, targetId: 'u-banned' }),

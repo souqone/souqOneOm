@@ -173,6 +173,13 @@ describe('Auth & Input Validation Suite', () => {
         assertCanAuthenticate: jest.fn().mockResolvedValue(undefined),
       };
 
+      const mockBanBlacklistService = {
+        isGoogleBlocked: jest.fn().mockResolvedValue(false),
+        isPhoneBlocked: jest.fn().mockResolvedValue(false),
+        addForUser: jest.fn().mockResolvedValue(0),
+        removeForUser: jest.fn().mockResolvedValue(0),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMailService,
@@ -181,6 +188,7 @@ describe('Auth & Input Validation Suite', () => {
         mockOtp as any,
         mockAccessTokenGate as any,
         mockAccountStatusService as any,
+        mockBanBlacklistService as any,
       );
     });
 
@@ -356,6 +364,13 @@ describe('Auth & Input Validation Suite', () => {
         assertCanAuthenticate: jest.fn().mockResolvedValue(undefined),
       };
 
+      const mockBanBlacklistService = {
+        isGoogleBlocked: jest.fn().mockResolvedValue(false),
+        isPhoneBlocked: jest.fn().mockResolvedValue(false),
+        addForUser: jest.fn().mockResolvedValue(0),
+        removeForUser: jest.fn().mockResolvedValue(0),
+      };
+
       authService = new AuthService(
         mockPrisma,
         mockMail as any,
@@ -364,6 +379,7 @@ describe('Auth & Input Validation Suite', () => {
         mockOtp as any,
         mockAccessTokenGate as any,
         mockAccountStatusService as any,
+        mockBanBlacklistService as any,
       );
     });
 

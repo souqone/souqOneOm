@@ -6,6 +6,7 @@ import { WhatsappLimitsService } from './whatsapp-limits.service';
 import { PhoneOtpService } from './phone-otp.service';
 import { PhoneVerificationService } from './phone-verification.service';
 import { MockWhatsappOtpSender } from './senders/mock-whatsapp-sender.service';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 
 function getLocalDbUrls() {
   const rawUrl = process.env.DATABASE_URL;
@@ -91,9 +92,11 @@ describeOrSkip('PhoneVerificationService Real PostgreSQL Concurrency (127.0.0.1)
       limitsService,
       mockSender,
     );
+    const banBlacklistService = new BanBlacklistService(prisma as any);
     verificationService = new PhoneVerificationService(
       prisma as any,
       phoneOtpService,
+      banBlacklistService,
     );
   }, 45000);
 
@@ -347,6 +350,80 @@ describeOrSkip('PhoneVerificationService Real PostgreSQL Concurrency (127.0.0.1)
     } else {
       expect(finalUser?.phoneVerifiedAt).toBeNull();
       expect(finalUser?.phoneE164).toBeNull();
+    }
+  });
+
+  it('deterministic race: concurrent ban during verifyPhone triggers 403 ACCOUNT_BANNED and leaves verification null', async () => {
+    const testPhone = '+96894445566';
+
+    const user = await prisma.user.create({
+      data: {
+        id: 'user_race_ban',
+        username: 'race_ban_user',
+        email: 'race_ban@example.com',
+        phone: testPhone,
+        status: 'ACTIVE',
+      },
+    });
+
+    const { getAuthPepper } = require('../config/pepper.config');
+    const pepper = getAuthPepper();
+    const expiresAt = new Date(Date.now() + 600000);
+    const challengeId = require('crypto').randomUUID();
+    const code = '123456';
+    const codeHash = require('crypto')
+      .createHmac('sha256', pepper)
+      .update(`${OtpPurpose.PHONE_VERIFY}:${testPhone}:${challengeId}:${code}`)
+      .digest('hex');
+
+    await prisma.otpChallenge.create({
+      data: {
+        id: challengeId,
+        userId: user.id,
+        phoneE164: testPhone,
+        purpose: OtpPurpose.PHONE_VERIFY,
+        codeHash,
+        attempts: 0,
+        maxAttempts: 5,
+        expiresAt,
+      },
+    });
+
+    // Intercept phoneOtpService.verify: after OTP verification succeeds, ban user in PostgreSQL before updateMany executes
+    const originalVerify = phoneOtpService.verify.bind(phoneOtpService);
+    const verifySpy = jest.spyOn(phoneOtpService, 'verify').mockImplementation(async (params) => {
+      const result = await originalVerify(params);
+      // Mutate status to BANNED in PostgreSQL before PhoneVerificationService executes updateMany
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'BANNED' },
+      });
+      return result;
+    });
+
+    try {
+      await expect(
+        verificationService.verifyPhone(user.id, code),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 403,
+            code: 'ACCOUNT_BANNED',
+            message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+          }),
+        }),
+      );
+
+      // Verify that user status is BANNED and phoneVerifiedAt and phoneE164 remain NULL in PostgreSQL
+      const freshUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+
+      expect(freshUser?.status).toBe('BANNED');
+      expect(freshUser?.phoneVerifiedAt).toBeNull();
+      expect(freshUser?.phoneE164).toBeNull();
+    } finally {
+      verifySpy.mockRestore();
     }
   });
 });

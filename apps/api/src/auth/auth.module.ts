@@ -13,10 +13,12 @@ import { TokenCleanupService } from './token-cleanup.service';
 import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
 import { getJwtModuleOptions } from '../config/jwt.config';
+import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
 
 @Module({
   imports: [
     PassportModule,
+    BanBlacklistModule,
     JwtModule.registerAsync({
       useFactory: () => getJwtModuleOptions(),
     }),

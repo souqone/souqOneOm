@@ -38,9 +38,11 @@ import { AdminAuditModule } from './admin-audit/admin-audit.module';
 import { AdminUsersModule } from './admin-users/admin-users.module';
 import { VisibilityModule } from './common/visibility.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { BanBlacklistModule } from './ban-blacklist/ban-blacklist.module';
 
 @Module({
   imports: [
+    BanBlacklistModule,
     WhatsappModule,
     VisibilityModule,
     EventEmitterModule.forRoot(),
