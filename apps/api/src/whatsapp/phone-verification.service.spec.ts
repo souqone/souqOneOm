@@ -233,7 +233,7 @@ describe('PhoneVerificationService', () => {
 
       expect(res).toEqual({ phoneVerified: true });
       expect(mockPhoneOtpService.verify).not.toHaveBeenCalled();
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it('throws 409 PHONE_ALREADY_VERIFIED when phone is claimed by another user and does not burn OTP', async () => {
