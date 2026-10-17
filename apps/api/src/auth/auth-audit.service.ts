@@ -185,7 +185,7 @@ export class AuthAuditService {
           {
             statusCode: 429,
             code: 'RESEND_COOLDOWN',
-            message: 'يرجى الانتظار دقيقة قبل طلب رمز تحقق جديد',
+            message: 'يرجى الانتظار دقيقة واحدة قبل طلب رمز جديد.',
             retryAfterSeconds: Math.max(1, ttl),
           },
           HttpStatus.TOO_MANY_REQUESTS,
@@ -198,7 +198,7 @@ export class AuthAuditService {
           {
             statusCode: 429,
             code: 'RESEND_DAILY_LIMIT_EXCEEDED',
-            message: 'تم تجاوز الحد اليومي لإعادة إرسال رمز التحقق (10 محاولات)',
+            message: 'لقد بلغت الحد اليومي لطلب رمز التحقق. يرجى المحاولة غداً.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );
@@ -227,7 +227,7 @@ export class AuthAuditService {
           {
             statusCode: 429,
             code: 'SIGNUP_IP_LIMIT_EXCEEDED',
-            message: `تم تجاوز الحد الأقصى لإنشاء الحسابات اليوم من هذه الشبكة (${SIGNUP_DAILY_IP_CAP} حساباً). يرجى المحاولة لاحقاً.`,
+            message: 'تم بلوغ الحد الأقصى لإنشاء الحسابات اليوم من هذه الشبكة. يرجى المحاولة لاحقاً.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );

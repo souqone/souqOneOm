@@ -311,7 +311,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
         expect(err.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
         const res = err.getResponse();
         expect(res.code).toBe('RESEND_COOLDOWN');
-        expect(res.message).toBe('يرجى الانتظار دقيقة قبل طلب رمز تحقق جديد');
+        expect(res.message).toBe('يرجى الانتظار دقيقة واحدة قبل طلب رمز جديد.');
       }
     });
 
@@ -338,7 +338,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
         expect(err.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
         const res = err.getResponse();
         expect(res.code).toBe('RESEND_DAILY_LIMIT_EXCEEDED');
-        expect(res.message).toBe('تم تجاوز الحد اليومي لإعادة إرسال رمز التحقق (10 محاولات)');
+        expect(res.message).toBe('لقد بلغت الحد اليومي لطلب رمز التحقق. يرجى المحاولة غداً.');
       }
     });
 
@@ -403,7 +403,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
         expect(err.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
         const res = err.getResponse();
         expect(res.code).toBe('SIGNUP_IP_LIMIT_EXCEEDED');
-        expect(res.message).toContain('20 حساباً');
+        expect(res.message).toBe('تم بلوغ الحد الأقصى لإنشاء الحسابات اليوم من هذه الشبكة. يرجى المحاولة لاحقاً.');
       }
 
       // No database queries should be performed when blocked by IP limit!
