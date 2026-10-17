@@ -10,6 +10,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
+import { PhoneAuthModule } from './auth/phone-auth.module';
 import { UsersModule } from './users/users.module';
 import { ListingsModule } from './listings/listings.module';
 import { ChatModule } from './chat/chat.module';
@@ -60,6 +61,7 @@ import { BanBlacklistModule } from './ban-blacklist/ban-blacklist.module';
     PrismaModule,
     RedisModule,
     AuthModule,
+    PhoneAuthModule,
     UsersModule,
     ListingsModule,
     ChatModule,

@@ -136,6 +136,17 @@ export class UsersService {
       const isVerifiedCurrently = Boolean(user.phoneVerifiedAt && user.phoneE164);
       const passwordHash = user.passwordHash;
 
+      if (isVerifiedCurrently && !passwordHash && !user.googleId) {
+        throw new HttpException(
+          {
+            statusCode: 403,
+            code: 'PHONE_CHANGE_NOT_SUPPORTED',
+            message: 'لا يمكن تغيير رقم الهاتف مباشرة للحسابات المسجلة برقم الهاتف. مسار التغيير بالرمز سيتوفر قريباً.',
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
       if (isVerifiedCurrently && passwordHash) {
         if (!dto.currentPassword || typeof dto.currentPassword !== 'string') {
           throw new HttpException(
@@ -244,7 +255,10 @@ export class UsersService {
     }
 
     if (!user.passwordHash) {
-      throw new BadRequestException('هذا الحساب مسجل بواسطة Google ولا يحتوي على كلمة مرور.');
+      if (user.googleId) {
+        throw new BadRequestException('هذا الحساب مسجل بواسطة Google ولا يحتوي على كلمة مرور.');
+      }
+      throw new BadRequestException('هذا الحساب مسجل بواسطة رقم الهاتف ولا يحتوي على كلمة مرور.');
     }
     const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!valid) {

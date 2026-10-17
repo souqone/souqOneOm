@@ -127,8 +127,12 @@ export class AuthService {
     }
 
     if (!user.passwordHash) {
-      await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'GOOGLE_ONLY', ip, userAgent });
-      throw new UnauthorizedException('هذا الحساب مسجل بواسطة Google. استخدم تسجيل الدخول بـ Google.');
+      if (user.googleId) {
+        await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'GOOGLE_ONLY', ip, userAgent });
+        throw new UnauthorizedException('هذا الحساب مسجل بواسطة Google. استخدم تسجيل الدخول بـ Google.');
+      }
+      await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'PHONE_ONLY', ip, userAgent });
+      throw new UnauthorizedException('هذا الحساب مسجل بواسطة رقم الهاتف. استخدم تسجيل الدخول برقم الهاتف.');
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) {
