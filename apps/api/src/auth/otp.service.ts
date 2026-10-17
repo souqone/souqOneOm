@@ -238,19 +238,25 @@ export class OtpService {
     phoneE164: string,
     purpose: OtpPurpose,
     code: string,
+    userId?: string,
   ): Promise<OtpVerifyResult> {
     if (!code || typeof code !== 'string') {
       return 'INVALID';
     }
 
     const now = new Date();
+    const where: any = {
+      phoneE164,
+      purpose,
+      consumedAt: null,
+      expiresAt: { gt: now },
+    };
+    if (userId !== undefined) {
+      where.userId = userId;
+    }
+
     const challenge = await this.prisma.otpChallenge.findFirst({
-      where: {
-        phoneE164,
-        purpose,
-        consumedAt: null,
-        expiresAt: { gt: now },
-      },
+      where,
       orderBy: { createdAt: 'desc' },
     });
 

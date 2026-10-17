@@ -15,13 +15,22 @@ export interface MetaSenderConfig {
   timeoutMs?: number;
 }
 
+interface ResolvedMetaSenderConfig {
+  phoneNumberId: string;
+  accessToken: string;
+  templateName: string;
+  templateLang?: string;
+  graphVersion: string;
+  timeoutMs: number;
+}
+
 @Injectable()
 export class MetaWhatsappOtpSender implements WhatsappOtpSender {
   private readonly logger = new Logger(MetaWhatsappOtpSender.name);
 
   constructor(private readonly config?: MetaSenderConfig) {}
 
-  private getConfig(): Required<MetaSenderConfig> {
+  private getConfig(): ResolvedMetaSenderConfig {
     const phoneNumberId =
       this.config?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
     const accessToken =
@@ -32,8 +41,7 @@ export class MetaWhatsappOtpSender implements WhatsappOtpSender {
       'auth_otp';
     const templateLang =
       this.config?.templateLang ||
-      process.env.WHATSAPP_TEMPLATE_LANG ||
-      'ar';
+      process.env.WHATSAPP_TEMPLATE_LANG;
     const graphVersion =
       this.config?.graphVersion ||
       process.env.WHATSAPP_GRAPH_VERSION ||
@@ -83,7 +91,7 @@ export class MetaWhatsappOtpSender implements WhatsappOtpSender {
       template: {
         name: templateName,
         language: {
-          code: options.locale || templateLang,
+          code: templateLang || options.locale || 'ar',
         },
         components: [
           {

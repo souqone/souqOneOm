@@ -12,6 +12,8 @@ export function hashToBigInt(hexHash: string): bigint {
   return BigInt('0x' + hexHash.slice(0, 15));
 }
 
+export const WHATSAPP_GLOBAL_LOCK_KEY = BigInt('0x534f55514f4e45');
+
 export interface ReserveSendSlotOptions {
   phoneE164: string;
   purpose: OtpPurpose;
@@ -66,21 +68,19 @@ export class WhatsappLimitsService {
 
     // 1. Acquire transaction-level advisory locks in deterministic order to prevent race conditions & deadlocks
     const phoneLockKey = hashToBigInt(pHash);
-    const lockKeys: bigint[] = [phoneLockKey];
+    const lockKeys: bigint[] = [phoneLockKey, WHATSAPP_GLOBAL_LOCK_KEY];
     if (iHash) {
       const ipLockKey = hashToBigInt(iHash);
-      if (ipLockKey !== phoneLockKey) {
+      if (!lockKeys.includes(ipLockKey)) {
         lockKeys.push(ipLockKey);
       }
     }
-    lockKeys.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const uniqueSortedKeys = Array.from(new Set(lockKeys)).sort((a, b) =>
+      a < b ? -1 : a > b ? 1 : 0,
+    );
 
-    for (const key of lockKeys) {
-      try {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${key})`;
-      } catch (e) {
-        // Fallback for mocks or environments without advisory lock support
-      }
+    for (const key of uniqueSortedKeys) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${key}::bigint)`;
     }
 
     // 2. Cooldown check: 60 seconds between messages for the same phone

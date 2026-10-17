@@ -279,5 +279,23 @@ describe('OtpService Unit Tests', () => {
       const res2 = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code);
       expect(res2).toBe('MISSING_OR_EXPIRED');
     });
+
+    it('binds challenge to userId: verifies with matching userId, rejects with non-matching userId, and verifies without userId for PHONE_LOGIN', async () => {
+      // 1. Issue with userId = 'user-A'
+      const codeA = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300, 'user-A');
+
+      // Attempt to verify with user-B -> rejected as MISSING_OR_EXPIRED
+      const resB = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, codeA, 'user-B');
+      expect(resB).toBe('MISSING_OR_EXPIRED');
+
+      // Verify with matching user-A -> OK
+      const resA = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, codeA, 'user-A');
+      expect(resA).toBe('OK');
+
+      // 2. Issue without userId for PHONE_LOGIN
+      const codeLogin = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_LOGIN, 300);
+      const resLogin = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_LOGIN, codeLogin);
+      expect(resLogin).toBe('OK');
+    });
   });
 });

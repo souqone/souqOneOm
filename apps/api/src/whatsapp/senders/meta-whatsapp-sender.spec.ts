@@ -130,4 +130,40 @@ describe('MetaWhatsappOtpSender', () => {
       expect(err.cause).toBeDefined();
     }
   });
+
+  it('prioritizes WHATSAPP_TEMPLATE_LANG over options.locale, then options.locale, then fallback to ar', async () => {
+    let capturedOptions: any = null;
+    global.fetch = jest.fn().mockImplementation(async (_url, opts) => {
+      capturedOptions = opts;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ messages: [{ id: 'wamid.123' }] }),
+      } as Response;
+    });
+
+    // 1. When config/env templateLang is set (e.g. 'ar_SA'), it overrides options.locale (e.g. 'en')
+    const senderWithLang = new MetaWhatsappOtpSender({
+      phoneNumberId: '123',
+      accessToken: 'token',
+      templateLang: 'ar_SA',
+    });
+    await senderWithLang.send({ phoneE164: '+96891234567', code: '123456', locale: 'en' });
+    let body = JSON.parse(capturedOptions.body);
+    expect(body.template.language.code).toBe('ar_SA');
+
+    // 2. When templateLang is not set, options.locale is used
+    const senderWithoutLang = new MetaWhatsappOtpSender({
+      phoneNumberId: '123',
+      accessToken: 'token',
+    });
+    await senderWithoutLang.send({ phoneE164: '+96891234567', code: '123456', locale: 'en' });
+    body = JSON.parse(capturedOptions.body);
+    expect(body.template.language.code).toBe('en');
+
+    // 3. When neither is set, defaults to 'ar'
+    await senderWithoutLang.send({ phoneE164: '+96891234567', code: '123456' });
+    body = JSON.parse(capturedOptions.body);
+    expect(body.template.language.code).toBe('ar');
+  });
 });

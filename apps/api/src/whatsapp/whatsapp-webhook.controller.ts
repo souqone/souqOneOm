@@ -15,7 +15,7 @@ import {
 import { Response } from 'express';
 import { SkipThrottle } from '@nestjs/throttler';
 import * as crypto from 'crypto';
-import { WhatsappMessageStatus } from '@prisma/client';
+import { Prisma, WhatsappMessageStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -34,12 +34,18 @@ export function safeSecretCompare(a?: string | null, b?: string | null): boolean
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-const STATUS_RANKS: Record<WhatsappMessageStatus, number> = {
-  ACCEPTED: 1,
-  SENT: 2,
-  DELIVERED: 3,
-  READ: 4,
-  FAILED: 99,
+export const LOWER_STATUSES: Record<WhatsappMessageStatus, WhatsappMessageStatus[]> = {
+  ACCEPTED: [],
+  SENT: [WhatsappMessageStatus.ACCEPTED],
+  DELIVERED: [WhatsappMessageStatus.ACCEPTED, WhatsappMessageStatus.SENT],
+  READ: [WhatsappMessageStatus.ACCEPTED, WhatsappMessageStatus.SENT, WhatsappMessageStatus.DELIVERED],
+  FAILED: [
+    WhatsappMessageStatus.ACCEPTED,
+    WhatsappMessageStatus.SENT,
+    WhatsappMessageStatus.DELIVERED,
+    WhatsappMessageStatus.READ,
+    WhatsappMessageStatus.FAILED,
+  ],
 };
 
 @SkipThrottle()
@@ -158,50 +164,40 @@ export class WhatsappWebhookController {
     }
 
     let targetStatus: WhatsappMessageStatus | null = null;
-    if (rawStatus === 'sent') targetStatus = 'SENT';
-    else if (rawStatus === 'delivered') targetStatus = 'DELIVERED';
-    else if (rawStatus === 'read') targetStatus = 'READ';
-    else if (rawStatus === 'failed') targetStatus = 'FAILED';
+    if (rawStatus === 'sent') targetStatus = WhatsappMessageStatus.SENT;
+    else if (rawStatus === 'delivered') targetStatus = WhatsappMessageStatus.DELIVERED;
+    else if (rawStatus === 'read') targetStatus = WhatsappMessageStatus.READ;
+    else if (rawStatus === 'failed') targetStatus = WhatsappMessageStatus.FAILED;
 
     if (!targetStatus) {
       return;
     }
 
-    const existing = await this.prisma.whatsappMessageLog.findUnique({
-      where: { providerMessageId },
-    });
+    // Atomic conditional updateMany:
+    // Only update if current status in DB is of strictly lower rank than targetStatus.
+    // FAILED is always applied unconditionally.
+    const where: Prisma.WhatsappMessageLogWhereInput = {
+      providerMessageId,
+    };
 
-    if (!existing) {
-      // Message ID not recognized, ignore gracefully
-      return;
+    if (targetStatus !== WhatsappMessageStatus.FAILED) {
+      where.status = { in: LOWER_STATUSES[targetStatus] };
     }
 
-    // Monotonic transition rule:
-    // FAILED is always applied.
-    // For others, only update if targetStatus rank is strictly greater than existing status rank.
-    if (targetStatus !== 'FAILED') {
-      const currentRank = STATUS_RANKS[existing.status] || 0;
-      const targetRank = STATUS_RANKS[targetStatus] || 0;
+    const updateData: Prisma.WhatsappMessageLogUpdateInput = {
+      status: targetStatus,
+    };
 
-      if (targetRank <= currentRank) {
-        // State is already at or past this stage (e.g. READ arrived before DELIVERED), ignore
-        return;
-      }
+    if (targetStatus === WhatsappMessageStatus.FAILED) {
+      const errCode = statusObj?.errors?.[0]?.code
+        ? String(statusObj.errors[0].code)
+        : 'DELIVERY_FAILED';
+      updateData.errorCode = errCode;
     }
 
-    const errorCode =
-      targetStatus === 'FAILED'
-        ? statusObj?.errors?.[0]?.code
-          ? String(statusObj.errors[0].code)
-          : existing.errorCode || 'DELIVERY_FAILED'
-        : existing.errorCode;
-
-    await this.prisma.whatsappMessageLog.update({
-      where: { id: existing.id },
-      data: {
-        status: targetStatus,
-        errorCode,
-      },
+    await this.prisma.whatsappMessageLog.updateMany({
+      where,
+      data: updateData,
     });
   }
 }

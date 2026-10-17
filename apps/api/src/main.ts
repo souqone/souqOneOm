@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import 'dotenv/config';
-import { json, urlencoded } from 'express';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import { applyBodyParsers } from './common/utils/body-parser.util';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SanitizeInterceptor } from './common/interceptors/sanitize.interceptor';
 import { NormalizeImagesInterceptor } from './common/interceptors/normalize-images.interceptor';
@@ -26,9 +26,8 @@ async function bootstrap() {
   // M-8: trust the first proxy hop so req.ip / X-Forwarded-For reflects the real client IP
   app.set('trust proxy', 1);
 
-  // Set JSON payload limits to prevent unbounded memory exhaustion
-  app.use(json({ limit: '2mb' }));
-  app.use(urlencoded({ extended: true, limit: '2mb' }));
+  // Set JSON & URL-encoded payload limits (2MB) while preserving rawBody for Webhooks
+  applyBodyParsers(app);
 
   // Strict CORS Allowlist
   const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')

@@ -21,6 +21,7 @@ describe('WhatsappWebhookController', () => {
 
     mockPrisma = {
       whatsappMessageLog: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
@@ -135,13 +136,7 @@ describe('WhatsappWebhookController', () => {
       );
     });
 
-    it('updates status monotonically from ACCEPTED to SENT to DELIVERED to READ', async () => {
-      mockPrisma.whatsappMessageLog.findUnique.mockResolvedValueOnce({
-        id: 'msg_1',
-        status: 'ACCEPTED',
-        providerMessageId: 'wamid_1',
-      });
-
+    it('updates status monotonically from ACCEPTED to SENT to DELIVERED to READ using conditional updateMany', async () => {
       const payload = {
         entry: [
           {
@@ -160,20 +155,17 @@ describe('WhatsappWebhookController', () => {
       const res = await controller.handleWebhook(req, signature);
 
       expect(res).toEqual({ status: 'ok' });
-      expect(mockPrisma.whatsappMessageLog.update).toHaveBeenCalledWith({
-        where: { id: 'msg_1' },
-        data: { status: 'SENT', errorCode: undefined },
+      expect(mockPrisma.whatsappMessageLog.updateMany).toHaveBeenCalledWith({
+        where: {
+          providerMessageId: 'wamid_1',
+          status: { in: ['ACCEPTED'] },
+        },
+        data: { status: 'SENT' },
       });
     });
 
-    it('handles out-of-order deliveries: if READ arrives before DELIVERED, subsequent DELIVERED is ignored', async () => {
-      // 1. Message is currently in ACCEPTED, receives READ
-      mockPrisma.whatsappMessageLog.findUnique.mockResolvedValueOnce({
-        id: 'msg_2',
-        status: 'ACCEPTED',
-        providerMessageId: 'wamid_2',
-      });
-
+    it('handles out-of-order deliveries atomically: if READ arrives before DELIVERED, DELIVERED query excludes READ', async () => {
+      // 1. Message receives READ
       const readPayload = {
         entry: [
           {
@@ -191,20 +183,17 @@ describe('WhatsappWebhookController', () => {
       const { req: readReq, signature: readSig } = createSignedRequest(readPayload);
       await controller.handleWebhook(readReq, readSig);
 
-      expect(mockPrisma.whatsappMessageLog.update).toHaveBeenCalledWith({
-        where: { id: 'msg_2' },
-        data: { status: 'READ', errorCode: undefined },
+      expect(mockPrisma.whatsappMessageLog.updateMany).toHaveBeenCalledWith({
+        where: {
+          providerMessageId: 'wamid_2',
+          status: { in: ['ACCEPTED', 'SENT', 'DELIVERED'] },
+        },
+        data: { status: 'READ' },
       });
 
-      mockPrisma.whatsappMessageLog.update.mockClear();
+      mockPrisma.whatsappMessageLog.updateMany.mockClear();
 
-      // 2. Later, delayed DELIVERED status arrives for the message that is now READ
-      mockPrisma.whatsappMessageLog.findUnique.mockResolvedValueOnce({
-        id: 'msg_2',
-        status: 'READ',
-        providerMessageId: 'wamid_2',
-      });
-
+      // 2. Later, delayed DELIVERED status arrives for the message
       const deliveredPayload = {
         entry: [
           {
@@ -223,17 +212,17 @@ describe('WhatsappWebhookController', () => {
       const res = await controller.handleWebhook(delReq, delSig);
 
       expect(res).toEqual({ status: 'ok' });
-      // DELIVERED rank (3) <= READ rank (4), so update is NOT called!
-      expect(mockPrisma.whatsappMessageLog.update).not.toHaveBeenCalled();
+      // Crucial test: DELIVERED updateMany strictly checks status IN ('ACCEPTED', 'SENT') - strictly excluding 'READ' and 'DELIVERED'
+      expect(mockPrisma.whatsappMessageLog.updateMany).toHaveBeenCalledWith({
+        where: {
+          providerMessageId: 'wamid_2',
+          status: { in: ['ACCEPTED', 'SENT'] },
+        },
+        data: { status: 'DELIVERED' },
+      });
     });
 
-    it('always applies FAILED status even if message is in intermediate or final state', async () => {
-      mockPrisma.whatsappMessageLog.findUnique.mockResolvedValueOnce({
-        id: 'msg_3',
-        status: 'SENT',
-        providerMessageId: 'wamid_3',
-      });
-
+    it('always applies FAILED status unconditionally without status constraints', async () => {
       const failedPayload = {
         entry: [
           {
@@ -257,14 +246,14 @@ describe('WhatsappWebhookController', () => {
       const { req, signature } = createSignedRequest(failedPayload);
       await controller.handleWebhook(req, signature);
 
-      expect(mockPrisma.whatsappMessageLog.update).toHaveBeenCalledWith({
-        where: { id: 'msg_3' },
+      expect(mockPrisma.whatsappMessageLog.updateMany).toHaveBeenCalledWith({
+        where: { providerMessageId: 'wamid_3' },
         data: { status: 'FAILED', errorCode: '131026' },
       });
     });
 
     it('gracefully returns 200 without throwing when message ID is unknown', async () => {
-      mockPrisma.whatsappMessageLog.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.whatsappMessageLog.updateMany.mockResolvedValueOnce({ count: 0 });
 
       const payload = {
         entry: [
@@ -284,7 +273,7 @@ describe('WhatsappWebhookController', () => {
       const res = await controller.handleWebhook(req, signature);
 
       expect(res).toEqual({ status: 'ok' });
-      expect(mockPrisma.whatsappMessageLog.update).not.toHaveBeenCalled();
+      expect(mockPrisma.whatsappMessageLog.updateMany).toHaveBeenCalled();
     });
   });
 });

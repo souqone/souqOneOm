@@ -37,6 +37,14 @@ describe('WhatsappLimitsService', () => {
     expect(mockTx.$executeRaw).toHaveBeenCalled();
   });
 
+  it('throws immediately when acquiring advisory lock fails', async () => {
+    mockTx.$executeRaw.mockRejectedValue(new Error('PostgreSQL advisory lock failure'));
+
+    await expect(
+      service.reserveSendSlot(mockTx, defaultOptions),
+    ).rejects.toThrow('PostgreSQL advisory lock failure');
+  });
+
   it('enforces 60-second cooldown between requests for the same phone', async () => {
     const recentCreatedAt = new Date(Date.now() - 30 * 1000); // 30 seconds ago
     mockTx.whatsappMessageLog.findFirst.mockResolvedValue({

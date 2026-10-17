@@ -17,6 +17,7 @@ import {
   WHATSAPP_OTP_SENDER,
   WhatsappOtpSender,
   WhatsappOtpError,
+  SendWhatsappOtpResult,
 } from './senders/whatsapp-sender.interface';
 import { WhatsappLimitsService } from './whatsapp-limits.service';
 
@@ -35,6 +36,7 @@ export interface VerifyPhoneOtpOptions {
   phoneE164: string;
   purpose: OtpPurpose;
   code: string;
+  userId?: string;
 }
 
 export interface VerifyPhoneOtpResult {
@@ -103,22 +105,13 @@ export class PhoneOtpService {
     );
 
     // 2. Dispatch message outside transaction
+    let sendResult: SendWhatsappOtpResult;
     try {
-      const sendResult = await this.sender.send({
+      sendResult = await this.sender.send({
         phoneE164,
         code,
         locale: 'ar',
       });
-
-      // 3. Update reserved log with providerMessageId
-      await this.prisma.whatsappMessageLog.update({
-        where: { id: reservedLogId },
-        data: {
-          providerMessageId: sendResult.providerMessageId,
-        },
-      });
-
-      return { providerMessageId: sendResult.providerMessageId };
     } catch (err: any) {
       this.logger.error(
         `Failed to send WhatsApp OTP: ${err?.message || 'Unknown error'}`,
@@ -158,6 +151,23 @@ export class PhoneOtpService {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
+
+    // 3. Update reserved log with providerMessageId in separate try/catch
+    try {
+      await this.prisma.whatsappMessageLog.update({
+        where: { id: reservedLogId },
+        data: {
+          providerMessageId: sendResult.providerMessageId,
+        },
+      });
+    } catch (dbErr: any) {
+      this.logger.error(
+        `Failed to record providerMessageId for reserved log: ${dbErr?.message || 'DB error'}`,
+      );
+      // Delivery succeeded! Do not cancel challenge or mark as failed.
+    }
+
+    return { providerMessageId: sendResult.providerMessageId };
   }
 
   /**
@@ -172,6 +182,7 @@ export class PhoneOtpService {
       phoneE164,
       options.purpose,
       options.code,
+      options.userId,
     );
 
     if (result === 'OK') {

@@ -161,6 +161,20 @@ describe('PhoneOtpService', () => {
         expect(f.err.getResponse().code).toBe('OTP_COOLDOWN');
       }
     });
+
+    it('returns success even if updating providerMessageId in DB fails after successful send', async () => {
+      mockPrisma.whatsappMessageLog.update.mockRejectedValueOnce(
+        new Error('Database connectivity issue after send'),
+      );
+
+      const result = await service.request({
+        phoneE164: '+96891234567',
+        purpose: 'PHONE_VERIFY',
+      });
+
+      expect(result).toEqual({ providerMessageId: 'wamid_test_123' });
+      expect(mockOtpService.invalidateActiveForPhone).not.toHaveBeenCalled();
+    });
   });
 
   describe('verify', () => {
@@ -174,6 +188,25 @@ describe('PhoneOtpService', () => {
       });
 
       expect(result).toEqual({ verified: true });
+    });
+
+    it('forwards optional userId to otpService.verifyForPhone', async () => {
+      mockOtpService.verifyForPhone.mockResolvedValueOnce('OK');
+
+      const result = await service.verify({
+        phoneE164: '+96891234567',
+        purpose: 'PHONE_VERIFY',
+        code: '123456',
+        userId: 'user-xyz',
+      });
+
+      expect(result).toEqual({ verified: true });
+      expect(mockOtpService.verifyForPhone).toHaveBeenCalledWith(
+        '+96891234567',
+        'PHONE_VERIFY',
+        '123456',
+        'user-xyz',
+      );
     });
 
     it('throws 429 TOO_MANY_ATTEMPTS when attempts exceed limit', async () => {
