@@ -215,7 +215,12 @@ export class AuthService {
     let user = await this.prisma.user.findUnique({ where: { googleId } });
 
     if (user) {
-      if (!user.isVerified && isGoogleAuthoritative && (user.status ?? 'ACTIVE') === 'ACTIVE') {
+      if (
+        !user.isVerified &&
+        isGoogleAuthoritative &&
+        normalizeEmail(user.email) === normalizedEmail &&
+        (user.status ?? 'ACTIVE') === 'ACTIVE'
+      ) {
         const targetUserId = user.id;
         user = await this.prisma.$transaction(async (tx) => {
           const res = await tx.user.updateMany({

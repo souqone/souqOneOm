@@ -692,4 +692,37 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
   });
+
+  /* Matrix 12: Existing user found by googleId, unverified, authoritative Google, but stored email differs from Google token email => remains unverified without update */
+  it('Matrix 12: existing user found by googleId, unverified, but stored email differs from token email => remains unverified without update', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'token-email@gmail.com',
+        sub: 'linked-google-id-5',
+        email_verified: true,
+      }),
+    });
+
+    const unverifiedUser = {
+      id: 'u-unverified-mismatch-5',
+      email: 'stored-different-email@gmail.com',
+      username: 'mismatch_user',
+      role: 'USER',
+      status: 'ACTIVE',
+      googleId: 'linked-google-id-5',
+      isVerified: false,
+      passwordHash: null,
+    };
+
+    mockPrisma.user.findUnique.mockResolvedValue(unverifiedUser);
+    mockPrisma.refreshToken.create.mockResolvedValue({ token: 'new-rt-5' });
+
+    const result = await authService.googleAuth({ credential: 'valid-cred-5' });
+
+    expect(result.accessToken).toBe('jwt-access-token-123');
+    expect(result.user.isVerified).toBe(false);
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
+  });
 });
+
