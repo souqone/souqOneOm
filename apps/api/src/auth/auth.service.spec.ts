@@ -11,7 +11,17 @@ import { RedisService } from '../redis/redis.service';
 import { OtpService } from './otp.service';
 import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 import { OtpPurpose } from '@prisma/client';
+
+const mockBanBlacklistService = {
+  isPhoneBlocked: jest.fn().mockResolvedValue(false),
+  isGoogleBlocked: jest.fn().mockResolvedValue(false),
+  hashPhone: jest.fn().mockReturnValue('mock-phone-hash'),
+  hashGoogle: jest.fn().mockReturnValue('mock-google-hash'),
+  addForUser: jest.fn().mockResolvedValue(1),
+  removeForUser: jest.fn().mockResolvedValue(1),
+};
 
 const mockPrisma = {
   user: {
@@ -127,6 +137,7 @@ describe('AuthService', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE' }) } },
         { provide: AccountStatusService, useValue: mockAccountStatusService },
+        { provide: BanBlacklistService, useValue: mockBanBlacklistService },
       ],
     }).compile();
 

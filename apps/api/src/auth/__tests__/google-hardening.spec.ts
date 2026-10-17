@@ -10,6 +10,8 @@ import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
 import { AccessTokenGate } from '../access-token-gate.service';
 import { AccountStatusService } from '../account-status.service';
+import { BanBlacklistService } from '../../ban-blacklist/ban-blacklist.service';
+import { AccountStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAuth)', () => {
@@ -17,6 +19,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
   let tokenService: AuthTokenService;
   let accountStatusService: AccountStatusService;
   let mockOtp: any;
+  let mockBanBlacklistService: any;
 
   let verifyIdTokenMock: jest.Mock;
 
@@ -61,6 +64,19 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.user.findUnique = jest.fn();
+    mockPrisma.user.create = jest.fn();
+    mockPrisma.user.update = jest.fn();
+    mockPrisma.user.updateMany = jest.fn().mockResolvedValue({ count: 1 });
+
+    mockBanBlacklistService = {
+      isPhoneBlocked: jest.fn().mockResolvedValue(false),
+      isGoogleBlocked: jest.fn().mockResolvedValue(false),
+      hashPhone: jest.fn().mockReturnValue('mock-phone-hash'),
+      hashGoogle: jest.fn().mockReturnValue('mock-google-hash'),
+      addForUser: jest.fn().mockResolvedValue(1),
+      removeForUser: jest.fn().mockResolvedValue(1),
+    };
 
     mockOtp = {
       issue: jest.fn().mockResolvedValue('123456'),
@@ -80,6 +96,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
         { provide: RedisService, useValue: mockRedis },
         { provide: AccessTokenGate, useValue: { invalidate: jest.fn().mockResolvedValue(undefined), validate: jest.fn().mockResolvedValue({ tv: 0, status: 'ACTIVE', role: 'USER' }) } },
         { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
+        { provide: BanBlacklistService, useValue: mockBanBlacklistService },
       ],
     }).compile();
 
@@ -283,9 +300,9 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
 
     expect(result.accessToken).toBe('jwt-access-token-123');
     expect(mockPrisma.$transaction).toHaveBeenCalled();
-    expect(mockPrisma.user.update).toHaveBeenCalledWith(
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'u-company' },
+        where: { id: 'u-company', status: { not: AccountStatus.BANNED } },
         data: expect.objectContaining({
           passwordHash: null,
           googleId: 'google-sub-company',
@@ -516,9 +533,9 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
 
     // 1. Transaction executed with password wiped to null, active OTP challenges invalidated, isVerified=true, googleId linked
     expect(mockPrisma.$transaction).toHaveBeenCalled();
-    expect(mockPrisma.user.update).toHaveBeenCalledWith(
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'u-victim' },
+        where: { id: 'u-victim', status: { not: AccountStatus.BANNED } },
         data: expect.objectContaining({
           passwordHash: null,
           googleId: 'victim-google-sub-999',
@@ -575,7 +592,11 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     expect(result.accessToken).toBe('jwt-access-token-123');
     expect(mockPrisma.$transaction).toHaveBeenCalled();
     expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
-      where: { id: 'u-unverified-1', isVerified: false },
+      where: {
+        id: 'u-unverified-1',
+        isVerified: false,
+        status: { not: AccountStatus.BANNED },
+      },
       data: {
         isVerified: true,
         emailVerifiedAt: expect.any(Date),
@@ -723,6 +744,167 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     expect(result.user.isVerified).toBe(false);
     expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 13: Path 1 - New user from Google, but googleId is blacklisted => 403 ACCOUNT_BANNED */
+  it('Matrix 13: Path 1 - new user registration with blacklisted Google sub rejects with 403 ACCOUNT_BANNED', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'banned-new@gmail.com',
+        sub: 'google-sub-blacklisted-1',
+        email_verified: true,
+      }),
+    });
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockBanBlacklistService.isGoogleBlocked.mockResolvedValueOnce(true);
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'token-blacklisted-new' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({
+      statusCode: 403,
+      code: 'ACCOUNT_BANNED',
+      message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+    });
+    expect(mockPrisma.user.create).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 14: Path 2 - Email linking for unverified user with blacklisted Google sub => 403 ACCOUNT_BANNED */
+  it('Matrix 14: Path 2 - email linking with blacklisted Google sub rejects with 403 ACCOUNT_BANNED', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'victim@gmail.com',
+        sub: 'google-sub-blacklisted-2',
+        email_verified: true,
+      }),
+    });
+
+    // Lookup by googleId => null, rejected before email lookup
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+
+    mockBanBlacklistService.isGoogleBlocked.mockResolvedValueOnce(true);
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'token-blacklisted-link' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({
+      statusCode: 403,
+      code: 'ACCOUNT_BANNED',
+    });
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 15: Path 2 - Concurrent ban during email linking => updateMany count 0 => 403 ACCOUNT_BANNED */
+  it('Matrix 15: Path 2 - concurrent ban during email linking rejects with 403 ACCOUNT_BANNED', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'victim-race@gmail.com',
+        sub: 'google-sub-allowed-3',
+        email_verified: true,
+      }),
+    });
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'u-unverified-race',
+        email: 'victim-race@gmail.com',
+        isVerified: false,
+        googleId: null,
+      });
+
+    mockBanBlacklistService.isGoogleBlocked.mockResolvedValueOnce(false);
+    mockPrisma.user.updateMany.mockResolvedValueOnce({ count: 0 }); // Target became BANNED concurrently!
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'token-race-link' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({
+      statusCode: 403,
+      code: 'ACCOUNT_BANNED',
+    });
+  });
+
+  /* Matrix 16: Path 3 - Concurrent ban on unverified user found by googleId => updateMany count 0 => 403 ACCOUNT_BANNED */
+  it('Matrix 16: Path 3 - concurrent ban during unverified googleId verification rejects with 403 ACCOUNT_BANNED', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'linked-unverified@gmail.com',
+        sub: 'google-sub-linked-unverified',
+        email_verified: true,
+      }),
+    });
+
+    const unverifiedUser = {
+      id: 'u-linked-unverified',
+      email: 'linked-unverified@gmail.com',
+      googleId: 'google-sub-linked-unverified',
+      isVerified: false,
+      status: 'ACTIVE',
+    };
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(unverifiedUser)
+      .mockResolvedValueOnce({ id: 'u-linked-unverified', status: 'BANNED' }); // Second lookup finds BANNED
+
+    mockPrisma.user.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'token-linked-race' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({
+      statusCode: 403,
+      code: 'ACCOUNT_BANNED',
+    });
+  });
+
+  /* Matrix 17: Path near line 349 - verified user without googleId with blacklisted Google sub => 403 ACCOUNT_BANNED */
+  it('Matrix 17: Path near line 349 - verified user with blacklisted Google sub rejects with 403 without leaking link required', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'verified-no-pass@gmail.com',
+        sub: 'google-sub-blacklisted-4',
+        email_verified: true,
+      }),
+    });
+
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null); // lookup by googleId
+    mockBanBlacklistService.isGoogleBlocked.mockResolvedValueOnce(true);
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'token-verified-no-pass' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({
+      statusCode: 403,
+      code: 'ACCOUNT_BANNED',
+    });
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
   });
 });
 

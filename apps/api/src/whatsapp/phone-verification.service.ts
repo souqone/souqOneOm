@@ -4,9 +4,10 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { OtpPurpose } from '@prisma/client';
+import { OtpPurpose, AccountStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PhoneOtpService } from './phone-otp.service';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 import {
   normalizePhoneStrict,
   getAllowedCountryCodes,
@@ -17,6 +18,7 @@ export class PhoneVerificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly phoneOtpService: PhoneOtpService,
+    private readonly banBlacklistService: BanBlacklistService,
   ) {}
 
   /**
@@ -167,12 +169,26 @@ export class PhoneVerificationService {
       userId,
     });
 
-    // Write phoneE164 and phoneVerifiedAt to user conditionally matching current phone
+    // Check if phone number is blacklisted (checked AFTER OTP verification to prevent enumeration)
+    const isBlocked = await this.banBlacklistService.isPhoneBlocked(phoneE164);
+    if (isBlocked) {
+      throw new HttpException(
+        {
+          statusCode: 403,
+          code: 'PHONE_NOT_ALLOWED',
+          message: 'رقم الهاتف غير متاح للتوثيق',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // Write phoneE164 and phoneVerifiedAt to user conditionally matching current phone and non-banned status
     try {
       const updateResult = await this.prisma.user.updateMany({
         where: {
           id: userId,
           phone: user.phone,
+          status: { not: AccountStatus.BANNED },
         },
         data: {
           phoneE164,
@@ -181,6 +197,20 @@ export class PhoneVerificationService {
       });
 
       if (updateResult.count === 0) {
+        const freshUser = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { status: true },
+        });
+        if (freshUser?.status === AccountStatus.BANNED) {
+          throw new HttpException(
+            {
+              statusCode: 403,
+              code: 'ACCOUNT_BANNED',
+              message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+            },
+            HttpStatus.FORBIDDEN,
+          );
+        }
         throw new HttpException(
           {
             statusCode: 409,

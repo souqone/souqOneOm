@@ -39,6 +39,7 @@ import {
 } from './admin-users.types';
 import type { JwtPayload } from '../auth/auth.types';
 import { LAST_ADMIN_ADVISORY_LOCK_ID } from '../common/constants/admin-lock.constant';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 
 @Injectable()
 export class AdminUsersService {
@@ -50,6 +51,7 @@ export class AdminUsersService {
     private readonly accessTokenGate: AccessTokenGate,
     private readonly chatGateway: ChatGateway,
     private readonly adminAuditService: AdminAuditService,
+    private readonly banBlacklistService: BanBlacklistService,
     @Optional()
     private readonly eventEmitter?: EventEmitter2,
   ) {}
@@ -586,6 +588,8 @@ export class AdminUsersService {
           suspendedUntil: true,
           statusChangedAt: true,
           tokenVersion: true,
+          phoneE164: true,
+          googleId: true,
         },
       });
 
@@ -639,6 +643,16 @@ export class AdminUsersService {
       });
 
       await this.tokenService.revokeAllRefreshTokens(targetId, tx);
+
+      await this.banBlacklistService.addForUser(
+        tx,
+        {
+          id: target.id,
+          phoneE164: target.phoneE164,
+          googleId: target.googleId,
+        },
+        trimmedReason,
+      );
 
       await this.adminAuditService.record(tx, {
         adminId: admin.sub,
@@ -713,6 +727,8 @@ export class AdminUsersService {
           suspendedUntil: true,
           statusChangedAt: true,
           tokenVersion: true,
+          phoneE164: true,
+          googleId: true,
         },
       });
 
@@ -760,6 +776,15 @@ export class AdminUsersService {
           tokenVersion: true,
         },
       });
+
+      await this.banBlacklistService.removeForUser(
+        tx,
+        {
+          id: target.id,
+          phoneE164: target.phoneE164,
+          googleId: target.googleId,
+        },
+      );
 
       await this.adminAuditService.record(tx, {
         adminId: admin.sub,
