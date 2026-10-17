@@ -25,5 +25,31 @@ export class TokenCleanupService {
     if (count > 0) {
       this.logger.log(`Cleaned up ${count} expired/revoked refresh tokens`);
     }
+
+    // Cleanup expired or consumed OTP challenges (older than 7 days if consumed, or expired)
+    const { count: otpCount } = await this.prisma.otpChallenge.deleteMany({
+      where: {
+        OR: [
+          { expiresAt: { lt: new Date() } },
+          { consumedAt: { lt: sevenDaysAgo } },
+        ],
+      },
+    });
+
+    if (otpCount > 0) {
+      this.logger.log(`Cleaned up ${otpCount} expired/consumed OTP challenges`);
+    }
+
+    // Cleanup WhatsApp message logs older than 30 days (limits only need 24 hours)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { count: whatsappCount } = await this.prisma.whatsappMessageLog.deleteMany({
+      where: {
+        createdAt: { lt: thirtyDaysAgo },
+      },
+    });
+
+    if (whatsappCount > 0) {
+      this.logger.log(`Cleaned up ${whatsappCount} old WhatsApp message logs`);
+    }
   }
 }

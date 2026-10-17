@@ -195,7 +195,7 @@ export async function createTestApp(options?: { useGlobalFilters?: boolean }): P
     .useValue(null)
     .compile();
 
-  app = moduleFixture.createNestApplication();
+  app = moduleFixture.createNestApplication({ rawBody: true });
 
   // Strict CORS Allowlist (mirrors main.ts)
   const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')

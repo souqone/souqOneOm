@@ -16,7 +16,7 @@ import * as path from 'path';
 async function bootstrap() {
   validateProductionEnv();
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   // Redis Socket.IO Adapter for horizontal scaling
   const redisIoAdapter = new RedisIoAdapter(app);

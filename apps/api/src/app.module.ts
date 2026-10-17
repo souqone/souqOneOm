@@ -37,9 +37,11 @@ import { ListingNotificationListener } from './common/listeners/listing-notifica
 import { AdminAuditModule } from './admin-audit/admin-audit.module';
 import { AdminUsersModule } from './admin-users/admin-users.module';
 import { VisibilityModule } from './common/visibility.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
 
 @Module({
   imports: [
+    WhatsappModule,
     VisibilityModule,
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
