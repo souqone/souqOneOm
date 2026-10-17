@@ -237,6 +237,13 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
         assertCanAuthenticate: jest.fn().mockResolvedValue(undefined),
       };
 
+      const mockBanBlacklistService = {
+        isGoogleBlocked: jest.fn().mockResolvedValue(false),
+        isPhoneBlocked: jest.fn().mockResolvedValue(false),
+        addForUser: jest.fn().mockResolvedValue(0),
+        removeForUser: jest.fn().mockResolvedValue(0),
+      };
+
       authService = new AuthService(
         mockPrisma as any,
         mockMailService as any,
@@ -245,6 +252,7 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
         mockOtp as any,
         mockAccessTokenGate as any,
         mockAccountStatusService as any,
+        mockBanBlacklistService as any,
       );
     });
 

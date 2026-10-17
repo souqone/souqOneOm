@@ -521,6 +521,26 @@ describeOrSkip('BanBlacklist Integration & Real PostgreSQL Deterministic Concurr
     });
   });
 
+  // Helper to poll pg_stat_activity until a concurrent backend is blocked on a row lock
+  async function waitForBackendLock(client: Client, timeoutMs = 5000, pollIntervalMs = 20): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const res = await client.query<{ count: string }>(
+        `SELECT count(*)::int AS count
+         FROM pg_stat_activity
+         WHERE datname = current_database()
+           AND pid <> pg_backend_pid()
+           AND wait_event_type = 'Lock'`,
+      );
+      const count = parseInt(res.rows[0]?.count || '0', 10);
+      if (count > 0) {
+        return;
+      }
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
+    }
+    throw new Error(`waitForBackendLock timed out after ${timeoutMs}ms waiting for a backend blocked on a Lock`);
+  }
+
   describe('(D) Deterministic Concurrency Race in both directions using dedicated pg client holding FOR UPDATE', () => {
     it('Direction 1 (Ban First): verification blocks behind lock, ban marks BANNED, verification resumes and fails 403 ACCOUNT_BANNED', async () => {
       const racePhone1 = '+96894445566';
@@ -555,8 +575,8 @@ describeOrSkip('BanBlacklist Integration & Real PostgreSQL Deterministic Concurr
           verifySettled = true;
         });
 
-      // Small pause to guarantee verifyPhone is executing and blocked in PostgreSQL
-      await new Promise((r) => setTimeout(r, 100));
+      // Poll pg_stat_activity until verifyPhone is actively blocked on row lock
+      await waitForBackendLock(pgClient);
       expect(verifySettled).toBe(false);
 
       // The pg connection updates the user status to BANNED before releasing the lock
@@ -616,8 +636,8 @@ describeOrSkip('BanBlacklist Integration & Real PostgreSQL Deterministic Concurr
           banSettled = true;
         });
 
-      // Small pause to guarantee banUser is executing and blocked on the row lock
-      await new Promise((r) => setTimeout(r, 100));
+      // Poll pg_stat_activity until banUser is actively blocked on row lock
+      await waitForBackendLock(pgClient);
       expect(banSettled).toBe(false);
 
       // The pg connection simulates verification committing first: sets phoneE164 and phoneVerifiedAt

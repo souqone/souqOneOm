@@ -85,9 +85,11 @@ describe('BanBlacklistService', () => {
     it('creates blacklist entries for both phone and google identities idempotently', async () => {
       const mockTx = {
         authIdentity: {
-          findFirst: jest.fn().mockResolvedValue({
-            providerUserId: 'google-sub-from-auth-ident',
-          }),
+          findMany: jest.fn().mockResolvedValue([
+            {
+              providerUserId: 'google-sub-from-auth-ident',
+            },
+          ]),
         },
         banBlacklistEntry: {
           createMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -118,16 +120,68 @@ describe('BanBlacklistService', () => {
         ]),
         skipDuplicates: true,
       });
-      expect(mockTx.authIdentity.findFirst).toHaveBeenCalledWith({
+      expect(mockTx.authIdentity.findMany).toHaveBeenCalledWith({
         where: { userId: 'u-123', provider: AuthProvider.GOOGLE },
         select: { providerUserId: true },
+      });
+    });
+
+    it('creates blacklist entries for both user.googleId and distinct auth identity with provider GOOGLE proving both hashes are written', async () => {
+      const rawGoogleId = 'google-sub-primary-111';
+      const secondaryGoogleSub = 'google-sub-linked-secondary-222';
+
+      const mockTx = {
+        authIdentity: {
+          findMany: jest.fn().mockResolvedValue([
+            { providerUserId: secondaryGoogleSub },
+          ]),
+        },
+        banBlacklistEntry: {
+          createMany: jest.fn().mockResolvedValue({ count: 2 }),
+        },
+      } as any;
+
+      const user = {
+        id: 'u-multi-google',
+        phoneE164: null,
+        googleId: rawGoogleId,
+      };
+
+      const count = await service.addForUser(mockTx, user, 'Multiple google ids ban');
+
+      expect(count).toBe(2);
+      expect(mockTx.authIdentity.findMany).toHaveBeenCalledWith({
+        where: { userId: 'u-multi-google', provider: AuthProvider.GOOGLE },
+        select: { providerUserId: true },
+      });
+
+      const hashPrimary = service.hashGoogle(rawGoogleId);
+      const hashSecondary = service.hashGoogle(secondaryGoogleSub);
+      expect(hashPrimary).not.toBe(hashSecondary);
+
+      expect(mockTx.banBlacklistEntry.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            kind: BanBlacklistKind.GOOGLE,
+            hash: hashPrimary,
+            userId: 'u-multi-google',
+            reason: 'Multiple google ids ban',
+          },
+          {
+            kind: BanBlacklistKind.GOOGLE,
+            hash: hashSecondary,
+            userId: 'u-multi-google',
+            reason: 'Multiple google ids ban',
+          },
+        ],
+        skipDuplicates: true,
       });
     });
 
     it('returns 0 when user has neither phoneE164 nor googleId nor auth identities', async () => {
       const mockTx = {
         authIdentity: {
-          findFirst: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn().mockResolvedValue([]),
         },
         banBlacklistEntry: {
           createMany: jest.fn(),

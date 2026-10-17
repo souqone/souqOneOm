@@ -64,12 +64,14 @@ export class BanBlacklistService {
       googleSubs.add(user.googleId.trim());
     }
 
-    const identity = await tx.authIdentity.findFirst({
+    const identities = await tx.authIdentity.findMany({
       where: { userId: user.id, provider: AuthProvider.GOOGLE },
       select: { providerUserId: true },
     });
-    if (identity?.providerUserId && identity.providerUserId.trim() !== '') {
-      googleSubs.add(identity.providerUserId.trim());
+    for (const identity of identities) {
+      if (identity?.providerUserId && identity.providerUserId.trim() !== '') {
+        googleSubs.add(identity.providerUserId.trim());
+      }
     }
 
     for (const sub of googleSubs) {

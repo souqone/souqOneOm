@@ -18,6 +18,7 @@ import { MailService } from '../../mail/mail.service';
 import { RedisService } from '../../redis/redis.service';
 import { GeoService } from '../../locations/geo.service';
 import { AccountStatus, AuthProvider, OtpPurpose } from '@prisma/client';
+import { BanBlacklistService } from '../../ban-blacklist/ban-blacklist.service';
 import * as bcrypt from 'bcryptjs';
 
 const TEST_JWT_SECRET = 'super-secret-key-at-least-32-chars-long-for-test!!';
@@ -53,6 +54,8 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn(),
       },
       authIdentity: {
         upsert: jest.fn().mockResolvedValue({}),
@@ -130,6 +133,15 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
         { provide: ChatService, useValue: mockChatService },
         { provide: GeoService, useValue: mockGeo },
         { provide: AccountStatusService, useValue: { assertCanAuthenticate: jest.fn().mockResolvedValue(undefined) } },
+        {
+          provide: BanBlacklistService,
+          useValue: {
+            isGoogleBlocked: jest.fn().mockResolvedValue(false),
+            isPhoneBlocked: jest.fn().mockResolvedValue(false),
+            addForUser: jest.fn().mockResolvedValue(0),
+            removeForUser: jest.fn().mockResolvedValue(0),
+          },
+        },
       ],
     }).compile();
 
@@ -573,13 +585,19 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
         }); // email lookup
 
       let updatePayload: any = null;
-      mockPrisma.user.update.mockImplementation((args: any) => {
+      mockPrisma.user.updateMany.mockImplementation((args: any) => {
         updatePayload = args.data;
-        return Promise.resolve({
-          id: 'u-target-unverified',
-          tokenVersion: 0,
-          ...args.data,
-        });
+        return Promise.resolve({ count: 1 });
+      });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
+        id: 'u-target-unverified',
+        email: 'unverified.target@gmail.com',
+        isVerified: true,
+        passwordHash: null,
+        avatarUrl: null,
+        googleId: 'google-sub-link',
+        tokenVersion: 0,
+        status: AccountStatus.ACTIVE,
       });
 
       await authService.googleAuth({ credential: 'link-google-cred' });
