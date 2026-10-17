@@ -37,6 +37,7 @@ const TABLES_TO_TRUNCATE = [
   'admin_audit_logs',
   'refresh_tokens',
   'otp_challenges',
+  'whatsapp_message_logs',
 
   // Profile tables
   'driver_profiles',

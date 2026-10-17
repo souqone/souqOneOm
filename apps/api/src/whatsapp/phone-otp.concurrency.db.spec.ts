@@ -6,18 +6,47 @@ import { WhatsappLimitsService } from './whatsapp-limits.service';
 import { PhoneOtpService } from './phone-otp.service';
 import { MockWhatsappOtpSender } from './senders/mock-whatsapp-sender.service';
 
-const shouldRun =
-  process.env.RUN_DB_CONCURRENCY_TESTS === '1' &&
-  (!process.env.DATABASE_URL ||
-    process.env.DATABASE_URL.includes('127.0.0.1') ||
-    process.env.DATABASE_URL.includes('localhost'));
+function getLocalDbUrls() {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) {
+    return null;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
 
+  const hostname = parsed.hostname;
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return null;
+  }
+
+  const TEST_DB_NAME = 'concurrency_otp_test_db';
+  const baseUrlObj = new URL(parsed.toString());
+  baseUrlObj.pathname = '/postgres';
+
+  const testDbUrlObj = new URL(parsed.toString());
+  testDbUrlObj.pathname = `/${TEST_DB_NAME}`;
+
+  return {
+    testDbName: TEST_DB_NAME,
+    baseUrl: baseUrlObj.toString(),
+    testDbUrl: testDbUrlObj.toString(),
+  };
+}
+
+const dbConfig = getLocalDbUrls();
+const shouldRun = process.env.RUN_DB_CONCURRENCY_TESTS === '1' && dbConfig !== null;
 const describeOrSkip = shouldRun ? describe : describe.skip;
 
 describeOrSkip('PhoneOtpService Real PostgreSQL Concurrency (127.0.0.1)', () => {
-  const TEST_DB_NAME = 'concurrency_otp_test_db';
-  const BASE_URL = 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
-  const TEST_DB_URL = `postgresql://postgres:postgres@127.0.0.1:5432/${TEST_DB_NAME}`;
+  const { testDbName: TEST_DB_NAME, baseUrl: BASE_URL, testDbUrl: TEST_DB_URL } = dbConfig || {
+    testDbName: 'concurrency_otp_test_db',
+    baseUrl: '',
+    testDbUrl: '',
+  };
 
   let prisma: PrismaClient;
   let otpService: OtpService;

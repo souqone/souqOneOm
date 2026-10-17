@@ -6,6 +6,8 @@ import { MailService } from '../mail/mail.service';
 import { RedisService } from '../redis/redis.service';
 import { PhoneOtpService } from './phone-otp.service';
 import { WhatsappLimitsService } from './whatsapp-limits.service';
+import { PhoneVerificationController } from './phone-verification.controller';
+import { PhoneVerificationService } from './phone-verification.service';
 import {
   WHATSAPP_OTP_SENDER,
   MockWhatsappOtpSender,
@@ -62,10 +64,14 @@ describe('WhatsappModule Dependency Injection', () => {
     const phoneOtpService = moduleRef.get(PhoneOtpService);
     const limitsService = moduleRef.get(WhatsappLimitsService);
     const sender = moduleRef.get(WHATSAPP_OTP_SENDER);
+    const phoneVerificationService = moduleRef.get(PhoneVerificationService);
+    const phoneVerificationController = moduleRef.get(PhoneVerificationController);
 
     expect(phoneOtpService).toBeDefined();
     expect(limitsService).toBeDefined();
     expect(sender).toBeDefined();
+    expect(phoneVerificationService).toBeDefined();
+    expect(phoneVerificationController).toBeDefined();
   });
 
   it('resolves DisabledWhatsappOtpSender in production when unconfigured', async () => {

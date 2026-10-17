@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { AuthTokenService } from '../auth/auth-token.service';
@@ -26,14 +32,21 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: USER_SELECT_PROFILE_PRIVATE,
+      select: {
+        ...USER_SELECT_PROFILE_PRIVATE,
+        phoneVerifiedAt: true,
+        phoneE164: true,
+      },
     });
 
     if (!user) {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
-    return user;
+    const { phoneVerifiedAt, phoneE164, ...profile } = user;
+    const phoneVerified = Boolean(phoneVerifiedAt && phoneE164);
+
+    return { ...profile, phoneVerified };
   }
 
   async getPublicProfile(userId: string) {
@@ -87,8 +100,13 @@ export class UsersService {
 
     // 2. Phone validation & normalization
     let nextPhone: string | undefined = undefined;
+    let isPhoneChanged = false;
+
     if (dto.phone !== undefined) {
-      if (dto.phone === null || (typeof dto.phone === 'string' && dto.phone.trim() === '')) {
+      if (
+        dto.phone === null ||
+        (typeof dto.phone === 'string' && dto.phone.trim() === '')
+      ) {
         throw new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه');
       }
 
@@ -109,6 +127,41 @@ export class UsersService {
           throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
         }
         nextPhone = strict.e164;
+        isPhoneChanged = true;
+      }
+    }
+
+    // Step-up authentication on phone change if user is currently verified and has password
+    if (isPhoneChanged) {
+      const isVerifiedCurrently = Boolean(user.phoneVerifiedAt && user.phoneE164);
+      const passwordHash = user.passwordHash;
+
+      if (isVerifiedCurrently && passwordHash) {
+        if (!dto.currentPassword || typeof dto.currentPassword !== 'string') {
+          throw new HttpException(
+            {
+              statusCode: 403,
+              code: 'STEP_UP_REQUIRED',
+              message: 'لتغيير رقم الهاتف الموثق، يرجى إدخال كلمة المرور الحالية',
+            },
+            HttpStatus.FORBIDDEN,
+          );
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          dto.currentPassword,
+          passwordHash,
+        );
+        if (!isPasswordValid) {
+          throw new HttpException(
+            {
+              statusCode: 403,
+              code: 'STEP_UP_REQUIRED',
+              message: 'كلمة المرور الحالية غير صحيحة لتأكيد تغيير رقم الهاتف',
+            },
+            HttpStatus.FORBIDDEN,
+          );
+        }
       }
     }
 
@@ -152,6 +205,10 @@ export class UsersService {
         ...(dto.displayName !== undefined && { displayName: dto.displayName }),
         ...(nextBio !== undefined && { bio: nextBio }),
         ...(nextPhone !== undefined && { phone: nextPhone }),
+        ...(isPhoneChanged && {
+          phoneVerifiedAt: null,
+          phoneE164: null,
+        }),
         ...(dto.country !== undefined && { country: dto.country }),
         ...(dto.governorateId !== undefined && { governorateId: dto.governorateId }),
         ...(dto.wilayaId !== undefined && { wilayaId: dto.wilayaId }),
@@ -159,7 +216,11 @@ export class UsersService {
         ...(dto.latitude !== undefined && { latitude: dto.latitude }),
         ...(dto.longitude !== undefined && { longitude: dto.longitude }),
       },
-      select: USER_SELECT_PROFILE_PRIVATE,
+      select: {
+        ...USER_SELECT_PROFILE_PRIVATE,
+        phoneVerifiedAt: true,
+        phoneE164: true,
+      },
     });
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -170,7 +231,10 @@ export class UsersService {
       }
     }
 
-    return updated;
+    const { phoneVerifiedAt, phoneE164, ...profile } = updated;
+    const phoneVerified = Boolean(phoneVerifiedAt && phoneE164);
+
+    return { ...profile, phoneVerified };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {

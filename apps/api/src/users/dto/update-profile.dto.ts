@@ -37,6 +37,10 @@ export class UpdateProfileDto {
   @IsValidPhone({ message: 'رقم الهاتف غير صالح' })
   phone?: string;
 
+  @ValidateIf((_o, v) => v !== undefined)
+  @IsString({ message: 'كلمة المرور الحالية يجب أن تكون نصاً' })
+  currentPassword?: string;
+
   @ValidateIf((_o, v) => v !== undefined && v !== null)
   @IsString({ message: 'رمز الدولة يجب أن يكون نصاً' })
   @MaxLength(10, { message: 'رمز الدولة يجب ألا يتجاوز 10 أحرف' })

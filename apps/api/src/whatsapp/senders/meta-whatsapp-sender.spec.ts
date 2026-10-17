@@ -3,9 +3,20 @@ import { WhatsappOtpError } from './whatsapp-sender.interface';
 
 describe('MetaWhatsappOtpSender', () => {
   const originalFetch = global.fetch;
+  let originalTemplateLang: string | undefined;
+
+  beforeEach(() => {
+    originalTemplateLang = process.env.WHATSAPP_TEMPLATE_LANG;
+    delete process.env.WHATSAPP_TEMPLATE_LANG;
+  });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    if (originalTemplateLang !== undefined) {
+      process.env.WHATSAPP_TEMPLATE_LANG = originalTemplateLang;
+    } else {
+      delete process.env.WHATSAPP_TEMPLATE_LANG;
+    }
   });
 
   const validConfig = {
