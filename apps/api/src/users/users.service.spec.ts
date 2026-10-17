@@ -132,47 +132,29 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
     });
   });
 
-  describe('2. Phone Clearing, Step-Up Auth & Verification Reset', () => {
-    it('should set phone to null and clear verification when phone is null', async () => {
-      await service.updateProfile('user-uuid-1', { phone: null });
+  describe('2. Phone Clearing Prevention, Step-Up Auth & Verification Reset', () => {
+    it('should throw BadRequestException (400) when phone is null', async () => {
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: null as any }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه'));
 
-      expect(mockPrisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            phone: null,
-            phoneVerifiedAt: null,
-            phoneE164: null,
-          }),
-        }),
-      );
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should set phone to null and clear verification when phone is empty string', async () => {
-      await service.updateProfile('user-uuid-1', { phone: '' });
+    it('should throw BadRequestException (400) when phone is empty string', async () => {
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: '' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه'));
 
-      expect(mockPrisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            phone: null,
-            phoneVerifiedAt: null,
-            phoneE164: null,
-          }),
-        }),
-      );
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should set phone to null and clear verification when phone is whitespace only', async () => {
-      await service.updateProfile('user-uuid-1', { phone: '   ' });
+    it('should throw BadRequestException (400) when phone is whitespace only', async () => {
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: '   ' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه'));
 
-      expect(mockPrisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            phone: null,
-            phoneVerifiedAt: null,
-            phoneE164: null,
-          }),
-        }),
-      );
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
     it('should normalize valid new phone to E.164 and clear verification', async () => {
@@ -569,18 +551,20 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       expect(errors.length).toBe(0);
     });
 
-    it('should accept null phone in DTO validation to allow clearing phone', async () => {
+    it('should reject null phone in DTO validation', async () => {
       const dto = plainToInstance(UpdateProfileDto, { phone: null as any });
       const errors = await validate(dto);
-      const phoneErrors = errors.filter((e) => e.property === 'phone');
-      expect(phoneErrors.length).toBe(0);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('phone');
+      expect(errors[0].constraints?.isNotEmpty).toBe('رقم الهاتف مطلوب ولا يمكن حذفه');
     });
 
-    it('should accept empty phone string in DTO validation to allow clearing phone', async () => {
+    it('should reject empty phone string in DTO validation', async () => {
       const dto = plainToInstance(UpdateProfileDto, { phone: '' });
       const errors = await validate(dto);
-      const phoneErrors = errors.filter((e) => e.property === 'phone');
-      expect(phoneErrors.length).toBe(0);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('phone');
+      expect(errors[0].constraints?.isNotEmpty).toBe('رقم الهاتف مطلوب ولا يمكن حذفه');
     });
 
     it('should reject null governorateId in DTO validation', async () => {

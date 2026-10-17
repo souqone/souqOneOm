@@ -167,16 +167,33 @@ export class PhoneVerificationService {
       userId,
     });
 
-    // Write phoneE164 and phoneVerifiedAt to user
+    // Write phoneE164 and phoneVerifiedAt to user conditionally matching current phone
     try {
-      await this.prisma.user.update({
-        where: { id: userId },
+      const updateResult = await this.prisma.user.updateMany({
+        where: {
+          id: userId,
+          phone: user.phone,
+        },
         data: {
           phoneE164,
           phoneVerifiedAt: new Date(),
         },
       });
+
+      if (updateResult.count === 0) {
+        throw new HttpException(
+          {
+            statusCode: 409,
+            code: 'PHONE_CHANGED_DURING_VERIFICATION',
+            message: 'تم تغيير رقم الهاتف أثناء عملية التوثيق، يرجى إعادة طلب رمز التحقق للرقم الجديد',
+          },
+          HttpStatus.CONFLICT,
+        );
+      }
     } catch (err: any) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
       if (
         err?.code === 'P2002' ||
         err?.message?.includes('P2002') ||

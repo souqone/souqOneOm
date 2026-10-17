@@ -31,6 +31,7 @@ describe('PhoneVerificationService', () => {
             ...data,
           });
         }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -280,7 +281,7 @@ describe('PhoneVerificationService', () => {
         }),
       );
 
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it('propagates MISSING_OR_EXPIRED when phone changed between request and verify', async () => {
@@ -302,7 +303,7 @@ describe('PhoneVerificationService', () => {
         }),
       );
 
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it('propagates TOO_MANY_ATTEMPTS when verification attempts exceed limit', async () => {
@@ -324,7 +325,7 @@ describe('PhoneVerificationService', () => {
         }),
       );
 
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it('successfully verifies OTP, updates user phoneE164 and phoneVerifiedAt, and returns { phoneVerified: true }', async () => {
@@ -338,8 +339,8 @@ describe('PhoneVerificationService', () => {
         userId: 'user_1',
       });
 
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user_1' },
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'user_1', phone: '+96891234567' },
         data: {
           phoneE164: '+96891234567',
           phoneVerifiedAt: expect.any(Date),
@@ -347,12 +348,28 @@ describe('PhoneVerificationService', () => {
       });
     });
 
+    it('throws 409 PHONE_CHANGED_DURING_VERIFICATION when user phone was modified during verification (updateMany returns count 0)', async () => {
+      mockPrisma.user.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        service.verifyPhone('user_1', '123456'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 409,
+            code: 'PHONE_CHANGED_DURING_VERIFICATION',
+            message: 'تم تغيير رقم الهاتف أثناء عملية التوثيق، يرجى إعادة طلب رمز التحقق للرقم الجديد',
+          }),
+        }),
+      );
+    });
+
     it('catches Prisma P2002 unique constraint failure during race condition and throws 409 PHONE_ALREADY_VERIFIED', async () => {
       const p2002Err: any = new Error('Unique constraint failed on the fields: (`phoneE164`)');
       p2002Err.code = 'P2002';
       p2002Err.meta = { target: ['phoneE164'] };
 
-      mockPrisma.user.update.mockRejectedValueOnce(p2002Err);
+      mockPrisma.user.updateMany.mockRejectedValueOnce(p2002Err);
 
       await expect(
         service.verifyPhone('user_1', '123456'),

@@ -8,7 +8,10 @@ import { PhoneVerificationService } from './phone-verification.service';
 import { MockWhatsappOtpSender } from './senders/mock-whatsapp-sender.service';
 
 function getLocalDbUrls() {
-  const rawUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) {
+    return null;
+  }
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -207,5 +210,143 @@ describeOrSkip('PhoneVerificationService Real PostgreSQL Concurrency (127.0.0.1)
     expect(verifiedUsers.length).toBe(1);
     expect(['user_race_a', 'user_race_b']).toContain(verifiedUsers[0].id);
     expect(verifiedUsers[0].phoneVerifiedAt).toBeInstanceOf(Date);
+  });
+
+  it('deterministic race: phone changed during verifyPhone triggers 409 PHONE_CHANGED_DURING_VERIFICATION and leaves verification null', async () => {
+    const originalPhone = '+96892223344';
+    const modifiedPhone = '+96899990000';
+
+    const user = await prisma.user.create({
+      data: {
+        id: 'user_race_deterministic',
+        username: 'race_deterministic',
+        email: 'race_deterministic@example.com',
+        phone: originalPhone,
+      },
+    });
+
+    const { getAuthPepper } = require('../config/pepper.config');
+    const pepper = getAuthPepper();
+    const expiresAt = new Date(Date.now() + 600000);
+    const challengeId = require('crypto').randomUUID();
+    const code = '123456';
+    const codeHash = require('crypto')
+      .createHmac('sha256', pepper)
+      .update(`${OtpPurpose.PHONE_VERIFY}:${originalPhone}:${challengeId}:${code}`)
+      .digest('hex');
+
+    await prisma.otpChallenge.create({
+      data: {
+        id: challengeId,
+        userId: user.id,
+        phoneE164: originalPhone,
+        purpose: OtpPurpose.PHONE_VERIFY,
+        codeHash,
+        attempts: 0,
+        maxAttempts: 5,
+        expiresAt,
+      },
+    });
+
+    // Intercept phoneOtpService.verify: after OTP verification succeeds, change user.phone in DB before updateMany executes
+    const originalVerify = phoneOtpService.verify.bind(phoneOtpService);
+    const verifySpy = jest.spyOn(phoneOtpService, 'verify').mockImplementation(async (params) => {
+      const result = await originalVerify(params);
+      // Directly mutate user.phone in PostgreSQL before PhoneVerificationService executes updateMany
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { phone: modifiedPhone },
+      });
+      return result;
+    });
+
+    try {
+      await expect(
+        verificationService.verifyPhone(user.id, code),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 409,
+            code: 'PHONE_CHANGED_DURING_VERIFICATION',
+            message: 'تم تغيير رقم الهاتف أثناء عملية التوثيق، يرجى إعادة طلب رمز التحقق للرقم الجديد',
+          }),
+        }),
+      );
+
+      // Verify that phoneVerifiedAt and phoneE164 remain NULL in PostgreSQL
+      const freshUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+
+      expect(freshUser?.phone).toBe(modifiedPhone);
+      expect(freshUser?.phoneVerifiedAt).toBeNull();
+      expect(freshUser?.phoneE164).toBeNull();
+    } finally {
+      verifySpy.mockRestore();
+    }
+  });
+
+  it('parallel race: concurrent PATCH phone and verifyPhone guarantees no desync between phone and phoneVerifiedAt', async () => {
+    const originalPhone = '+96893334455';
+    const updatedPhone = '+96898887766';
+
+    const user = await prisma.user.create({
+      data: {
+        id: 'user_race_parallel',
+        username: 'race_parallel',
+        email: 'race_parallel@example.com',
+        phone: originalPhone,
+      },
+    });
+
+    const { getAuthPepper } = require('../config/pepper.config');
+    const pepper = getAuthPepper();
+    const expiresAt = new Date(Date.now() + 600000);
+    const challengeId = require('crypto').randomUUID();
+    const code = '123456';
+    const codeHash = require('crypto')
+      .createHmac('sha256', pepper)
+      .update(`${OtpPurpose.PHONE_VERIFY}:${originalPhone}:${challengeId}:${code}`)
+      .digest('hex');
+
+    await prisma.otpChallenge.create({
+      data: {
+        id: challengeId,
+        userId: user.id,
+        phoneE164: originalPhone,
+        purpose: OtpPurpose.PHONE_VERIFY,
+        codeHash,
+        attempts: 0,
+        maxAttempts: 5,
+        expiresAt,
+      },
+    });
+
+    // Fire verifyPhone and user.update concurrently
+    await Promise.allSettled([
+      verificationService.verifyPhone(user.id, code),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          phone: updatedPhone,
+          phoneVerifiedAt: null,
+          phoneE164: null,
+        },
+      }),
+    ]);
+
+    // Inspect final state in DB
+    const finalUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+
+    // If verified, phone and phoneE164 MUST match. If not verified, phoneVerifiedAt MUST be null.
+    if (finalUser?.phoneVerifiedAt) {
+      expect(finalUser.phone).toBe(originalPhone);
+      expect(finalUser.phoneE164).toBe(originalPhone);
+    } else {
+      expect(finalUser?.phoneVerifiedAt).toBeNull();
+      expect(finalUser?.phoneE164).toBeNull();
+    }
   });
 });

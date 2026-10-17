@@ -98,41 +98,36 @@ export class UsersService {
       throw new BadRequestException('الاسم المعروض مطلوب ولا يمكن حذفه');
     }
 
-    // 2. Phone validation & normalization & change detection
-    let nextPhone: string | null | undefined = undefined;
+    // 2. Phone validation & normalization
+    let nextPhone: string | undefined = undefined;
     let isPhoneChanged = false;
 
     if (dto.phone !== undefined) {
-      const isClearing =
+      if (
         dto.phone === null ||
-        (typeof dto.phone === 'string' && dto.phone.trim() === '');
+        (typeof dto.phone === 'string' && dto.phone.trim() === '')
+      ) {
+        throw new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه');
+      }
 
-      if (isClearing) {
-        const hadPhone = Boolean(user.phone && user.phone.trim() !== '');
-        if (hadPhone) {
-          isPhoneChanged = true;
-          nextPhone = null;
+      const trimmedPhone = dto.phone.trim();
+      const lenientNew = normalizePhone(trimmedPhone);
+
+      // Check if unchanged: bypass strict country allowlist & keep stored value intact
+      const isUnchanged = Boolean(
+        user.phone &&
+          ((lenientNew !== null &&
+            (lenientNew === user.phone || lenientNew === normalizePhone(user.phone))) ||
+            trimmedPhone === user.phone),
+      );
+
+      if (!isUnchanged) {
+        const strict = normalizePhoneStrict(trimmedPhone);
+        if (!strict) {
+          throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
         }
-      } else if (typeof dto.phone === 'string') {
-        const trimmedPhone = dto.phone.trim();
-        const lenientNew = normalizePhone(trimmedPhone);
-
-        // Check if unchanged: bypass strict country allowlist & keep stored value intact
-        const isUnchanged = Boolean(
-          user.phone &&
-            ((lenientNew !== null &&
-              (lenientNew === user.phone || lenientNew === normalizePhone(user.phone))) ||
-              trimmedPhone === user.phone),
-        );
-
-        if (!isUnchanged) {
-          const strict = normalizePhoneStrict(trimmedPhone);
-          if (!strict) {
-            throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
-          }
-          nextPhone = strict.e164;
-          isPhoneChanged = true;
-        }
+        nextPhone = strict.e164;
+        isPhoneChanged = true;
       }
     }
 

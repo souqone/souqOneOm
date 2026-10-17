@@ -7,7 +7,10 @@ import { PhoneOtpService } from './phone-otp.service';
 import { MockWhatsappOtpSender } from './senders/mock-whatsapp-sender.service';
 
 function getLocalDbUrls() {
-  const rawUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) {
+    return null;
+  }
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
