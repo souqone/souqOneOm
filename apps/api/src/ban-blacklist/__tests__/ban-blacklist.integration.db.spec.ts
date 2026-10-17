@@ -525,6 +525,7 @@ describeOrSkip('BanBlacklist Integration & Real PostgreSQL Deterministic Concurr
   async function waitForBackendLock(client: Client, timeoutMs = 5000, pollIntervalMs = 20): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
+      await client.query('SELECT pg_stat_clear_snapshot()');
       const res = await client.query<{ count: string }>(
         `SELECT count(*)::int AS count
          FROM pg_stat_activity
