@@ -6,7 +6,6 @@ import {
   Matches,
   IsInt,
   IsPositive,
-  IsNotEmpty,
   IsNumber,
   Min,
   Max,
@@ -29,13 +28,16 @@ export class UpdateProfileDto {
   @MaxLength(500, { message: 'النبذة لا يجب أن تتجاوز 500 حرف' })
   bio?: string | null;
 
-  @ValidateIf((_o, v) => v !== undefined)
+  @ValidateIf((_o, v) => v !== undefined && v !== null && v !== '')
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @IsNotEmpty({ message: 'رقم الهاتف مطلوب ولا يمكن حذفه' })
   @IsString({ message: 'رقم الهاتف يجب أن يكون نصاً' })
   @MaxLength(20, { message: 'رقم الهاتف يجب ألا يتجاوز 20 حرفاً' })
   @IsValidPhone({ message: 'رقم الهاتف غير صالح' })
-  phone?: string;
+  phone?: string | null;
+
+  @ValidateIf((_o, v) => v !== undefined)
+  @IsString({ message: 'كلمة المرور الحالية يجب أن تكون نصاً' })
+  currentPassword?: string;
 
   @ValidateIf((_o, v) => v !== undefined && v !== null)
   @IsString({ message: 'رمز الدولة يجب أن يكون نصاً' })

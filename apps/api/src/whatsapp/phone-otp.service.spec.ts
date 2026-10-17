@@ -90,6 +90,14 @@ describe('PhoneOtpService', () => {
         where: { id: 'log_reserved_1' },
         data: { providerMessageId: 'wamid_test_123' },
       });
+
+      expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
     });
 
     it('invalidates challenge and marks log FAILED when sender fails', async () => {

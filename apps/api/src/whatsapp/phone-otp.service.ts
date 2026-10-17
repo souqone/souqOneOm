@@ -102,6 +102,10 @@ export class PhoneOtpService {
           code: generatedCode,
         };
       },
+      {
+        maxWait: 5000,
+        timeout: 10000,
+      },
     );
 
     // 2. Dispatch message outside transaction
