@@ -57,6 +57,10 @@ describe('Auth Part 5 Unit Tests (Null Email & Dual-Write)', () => {
 
     mockAudit = {
       logAudit: jest.fn().mockResolvedValue(undefined),
+      checkAndRecordForgotPasswordLimit: jest.fn().mockResolvedValue(true),
+      assertResendVerificationLimit: jest.fn().mockResolvedValue(undefined),
+      assertSignupIpLimit: jest.fn().mockResolvedValue(undefined),
+      recordSignupSuccess: jest.fn().mockResolvedValue(undefined),
     };
 
     mockOtp = {

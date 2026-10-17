@@ -150,6 +150,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } catch { return false; }
   }
 
+  // Tri-state setNX for rate limiting / cooldowns:
+  // - 'acquired': key was absent and successfully set
+  // - 'exists': key already exists (cooldown active)
+  // - 'unavailable': Redis is disconnected or threw an error
+  async trySetNX(key: string, value: string, ttlSeconds: number): Promise<'acquired' | 'exists' | 'unavailable'> {
+    if (!this.connected) return 'unavailable';
+    try {
+      const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+      return result === 'OK' ? 'acquired' : 'exists';
+    } catch {
+      return 'unavailable';
+    }
+  }
+
   // Get remaining TTL of a key in seconds
   async getTTL(key: string): Promise<number> {
     if (!this.connected) return -2;

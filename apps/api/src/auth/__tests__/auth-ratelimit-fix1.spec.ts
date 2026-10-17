@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthTokenService } from '../auth-token.service';
 import {
@@ -36,6 +35,13 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
     }),
     set: jest.fn().mockImplementation(async (key: string, value: any, ttl?: number) => {
       redisStore.set(key, { value, ttlSeconds: ttl ?? -1 });
+    }),
+    trySetNX: jest.fn().mockImplementation(async (key: string, value: string, ttlSeconds: number) => {
+      if (redisStore.has(key)) {
+        return 'exists';
+      }
+      redisStore.set(key, { value, ttlSeconds });
+      return 'acquired';
     }),
     setNX: jest.fn().mockImplementation(async (key: string, value: string, ttlSeconds: number) => {
       if (redisStore.has(key)) {
@@ -138,17 +144,17 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
       }
     });
 
-    it('enforces 2-minute cooldown between requests using atomic setNX', async () => {
+    it('enforces 2-minute cooldown between requests using atomic trySetNX', async () => {
       // First attempt succeeds and sets cooldown key
       const first = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
       expect(first).toBe(true);
-      expect(fakeRedis.setNX).toHaveBeenCalledWith(
+      expect(fakeRedis.trySetNX).toHaveBeenCalledWith(
         `auth:forgot:cooldown:${expectedHash}`,
         '1',
         FORGOT_PASSWORD_COOLDOWN_SECONDS,
       );
 
-      // Immediate second attempt fails due to active cooldown
+      // Immediate second attempt fails due to active cooldown (returns exists)
       const second = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
       expect(second).toBe(false);
     });
@@ -205,7 +211,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
     });
 
     it('fails open on Redis error during forgotPassword check without throwing 500', async () => {
-      fakeRedis.setNX.mockRejectedValueOnce(new Error('Redis connection refused'));
+      fakeRedis.trySetNX.mockResolvedValueOnce('unavailable');
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-fp-2',
         email: 'user.test+tag@example.com',
@@ -272,14 +278,14 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
       }
     });
 
-    it('fails open on Redis error during resend-verification check', async () => {
+    it('fails open when trySetNX returns unavailable during resend-verification check', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
         email: 'test@example.com',
         isVerified: false,
       });
 
-      fakeRedis.setNX.mockRejectedValueOnce(new Error('Redis timeout'));
+      fakeRedis.trySetNX.mockResolvedValueOnce('unavailable');
 
       const res = await authService.resendVerification(userId);
       expect(res).toEqual({ message: 'تم إرسال رمز تحقق جديد', emailSent: true });
@@ -362,6 +368,86 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
 
       const res = await authService.signup(validSignupDto, ip);
       expect(res.requiresVerification).toBe(true);
+    });
+  });
+
+  describe('Spec 4: Real RedisService in Disconnected State (Fail-Open Verification)', () => {
+    let disconnectedRedisService: RedisService;
+    let disconnectedAuditService: AuthAuditService;
+    let disconnectedAuthService: AuthService;
+
+    beforeAll(() => {
+      // Instantiate the real RedisService class without calling onModuleInit() -> connected is false
+      disconnectedRedisService = new RedisService();
+      expect(disconnectedRedisService.isReady()).toBe(false);
+
+      disconnectedAuditService = new AuthAuditService(mockPrisma as any, disconnectedRedisService);
+      disconnectedAuthService = new AuthService(
+        mockPrisma as any,
+        mockMail as any,
+        mockTokens as any,
+        disconnectedAuditService,
+        mockOtp as any,
+        { validate: jest.fn() } as any,
+        { assertCanAuthenticate: jest.fn() } as any,
+        { isPhoneBannedOrBlacklisted: jest.fn() } as any,
+      );
+    });
+
+    it('trySetNX returns "unavailable" on real disconnected RedisService', async () => {
+      const res = await disconnectedRedisService.trySetNX('test:key', '1', 60);
+      expect(res).toBe('unavailable');
+    });
+
+    it('forgot-password sends email when RedisService is real but disconnected (fail-open)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-disconnected-1',
+        email: 'disconnected@example.com',
+      });
+
+      const res = await disconnectedAuthService.forgotPassword('disconnected@example.com');
+
+      expect(res).toEqual({ message: 'إذا كان البريد مسجلاً ستصلك رسالة' });
+      expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+      expect(mockOtp.issue).toHaveBeenCalledWith('u-disconnected-1', OtpPurpose.PASSWORD_RESET, expect.any(Number));
+      expect(mockMail.sendPasswordResetEmail).toHaveBeenCalledWith('disconnected@example.com', '123456');
+    });
+
+    it('resend-verification succeeds without throwing 429 when RedisService is real but disconnected (fail-open)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u-disconnected-2',
+        email: 'resend-disconnected@example.com',
+        isVerified: false,
+      });
+
+      const res = await disconnectedAuthService.resendVerification('u-disconnected-2');
+
+      expect(res).toEqual({ message: 'تم إرسال رمز تحقق جديد', emailSent: true });
+      expect(mockMail.sendVerificationEmail).toHaveBeenCalledWith('resend-disconnected@example.com', '123456');
+    });
+
+    it('signup succeeds and creates account when RedisService is real but disconnected (fail-open)', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({
+        id: 'u-disconnected-3',
+        email: 'signup-disconnected@example.com',
+      });
+
+      const res = await disconnectedAuthService.signup(
+        {
+          email: 'signup-disconnected@example.com',
+          username: 'discuser',
+          password: 'Password123!',
+          displayName: 'Disconnected User',
+          country: 'OM',
+          governorate: 'Muscat',
+          city: 'Seeb',
+        },
+        '203.0.113.99',
+      );
+
+      expect(res.requiresVerification).toBe(true);
+      expect(mockPrisma.user.create).toHaveBeenCalled();
     });
   });
 });

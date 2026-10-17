@@ -40,7 +40,7 @@ export class AuthService {
   }
 
   async signup(dto: SignupDto, ip?: string) {
-    if (ip && typeof this.audit.assertSignupIpLimit === 'function') {
+    if (ip) {
       await this.audit.assertSignupIpLimit(ip);
     }
 
@@ -84,7 +84,7 @@ export class AuthService {
         },
       });
 
-      if (ip && typeof this.audit.recordSignupSuccess === 'function') {
+      if (ip) {
         await this.audit.recordSignupSuccess(ip);
       }
 
@@ -479,9 +479,7 @@ export class AuthService {
       return { message: 'تم إرسال رمز تحقق جديد', emailSent: false };
     }
 
-    if (typeof this.audit.assertResendVerificationLimit === 'function') {
-      await this.audit.assertResendVerificationLimit(userId);
-    }
+    await this.audit.assertResendVerificationLimit(userId);
 
     const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
@@ -500,11 +498,9 @@ export class AuthService {
     const normalizedEmail = normalizeEmail(email);
 
     // Rate limit check before database lookup for uniform timing & protection:
-    if (typeof this.audit.checkAndRecordForgotPasswordLimit === 'function') {
-      const allowed = await this.audit.checkAndRecordForgotPasswordLimit(normalizedEmail);
-      if (!allowed) {
-        return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
-      }
+    const allowed = await this.audit.checkAndRecordForgotPasswordLimit(normalizedEmail);
+    if (!allowed) {
+      return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
     }
 
     const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });

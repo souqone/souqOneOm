@@ -122,18 +122,14 @@ export class AuthAuditService {
     const dailyKey = `auth:forgot:daily:${emailHash}`;
 
     try {
-      let cooldownAcquired = false;
-      if (typeof this.redis.setNX === 'function') {
-        cooldownAcquired = await this.redis.setNX(cooldownKey, '1', FORGOT_PASSWORD_COOLDOWN_SECONDS);
-      } else {
-        const existing = await this.redis.get(cooldownKey);
-        if (!existing) {
-          await this.redis.set(cooldownKey, '1', FORGOT_PASSWORD_COOLDOWN_SECONDS);
-          cooldownAcquired = true;
-        }
+      const cooldownStatus = await this.redis.trySetNX(cooldownKey, '1', FORGOT_PASSWORD_COOLDOWN_SECONDS);
+
+      if (cooldownStatus === 'unavailable') {
+        this.logger.warn(`Redis unavailable during forgot-password check (fail-open)`);
+        return true;
       }
 
-      if (!cooldownAcquired) {
+      if (cooldownStatus === 'exists') {
         return false;
       }
 
@@ -160,18 +156,14 @@ export class AuthAuditService {
     const dailyKey = `auth:resend:daily:${userId}`;
 
     try {
-      let cooldownAcquired = false;
-      if (typeof this.redis.setNX === 'function') {
-        cooldownAcquired = await this.redis.setNX(cooldownKey, '1', RESEND_VERIFICATION_COOLDOWN_SECONDS);
-      } else {
-        const existing = await this.redis.get(cooldownKey);
-        if (!existing) {
-          await this.redis.set(cooldownKey, '1', RESEND_VERIFICATION_COOLDOWN_SECONDS);
-          cooldownAcquired = true;
-        }
+      const cooldownStatus = await this.redis.trySetNX(cooldownKey, '1', RESEND_VERIFICATION_COOLDOWN_SECONDS);
+
+      if (cooldownStatus === 'unavailable') {
+        this.logger.warn(`Redis unavailable during resend-verification check (fail-open)`);
+        return;
       }
 
-      if (!cooldownAcquired) {
+      if (cooldownStatus === 'exists') {
         let ttl = 60;
         try {
           ttl = await this.redis.getTTL(cooldownKey);

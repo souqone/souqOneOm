@@ -123,6 +123,11 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
     }),
     getTTL: jest.fn().mockResolvedValue(900),
     expire: jest.fn().mockResolvedValue(undefined),
+    trySetNX: jest.fn().mockImplementation(async (k: string, v: string, ttl: number) => {
+      if (redisStore.has(k)) return 'exists';
+      redisStore.set(k, v);
+      return 'acquired';
+    }),
   };
 
   const mockOtp = {
