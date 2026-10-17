@@ -15,6 +15,7 @@ describe('OtpService Unit Tests', () => {
         const now = new Date();
         const matches = challenges.filter((c) => {
           if (where.userId && c.userId !== where.userId) return false;
+          if (where.phoneE164 && c.phoneE164 !== where.phoneE164) return false;
           if (where.purpose && c.purpose !== where.purpose) return false;
           if (where.consumedAt === null && c.consumedAt !== null) return false;
           if (where.expiresAt?.gt && !(c.expiresAt > where.expiresAt.gt)) return false;
@@ -34,6 +35,7 @@ describe('OtpService Unit Tests', () => {
         for (const c of challenges) {
           if (where.id && c.id !== where.id) continue;
           if (where.userId && c.userId !== where.userId) continue;
+          if (where.phoneE164 && c.phoneE164 !== where.phoneE164) continue;
           if (where.purpose && c.purpose !== where.purpose) continue;
           if (where.consumedAt === null && c.consumedAt !== null) continue;
           if (where.expiresAt?.gt && !(c.expiresAt > where.expiresAt.gt)) continue;
@@ -198,6 +200,102 @@ describe('OtpService Unit Tests', () => {
       expect(u1Email.consumedAt).not.toBeNull();
       expect(u1Reset.consumedAt).toBeNull();
       expect(u2Email.consumedAt).toBeNull();
+    });
+  });
+
+  describe('5. issueForPhone & verifyForPhone', () => {
+    it('issues a 6-digit code for a phone and verifies successfully with OK', async () => {
+      const code = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300);
+
+      expect(code).toMatch(/^\d{6}$/);
+      expect(challenges.length).toBe(1);
+      expect(challenges[0].phoneE164).toBe('+96891234567');
+      expect(challenges[0].userId).toBeNull();
+      expect(challenges[0].codeHash).toBeDefined();
+      expect(challenges[0].attempts).toBe(0);
+
+      const result = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code);
+      expect(result).toBe('OK');
+      expect(challenges[0].consumedAt).not.toBeNull();
+    });
+
+    it('returns INVALID for wrong code and increments attempts', async () => {
+      const code = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300);
+      const wrong = code === '123456' ? '654321' : '123456';
+
+      const result = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, wrong);
+      expect(result).toBe('INVALID');
+      expect(challenges[0].attempts).toBe(1);
+      expect(challenges[0].consumedAt).toBeNull();
+    });
+
+    it('enforces 5 attempts limit and returns TOO_MANY_ATTEMPTS', async () => {
+      const code = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300);
+      const wrong = '000000';
+
+      for (let i = 1; i <= 4; i++) {
+        const res = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, wrong);
+        expect(res).toBe('INVALID');
+      }
+
+      const fifth = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, wrong);
+      expect(fifth).toBe('TOO_MANY_ATTEMPTS');
+
+      // Valid code after lockout fails with TOO_MANY_ATTEMPTS
+      const subsequent = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code);
+      expect(subsequent).toBe('TOO_MANY_ATTEMPTS');
+    });
+
+    it('returns MISSING_OR_EXPIRED for expired phone challenge', async () => {
+      const code = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, -10);
+
+      const result = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code);
+      expect(result).toBe('MISSING_OR_EXPIRED');
+    });
+
+    it('invalidates prior challenge when issuing a new one for the same phone and purpose', async () => {
+      const code1 = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300);
+      const code2 = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300);
+
+      expect(challenges.length).toBe(2);
+      expect(challenges[0].consumedAt).not.toBeNull();
+      expect(challenges[1].consumedAt).toBeNull();
+
+      // Old code is invalid against new challenge
+      expect(await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code1)).toBe('INVALID');
+
+      // New code verifies successfully
+      expect(await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code2)).toBe('OK');
+    });
+
+    it('prevents race conditions: second concurrent consumption returns INVALID', async () => {
+      const code = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300);
+
+      // Simulate first consumption succeeding
+      const res1 = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code);
+      expect(res1).toBe('OK');
+
+      // Subsequent verify fails because challenge is already consumed
+      const res2 = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, code);
+      expect(res2).toBe('MISSING_OR_EXPIRED');
+    });
+
+    it('binds challenge to userId: verifies with matching userId, rejects with non-matching userId, and verifies without userId for PHONE_LOGIN', async () => {
+      // 1. Issue with userId = 'user-A'
+      const codeA = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, 300, 'user-A');
+
+      // Attempt to verify with user-B -> rejected as MISSING_OR_EXPIRED
+      const resB = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, codeA, 'user-B');
+      expect(resB).toBe('MISSING_OR_EXPIRED');
+
+      // Verify with matching user-A -> OK
+      const resA = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_VERIFY, codeA, 'user-A');
+      expect(resA).toBe('OK');
+
+      // 2. Issue without userId for PHONE_LOGIN
+      const codeLogin = await service.issueForPhone('+96891234567', OtpPurpose.PHONE_LOGIN, 300);
+      const resLogin = await service.verifyForPhone('+96891234567', OtpPurpose.PHONE_LOGIN, codeLogin);
+      expect(resLogin).toBe('OK');
     });
   });
 });

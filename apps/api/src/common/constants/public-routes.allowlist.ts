@@ -72,6 +72,8 @@ export const PUBLIC_ROUTES_ALLOWLIST = [
   'GET /transport/requests/:id',
   'GET /uploads/listings/:listingId/images',
   'GET /users/:id',
+  'GET /whatsapp/webhook',
+  'POST /whatsapp/webhook',
 ] as const;
 
 export type PublicRoute = (typeof PUBLIC_ROUTES_ALLOWLIST)[number];

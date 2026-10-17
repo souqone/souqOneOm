@@ -28,6 +28,7 @@ import { CarsModule } from '../src/cars/cars.module';
 import { JobsModule } from '../src/jobs/jobs.module';
 import { PartsModule } from '../src/parts/parts.module';
 import { ServicesModule } from '../src/services/services.module';
+import { applyBodyParsers } from '../src/common/utils/body-parser.util';
 import { TransportModule } from '../src/transport/transport.module';
 import { SearchModule } from '../src/search/search.module';
 import { BusesModule } from '../src/buses/buses.module';
@@ -195,7 +196,8 @@ export async function createTestApp(options?: { useGlobalFilters?: boolean }): P
     .useValue(null)
     .compile();
 
-  app = moduleFixture.createNestApplication();
+  app = moduleFixture.createNestApplication({ rawBody: true });
+  applyBodyParsers(app);
 
   // Strict CORS Allowlist (mirrors main.ts)
   const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
