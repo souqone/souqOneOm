@@ -6,6 +6,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AccountStatus, OtpPurpose, UserRole } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PhoneAuthService } from './phone-auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PhoneOtpService } from '../whatsapp/phone-otp.service';
@@ -13,6 +15,9 @@ import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
 import { AccountStatusService } from './account-status.service';
 import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { normalizePhoneStrict } from '../common/utils/normalize-phone';
 
 describe('PhoneAuthService', () => {
   let service: PhoneAuthService;
@@ -471,6 +476,56 @@ describe('PhoneAuthService', () => {
 
       expect(res.user.id).toBe('usr_retry_success');
       expect(mockPrisma.user.create).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('DTO Transformation — Arabic/Eastern-Indic digits normalization', () => {
+    it('transforms Arabic-Indic digits in RequestOtpDto to ASCII and passes normalizePhoneStrict', async () => {
+      // ٩١٢٣٤٥٦٧ -> 91234567
+      const rawBody = { phone: '٩١٢٣٤٥٦٧' };
+      const dto = plainToInstance(RequestOtpDto, rawBody);
+      const errors = await validate(dto);
+
+      expect(errors).toHaveLength(0);
+      expect(dto.phone).toBe('91234567');
+
+      const strict = normalizePhoneStrict(dto.phone);
+      expect(strict).toEqual({
+        e164: '+96891234567',
+        countryCode: '968',
+      });
+    });
+
+    it('transforms Persian/Eastern-Indic digits and mixed whitespace in RequestOtpDto to ASCII', async () => {
+      // ۹۱۲۳۴۵۶۷ (Persian)
+      const rawBody = { phone: ' ۹۱۲۳۴۵۶۷ ' };
+      const dto = plainToInstance(RequestOtpDto, rawBody);
+      const errors = await validate(dto);
+
+      expect(errors).toHaveLength(0);
+      expect(dto.phone).toBe('91234567');
+
+      const strict = normalizePhoneStrict(dto.phone);
+      expect(strict).toEqual({
+        e164: '+96891234567',
+        countryCode: '968',
+      });
+    });
+
+    it('transforms Arabic-Indic digits in VerifyOtpDto for both phone and code and passes normalizePhoneStrict', async () => {
+      const rawBody = { phone: '٩١٢٣٤٥٦٧', code: '١٢٣٤٥٦' };
+      const dto = plainToInstance(VerifyOtpDto, rawBody);
+      const errors = await validate(dto);
+
+      expect(errors).toHaveLength(0);
+      expect(dto.phone).toBe('91234567');
+      expect(dto.code).toBe('123456');
+
+      const strict = normalizePhoneStrict(dto.phone);
+      expect(strict).toEqual({
+        e164: '+96891234567',
+        countryCode: '968',
+      });
     });
   });
 });

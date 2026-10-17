@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import { normalizeDigits } from '../auth.validators';
 
 export class VerifyOtpDto {
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeDigits(value) : value))
   @IsString({ message: 'رقم الهاتف مطلوب' })
   @IsNotEmpty({ message: 'رقم الهاتف مطلوب' })
   phone!: string;
