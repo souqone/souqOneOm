@@ -61,8 +61,23 @@ export function normalizePhoneStrict(
 ): StrictPhoneResult | null {
   if (!raw || typeof raw !== 'string') return null;
 
-  let cleaned = raw.replace(/[^\d+]/g, '');
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Reject any character outside: digits, +, spaces, dashes, parentheses, dot
+  if (/[^\d+\s\-().]/.test(trimmed)) {
+    return null;
+  }
+
+  // Plus sign (+) is only allowed at the very beginning (index 0) of the trimmed input
+  const plusCount = (trimmed.match(/\+/g) || []).length;
+  if (plusCount > 1 || (plusCount === 1 && !trimmed.startsWith('+'))) {
+    return null;
+  }
+
+  let cleaned = trimmed.replace(/[^\d+]/g, '');
   if (cleaned.startsWith('00')) cleaned = '+' + cleaned.slice(2);
+
 
   let countryCode: string | null = null;
   let nationalNumber: string | null = null;

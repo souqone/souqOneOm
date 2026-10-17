@@ -98,8 +98,8 @@ export class UsersService {
       // Check if unchanged: bypass strict country allowlist & keep stored value intact
       const isUnchanged = Boolean(
         user.phone &&
-          (lenientNew === user.phone ||
-            lenientNew === normalizePhone(user.phone) ||
+          ((lenientNew !== null &&
+            (lenientNew === user.phone || lenientNew === normalizePhone(user.phone))) ||
             trimmedPhone === user.phone),
       );
 

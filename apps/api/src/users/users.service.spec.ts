@@ -227,6 +227,32 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
         }
       }
     });
+
+    it('should reject with 400 when user has invalid stored phone and sends another invalid phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: 'corrupt-old-phone',
+      });
+
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: 'invalid_phone' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should reject with 400 when user with null phone sends an invalid phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: null,
+      });
+
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: 'invalid_phone' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('3. Location & DisplayName Null Checks', () => {

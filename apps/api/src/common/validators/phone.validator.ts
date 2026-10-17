@@ -1,9 +1,9 @@
 import { registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
-import { normalizePhone } from '../utils/normalize-phone';
+import { normalizePhone, normalizePhoneStrict } from '../utils/normalize-phone';
 
 /**
  * Validates that an optional phone number string, if provided and non-empty,
- * conforms to the valid E.164-compatible phone format supported by `normalizePhone`.
+ * conforms to the valid phone format supported by `normalizePhoneStrict` or `normalizePhone`.
  */
 export function IsValidPhone(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
@@ -19,7 +19,7 @@ export function IsValidPhone(validationOptions?: ValidationOptions) {
         validate(value: any, _args: ValidationArguments) {
           if (value === undefined || value === null || value === '') return true;
           if (typeof value !== 'string') return false;
-          return normalizePhone(value) !== null;
+          return normalizePhoneStrict(value) !== null || normalizePhone(value) !== null;
         },
       },
     });

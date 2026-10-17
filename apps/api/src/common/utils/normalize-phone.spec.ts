@@ -150,6 +150,34 @@ describe('normalizePhoneStrict', () => {
       expect(normalizePhoneStrict('+14155552671')).toBeNull();
       expect(normalizePhoneStrict('+447911123456')).toBeNull();
     });
+
+    it('rejects numbers containing letters in any position', () => {
+      expect(normalizePhoneStrict('9abc1234567')).toBeNull();
+      expect(normalizePhoneStrict('+968 9123 abcd')).toBeNull();
+      expect(normalizePhoneStrict('+96891234567x')).toBeNull();
+      expect(normalizePhoneStrict('+968-9123-45a7')).toBeNull();
+      expect(normalizePhoneStrict('0101234567a')).toBeNull();
+      expect(normalizePhoneStrict('+20 10 1234 abcd')).toBeNull();
+    });
+
+    it('rejects mid-string plus signs or duplicate plus signs', () => {
+      expect(normalizePhoneStrict('968+91234567')).toBeNull();
+      expect(normalizePhoneStrict('++96891234567')).toBeNull();
+      expect(normalizePhoneStrict('+968+91234567')).toBeNull();
+      expect(normalizePhoneStrict('+9689123+4567')).toBeNull();
+      expect(normalizePhoneStrict('0020+1012345678')).toBeNull();
+    });
+
+    it('accepts valid formatted phone numbers with spaces, hyphens, and parentheses', () => {
+      expect(normalizePhoneStrict('+968 9123-4567')).toEqual({
+        e164: '+96891234567',
+        countryCode: '968',
+      });
+      expect(normalizePhoneStrict('(0020) 101 234 5678')).toEqual({
+        e164: '+201012345678',
+        countryCode: '20',
+      });
+    });
   });
 
   describe('Allowlist and Environment defaults', () => {
