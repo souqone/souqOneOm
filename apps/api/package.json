@@ -21,7 +21,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "seed:marketplace": "tsx prisma/seed-marketplace.ts",
-    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts"
+    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
+    "analyze:phones": "tsx scripts/analyze-phones.ts"
   },
   "dependencies": {
     "@carone/types": "*",

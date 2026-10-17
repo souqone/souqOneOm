@@ -156,13 +156,102 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should never touch or write phoneE164 during profile update', async () => {
+    it('should normalize valid new phone to E.164 and never write phoneE164', async () => {
       await service.updateProfile('user-uuid-1', { phone: '99887766' });
 
       const updateCall = mockPrisma.user.update.mock.calls[0][0];
-      expect(updateCall.data).toHaveProperty('phone', '99887766');
+      expect(updateCall.data).toHaveProperty('phone', '+96899887766');
       expect(updateCall.data).not.toHaveProperty('phoneE164');
       expect('phoneE164' in updateCall.data).toBe(false);
+    });
+
+    it('should keep stored phone untouched when user submits their existing unchanged raw 8-digit phone', async () => {
+      // mockUser.phone is '91234567'
+      await service.updateProfile('user-uuid-1', { phone: '91234567' });
+
+      const updateCall = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateCall.data.phone).toBeUndefined();
+    });
+
+    it('should keep stored phone untouched when user submits their existing phone in lenient format', async () => {
+      // mockUser.phone is '91234567' -> lenient is +96891234567
+      await service.updateProfile('user-uuid-1', { phone: '+96891234567' });
+
+      const updateCall = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateCall.data.phone).toBeUndefined();
+    });
+
+    it('should preserve legacy foreign phone without failure if sent unchanged', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: '+971501234567',
+      });
+
+      await service.updateProfile('user-uuid-1', { phone: '+971501234567' });
+
+      const updateCall = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateCall.data.phone).toBeUndefined();
+    });
+
+    it('should reject with 400 when changing phone to a disallowed country', async () => {
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: '+971509999999' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should reject with 400 when user with null phone adds +20 in production', async () => {
+      const prevEnv = process.env.NODE_ENV;
+      const prevCodes = process.env.PHONE_ALLOWED_COUNTRY_CODES;
+      try {
+        process.env.NODE_ENV = 'production';
+        delete process.env.PHONE_ALLOWED_COUNTRY_CODES;
+
+        mockPrisma.user.findUnique.mockResolvedValueOnce({
+          ...mockUser,
+          phone: null,
+        });
+
+        await expect(
+          service.updateProfile('user-uuid-1', { phone: '+201012345678' }),
+        ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+        if (prevCodes !== undefined) {
+          process.env.PHONE_ALLOWED_COUNTRY_CODES = prevCodes;
+        } else {
+          delete process.env.PHONE_ALLOWED_COUNTRY_CODES;
+        }
+      }
+    });
+
+    it('should reject with 400 when user has invalid stored phone and sends another invalid phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: 'corrupt-old-phone',
+      });
+
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: 'invalid_phone' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should reject with 400 when user with null phone sends an invalid phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: null,
+      });
+
+      await expect(
+        service.updateProfile('user-uuid-1', { phone: 'invalid_phone' }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
   });
 

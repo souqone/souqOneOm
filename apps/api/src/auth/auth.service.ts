@@ -15,6 +15,7 @@ import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
 import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
+import { normalizePhoneStrict } from '../common/utils/normalize-phone';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
@@ -43,6 +44,15 @@ export class AuthService {
     }
     const username = dto.username.trim().toLowerCase();
 
+    let normalizedPhone: string | undefined = undefined;
+    if (dto.phone !== undefined && dto.phone !== null && dto.phone.trim() !== '') {
+      const strict = normalizePhoneStrict(dto.phone);
+      if (!strict) {
+        throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
+      }
+      normalizedPhone = strict.e164;
+    }
+
     const existingUserByUsername = await this.prisma.user.findFirst({
       where: {
         username: {
@@ -61,7 +71,7 @@ export class AuthService {
     try {
       const user = await this.prisma.user.create({
         data: {
-          email, username, displayName: dto.displayName, passwordHash, phone: dto.phone,
+          email, username, displayName: dto.displayName, passwordHash, phone: normalizedPhone,
           country: dto.country,
           governorate: dto.governorate,
           city: dto.city,

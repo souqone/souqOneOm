@@ -173,6 +173,106 @@ describe('AuthService', () => {
         service.signup({ email: 'test@example.com', username: 'new', password: 'Password1' }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should normalize and store Omani phone in E.164 format on signup', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({
+        id: 'user-oman-1',
+        email: 'oman@example.com',
+        username: 'omanuser',
+        role: 'USER',
+        phone: '+96891234567',
+      });
+
+      await service.signup({
+        email: 'oman@example.com',
+        username: 'omanuser',
+        password: 'Password1',
+        phone: '91234567',
+      });
+
+      const createCall = mockPrisma.user.create.mock.calls[0][0];
+      expect(createCall.data.phone).toBe('+96891234567');
+    });
+
+    it('should reject signup with 400 when phone is invalid or disallowed country', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.signup({
+          email: 'disallowed@example.com',
+          username: 'disalloweduser',
+          password: 'Password1',
+          phone: '+971501234567',
+        }),
+      ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+      expect(mockPrisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject signup with Egyptian phone in production when default allowlist is 968', async () => {
+      const prevEnv = process.env.NODE_ENV;
+      const prevCodes = process.env.PHONE_ALLOWED_COUNTRY_CODES;
+      try {
+        process.env.NODE_ENV = 'production';
+        delete process.env.PHONE_ALLOWED_COUNTRY_CODES;
+
+        mockPrisma.user.findFirst.mockResolvedValue(null);
+
+        await expect(
+          service.signup({
+            email: 'egypt-prod@example.com',
+            username: 'egyptproduser',
+            password: 'Password1',
+            phone: '01012345678',
+          }),
+        ).rejects.toThrow(new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك'));
+
+        expect(mockPrisma.user.create).not.toHaveBeenCalled();
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+        if (prevCodes !== undefined) {
+          process.env.PHONE_ALLOWED_COUNTRY_CODES = prevCodes;
+        } else {
+          delete process.env.PHONE_ALLOWED_COUNTRY_CODES;
+        }
+      }
+    });
+
+    it('should accept Egyptian phone on signup in non-production environment', async () => {
+      const prevEnv = process.env.NODE_ENV;
+      const prevCodes = process.env.PHONE_ALLOWED_COUNTRY_CODES;
+      try {
+        process.env.NODE_ENV = 'development';
+        delete process.env.PHONE_ALLOWED_COUNTRY_CODES;
+
+        mockPrisma.user.findFirst.mockResolvedValue(null);
+        mockPrisma.user.create.mockResolvedValue({
+          id: 'user-egypt-1',
+          email: 'egypt-dev@example.com',
+          username: 'egyptdevuser',
+          role: 'USER',
+          phone: '+201012345678',
+        });
+
+        await service.signup({
+          email: 'egypt-dev@example.com',
+          username: 'egyptdevuser',
+          password: 'Password1',
+          phone: '01012345678',
+        });
+
+        const createCall = mockPrisma.user.create.mock.calls[0][0];
+        expect(createCall.data.phone).toBe('+201012345678');
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+        if (prevCodes !== undefined) {
+          process.env.PHONE_ALLOWED_COUNTRY_CODES = prevCodes;
+        } else {
+          delete process.env.PHONE_ALLOWED_COUNTRY_CODES;
+        }
+      }
+    });
   });
 
   /* ═══════ LOGIN ═══════ */

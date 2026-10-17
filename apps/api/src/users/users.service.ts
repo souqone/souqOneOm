@@ -11,6 +11,8 @@ import {
   USER_SELECT_PROFILE_PRIVATE,
 } from '../common/constants/user-select.constant';
 import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
+import { normalizePhone, normalizePhoneStrict } from '../common/utils/normalize-phone';
+
 
 @Injectable()
 export class UsersService {
@@ -83,10 +85,30 @@ export class UsersService {
       throw new BadRequestException('الاسم المعروض مطلوب ولا يمكن حذفه');
     }
 
-    // 2. Phone validation: cannot be deleted (null or empty string)
+    // 2. Phone validation & normalization
+    let nextPhone: string | undefined = undefined;
     if (dto.phone !== undefined) {
       if (dto.phone === null || (typeof dto.phone === 'string' && dto.phone.trim() === '')) {
         throw new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه');
+      }
+
+      const trimmedPhone = dto.phone.trim();
+      const lenientNew = normalizePhone(trimmedPhone);
+
+      // Check if unchanged: bypass strict country allowlist & keep stored value intact
+      const isUnchanged = Boolean(
+        user.phone &&
+          ((lenientNew !== null &&
+            (lenientNew === user.phone || lenientNew === normalizePhone(user.phone))) ||
+            trimmedPhone === user.phone),
+      );
+
+      if (!isUnchanged) {
+        const strict = normalizePhoneStrict(trimmedPhone);
+        if (!strict) {
+          throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
+        }
+        nextPhone = strict.e164;
       }
     }
 
@@ -129,7 +151,7 @@ export class UsersService {
       data: {
         ...(dto.displayName !== undefined && { displayName: dto.displayName }),
         ...(nextBio !== undefined && { bio: nextBio }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(nextPhone !== undefined && { phone: nextPhone }),
         ...(dto.country !== undefined && { country: dto.country }),
         ...(dto.governorateId !== undefined && { governorateId: dto.governorateId }),
         ...(dto.wilayaId !== undefined && { wilayaId: dto.wilayaId }),
