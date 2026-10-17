@@ -208,6 +208,11 @@ describe('CustomThrottlerGuard Identity Hardening (Task B1e)', () => {
         .set('X-Forwarded-For', sharedCarrierIp)
         .set('Authorization', `Bearer ${tokenUserA}`);
       expect(resA6.status).toBe(429);
+      expect(resA6.body).toMatchObject({
+        statusCode: 429,
+        code: 'RATE_LIMITED',
+        message: 'عدد طلباتك كبير خلال وقت قصير. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.',
+      });
 
       // User B makes request from the EXACT SAME IP and succeeds because User B has their own user bucket!
       const resB1 = await request(app.getHttpServer())

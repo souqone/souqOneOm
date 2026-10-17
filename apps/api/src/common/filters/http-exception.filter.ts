@@ -16,7 +16,7 @@ const DEFAULT_ARABIC_MESSAGES: Record<number, string> = {
   [HttpStatus.FORBIDDEN]: 'غير مسموح لك بهذا الإجراء',
   [HttpStatus.NOT_FOUND]: 'العنصر المطلوب غير موجود',
   [HttpStatus.CONFLICT]: 'يوجد سجل مشابه بالفعل',
-  [HttpStatus.TOO_MANY_REQUESTS]: 'تم تجاوز الحد المسموح من الطلبات',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'عدد طلباتك كبير خلال وقت قصير. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'حدث خطأ غير متوقع، حاول مرة أخرى لاحقاً',
 };
 

@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Body, Param, Query, Req,
   UseGuards, ParseIntPipe, DefaultValuePipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -34,6 +35,7 @@ export class TransportController {
   // ─── Carrier Profile ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('carrier-profile')
   createCarrierProfile(@CurrentUser() user: JwtPayload, @Body() dto: CreateCarrierProfileDto) {
     return this.carrierProfileService.create(user.sub, dto);
@@ -47,6 +49,7 @@ export class TransportController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch('carrier-profile')
   updateCarrierProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateCarrierProfileDto) {
     return this.carrierProfileService.update(user.sub, dto);
@@ -86,6 +89,7 @@ export class TransportController {
   // ─── Transport Requests ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('requests')
   createRequest(@CurrentUser() user: JwtPayload, @Body() dto: CreateTransportRequestDto) {
     return this.transportRequestService.create(user.sub, dto);
@@ -124,6 +128,7 @@ export class TransportController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch('requests/:id')
   updateRequest(
     @Param('id') id: string,
@@ -134,6 +139,7 @@ export class TransportController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('requests/:id/repost')
   repostRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.transportRequestService.repost(id, user.sub);
@@ -148,6 +154,7 @@ export class TransportController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('requests/:id/quotes')
   submitQuote(
     @Param('id') id: string,
@@ -235,6 +242,7 @@ export class TransportController {
   // ─── Reviews ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('bookings/:id/review')
   createReview(
     @Param('id') id: string,
