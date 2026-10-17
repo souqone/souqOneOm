@@ -12,7 +12,7 @@ import { AccessTokenGate } from '../src/auth/access-token-gate.service';
 import { AccountStatus } from '@prisma/client';
 
 beforeAll(async () => {
-  await createTestApp();
+  await createTestApp({ useGlobalFilters: true });
 });
 
 afterAll(async () => {
@@ -175,6 +175,109 @@ describe('Auth Part 5 E2E Tests (Live Docker Postgres 18 & TokenVersion Gate)', 
       expect(res.body).toEqual({
         message: 'إذا كان البريد مسجلاً ستصلك رسالة',
       });
+    });
+  });
+
+  describe('6. Report 116: ACCOUNT_SUSPENDED suspendedUntil passthrough and Refresh behavior', () => {
+    it('POST /api/auth/login returns 403 with code ACCOUNT_SUSPENDED and exact ISO suspendedUntil', async () => {
+      const prisma = getPrisma();
+      const testEmail = `suspended_fixed_${uniqueId()}@example.test`;
+      const testPassword = 'TestPassword123!';
+      const futureSuspendedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const { user } = await registerUser({
+        email: testEmail,
+        password: testPassword,
+      });
+
+      // Suspend user with dynamic future date (now + 30 days)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: AccountStatus.SUSPENDED,
+          suspendedUntil: futureSuspendedUntil,
+        },
+      });
+
+      const res = await request(getApp().getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: testEmail,
+          password: testPassword,
+        })
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        statusCode: 403,
+        code: 'ACCOUNT_SUSPENDED',
+        suspendedUntil: futureSuspendedUntil.toISOString(),
+      });
+      expect(res.body.timestamp).toBeDefined();
+    });
+
+    it('POST /api/auth/login returns 403 with code ACCOUNT_SUSPENDED and suspendedUntil: null when suspended indefinitely', async () => {
+      const prisma = getPrisma();
+      const testEmail = `suspended_null_${uniqueId()}@example.test`;
+      const testPassword = 'TestPassword123!';
+
+      const { user } = await registerUser({
+        email: testEmail,
+        password: testPassword,
+      });
+
+      // Suspend user with null suspendedUntil
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: AccountStatus.SUSPENDED,
+          suspendedUntil: null,
+        },
+      });
+
+      const res = await request(getApp().getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: testEmail,
+          password: testPassword,
+        })
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        statusCode: 403,
+        code: 'ACCOUNT_SUSPENDED',
+        suspendedUntil: null,
+      });
+      expect(res.body.timestamp).toBeDefined();
+    });
+
+    it('POST /api/auth/refresh for suspended user returns 401 without code (per pre-existing rotateRefreshToken behavior)', async () => {
+      const prisma = getPrisma();
+      const testEmail = `suspended_rf_${uniqueId()}@example.test`;
+      const testPassword = 'TestPassword123!';
+      const refreshSuspendedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const { refreshToken, user } = await registerUser({
+        email: testEmail,
+        password: testPassword,
+      });
+
+      // Suspend user after obtaining valid refresh token with dynamic future date
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: AccountStatus.SUSPENDED,
+          suspendedUntil: refreshSuspendedUntil,
+        },
+      });
+
+      const res = await request(getApp().getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken })
+        .expect(401);
+
+      expect(res.body.statusCode).toBe(401);
+      // Confirms rotateRefreshToken returns null when status !== ACTIVE, throwing UnauthorizedException
+      expect(res.body.code).toBeUndefined();
     });
   });
 });

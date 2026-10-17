@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthTokenService } from '../auth-token.service';
@@ -15,6 +15,7 @@ import * as bcrypt from 'bcryptjs';
 describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAuth)', () => {
   let authService: AuthService;
   let tokenService: AuthTokenService;
+  let accountStatusService: AccountStatusService;
   let mockOtp: any;
 
   let verifyIdTokenMock: jest.Mock;
@@ -24,6 +25,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     refreshToken: {
       create: jest.fn(),
@@ -83,6 +85,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
 
     authService = module.get<AuthService>(AuthService);
     tokenService = module.get<AuthTokenService>(AuthTokenService);
+    accountStatusService = module.get<AccountStatusService>(AccountStatusService);
 
     // Mock OAuth2Client verifyIdToken on the service instance
     verifyIdTokenMock = jest.fn();
@@ -532,4 +535,194 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
       data: { revokedAt: expect.any(Date) },
     });
   });
+
+  /* Matrix 8: Existing user found by googleId, unverified, authoritative Google -> auto-verified inside transaction */
+  it('Matrix 8: existing user found by googleId, unverified, authoritative Google => marks isVerified=true inside tx and invalidates OTPs', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'unverified-google@gmail.com',
+        sub: 'linked-google-id-1',
+        email_verified: true,
+      }),
+    });
+
+    const unverifiedUser = {
+      id: 'u-unverified-1',
+      email: 'unverified-google@gmail.com',
+      username: 'unverified_user',
+      role: 'USER',
+      status: 'ACTIVE',
+      googleId: 'linked-google-id-1',
+      isVerified: false,
+      passwordHash: null,
+    };
+
+    const verifiedUser = {
+      ...unverifiedUser,
+      isVerified: true,
+      emailVerifiedAt: new Date(),
+    };
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(unverifiedUser) // first lookup by googleId
+      .mockResolvedValueOnce(verifiedUser); // inside transaction re-fetch
+
+    mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.refreshToken.create.mockResolvedValue({ token: 'new-rt-1' });
+
+    const result = await authService.googleAuth({ credential: 'valid-cred-1' });
+
+    expect(result.accessToken).toBe('jwt-access-token-123');
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'u-unverified-1', isVerified: false },
+      data: {
+        isVerified: true,
+        emailVerifiedAt: expect.any(Date),
+      },
+    });
+    expect(mockOtp.invalidateActive).toHaveBeenCalledWith('u-unverified-1', 'EMAIL_VERIFY', expect.anything());
+  });
+
+  /* Matrix 9: Existing user found by googleId, unverified, but Google NOT authoritative => remains unverified */
+  it('Matrix 9: existing user found by googleId, unverified, but Google NOT authoritative => remains unverified without update', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'unverified-google@yahoo.com',
+        sub: 'linked-google-id-2',
+        email_verified: true,
+      }),
+    });
+
+    const unverifiedUser = {
+      id: 'u-unverified-2',
+      email: 'unverified-google@yahoo.com',
+      username: 'unverified_yahoo',
+      role: 'USER',
+      status: 'ACTIVE',
+      googleId: 'linked-google-id-2',
+      isVerified: false,
+      passwordHash: null,
+    };
+
+    mockPrisma.user.findUnique.mockResolvedValue(unverifiedUser);
+    mockPrisma.refreshToken.create.mockResolvedValue({ token: 'new-rt-2' });
+
+    const result = await authService.googleAuth({ credential: 'valid-cred-2' });
+
+    expect(result.accessToken).toBe('jwt-access-token-123');
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 10: Existing user found by googleId, already verified => untouched */
+  it('Matrix 10: existing user found by googleId, already verified => no update and normal login', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'already-verified@gmail.com',
+        sub: 'linked-google-id-3',
+        email_verified: true,
+      }),
+    });
+
+    const verifiedUser = {
+      id: 'u-verified-3',
+      email: 'already-verified@gmail.com',
+      username: 'verified_user',
+      role: 'USER',
+      status: 'ACTIVE',
+      googleId: 'linked-google-id-3',
+      isVerified: true,
+      passwordHash: null,
+    };
+
+    mockPrisma.user.findUnique.mockResolvedValue(verifiedUser);
+    mockPrisma.refreshToken.create.mockResolvedValue({ token: 'new-rt-3' });
+
+    const result = await authService.googleAuth({ credential: 'valid-cred-3' });
+
+    expect(result.accessToken).toBe('jwt-access-token-123');
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 11: Existing user found by googleId, unverified, but status is BANNED => rejects 403 ACCOUNT_BANNED and isVerified remains false */
+  it('Matrix 11: existing user found by googleId, unverified, but status is BANNED => rejects 403 ACCOUNT_BANNED without updating isVerified', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'banned-google@gmail.com',
+        sub: 'linked-google-id-4',
+        email_verified: true,
+      }),
+    });
+
+    const bannedUser = {
+      id: 'u-banned-4',
+      email: 'banned-google@gmail.com',
+      username: 'banned_user',
+      role: 'USER',
+      status: 'BANNED',
+      googleId: 'linked-google-id-4',
+      isVerified: false,
+      passwordHash: null,
+    };
+
+    mockPrisma.user.findUnique.mockResolvedValue(bannedUser);
+    jest.spyOn(accountStatusService, 'assertCanAuthenticate').mockImplementation(() => {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك بشكل دائم من استخدام المنصة',
+      });
+    });
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'valid-cred-4' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({
+      statusCode: 403,
+      code: 'ACCOUNT_BANNED',
+    });
+    // Crucial check: verify that isVerified was NOT updated in DB
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 12: Existing user found by googleId, unverified, authoritative Google, but stored email differs from Google token email => remains unverified without update */
+  it('Matrix 12: existing user found by googleId, unverified, but stored email differs from token email => remains unverified without update', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'token-email@gmail.com',
+        sub: 'linked-google-id-5',
+        email_verified: true,
+      }),
+    });
+
+    const unverifiedUser = {
+      id: 'u-unverified-mismatch-5',
+      email: 'stored-different-email@gmail.com',
+      username: 'mismatch_user',
+      role: 'USER',
+      status: 'ACTIVE',
+      googleId: 'linked-google-id-5',
+      isVerified: false,
+      passwordHash: null,
+    };
+
+    mockPrisma.user.findUnique.mockResolvedValue(unverifiedUser);
+    mockPrisma.refreshToken.create.mockResolvedValue({ token: 'new-rt-5' });
+
+    const result = await authService.googleAuth({ credential: 'valid-cred-5' });
+
+    expect(result.accessToken).toBe('jwt-access-token-123');
+    expect(result.user.isVerified).toBe(false);
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    expect(mockOtp.invalidateActive).not.toHaveBeenCalled();
+  });
 });
+
