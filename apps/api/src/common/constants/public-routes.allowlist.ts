@@ -1,10 +1,10 @@
 /**
  * Comprehensive allowlist of public API endpoints that do not require mandatory JWT authentication.
  * Includes:
- * - Completely un-guarded public endpoints (54 routes)
+ * - Completely un-guarded public endpoints (56 routes)
  * - OptionalJwtAuthGuard endpoints permitting anonymous browsing (9 routes)
  * - VerificationGuard endpoints for onboarding verification (2 routes)
- * Total: 65 routes.
+ * Total: 67 routes.
  */
 export const PUBLIC_ROUTES_ALLOWLIST = [
   'GET /health/live',
@@ -19,6 +19,8 @@ export const PUBLIC_ROUTES_ALLOWLIST = [
   'POST /auth/resend-verification',
   'POST /auth/forgot-password',
   'POST /auth/reset-password',
+  'POST /auth/otp/request',
+  'POST /auth/otp/verify',
   'GET /buses',
   'GET /buses/manufacturers',
   'GET /buses/models',
