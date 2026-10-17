@@ -16,6 +16,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { RedisModule } from '../src/redis/redis.module';
 import { RedisService } from '../src/redis/redis.service';
 import { AuthModule } from '../src/auth/auth.module';
+import { PhoneAuthModule } from '../src/auth/phone-auth.module';
 import { UsersModule } from '../src/users/users.module';
 import { ListingsModule } from '../src/listings/listings.module';
 import { ChatModule } from '../src/chat/chat.module';
@@ -156,6 +157,7 @@ export async function createTestApp(options?: { useGlobalFilters?: boolean }): P
       PrismaModule,
       RedisModule,
       AuthModule,
+      PhoneAuthModule,
       UsersModule,
       ListingsModule,
       ChatModule,
