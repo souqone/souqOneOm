@@ -70,6 +70,12 @@ export const EXPOSE_PHONE_ALLOWLIST: readonly ExposePhoneEntry[] = [
     handler: 'refresh',
     justification: 'تجديد جلسة المستخدم المسجل وإرجاع بيانات الجلسة',
   },
+  {
+    routeKey: 'POST /auth/otp/verify',
+    controller: 'PhoneAuthController',
+    handler: 'verify',
+    justification: 'إرجاع بيانات الحساب للمستخدم نفسه عند تسجيل الدخول أو إنشاء الحساب برقم الهاتف',
+  },
 
   // ─── Jobs & Driver/Employer Profiles Self & Owner ───
   {

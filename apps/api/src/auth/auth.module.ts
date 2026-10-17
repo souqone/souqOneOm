@@ -36,6 +36,6 @@ import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
     AccessTokenGate,
     AccountStatusService,
   ],
-  exports: [AuthTokenService, VerificationGuard, OtpService, AccessTokenGate, AccountStatusService],
+  exports: [AuthTokenService, VerificationGuard, OtpService, AccessTokenGate, AccountStatusService, AuthAuditService],
 })
 export class AuthModule {}

@@ -246,6 +246,7 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
     it('allows Google-only verified user (no passwordHash) to change phone without step-up and clears verification', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce({
         ...mockUser,
+        googleId: 'google-sub-123',
         passwordHash: null,
         phoneVerifiedAt: new Date(),
         phoneE164: '+96891234567',
@@ -659,5 +660,61 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       expect((profile as any).role).toBe('USER');
     });
   });
+
+  describe('Phone-only account restrictions', () => {
+    it('throws 403 PHONE_CHANGE_NOT_SUPPORTED when phone-verified account without password or googleId tries to change phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-phone-only',
+        phone: '+96891234567',
+        phoneE164: '+96891234567',
+        phoneVerifiedAt: new Date(),
+        passwordHash: null,
+        googleId: null,
+      });
+
+      await expect(
+        service.updateProfile('user-phone-only', { phone: '97654321' }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: 403,
+          response: expect.objectContaining({
+            code: 'PHONE_CHANGE_NOT_SUPPORTED',
+            message: 'لا يمكن تغيير رقم الهاتف مباشرة للحسابات المسجلة برقم الهاتف. مسار التغيير بالرمز سيتوفر قريباً.',
+          }),
+        }),
+      );
+    });
+
+    it('changePassword throws Arabic message distinguishing phone-only from Google accounts', async () => {
+      // Phone only account
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'user-phone-only',
+        passwordHash: null,
+        googleId: null,
+      });
+
+      await expect(
+        service.changePassword('user-phone-only', {
+          currentPassword: 'Password123!',
+          newPassword: 'NewPassword123!',
+        }),
+      ).rejects.toThrow('هذا الحساب مسجل بواسطة رقم الهاتف ولا يحتوي على كلمة مرور.');
+
+      // Google only account
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'user-google-only',
+        passwordHash: null,
+        googleId: 'google-sub-123',
+      });
+
+      await expect(
+        service.changePassword('user-google-only', {
+          currentPassword: 'Password123!',
+          newPassword: 'NewPassword123!',
+        }),
+      ).rejects.toThrow('هذا الحساب مسجل بواسطة Google ولا يحتوي على كلمة مرور.');
+    });
+  });
 });
+
 
