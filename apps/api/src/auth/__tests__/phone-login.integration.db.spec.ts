@@ -91,7 +91,7 @@ describeOrSkip('Phone Login & Signup v2 Real PostgreSQL Integration & Concurrenc
 
     // 4. Instantiate real services
     banBlacklistService = new BanBlacklistService(prisma as any);
-    accountStatusService = new AccountStatusService(prisma as any);
+    accountStatusService = new AccountStatusService(prisma as any, { invalidate: jest.fn().mockResolvedValue(undefined) } as any);
 
     // Mock PhoneOtpService to simulate valid OTP verification
     phoneOtpService = {
