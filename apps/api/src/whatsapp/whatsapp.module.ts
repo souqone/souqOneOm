@@ -6,9 +6,6 @@ import { WhatsappLimitsService } from './whatsapp-limits.service';
 import { WhatsappWebhookController } from './whatsapp-webhook.controller';
 import {
   WhatsappSenderProvider,
-  MockWhatsappOtpSender,
-  MetaWhatsappOtpSender,
-  DisabledWhatsappOtpSender,
   WHATSAPP_OTP_SENDER,
 } from './senders';
 
@@ -19,9 +16,6 @@ import {
     PhoneOtpService,
     WhatsappLimitsService,
     WhatsappSenderProvider,
-    MockWhatsappOtpSender,
-    MetaWhatsappOtpSender,
-    DisabledWhatsappOtpSender,
   ],
   exports: [PhoneOtpService, WhatsappLimitsService, WHATSAPP_OTP_SENDER],
 })
