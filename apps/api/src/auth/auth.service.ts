@@ -39,7 +39,11 @@ export class AuthService {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
 
-  async signup(dto: SignupDto) {
+  async signup(dto: SignupDto, ip?: string) {
+    if (ip && typeof this.audit.assertSignupIpLimit === 'function') {
+      await this.audit.assertSignupIpLimit(ip);
+    }
+
     const email = normalizeEmail(dto.email);
     if (!isValidNormalizedEmail(email)) {
       throw new BadRequestException('البريد الإلكتروني غير صالح');
@@ -79,6 +83,10 @@ export class AuthService {
           city: dto.city,
         },
       });
+
+      if (ip && typeof this.audit.recordSignupSuccess === 'function') {
+        await this.audit.recordSignupSuccess(ip);
+      }
 
       const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
@@ -471,6 +479,10 @@ export class AuthService {
       return { message: 'تم إرسال رمز تحقق جديد', emailSent: false };
     }
 
+    if (typeof this.audit.assertResendVerificationLimit === 'function') {
+      await this.audit.assertResendVerificationLimit(userId);
+    }
+
     const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
 
     let emailSent = true;
@@ -485,7 +497,17 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
+    const normalizedEmail = normalizeEmail(email);
+
+    // Rate limit check before database lookup for uniform timing & protection:
+    if (typeof this.audit.checkAndRecordForgotPasswordLimit === 'function') {
+      const allowed = await this.audit.checkAndRecordForgotPasswordLimit(normalizedEmail);
+      if (!allowed) {
+        return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
+      }
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user || !user.email) return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
 
     const code = await this.otp.issue(user.id, OtpPurpose.PASSWORD_RESET, OTP_TTL_SECONDS);

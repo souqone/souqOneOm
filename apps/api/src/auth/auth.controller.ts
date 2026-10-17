@@ -21,8 +21,8 @@ export class AuthController {
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ExposePhone()
   @Post(['signup', 'register'])
-  signup(@Body() dto: SignupDto) {
-    return this.authService.signup(dto);
+  signup(@Body() dto: SignupDto, @Req() req: Request) {
+    return this.authService.signup(dto, req.ip);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
