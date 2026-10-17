@@ -494,11 +494,11 @@ export class AuthService {
     return { message: 'تم إرسال رمز تحقق جديد', emailSent };
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, ip?: string) {
     const normalizedEmail = normalizeEmail(email);
 
     // Rate limit check before database lookup for uniform timing & protection:
-    const allowed = await this.audit.checkAndRecordForgotPasswordLimit(normalizedEmail);
+    const allowed = await this.audit.checkAndRecordForgotPasswordLimit(normalizedEmail, ip);
     if (!allowed) {
       return { message: 'إذا كان البريد مسجلاً ستصلك رسالة' };
     }

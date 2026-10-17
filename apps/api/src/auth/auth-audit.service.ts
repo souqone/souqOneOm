@@ -6,6 +6,7 @@ import { normalizeEmail } from './auth.validators';
 
 export const SIGNUP_DAILY_IP_CAP = 20;
 export const FORGOT_PASSWORD_DAILY_CAP = 5;
+export const FORGOT_PASSWORD_GLOBAL_DAILY_CAP = 20;
 export const FORGOT_PASSWORD_COOLDOWN_SECONDS = 120; // 2 minutes
 export const RESEND_VERIFICATION_DAILY_CAP = 10;
 export const RESEND_VERIFICATION_COOLDOWN_SECONDS = 60; // 60 seconds
@@ -111,15 +112,19 @@ export class AuthAuditService {
 
   /**
    * Checks and records forgot-password rate limits atomically using Redis:
-   * 1. 2-minute cooldown between requests for the same email using SET NX EX.
-   * 2. Daily cap of 5 requests max per 24 hours using INCR + EXPIRE.
+   * 1. 2-minute cooldown per requester (email + ip) using SET NX EX.
+   * 2. Daily cap of 5 requests per requester (email + ip) per 24 hours using INCR + EXPIRE.
+   * 3. Global cap of 20 requests per email per 24 hours across all IPs (only incremented if 1 & 2 succeed).
    * Email is normalized and hashed with SHA-256 before forming keys.
    * Returns true if allowed, false if limit exceeded. Fail-open on Redis errors.
    */
-  async checkAndRecordForgotPasswordLimit(email: string): Promise<boolean> {
+  async checkAndRecordForgotPasswordLimit(email: string, ip?: string): Promise<boolean> {
+    const safeIp = ip || 'unknown';
     const emailHash = hashEmailForRedis(email);
-    const cooldownKey = `auth:forgot:cooldown:${emailHash}`;
-    const dailyKey = `auth:forgot:daily:${emailHash}`;
+    const hashPrefix = emailHash.slice(0, 8);
+    const cooldownKey = `auth:forgot:cooldown:${emailHash}:${safeIp}`;
+    const dailyKey = `auth:forgot:daily:${emailHash}:${safeIp}`;
+    const globalKey = `auth:forgot:global:${emailHash}`;
 
     try {
       const cooldownStatus = await this.redis.trySetNX(cooldownKey, '1', FORGOT_PASSWORD_COOLDOWN_SECONDS);
@@ -130,11 +135,19 @@ export class AuthAuditService {
       }
 
       if (cooldownStatus === 'exists') {
+        this.logger.warn(`Forgot-password throttled for emailHash=${hashPrefix} reason=cooldown`);
         return false;
       }
 
       const count = await this.redis.incr(dailyKey, DAY_SECONDS);
       if (count > FORGOT_PASSWORD_DAILY_CAP) {
+        this.logger.warn(`Forgot-password throttled for emailHash=${hashPrefix} reason=per-requester`);
+        return false;
+      }
+
+      const globalCount = await this.redis.incr(globalKey, DAY_SECONDS);
+      if (globalCount > FORGOT_PASSWORD_GLOBAL_DAILY_CAP) {
+        this.logger.warn(`Forgot-password throttled for emailHash=${hashPrefix} reason=global`);
         return false;
       }
 

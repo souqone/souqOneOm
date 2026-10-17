@@ -7,6 +7,7 @@ import {
   hashEmailForRedis,
   FORGOT_PASSWORD_COOLDOWN_SECONDS,
   FORGOT_PASSWORD_DAILY_CAP,
+  FORGOT_PASSWORD_GLOBAL_DAILY_CAP,
   RESEND_VERIFICATION_COOLDOWN_SECONDS,
   RESEND_VERIFICATION_DAILY_CAP,
   SIGNUP_DAILY_IP_CAP,
@@ -129,13 +130,15 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
   describe('Spec 1: forgot-password rate limits (V3)', () => {
     const rawEmail = 'User.Test+tag@Example.COM ';
     const expectedHash = hashEmailForRedis(rawEmail);
+    const ipA = '192.0.2.1';
+    const ipB = '198.51.100.2';
 
     it('hashes email with SHA-256 for Redis keys and never uses plaintext email in keys', async () => {
       expect(expectedHash).toMatch(/^[a-f0-9]{64}$/);
       expect(expectedHash).not.toContain('example.com');
       expect(expectedHash).not.toContain('User.Test');
 
-      await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
+      await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
 
       const keys = Array.from(redisStore.keys());
       for (const k of keys) {
@@ -144,41 +147,102 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
       }
     });
 
-    it('enforces 2-minute cooldown between requests using atomic trySetNX', async () => {
-      // First attempt succeeds and sets cooldown key
-      const first = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
+    it('enforces 2-minute cooldown between requests using atomic trySetNX per (email, ip)', async () => {
+      // First attempt succeeds and sets cooldown key for ipA
+      const first = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
       expect(first).toBe(true);
       expect(fakeRedis.trySetNX).toHaveBeenCalledWith(
-        `auth:forgot:cooldown:${expectedHash}`,
+        `auth:forgot:cooldown:${expectedHash}:${ipA}`,
         '1',
         FORGOT_PASSWORD_COOLDOWN_SECONDS,
       );
 
-      // Immediate second attempt fails due to active cooldown (returns exists)
-      const second = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
+      // Immediate second attempt from same IP fails due to active cooldown (returns exists)
+      const second = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
       expect(second).toBe(false);
     });
 
-    it('enforces daily cap of 5 requests max per 24 hours', async () => {
-      // Simulate 5 successful requests spaced beyond cooldown
+    it('cooldown applies to the same (email, IP) pair only; different IP is not blocked by cooldown', async () => {
+      // Request from IP A acquires cooldown for IP A
+      const first = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
+      expect(first).toBe(true);
+
+      // Request from IP B for the same email is NOT blocked by IP A's cooldown
+      const requestFromIpB = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipB);
+      expect(requestFromIpB).toBe(true);
+    });
+
+    it('enforces daily cap of 5 requests max per requester (email, ip)', async () => {
+      // Simulate 5 successful requests from IP A spaced beyond cooldown
       for (let i = 1; i <= FORGOT_PASSWORD_DAILY_CAP; i++) {
         // Clear cooldown to simulate passing 2 minutes
-        redisStore.delete(`auth:forgot:cooldown:${expectedHash}`);
-        const allowed = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
+        redisStore.delete(`auth:forgot:cooldown:${expectedHash}:${ipA}`);
+        const allowed = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
         expect(allowed).toBe(true);
       }
 
-      // 6th attempt after cooldown should fail because daily count > 5
-      redisStore.delete(`auth:forgot:cooldown:${expectedHash}`);
-      const sixth = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
+      // 6th attempt from IP A after cooldown should fail because requester daily count > 5
+      redisStore.delete(`auth:forgot:cooldown:${expectedHash}:${ipA}`);
+      const sixth = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
       expect(sixth).toBe(false);
     });
 
-    it('forgotPassword checks rate limit before querying database and returns generic message silently', async () => {
-      // Simulate rate limit exceeded
-      redisStore.set(`auth:forgot:cooldown:${expectedHash}`, { value: '1', ttlSeconds: 100 });
+    it('attacker exhausting their daily cap from IP A does NOT prevent victim from IP B from receiving reset email', async () => {
+      // Attacker on IP A makes 5 requests exhausting daily cap
+      for (let i = 1; i <= FORGOT_PASSWORD_DAILY_CAP; i++) {
+        redisStore.delete(`auth:forgot:cooldown:${expectedHash}:${ipA}`);
+        const allowed = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
+        expect(allowed).toBe(true);
+      }
 
-      const res = await authService.forgotPassword(rawEmail);
+      // 6th attempt from Attacker IP A is blocked
+      redisStore.delete(`auth:forgot:cooldown:${expectedHash}:${ipA}`);
+      const blockedAttacker = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ipA);
+      expect(blockedAttacker).toBe(false);
+
+      // Victim on IP B requests forgotPassword
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'victim-user-1',
+        email: 'user.test+tag@example.com',
+      });
+
+      const victimRes = await authService.forgotPassword(rawEmail, ipB);
+
+      expect(victimRes).toEqual({ message: 'إذا كان البريد مسجلاً ستصلك رسالة' });
+      expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+      expect(mockOtp.issue).toHaveBeenCalledWith('victim-user-1', OtpPurpose.PASSWORD_RESET, expect.any(Number));
+      expect(mockMail.sendPasswordResetEmail).toHaveBeenCalledWith('user.test+tag@example.com', '123456');
+    });
+
+    it('21st request on the same email from different IPs is throttled by the global cap (20)', async () => {
+      // 20 requests from 20 different IPs all succeed
+      for (let i = 1; i <= FORGOT_PASSWORD_GLOBAL_DAILY_CAP; i++) {
+        const ip = `10.0.0.${i}`;
+        const allowed = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ip);
+        expect(allowed).toBe(true);
+      }
+
+      // 21st request from a 21st distinct IP is throttled by global cap
+      const ip21 = '10.0.0.21';
+      const twentyFirst = await auditService.checkAndRecordForgotPasswordLimit(rawEmail, ip21);
+      expect(twentyFirst).toBe(false);
+
+      // Verify global counter in Redis reached 21
+      expect(redisStore.get(`auth:forgot:global:${expectedHash}`)?.value).toBe(21);
+    });
+
+    it('falls back to "unknown" IP when ip is omitted and preserves backward compatibility', async () => {
+      const allowed = await auditService.checkAndRecordForgotPasswordLimit(rawEmail);
+      expect(allowed).toBe(true);
+      expect(redisStore.has(`auth:forgot:cooldown:${expectedHash}:unknown`)).toBe(true);
+      expect(redisStore.has(`auth:forgot:daily:${expectedHash}:unknown`)).toBe(true);
+    });
+
+    it('forgotPassword checks rate limit before querying database and returns generic message silently', async () => {
+      // Simulate rate limit exceeded for ipA
+      redisStore.set(`auth:forgot:cooldown:${expectedHash}:${ipA}`, { value: '1', ttlSeconds: 100 });
+
+      const res = await authService.forgotPassword(rawEmail, ipA);
 
       expect(res).toEqual({ message: 'إذا كان البريد مسجلاً ستصلك رسالة' });
       // Database should NOT be queried when rate-limited!
@@ -193,7 +257,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
         email: 'user.test+tag@example.com',
       });
 
-      const res = await authService.forgotPassword(rawEmail);
+      const res = await authService.forgotPassword(rawEmail, ipA);
 
       expect(res).toEqual({ message: 'إذا كان البريد مسجلاً ستصلك رسالة' });
       expect(mockPrisma.user.findUnique).toHaveBeenCalled();
@@ -204,7 +268,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
     it('forgotPassword returns generic message and does not throw when user is not found', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      const res = await authService.forgotPassword(rawEmail);
+      const res = await authService.forgotPassword(rawEmail, ipA);
 
       expect(res).toEqual({ message: 'إذا كان البريد مسجلاً ستصلك رسالة' });
       expect(mockMail.sendPasswordResetEmail).not.toHaveBeenCalled();
@@ -217,7 +281,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
         email: 'user.test+tag@example.com',
       });
 
-      const res = await authService.forgotPassword(rawEmail);
+      const res = await authService.forgotPassword(rawEmail, ipA);
 
       expect(res).toEqual({ message: 'إذا كان البريد مسجلاً ستصلك رسالة' });
       expect(mockMail.sendPasswordResetEmail).toHaveBeenCalled();
