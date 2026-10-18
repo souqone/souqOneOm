@@ -716,6 +716,23 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
         },
       });
 
+      // Create DriverProfile and DriverVerification for seller
+      const sellerDriverProfile = await prisma.driverProfile.create({
+        data: {
+          userId: sellerId,
+          isAvailable: true,
+          hiddenByOwnerStatus: false,
+        },
+      });
+
+      await prisma.driverVerification.create({
+        data: {
+          driverProfileId: sellerDriverProfile.id,
+          licenseImageUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/drivers/license.jpg',
+          idImageUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/drivers/id.jpg',
+        },
+      });
+
       // 3. Create conversation and message from buyer to seller on this listing
       const conversation = await prisma.conversation.create({
         data: {
@@ -779,9 +796,14 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
       expect(anonymizedCar?.hiddenByOwnerStatus).toBe(true);
       expect(anonymizedCar?.description).toBe('[تم حذف التفاصيل بواسطة المستخدم]');
 
-      // 9. Verify listing images were wiped from DB
+      // 9. Verify listing images and driver verifications were wiped from DB
       const remainingImages = await prisma.listingImage.count({ where: { listingId: car.id } });
       expect(remainingImages).toBe(0);
+
+      const remainingVerifications = await prisma.driverVerification.count({
+        where: { driverProfile: { userId: sellerId } },
+      });
+      expect(remainingVerifications).toBe(0);
 
       // 10. Verify Conversation and Messages are PRESERVED
       const remainingConversation = await prisma.conversation.findUnique({

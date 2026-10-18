@@ -308,6 +308,25 @@ export class AccountDeletionJob {
               collectedUrls.push(img.url);
             }
 
+            // Driver verification images (driverProfile is preserved, but verifications are wiped)
+            const driverVerifications = await this.prisma.driverVerification.findMany({
+              where: { driverProfile: { userId: candidate.id } },
+              select: {
+                licenseImageUrl: true,
+                licenseBackImageUrl: true,
+                idImageUrl: true,
+                idBackImageUrl: true,
+              },
+            });
+            for (const dv of driverVerifications) {
+              collectedUrls.push(
+                dv.licenseImageUrl,
+                dv.licenseBackImageUrl,
+                dv.idImageUrl,
+                dv.idBackImageUrl,
+              );
+            }
+
             // Note: JobApplication.resumeUrl is explicitly omitted from Cloudinary collection (free-form external URL)
 
             const cloudinaryPublicIds = new Set<string>();
@@ -401,7 +420,10 @@ export class AccountDeletionJob {
                   }
                 }
 
-                // 4(d) Wipe rows from listing image tables (preserve parent listings to avoid cascading conversation deletion)
+                // 4(d) Wipe driver verifications and listing image tables (preserve parent listings to avoid cascading conversation deletion)
+                await tx.driverVerification.deleteMany({
+                  where: { driverProfile: { userId: candidate.id } },
+                });
                 await tx.listingImage.deleteMany({
                   where: { listing: { sellerId: candidate.id } },
                 });
@@ -488,14 +510,20 @@ export class AccountDeletionJob {
             }
 
             // 5) Post-commit hooks (only executed if transaction was successfully committed)
-            await this.accessTokenGate.invalidate(candidate.id);
+            try {
+              await this.accessTokenGate.invalidate(candidate.id);
+            } catch (err: any) {
+              this.logger.warn(
+                `Failed to invalidate access token gate for user ${candidate.id}: ${err.message}`,
+              );
+            }
 
             if (originalEmail && originalEmail.trim().length > 0) {
               try {
                 await this.mailService.sendFinalDeletionEmail(originalEmail, originalDisplayName);
               } catch (err: any) {
                 this.logger.warn(
-                  `Failed to send final deletion email to ${originalEmail} for user ${candidate.id}: ${err.message}`,
+                  `Failed to send final deletion email for user ${candidate.id}: ${err.message}`,
                 );
               }
             }
@@ -560,7 +588,8 @@ export class AccountDeletionJob {
   /**
    * Reference check for Cloudinary assets.
    * Returns true if any active record in the database still references the publicId
-   * (e.g. User.avatarUrl, OperatorListing.profileImageUrl, or any of the 5 listing image tables).
+   * (e.g. User.avatarUrl, OperatorListing.profileImageUrl, any of the 5 listing image tables,
+   * Message.mediaUrl, or DriverVerification image fields).
    */
   private async isCloudinaryAssetReferenced(publicId: string): Promise<boolean> {
     const [
@@ -571,6 +600,8 @@ export class AccountDeletionJob {
       equipmentImageCount,
       sparePartImageCount,
       carServiceImageCount,
+      messageMediaCount,
+      driverVerificationCount,
     ] = await Promise.all([
       this.prisma.user.count({ where: { avatarUrl: { contains: publicId } } }),
       this.prisma.operatorListing.count({ where: { profileImageUrl: { contains: publicId } } }),
@@ -579,6 +610,17 @@ export class AccountDeletionJob {
       this.prisma.equipmentListingImage.count({ where: { url: { contains: publicId } } }),
       this.prisma.sparePartImage.count({ where: { url: { contains: publicId } } }),
       this.prisma.carServiceImage.count({ where: { url: { contains: publicId } } }),
+      this.prisma.message.count({ where: { mediaUrl: { contains: publicId } } }),
+      this.prisma.driverVerification.count({
+        where: {
+          OR: [
+            { licenseImageUrl: { contains: publicId } },
+            { licenseBackImageUrl: { contains: publicId } },
+            { idImageUrl: { contains: publicId } },
+            { idBackImageUrl: { contains: publicId } },
+          ],
+        },
+      }),
     ]);
 
     return (
@@ -588,7 +630,9 @@ export class AccountDeletionJob {
         busImageCount +
         equipmentImageCount +
         sparePartImageCount +
-        carServiceImageCount >
+        carServiceImageCount +
+        messageMediaCount +
+        driverVerificationCount >
       0
     );
   }

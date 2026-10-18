@@ -63,6 +63,7 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       transportRequest: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      driverVerification: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       listingImage: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       busListingImage: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       equipmentListingImage: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -107,6 +108,13 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
       },
       carServiceImage: {
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      driverVerification: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      message: {
         count: jest.fn().mockResolvedValue(0),
       },
       jobApplication: { findMany: jest.fn().mockResolvedValue([]) },
@@ -684,6 +692,105 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
 
       expect(result.processedCount).toBe(1);
       expect(mockGate.invalidate).toHaveBeenCalledWith(candidate.id);
+    });
+
+    it('does not delete Cloudinary asset if referenced in Message.mediaUrl', async () => {
+      mockPrisma.message.count.mockImplementation(async ({ where }: any) => {
+        if (where?.mediaUrl?.contains === 'users/avatar') {
+          return 1;
+        }
+        return 0;
+      });
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      expect(mockCloudinary.delete).not.toHaveBeenCalledWith('users/avatar');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('listings/car1');
+    });
+
+    it('does not delete Cloudinary asset if referenced in another user DriverVerification', async () => {
+      mockPrisma.driverVerification.count.mockImplementation(async ({ where }: any) => {
+        const orConditions = where?.OR || [];
+        const hasMatch = orConditions.some(
+          (cond: any) =>
+            cond.licenseImageUrl?.contains === 'ops/operator' ||
+            cond.licenseBackImageUrl?.contains === 'ops/operator' ||
+            cond.idImageUrl?.contains === 'ops/operator' ||
+            cond.idBackImageUrl?.contains === 'ops/operator',
+        );
+        return hasMatch ? 1 : 0;
+      });
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      expect(mockCloudinary.delete).not.toHaveBeenCalledWith('ops/operator');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('users/avatar');
+    });
+
+    it('collects all 4 DriverVerification URLs, deletes DriverVerification in tx, and deletes assets from Cloudinary', async () => {
+      mockPrisma.driverVerification.findMany.mockResolvedValue([
+        {
+          licenseImageUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/drivers/license_front.jpg',
+          licenseBackImageUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/drivers/license_back.jpg',
+          idImageUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/drivers/id_front.jpg',
+          idBackImageUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/drivers/id_back.jpg',
+        },
+      ]);
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      expect(txMock.driverVerification.deleteMany).toHaveBeenCalledWith({
+        where: { driverProfile: { userId: candidate.id } },
+      });
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('drivers/license_front');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('drivers/license_back');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('drivers/id_front');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('drivers/id_back');
+    });
+
+    it('continues email sending and Cloudinary deletion when accessTokenGate.invalidate throws an error without failing the job', async () => {
+      mockGate.invalidate.mockRejectedValueOnce(new Error('Redis connection lost'));
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+      expect(mockMail.sendFinalDeletionEmail).toHaveBeenCalledWith(
+        candidate.email,
+        candidate.displayName,
+      );
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('users/avatar');
+    });
+
+    it('never logs originalEmail, displayName, or phone even when email sending fails', async () => {
+      const warnSpy = jest.spyOn(job['logger'], 'warn');
+      const errorSpy = jest.spyOn(job['logger'], 'error');
+      const logSpy = jest.spyOn(job['logger'], 'log');
+      const debugSpy = jest.spyOn(job['logger'], 'debug');
+
+      mockMail.sendFinalDeletionEmail.mockRejectedValueOnce(new Error('SMTP connection timed out'));
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`Failed to send final deletion email for user ${candidate.id}`),
+      );
+
+      const allLoggedMessages: string[] = [
+        ...warnSpy.mock.calls.map((c) => String(c[0])),
+        ...errorSpy.mock.calls.map((c) => String(c[0])),
+        ...logSpy.mock.calls.map((c) => String(c[0])),
+        ...debugSpy.mock.calls.map((c) => String(c[0])),
+      ];
+
+      for (const msg of allLoggedMessages) {
+        expect(msg).not.toContain(candidate.email);
+        expect(msg).not.toContain(candidate.displayName);
+      }
     });
 
     it('skips sending email if candidate has no email', async () => {
