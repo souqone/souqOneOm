@@ -370,3 +370,558 @@ ${BRAND_NAME}
 
   return { subject, html, text };
 }
+
+/**
+ * Formats a given Date instance into the official Oman timezone (Asia/Muscat).
+ * Formatted cleanly with Gregorian calendar and standard numerals.
+ */
+export function formatOmanDate(date: Date, locale: 'ar' | 'en' = 'ar'): string {
+  const d = date instanceof Date ? date : new Date(date);
+  if (locale === 'ar') {
+    return new Intl.DateTimeFormat('ar-OM-u-nu-latn', {
+      timeZone: 'Asia/Muscat',
+      dateStyle: 'full',
+      timeStyle: 'short',
+    }).format(d);
+  }
+  return new Intl.DateTimeFormat('en-OM', {
+    timeZone: 'Asia/Muscat',
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(d);
+}
+
+function sanitizeName(name?: string | null): string {
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return 'المستخدم';
+  }
+  return escapeHtml(name.trim());
+}
+
+function sanitizeNameEn(name?: string | null): string {
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return 'User';
+  }
+  return escapeHtml(name.trim());
+}
+
+/**
+ * Builds official deletion request confirmation email (5-day grace period).
+ */
+export function buildDeletionRequestEmail({
+  displayName,
+  scheduledAt,
+}: {
+  displayName?: string | null;
+  scheduledAt: Date;
+}): EmailTemplateResult {
+  const safeName = sanitizeName(displayName);
+  const safeNameEn = sanitizeNameEn(displayName);
+  const formattedDateAr = formatOmanDate(scheduledAt, 'ar');
+  const formattedDateEn = formatOmanDate(scheduledAt, 'en');
+  const currentYear = new Date().getFullYear();
+
+  const subject = 'تم استلام طلب حذف حسابك — سوق ون';
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>${subject}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, p, div, a { font-family: Tahoma, Arial, sans-serif !important; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    html, body {
+      margin: 0 auto !important; padding: 0 !important; height: 100% !important; width: 100% !important;
+      background-color: #FFFFFF; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
+    }
+    table, td { mso-table-lspace: 0pt !important; mso-table-rspace: 0pt !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 480px) {
+      .outer-shell { padding: 20px 16px !important; }
+      .card-shell { width: 100% !important; }
+      .content-block { max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body dir="rtl" bgcolor="#FFFFFF" style="margin: 0 auto; padding: 0; background-color: #FFFFFF; font-family: Tahoma, Arial, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; direction: rtl; text-align: center;">
+
+  <!-- Hidden Preheader -->
+  <div style="display: none; font-size: 1px; color: #FFFFFF; line-height: 1px; font-family: Tahoma, Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+    تم استلام طلب حذف حسابكم في ${BRAND_NAME}. موعد الحذف النهائي المجدول: ${formattedDateAr}.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" bgcolor="#FFFFFF" class="outer-shell" style="background-color: #FFFFFF; margin: 0 auto; padding: 32px 16px; direction: rtl; width: 100%;">
+    <tr>
+      <td align="center" style="text-align: center; direction: rtl;">
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" class="card-shell" style="max-width: 600px; width: 100%; margin: 0 auto; direction: rtl; text-align: center;">
+          
+          <!-- Logo Row -->
+          <tr>
+            <td align="center" style="padding: 0 0 20px 0; text-align: center;">
+              <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="${BRAND_NAME}" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
+            </td>
+          </tr>
+
+          <!-- Subtle Turquoise Divider (2px) -->
+          <tr>
+            <td align="center" style="padding: 0 0 26px 0; text-align: center;">
+              <div style="height: 2px; width: 100%; max-width: 520px; background-color: #009CB5; line-height: 2px; font-size: 2px; margin: 0 auto;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Heading Row -->
+          <tr>
+            <td align="center" style="padding: 0 0 18px 0; text-align: center;">
+              <h1 id="mail-heading" style="margin: 0; font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 20px; font-weight: bold; color: #11232E; line-height: 1.4; text-align: center;">طلب حذف الحساب</h1>
+            </td>
+          </tr>
+
+          <!-- Body Content Area -->
+          <tr>
+            <td align="center" style="padding: 0 0 24px 0; text-align: center;">
+              <div class="content-block" style="max-width: 480px; margin: 0 auto; text-align: center;">
+                
+                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeName}</bdi>،</p>
+                <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">تلقينا طلباً لحذف حسابكم وبياناتكم في منصة <bdi dir="ltr">${BRAND_NAME}</bdi> (سوق ون). تم إخفاء كافة إعلاناتكم وخدماتكم من الظهور العام ومحرك البحث فوراً.</p>
+                
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto; width: 100%; max-width: 460px; background-color: #F8FAFC; border: 1.5px solid #009CB5; border-radius: 8px;">
+                  <tr>
+                    <td align="center" style="padding: 16px 20px; text-align: center;">
+                      <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #007A8F;">موعد الحذف النهائي المجدول (فترة سماح 5 أيام):</p>
+                      <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #11232E; direction: rtl;"><bdi dir="rtl">${formattedDateAr}</bdi></p>
+                      <p style="margin: 0; font-size: 13px; color: #64748B; direction: ltr;"><bdi dir="ltr">${formattedDateEn} (Asia/Muscat)</bdi></p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.7; color: #11232E; text-align: center;"><strong>طريقة إلغاء الحذف:</strong> إذا كنت ترغب في الاحتفاظ بحسابك، يمكنك إلغاء الطلب في أي وقت قبل حلول الموعد أعلاه من داخل التطبيق: <strong>الإعدادات ثم حذف الحساب</strong> ثم الضغط على <strong>إلغاء طلب الحذف</strong>.</p>
+                <p style="margin: 0 0 18px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تكن أنت من قدم هذا الطلب، يرجى فتح التطبيق فوراً لإلغائه وتأمين حسابكم أو التواصل معنا عبر: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+
+                <!-- English Summary -->
+                <div style="margin: 24px auto 0 auto; padding-top: 16px; border-top: 1px dashed #E2E8F0; font-size: 13px; line-height: 1.6; color: #475569; text-align: center; direction: ltr;">
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deletion Request Received — Souqone</p>
+                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEn}, we received a request to delete your Souqone account. All your active listings have been hidden immediately.</p>
+                  <p style="margin: 0 0 8px 0;">Scheduled permanent deletion date: <strong>${formattedDateEn}</strong> (Oman Time).</p>
+                  <p style="margin: 0 0 8px 0;"><strong>How to cancel:</strong> From the app: Settings then Delete Account, then tap <strong>Cancel Deletion</strong>.</p>
+                  <p style="margin: 0;">If you did not request this, please contact us immediately at: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- Bottom Subtle Divider -->
+          <tr>
+            <td align="center" style="padding: 0; text-align: center;">
+              <div style="height: 1px; width: 100%; max-width: 520px; background-color: #E5E7EB; line-height: 1px; font-size: 1px; margin: 0 auto;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Institutional Footer Row -->
+          <tr>
+            <td align="center" style="padding: 20px 0 0 0; text-align: center;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
+                <tr>
+                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
+                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">${BRAND_NAME} — سوق ون</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${BRAND_NAME} ${currentYear}</bdi>.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+  const text = `${subject}
+
+مرحباً ${safeName}،
+
+تلقينا طلباً لحذف حسابكم وبياناتكم الشخصية في منصة ${BRAND_NAME} (سوق ون).
+تم إخفاء كافة إعلاناتكم وخدماتكم من الظهور العام ومحرك البحث فوراً.
+
+موعد الحذف النهائي المجدول (فترة سماح 5 أيام):
+- بالتوقيت المحلي: ${formattedDateAr}
+- بتوقيت عُمان: ${formattedDateEn} (Asia/Muscat)
+
+طريقة إلغاء الحذف:
+إذا كنت ترغب في الاحتفاظ بحسابك، يمكنك إلغاء الطلب في أي وقت قبل حلول الموعد أعلاه من داخل التطبيق: الإعدادات ثم حذف الحساب ثم الضغط على "إلغاء طلب الحذف".
+
+إذا لم تكن أنت من قدم هذا الطلب، يرجى فتح التطبيق فوراً لإلغائه أو التواصل معنا عبر: support@souqoneom.com.
+
+---
+Account Deletion Request Received — Souqone
+
+Hello ${safeNameEn},
+We received a request to delete your Souqone account.
+All your active listings have been hidden immediately.
+Scheduled deletion date: ${formattedDateEn} (Asia/Muscat).
+
+To cancel: From the app: Settings then Delete Account, then tap "Cancel Deletion".
+For support: support@souqoneom.com.
+
+---
+${BRAND_NAME}
+سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
+جميع الحقوق محفوظة ${BRAND_NAME} ${currentYear}.
+`;
+
+  return { subject, html, text };
+}
+
+/**
+ * Builds official deletion cancellation confirmation email.
+ */
+export function buildDeletionCancelledEmail({
+  displayName,
+}: {
+  displayName?: string | null;
+}): EmailTemplateResult {
+  const safeName = sanitizeName(displayName);
+  const safeNameEn = sanitizeNameEn(displayName);
+  const currentYear = new Date().getFullYear();
+
+  const subject = 'تم إلغاء طلب حذف حسابك بنجاح — سوق ون';
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>${subject}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, p, div, a { font-family: Tahoma, Arial, sans-serif !important; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    html, body {
+      margin: 0 auto !important; padding: 0 !important; height: 100% !important; width: 100% !important;
+      background-color: #FFFFFF; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
+    }
+    table, td { mso-table-lspace: 0pt !important; mso-table-rspace: 0pt !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 480px) {
+      .outer-shell { padding: 20px 16px !important; }
+      .card-shell { width: 100% !important; }
+      .content-block { max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body dir="rtl" bgcolor="#FFFFFF" style="margin: 0 auto; padding: 0; background-color: #FFFFFF; font-family: Tahoma, Arial, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; direction: rtl; text-align: center;">
+
+  <!-- Hidden Preheader -->
+  <div style="display: none; font-size: 1px; color: #FFFFFF; line-height: 1px; font-family: Tahoma, Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+    تم إلغاء طلب حذف حسابكم في ${BRAND_NAME} واستعادة كافة الخدمات بنجاح.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" bgcolor="#FFFFFF" class="outer-shell" style="background-color: #FFFFFF; margin: 0 auto; padding: 32px 16px; direction: rtl; width: 100%;">
+    <tr>
+      <td align="center" style="text-align: center; direction: rtl;">
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" class="card-shell" style="max-width: 600px; width: 100%; margin: 0 auto; direction: rtl; text-align: center;">
+          
+          <!-- Logo Row -->
+          <tr>
+            <td align="center" style="padding: 0 0 20px 0; text-align: center;">
+              <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="${BRAND_NAME}" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
+            </td>
+          </tr>
+
+          <!-- Subtle Turquoise Divider (2px) -->
+          <tr>
+            <td align="center" style="padding: 0 0 26px 0; text-align: center;">
+              <div style="height: 2px; width: 100%; max-width: 520px; background-color: #009CB5; line-height: 2px; font-size: 2px; margin: 0 auto;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Heading Row -->
+          <tr>
+            <td align="center" style="padding: 0 0 18px 0; text-align: center;">
+              <h1 id="mail-heading" style="margin: 0; font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 20px; font-weight: bold; color: #11232E; line-height: 1.4; text-align: center;">إلغاء حذف الحساب</h1>
+            </td>
+          </tr>
+
+          <!-- Body Content Area -->
+          <tr>
+            <td align="center" style="padding: 0 0 24px 0; text-align: center;">
+              <div class="content-block" style="max-width: 480px; margin: 0 auto; text-align: center;">
+                
+                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeName}</bdi>،</p>
+                <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">نود إشعاركم بأنه قد تم إلغاء طلب حذف حسابكم في منصة <bdi dir="ltr">${BRAND_NAME}</bdi> (سوق ون) بنجاح.</p>
+                
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 16px auto; width: 100%; max-width: 460px; background-color: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 8px;">
+                  <tr>
+                    <td align="center" style="padding: 14px 20px; text-align: center;">
+                      <p style="margin: 0; font-size: 14px; font-weight: bold; color: #15803D;">حسابكم نشط الآن بالكامل، وتمت استعادة ظهور إعلاناتكم وخدماتكم السابقة في السوق العام ومحرك البحث.</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin: 0 0 16px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تكن أنت من قام بإلغاء هذا الطلب، أو كانت لديكم أي استفسارات، يسعدنا تواصلكم فوراً عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+
+                <!-- English Summary -->
+                <div style="margin: 24px auto 0 auto; padding-top: 16px; border-top: 1px dashed #E2E8F0; font-size: 13px; line-height: 1.6; color: #475569; text-align: center; direction: ltr;">
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deletion Request Cancelled — Souqone</p>
+                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEn}, your request to delete your Souqone account has been successfully cancelled.</p>
+                  <p style="margin: 0 0 8px 0;">Your account is now fully active, and your previous listings and services have been restored to public view.</p>
+                  <p style="margin: 0;">For assistance: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- Bottom Subtle Divider -->
+          <tr>
+            <td align="center" style="padding: 0; text-align: center;">
+              <div style="height: 1px; width: 100%; max-width: 520px; background-color: #E5E7EB; line-height: 1px; font-size: 1px; margin: 0 auto;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Institutional Footer Row -->
+          <tr>
+            <td align="center" style="padding: 20px 0 0 0; text-align: center;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
+                <tr>
+                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
+                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">${BRAND_NAME} — سوق ون</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${BRAND_NAME} ${currentYear}</bdi>.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+  const text = `${subject}
+
+مرحباً ${safeName}،
+
+نود إشعاركم بأنه قد تم إلغاء طلب حذف حسابكم في منصة ${BRAND_NAME} (سوق ون) بنجاح.
+حسابكم نشط الآن بالكامل، وتمت استعادة ظهور إعلاناتكم وخدماتكم السابقة في السوق العام ومحرك البحث.
+
+إذا لم تكن أنت من قام بإلغاء الطلب، يرجى التواصل معنا عبر: support@souqoneom.com.
+
+---
+Account Deletion Request Cancelled — Souqone
+
+Hello ${safeNameEn},
+Your request to delete your Souqone account has been successfully cancelled.
+Your account is fully active and your listings have been restored.
+For support: support@souqoneom.com.
+
+---
+${BRAND_NAME}
+سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
+جميع الحقوق محفوظة ${BRAND_NAME} ${currentYear}.
+`;
+
+  return { subject, html, text };
+}
+
+/**
+ * Builds official final deletion confirmation email.
+ */
+export function buildFinalDeletionEmail({
+  displayName,
+}: {
+  displayName?: string | null;
+}): EmailTemplateResult {
+  const safeName = sanitizeName(displayName);
+  const safeNameEn = sanitizeNameEn(displayName);
+  const currentYear = new Date().getFullYear();
+
+  const subject = 'تم حذف حسابك — سوق ون';
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>${subject}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, p, div, a { font-family: Tahoma, Arial, sans-serif !important; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    html, body {
+      margin: 0 auto !important; padding: 0 !important; height: 100% !important; width: 100% !important;
+      background-color: #FFFFFF; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
+    }
+    table, td { mso-table-lspace: 0pt !important; mso-table-rspace: 0pt !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 480px) {
+      .outer-shell { padding: 20px 16px !important; }
+      .card-shell { width: 100% !important; }
+      .content-block { max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body dir="rtl" bgcolor="#FFFFFF" style="margin: 0 auto; padding: 0; background-color: #FFFFFF; font-family: Tahoma, Arial, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; direction: rtl; text-align: center;">
+
+  <!-- Hidden Preheader -->
+  <div style="display: none; font-size: 1px; color: #FFFFFF; line-height: 1px; font-family: Tahoma, Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+    تم اكتمال حذف حسابكم وبياناتكم الشخصية في ${BRAND_NAME}.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" bgcolor="#FFFFFF" class="outer-shell" style="background-color: #FFFFFF; margin: 0 auto; padding: 32px 16px; direction: rtl; width: 100%;">
+    <tr>
+      <td align="center" style="text-align: center; direction: rtl;">
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" class="card-shell" style="max-width: 600px; width: 100%; margin: 0 auto; direction: rtl; text-align: center;">
+          
+          <!-- Logo Row -->
+          <tr>
+            <td align="center" style="padding: 0 0 20px 0; text-align: center;">
+              <img id="brand-logo" src="${BRAND_LOGO_URL}" alt="${BRAND_NAME}" width="130" style="display: block; width: 130px; max-width: 130px; height: auto; border: 0; margin: 0 auto;">
+            </td>
+          </tr>
+
+          <!-- Subtle Turquoise Divider (2px) -->
+          <tr>
+            <td align="center" style="padding: 0 0 26px 0; text-align: center;">
+              <div style="height: 2px; width: 100%; max-width: 520px; background-color: #009CB5; line-height: 2px; font-size: 2px; margin: 0 auto;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Heading Row -->
+          <tr>
+            <td align="center" style="padding: 0 0 18px 0; text-align: center;">
+              <h1 id="mail-heading" style="margin: 0; font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 20px; font-weight: bold; color: #11232E; line-height: 1.4; text-align: center;">تم حذف الحساب</h1>
+            </td>
+          </tr>
+
+          <!-- Body Content Area -->
+          <tr>
+            <td align="center" style="padding: 0 0 24px 0; text-align: center;">
+              <div class="content-block" style="max-width: 480px; margin: 0 auto; text-align: center;">
+                
+                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeName}</bdi>،</p>
+                <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">نود إشعاركم بأنه قد تم اكتمال حذف حسابكم وبياناتكم الشخصية في منصة <bdi dir="ltr">${BRAND_NAME}</bdi> (سوق ون) بنجاح.</p>
+                
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 16px auto; width: 100%; max-width: 460px; background-color: #F8FAFC; border: 1.5px solid #009CB5; border-radius: 8px;">
+                  <tr>
+                    <td align="center" style="padding: 16px 20px; text-align: center;">
+                      <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #11232E;">تم إنهاء الجلسات النشطة ومسح بيانات الملف الشخصي وإزالة الإعلانات من الظهور العام.</p>
+                      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #4A5568;">نود إشعارك بأن بعض السجلات المالية وسجلات تدقيق الأمان المتبقية لا تتضمن بياناتك الشخصية المباشرة وتُحفظ لأغراض محاسبية وأمنية.</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.7; color: #4A5568; text-align: center;">أصبح بريدكم الإلكتروني الآن متاحاً في حال رغبتم في إنشاء حساب جديد مستقبلاً. شكراً لثقتكم السابقة بمنصة سوق ون.</p>
+                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">لأي استفسار: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+
+                <!-- English Summary -->
+                <div style="margin: 24px auto 0 auto; padding-top: 16px; border-top: 1px dashed #E2E8F0; font-size: 13px; line-height: 1.6; color: #475569; text-align: center; direction: ltr;">
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deleted — Souqone</p>
+                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEn}, your Souqone account and personal data have been deleted. Active sessions have been revoked and listings removed from public view.</p>
+                  <p style="margin: 0 0 8px 0;">Please note that certain financial and security audit records are retained for accounting and security purposes and do not contain your direct personal data.</p>
+                  <p style="margin: 0;">Your email address is now released and may be used to register a new account at any time. For support: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- Bottom Subtle Divider -->
+          <tr>
+            <td align="center" style="padding: 0; text-align: center;">
+              <div style="height: 1px; width: 100%; max-width: 520px; background-color: #E5E7EB; line-height: 1px; font-size: 1px; margin: 0 auto;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Institutional Footer Row -->
+          <tr>
+            <td align="center" style="padding: 20px 0 0 0; text-align: center;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" dir="rtl" style="margin: 0 auto; text-align: center;">
+                <tr>
+                  <td align="center" style="font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.7; color: #4A5568; text-align: center;">
+                    <p style="margin: 0 0 4px 0; font-weight: bold; color: #11232E; font-size: 13px; text-align: center;">${BRAND_NAME} — سوق ون</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #4A5568; text-align: center;">سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان</p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A5568; text-align: center;">للمساعدة والاستفسار: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a></p>
+                    <p style="margin: 0; font-size: 11px; color: #6B7280; text-align: center;">جميع الحقوق محفوظة <bdi dir="ltr">${BRAND_NAME} ${currentYear}</bdi>.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+  const text = `${subject}
+
+مرحباً ${safeName}،
+
+نود إشعاركم بأنه قد تم اكتمال حذف حسابكم وبياناتكم الشخصية في منصة ${BRAND_NAME} (سوق ون) بنجاح.
+تم إنهاء الجلسات النشطة ومسح بيانات الملف الشخصي وإزالة الإعلانات من الظهور العام.
+
+نود إشعارك بأن بعض السجلات المالية وسجلات تدقيق الأمان المتبقية لا تتضمن بياناتك الشخصية المباشرة وتُحفظ لأغراض محاسبية وأمنية.
+
+أصبح بريدكم الإلكتروني الآن متاحاً في حال رغبتم في إنشاء حساب جديد مستقبلاً.
+لأي استفسار: support@souqoneom.com.
+
+---
+Account Deleted — Souqone
+
+Hello ${safeNameEn},
+Your Souqone account and personal data have been deleted. Active sessions have been revoked and listings removed from public view.
+
+Please note that certain financial and security audit records are retained for accounting and security purposes and do not contain your direct personal data.
+Your email address is now released and may be used to register a new account at any time.
+For support: support@souqoneom.com.
+
+---
+${BRAND_NAME}
+سوق إلكتروني للإعلانات والخدمات في سلطنة عُمان
+جميع الحقوق محفوظة ${BRAND_NAME} ${currentYear}.
+`;
+
+  return { subject, html, text };
+}
+

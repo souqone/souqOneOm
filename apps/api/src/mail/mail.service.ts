@@ -5,6 +5,9 @@ import {
   BRAND_NAME,
   buildVerificationEmail,
   buildPasswordResetEmail,
+  buildDeletionRequestEmail,
+  buildDeletionCancelledEmail,
+  buildFinalDeletionEmail,
   EmailTemplateResult,
 } from './mail.templates';
 
@@ -67,6 +70,55 @@ export class MailService {
   async sendPasswordResetEmail(to: string, code: string): Promise<void> {
     const template = buildPasswordResetEmail({ code });
     await this.send(to, template);
+  }
+
+  /**
+   * Sends 5-day grace period account deletion request confirmation email.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendDeletionRequestEmail(
+    to: string,
+    scheduledAt: Date,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildDeletionRequestEmail({ displayName, scheduledAt });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(`Failed to send deletion request email to ${to}: ${(error as Error)?.message || error}`);
+    }
+  }
+
+  /**
+   * Sends deletion request cancellation confirmation email.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendDeletionCancelledEmail(
+    to: string,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildDeletionCancelledEmail({ displayName });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(`Failed to send deletion cancellation email to ${to}: ${(error as Error)?.message || error}`);
+    }
+  }
+
+  /**
+   * Sends final account deletion notice email.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendFinalDeletionEmail(
+    to: string,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildFinalDeletionEmail({ displayName });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(`Failed to send final deletion email to ${to}: ${(error as Error)?.message || error}`);
+    }
   }
 }
 

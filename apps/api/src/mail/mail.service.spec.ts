@@ -1,5 +1,4 @@
 import { Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 import { MailService } from './mail.service';
 
 const mockSendMail = jest.fn();
@@ -107,7 +106,7 @@ describe('MailService', () => {
     ];
 
     allLogCalls.forEach((call) => {
-      const loggedString = call.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+      const loggedString = call.map((arg: any) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
       expect(loggedString).not.toContain(secretCode);
     });
   });
@@ -122,5 +121,100 @@ describe('MailService', () => {
 
     expect(mockSendMail).not.toHaveBeenCalled();
     expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('[DEV] Email to dev@example.com'));
+  });
+
+  describe('Deletion Emails (PR 1)', () => {
+    const fixedDate = new Date('2026-10-23T12:00:00Z');
+
+    it('should send deletion request email with Oman formatted date and cancellation guidance', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-del-req' });
+      const service = new MailService();
+
+      await service.sendDeletionRequestEmail('user@example.com', fixedDate, 'أحمد العماني');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.from).toBe('"SouqOne" <noreply@mail.souqoneom.com>');
+      expect(callArgs.replyTo).toBe('support@souqoneom.com');
+      expect(callArgs.subject).toBe('تم استلام طلب حذف حسابك — سوق ون');
+      expect(callArgs.html).toContain('أحمد العماني');
+      expect(callArgs.html).toContain('الإعدادات ثم حذف الحساب');
+      expect(callArgs.text).toContain('الإعدادات ثم حذف الحساب');
+      expect(callArgs.html).toContain('support@souqoneom.com');
+    });
+
+    it('should be fail-safe when sendDeletionRequestEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('SMTP connection dropped'));
+      const service = new MailService();
+
+      await expect(
+        service.sendDeletionRequestEmail('user@example.com', fixedDate, 'أحمد'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send deletion request email to user@example.com'),
+      );
+    });
+
+    it('should send deletion cancelled email with restored listings notice', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-del-cancel' });
+      const service = new MailService();
+
+      await service.sendDeletionCancelledEmail('user@example.com', 'أحمد العماني');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.subject).toBe('تم إلغاء طلب حذف حسابك بنجاح — سوق ون');
+      expect(callArgs.html).toContain('أحمد العماني');
+      expect(callArgs.html).toContain('تمت استعادة ظهور إعلاناتكم');
+      expect(callArgs.text).toContain('تمت استعادة ظهور إعلاناتكم');
+    });
+
+    it('should be fail-safe when sendDeletionCancelledEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('Network timeout'));
+      const service = new MailService();
+
+      await expect(
+        service.sendDeletionCancelledEmail('user@example.com', 'أحمد'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send deletion cancellation email to user@example.com'),
+      );
+    });
+
+    it('should send final deletion email with accounting/security notice', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-del-final' });
+      const service = new MailService();
+
+      await service.sendFinalDeletionEmail('user@example.com', 'أحمد العماني');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.subject).toBe('تم حذف حسابك — سوق ون');
+      expect(callArgs.html).toContain('لا تتضمن بياناتك الشخصية المباشرة');
+      expect(callArgs.html).toContain('لأغراض محاسبية وأمنية');
+      expect(callArgs.text).toContain('لا تتضمن بياناتك الشخصية المباشرة');
+      expect(callArgs.text).toContain('لأغراض محاسبية وأمنية');
+    });
+
+    it('should be fail-safe when sendFinalDeletionEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('SMTP down'));
+      const service = new MailService();
+
+      await expect(
+        service.sendFinalDeletionEmail('user@example.com', 'أحمد'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send final deletion email to user@example.com'),
+      );
+    });
   });
 });
