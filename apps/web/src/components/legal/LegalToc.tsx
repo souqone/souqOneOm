@@ -57,7 +57,10 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
   }, [sections]);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
   };
 
   return (
@@ -82,6 +85,7 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
                   <li key={section.id}>
                     <a
                       href={`#${section.id}`}
+                      aria-current={isActive ? 'location' : undefined}
                       className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
                         isActive
                           ? 'bg-primary/10 text-primary font-bold dark:bg-primary/20'
@@ -117,6 +121,7 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
                 <li key={section.id}>
                   <a
                     href={`#${section.id}`}
+                    aria-current={isActive ? 'location' : undefined}
                     className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
                       isActive
                         ? 'bg-primary/10 text-primary font-bold dark:bg-primary/20'
