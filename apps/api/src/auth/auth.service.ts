@@ -196,7 +196,6 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: this.tokens.sanitizeUser(user),
-      deletionScheduledAt: user.deletionScheduledAt ? user.deletionScheduledAt.toISOString() : null,
     };
   }
 
@@ -444,7 +443,6 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: this.tokens.sanitizeUser(user),
-      deletionScheduledAt: user.deletionScheduledAt ? user.deletionScheduledAt.toISOString() : null,
     };
   }
 

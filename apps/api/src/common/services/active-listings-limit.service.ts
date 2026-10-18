@@ -56,13 +56,13 @@ export class ActiveListingsLimitService {
       );
     }
 
-    // 2. Transactional advisory lock per user: serializes concurrent creations/activations
+    // 3. Transactional advisory lock per user: serializes concurrent creations/activations
     const lockKey = hashToBigInt(
       crypto.createHash('sha256').update(`active_ads_cap:${userId}`).digest('hex'),
     );
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey}::bigint)`;
 
-    // 3. Count public active listings across all 7 verticals
+    // 4. Count public active listings across all 7 verticals
     const [cars, buses, equipment, parts, services, jobs, operators] =
       await Promise.all([
         tx.listing.count({

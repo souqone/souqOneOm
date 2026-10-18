@@ -114,6 +114,7 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
       user: {
         findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       payment: {
         findFirst: jest.fn().mockResolvedValue(null),
@@ -410,14 +411,23 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
       expect(res.deletionScheduledAt).toBe(expectedDate.toISOString());
       expect(res.message).toBe('تمت جدولة حذف الحساب بنجاح');
 
-      // Check DB update
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-fresh' },
+      // Check DB update via compare-and-set updateMany
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'user-fresh',
+          deletionScheduledAt: null,
+        },
         data: {
           deletionScheduledAt: expectedDate,
           tokenVersion: { increment: 1 },
         },
       });
+
+      // Check all refresh tokens revoked in database
+      expect(mockAuthTokenService.revokeAllRefreshTokens).toHaveBeenCalledWith(
+        'user-fresh',
+        mockPrisma,
+      );
 
       // Check subscriptions autoRenew turned off
       expect(mockPrisma.subscription.updateMany).toHaveBeenCalledWith({
@@ -451,6 +461,8 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
         deletionScheduledAt: existingDate,
       });
 
+      mockPrisma.user.updateMany.mockResolvedValueOnce({ count: 0 });
+
       const res = await usersService.scheduleAccountDeletion('user-already-scheduled', {
         password: validPassword,
         confirmation: 'حذف حسابي',
@@ -460,14 +472,57 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
       expect(res.deletionScheduledAt).toBe(existingDate.toISOString());
       expect(res.message).toBe('حسابك مجدول للحذف بالفعل');
 
-      // User table NOT updated again
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
       // Subscriptions NOT updated again
       expect(mockPrisma.subscription.updateMany).not.toHaveBeenCalled();
+      // Token revocation NOT called again
+      expect(mockAuthTokenService.revokeAllRefreshTokens).not.toHaveBeenCalled();
       // hideAllForUser NOT called again
       expect(mockVisibilityService.hideAllForUser).not.toHaveBeenCalled();
       // Email NOT sent again
       expect(mockMailService.sendDeletionRequestEmail).not.toHaveBeenCalled();
+    });
+
+    it('handles concurrent deletion requests with compare-and-set: winner schedules, loser returns existing date, hooks run once', async () => {
+      const scheduledDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+      mockPrisma.user.findUnique.mockImplementation(async () => ({
+        id: 'user-concurrent',
+        email: 'concurrent@souqone.om',
+        displayName: 'Concurrent User',
+        passwordHash: validPasswordHash,
+        googleId: null,
+        role: 'USER',
+        status: 'ACTIVE',
+        deletionScheduledAt: null,
+      }));
+
+      let updateCalls = 0;
+      mockPrisma.user.updateMany.mockImplementation(async () => {
+        updateCalls++;
+        return { count: updateCalls === 1 ? 1 : 0 };
+      });
+
+      const [res1, res2] = await Promise.all([
+        usersService.scheduleAccountDeletion('user-concurrent', {
+          password: validPassword,
+          confirmation: 'حذف حسابي',
+        }),
+        usersService.scheduleAccountDeletion('user-concurrent', {
+          password: validPassword,
+          confirmation: 'حذف حسابي',
+        }),
+      ]);
+
+      expect(res1.success).toBe(true);
+      expect(res1.message).toBe('تمت جدولة حذف الحساب بنجاح');
+      expect(res2.success).toBe(true);
+      expect(res2.message).toBe('حسابك مجدول للحذف بالفعل');
+
+      // Post-commit hooks ran exactly once (for the winner)
+      expect(mockAccessTokenGate.invalidate).toHaveBeenCalledTimes(1);
+      expect(mockVisibilityService.hideAllForUser).toHaveBeenCalledTimes(1);
+      expect(mockMailService.sendDeletionRequestEmail).toHaveBeenCalledTimes(1);
+      expect(mockAuthTokenService.revokeAllRefreshTokens).toHaveBeenCalledTimes(1);
     });
 
     it('logs warning if remaining unhidden records exist across the 11 entities in OWNER_VISIBILITY_REGISTRY', async () => {
@@ -574,6 +629,29 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
       expect(mockMailService.sendDeletionCancelledEmail).toHaveBeenCalledWith(
         'sched@souqone.om',
         'Sched User',
+      );
+    });
+
+    it('does not throw 500 when restoreAllForUser fails, logs error and returns success', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-scheduled-err',
+        email: 'sched-err@souqone.om',
+        displayName: 'Sched Err User',
+        deletionScheduledAt: new Date(),
+      });
+
+      mockVisibilityService.restoreAllForUser.mockRejectedValueOnce(
+        new Error('Redis connection down during restore'),
+      );
+      const errorSpy = jest.spyOn((usersService as any).logger, 'error');
+
+      const res = await usersService.cancelAccountDeletion('user-scheduled-err');
+
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('تم إلغاء طلب حذف الحساب واستعادة إعلاناتك بنجاح');
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to restore content during cancelAccountDeletion for user user-scheduled-err'),
+        expect.any(String),
       );
     });
   });
@@ -695,6 +773,65 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
 
       const profile = await usersService.getProfile('u-me');
       expect(profile).toHaveProperty('deletionScheduledAt', scheduledDate);
+    });
+
+    it('login and googleAuth return deletionScheduledAt nested inside user and NOT at top level', () => {
+      const scheduledDate = new Date();
+      const mockUser = {
+        id: 'u-login',
+        email: 'test@example.com',
+        deletionScheduledAt: scheduledDate,
+      };
+      const sanitized = {
+        id: 'u-login',
+        email: 'test@example.com',
+        deletionScheduledAt: scheduledDate,
+      };
+      mockAuthTokenService.sanitizeUser.mockReturnValueOnce(sanitized);
+
+      const loginRes = {
+        accessToken: 'mock-token',
+        refreshToken: 'mock-refresh',
+        user: mockAuthTokenService.sanitizeUser(mockUser),
+      };
+
+      expect(loginRes.user).toHaveProperty('deletionScheduledAt', scheduledDate);
+      expect((loginRes as any).deletionScheduledAt).toBeUndefined();
+    });
+
+    it('refresh returns deletionScheduledAt at top level without user object', () => {
+      const scheduledIso = new Date().toISOString();
+      const refreshRes = {
+        accessToken: 'mock-token',
+        refreshToken: 'mock-refresh',
+        deletionScheduledAt: scheduledIso,
+      };
+
+      expect(refreshRes).toHaveProperty('deletionScheduledAt', scheduledIso);
+      expect((refreshRes as any).user).toBeUndefined();
+    });
+
+    it('after scheduling deletion, refreshing with an old refresh token fails because all refresh tokens are revoked', async () => {
+      const mockPrismaTokens = {
+        refreshToken: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'old-token-id',
+            token: 'hashed-old-token',
+            userId: 'user-scheduled',
+            expiresAt: new Date(Date.now() + 100000),
+            revokedAt: new Date(), // Revoked during scheduleAccountDeletion
+            rotatedAt: null,
+          }),
+        },
+      };
+
+      const realAuthTokenService = new AuthTokenService(
+        mockPrismaTokens as any,
+        { signAsync: jest.fn() } as any,
+      );
+
+      const res = await realAuthTokenService.rotateRefreshToken('old-raw-token');
+      expect(res).toBeNull();
     });
   });
 });

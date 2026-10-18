@@ -431,13 +431,27 @@ export class UsersService {
     // 3. Atomic transaction with extended timeout options
     const result = await this.prisma.$transaction(
       async (tx) => {
+        // Fetch current user state inside transaction to prevent concurrency races
+        const txUser = await tx.user.findUnique({
+          where: { id: userId },
+          select: {
+            role: true,
+            status: true,
+            deletionScheduledAt: true,
+          },
+        });
+
+        if (!txUser) {
+          throw new NotFoundException('المستخدم غير موجود');
+        }
+
         // (a) Role check: ADMIN and MODERATOR rejected
-        if (user.role === 'ADMIN' || user.role === 'MODERATOR') {
+        if (txUser.role === 'ADMIN' || txUser.role === 'MODERATOR') {
           throw new ForbiddenException('لا يمكن حذف حساب إداري عبر هذا المسار');
         }
 
         // (b) Status check: BANNED and SUSPENDED rejected
-        if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+        if (txUser.status === 'BANNED' || txUser.status === 'SUSPENDED') {
           throw new ForbiddenException('لا يمكن حذف حساب موقوف أو محظور');
         }
 
@@ -454,24 +468,37 @@ export class UsersService {
           );
         }
 
-        // (d) Idempotency: if already scheduled, return existing date without extending
-        if (user.deletionScheduledAt != null) {
-          return {
-            isExisting: true,
-            deletionScheduledAt: user.deletionScheduledAt,
-          };
-        }
-
-        // (e) Schedule deletion: now + 5 days
+        // (d) Compare-and-Set: updateMany with condition id and deletionScheduledAt: null
         const scheduledDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
-        await tx.user.update({
-          where: { id: userId },
+        const updateResult = await tx.user.updateMany({
+          where: {
+            id: userId,
+            deletionScheduledAt: null,
+          },
           data: {
             deletionScheduledAt: scheduledDate,
             tokenVersion: { increment: 1 },
           },
         });
+
+        // If count is 0, another request won the race or account was already scheduled
+        if (updateResult.count === 0) {
+          const existingScheduled = txUser.deletionScheduledAt ?? (
+            await tx.user.findUnique({
+              where: { id: userId },
+              select: { deletionScheduledAt: true },
+            })
+          )?.deletionScheduledAt ?? scheduledDate;
+
+          return {
+            isExisting: true,
+            deletionScheduledAt: existingScheduled,
+          };
+        }
+
+        // (e) Revoke all refresh tokens in database
+        await this.authTokenService.revokeAllRefreshTokens(userId, tx);
 
         // (f) Set autoRenew = false on active subscriptions
         await tx.subscription.updateMany({
@@ -492,7 +519,7 @@ export class UsersService {
       // (a) Invalidate token cache
       await this.accessTokenGate.invalidate(userId);
 
-      // (b) Hide all content with 2 retries (total 3 attempts)
+      // (b) Hide all content with 2 retries (total 3 attempts) and 200ms delay between attempts
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           await this.visibilityService.hideAllForUser(userId);
@@ -501,6 +528,9 @@ export class UsersService {
           this.logger.error(
             `Attempt ${attempt} to hide content for user ${userId} failed: ${err.message}`,
           );
+          if (attempt < 3) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
         }
       }
 
@@ -566,8 +596,15 @@ export class UsersService {
       data: { deletionScheduledAt: null },
     });
 
-    // 2. Restore all content for user
-    await this.visibilityService.restoreAllForUser(userId);
+    // 2. Restore all content for user (catch error so failure doesn't throw 500; cron will reconcile)
+    try {
+      await this.visibilityService.restoreAllForUser(userId);
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to restore content during cancelAccountDeletion for user ${userId}: ${err.message}`,
+        err.stack,
+      );
+    }
 
     // 3. Send cancellation email (fail-safe)
     if (user.email) {

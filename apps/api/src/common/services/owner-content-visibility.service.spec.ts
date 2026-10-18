@@ -81,7 +81,12 @@ describe('OwnerContentVisibilityService', () => {
           id: { in: ['car-1', 'car-2'] },
           sellerId: 'user-123',
           hiddenByOwnerStatus: false,
-          seller: { status: { not: 'ACTIVE' } },
+          seller: {
+            OR: [
+              { status: { not: 'ACTIVE' } },
+              { deletionScheduledAt: { not: null } },
+            ],
+          },
         },
         data: { hiddenByOwnerStatus: true },
       });
@@ -159,6 +164,33 @@ describe('OwnerContentVisibilityService', () => {
       expect(mockPrisma.busListing.updateMany).toHaveBeenCalledTimes(2);
       expect(mockPrisma.outboxEvent.createMany).toHaveBeenCalledTimes(2);
     });
+
+    it('should hide content for an ACTIVE owner who has deletionScheduledAt set', async () => {
+      mockPrisma.listing.findMany
+        .mockResolvedValueOnce([{ id: 'car-sched-1' }])
+        .mockResolvedValueOnce([{ id: 'car-sched-1' }]);
+
+      const result = await service.hideAllForUser('user-sched-123');
+
+      expect(result.affectedCounts[ENTITY_TYPES.LISTING]).toBe(1);
+      expect(mockPrisma.listing.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['car-sched-1'] },
+          sellerId: 'user-sched-123',
+          hiddenByOwnerStatus: false,
+          seller: {
+            OR: [
+              { status: { not: 'ACTIVE' } },
+              { deletionScheduledAt: { not: null } },
+            ],
+          },
+        },
+        data: { hiddenByOwnerStatus: true },
+      });
+      expect(mockPrisma.outboxEvent.createMany).toHaveBeenCalledWith({
+        data: [{ entityType: ENTITY_TYPES.LISTING, entityId: 'car-sched-1', action: 'DELETE' }],
+      });
+    });
   });
 
   describe('restoreAllForUser', () => {
@@ -183,7 +215,7 @@ describe('OwnerContentVisibilityService', () => {
           id: { in: ['part-1'] },
           sellerId: 'user-123',
           hiddenByOwnerStatus: true,
-          seller: { status: 'ACTIVE' },
+          seller: { status: 'ACTIVE', deletionScheduledAt: null },
         },
         data: { hiddenByOwnerStatus: false },
       });
@@ -247,7 +279,12 @@ describe('OwnerContentVisibilityService', () => {
           id: { in: ['bus-1'] },
           userId: 'user-123',
           hiddenByOwnerStatus: false,
-          user: { status: { not: 'ACTIVE' } },
+          user: {
+            OR: [
+              { status: { not: 'ACTIVE' } },
+              { deletionScheduledAt: { not: null } },
+            ],
+          },
         },
         data: { hiddenByOwnerStatus: true },
       });

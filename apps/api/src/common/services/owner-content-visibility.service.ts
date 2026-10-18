@@ -149,8 +149,16 @@ export class OwnerContentVisibilityService {
     }
 
     const ownerStatusCondition = options.toStatus
-      ? { status: { not: 'ACTIVE' } }
-      : { status: 'ACTIVE' };
+      ? {
+          OR: [
+            { status: { not: 'ACTIVE' } },
+            { deletionScheduledAt: { not: null } },
+          ],
+        }
+      : {
+          status: 'ACTIVE',
+          deletionScheduledAt: null,
+        };
 
     let verticalCount = 0;
 
