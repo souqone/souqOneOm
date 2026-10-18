@@ -138,10 +138,11 @@ describe('LoginMethodsUtil', () => {
       });
     });
 
-    it('identifies password login method when passwordHash, email, and emailVerifiedAt are present', () => {
+    it('identifies password login method when passwordHash, email, and isVerified are true', () => {
       const user: LoginMethodsUser = {
         passwordHash: '$2b$10$hashedpasswordstring',
         email: 'user@example.com',
+        isVerified: true,
         emailVerifiedAt: new Date(),
       };
       const result = getLoginMethods(user, prodEnabledEnv);
@@ -153,16 +154,16 @@ describe('LoginMethodsUtil', () => {
       });
     });
 
-    it('identifies password login method when email is verified via isVerified flag', () => {
+    it('does NOT count password as a login method if emailVerifiedAt is set but isVerified is false', () => {
       const user: LoginMethodsUser = {
         passwordHash: '$2b$10$hashedpasswordstring',
         email: 'user@example.com',
-        emailVerifiedAt: null,
-        isVerified: true,
+        emailVerifiedAt: new Date(),
+        isVerified: false,
       };
       const result = getLoginMethods(user, prodEnabledEnv);
-      expect(result.hasPassword).toBe(true);
-      expect(result.totalMethods).toBe(1);
+      expect(result.hasPassword).toBe(false);
+      expect(result.totalMethods).toBe(0);
     });
 
     it('does NOT count password as a login method if email is unverified', () => {
@@ -243,6 +244,7 @@ describe('LoginMethodsUtil', () => {
       const user: LoginMethodsUser = {
         passwordHash: '$2b$10$hashedpasswordstring',
         email: 'user@example.com',
+        isVerified: true,
         emailVerifiedAt: new Date(),
         googleId: 'google-sub-id',
         phoneE164: '+96891234567',

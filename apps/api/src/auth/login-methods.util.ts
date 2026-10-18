@@ -68,7 +68,7 @@ export function getLoginMethods(
   const hasPassword = Boolean(
     user.passwordHash &&
       user.email &&
-      (user.emailVerifiedAt || user.isVerified),
+      user.isVerified,
   );
 
   const hasGoogle = Boolean(user.googleId);

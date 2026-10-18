@@ -713,7 +713,7 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       );
     });
 
-    it('throws 400 LAST_LOGIN_METHOD when phone-only account attempts to clear phone (phone: null)', async () => {
+    it('throws 400 "رقم الهاتف مطلوب ولا يمكن حذفه" when attempting to clear phone (phone: null)', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-phone-only',
         phone: '+96891234567',
@@ -725,30 +725,37 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
 
       await expect(
         service.updateProfile('user-phone-only', { phone: null as any }),
-      ).rejects.toThrow(
-        expect.objectContaining({
-          status: 400,
-          response: expect.objectContaining({
-            code: 'LAST_LOGIN_METHOD',
-            message:
-              'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
-          }),
-        }),
-      );
+      ).rejects.toThrow('رقم الهاتف مطلوب ولا يمكن حذفه');
     });
 
-    it('throws 400 "رقم الهاتف مطلوب ولا يمكن حذفه" when multi-method account attempts to clear phone', async () => {
+    it('allows changing phone when user has linked googleId as alternative login method', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-multi-method',
+        id: 'user-google-and-phone',
         phone: '+96891234567',
         phoneE164: '+96891234567',
         phoneVerifiedAt: new Date(),
+        passwordHash: null,
         googleId: 'google-sub-id',
       });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'user-google-and-phone',
+        displayName: 'Google User',
+        phone: '+96897654321',
+        phoneVerifiedAt: null,
+        phoneE164: null,
+      });
 
-      await expect(
-        service.updateProfile('user-multi-method', { phone: null as any }),
-      ).rejects.toThrow('رقم الهاتف مطلوب ولا يمكن حذفه');
+      const result = await service.updateProfile('user-google-and-phone', { phone: '97654321' });
+      expect(result.phoneVerified).toBe(false);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            phone: '+96897654321',
+            phoneVerifiedAt: null,
+            phoneE164: null,
+          }),
+        }),
+      );
     });
 
     it('changePassword throws Arabic message distinguishing phone-only from Google accounts', async () => {

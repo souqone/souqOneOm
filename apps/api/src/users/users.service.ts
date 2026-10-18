@@ -108,14 +108,6 @@ export class UsersService {
         dto.phone === null ||
         (typeof dto.phone === 'string' && dto.phone.trim() === '')
       ) {
-        const methods = getLoginMethods(user);
-        if (methods.hasPhone && !methods.hasPassword && !methods.hasGoogle) {
-          throw new BadRequestException({
-            code: 'LAST_LOGIN_METHOD',
-            message:
-              'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
-          });
-        }
         throw new BadRequestException('رقم الهاتف مطلوب ولا يمكن حذفه');
       }
 
