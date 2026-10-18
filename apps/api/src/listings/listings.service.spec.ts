@@ -9,6 +9,7 @@ import { RedisService } from '../redis/redis.service';
 import { SearchService } from '../search/search.service';
 import { ListingsRepository } from './listings.repository';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 const mockListing = {
   id: 'listing-1',
@@ -94,6 +95,7 @@ describe('ListingsService', () => {
         { provide: ListingsRepository, useValue: mockRepo },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

@@ -12,6 +12,7 @@ import { GeoService } from '../locations/geo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 describe('OperatorsService', () => {
   let service: OperatorsService;
@@ -67,6 +68,7 @@ describe('OperatorsService', () => {
         { provide: GeoService, useValue: geoService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

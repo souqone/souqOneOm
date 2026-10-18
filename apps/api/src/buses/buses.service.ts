@@ -21,6 +21,7 @@ import { assertEntityVisible } from '../listings/listing-visibility';
 import { VisibilityViewer } from '../common/public-visibility';
 import { findSimilarListings } from '../common/utils/similar-listings.util';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 const VIEW_COOLDOWN_SECONDS = 3600; // 1 view per IP per listing per hour
@@ -79,6 +80,7 @@ export class BusesService {
     private readonly redis: RedisService,
     private readonly eventEmitter: EventEmitter2,
     private readonly sellerContactGate: SellerContactGate,
+    private readonly activeListingsLimitService: ActiveListingsLimitService,
   ) {}
 
   async getManufacturers() {
@@ -106,6 +108,7 @@ export class BusesService {
     const slug = generateSlug(cleanDto.title);
 
     const bus = await this.prisma.$transaction(async (tx) => {
+      await this.activeListingsLimitService.assertWithinLimit(userId, tx);
       const createdBus = await tx.busListing.create({
         data: {
           title: cleanDto.title,
@@ -500,6 +503,9 @@ export class BusesService {
     let updated;
     try {
       updated = await this.prisma.$transaction(async (tx) => {
+        if (dto.status === 'ACTIVE') {
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        }
         // `version` in the unique filter makes a stale write fail with P2025 (-> 409 below)
         const res = await tx.busListing.update({
           where: { id, version: dto.version },

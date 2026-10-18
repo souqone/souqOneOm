@@ -18,6 +18,7 @@ import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.u
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
@@ -30,6 +31,7 @@ export class EquipmentListingsService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
     private readonly sellerContactGate: SellerContactGate,
+    private readonly activeListingsLimitService: ActiveListingsLimitService,
   ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
@@ -59,6 +61,7 @@ export class EquipmentListingsService {
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     const item = await this.prisma.$transaction(async (tx) => {
+      await this.activeListingsLimitService.assertWithinLimit(userId, tx);
       const createdItem = await tx.equipmentListing.create({
         data: {
           title: cleanDto.title,

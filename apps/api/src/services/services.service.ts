@@ -12,6 +12,7 @@ import { QueryServicesDto } from './dto/query-services.dto';
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 @Injectable()
 export class ServicesService extends BaseListingService {
@@ -29,8 +30,9 @@ export class ServicesService extends BaseListingService {
     redis: RedisService,
     eventEmitter: EventEmitter2,
     sellerContactGate: SellerContactGate,
+    activeListingsLimitService: ActiveListingsLimitService,
   ) {
-    super(prisma, redis, eventEmitter, sellerContactGate);
+    super(prisma, redis, eventEmitter, sellerContactGate, activeListingsLimitService);
   }
 
   protected buildCreateData(dto: CreateServiceDto, slug: string, userId: string) {

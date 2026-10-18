@@ -5,6 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GeoService } from '../locations/geo.service';
 import { InternalServerErrorException } from '@nestjs/common';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 describe('EquipmentListingsService - Image Handling', () => {
   let service: EquipmentListingsService;
@@ -36,6 +37,7 @@ describe('EquipmentListingsService - Image Handling', () => {
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: GeoService, useValue: {} },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 
