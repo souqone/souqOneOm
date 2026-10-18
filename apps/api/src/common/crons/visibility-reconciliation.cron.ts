@@ -72,7 +72,10 @@ export class VisibilityReconciliationCron {
           where: {
             hiddenByOwnerStatus: false,
             [config.ownerRelation]: {
-              status: { not: 'ACTIVE' },
+              OR: [
+                { status: { not: 'ACTIVE' } },
+                { deletionScheduledAt: { not: null } },
+              ],
             },
           },
           select: { [config.ownerField]: true },
@@ -102,6 +105,7 @@ export class VisibilityReconciliationCron {
               hiddenByOwnerStatus: true,
               [config.ownerRelation]: {
                 status: 'ACTIVE',
+                deletionScheduledAt: null,
               },
             },
             select: { [config.ownerField]: true },

@@ -8,6 +8,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { AuthTokenService } from '../auth/auth-token.service';
 import { AccessTokenGate } from '../auth/access-token-gate.service';
+import { AuthService } from '../auth/auth.service';
+import { OwnerContentVisibilityService } from '../common/services/owner-content-visibility.service';
+import { MailService } from '../mail/mail.service';
 import { USER_SELECT_PROFILE_PRIVATE } from '../common/constants/user-select.constant';
 import * as bcrypt from 'bcryptjs';
 
@@ -57,6 +60,20 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
     invalidate: jest.fn(),
   };
 
+  const mockAuthService = {
+    verifyGoogleIdToken: jest.fn(),
+  };
+
+  const mockVisibilityService = {
+    hideAllForUser: jest.fn().mockResolvedValue({ userId: 'u1', affectedCounts: {}, totalAffected: 0 }),
+    restoreAllForUser: jest.fn().mockResolvedValue({ userId: 'u1', affectedCounts: {}, totalAffected: 0 }),
+  };
+
+  const mockMailService = {
+    sendDeletionRequestEmail: jest.fn().mockResolvedValue(true),
+    sendDeletionCancelledEmail: jest.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     process.env = { ...originalEnv, NODE_ENV: 'test', CLOUDINARY_CLOUD_NAME: 'souqone' };
@@ -76,6 +93,9 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
         { provide: GeoService, useValue: mockGeoService },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
         { provide: AccessTokenGate, useValue: mockAccessTokenGate },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: OwnerContentVisibilityService, useValue: mockVisibilityService },
+        { provide: MailService, useValue: mockMailService },
       ],
     }).compile();
 

@@ -192,7 +192,11 @@ export class AuthService {
     const accessToken = await this.tokens.signAccessToken(user);
     const refreshToken = await this.tokens.generateRefreshToken(user.id);
 
-    return { accessToken, refreshToken, user: this.tokens.sanitizeUser(user) };
+    return {
+      accessToken,
+      refreshToken,
+      user: this.tokens.sanitizeUser(user),
+    };
   }
 
   async refresh(token: string) {
@@ -203,12 +207,12 @@ export class AuthService {
     return result;
   }
 
-  async googleAuth(dto: GoogleAuthDto, ip?: string, userAgent?: string) {
-    let payload;
+  async verifyGoogleIdToken(idToken: string, nonce?: string) {
     const audiences = [GOOGLE_CLIENT_ID, GOOGLE_IOS_CLIENT_ID].filter(Boolean);
+    let payload;
     try {
       const ticket = await this.googleClient.verifyIdToken({
-        idToken: dto.credential,
+        idToken,
         audience: audiences.length > 0 ? (audiences.length === 1 ? audiences[0] : audiences) : GOOGLE_CLIENT_ID,
       });
       payload = ticket.getPayload();
@@ -225,9 +229,15 @@ export class AuthService {
     }
 
     // Nonce validation for CSRF protection
-    if (dto.nonce && payload.nonce !== dto.nonce) {
+    if (nonce && payload.nonce !== nonce) {
       throw new UnauthorizedException('رمز التحقق (nonce) غير متطابق — محاولة غير آمنة');
     }
+
+    return payload;
+  }
+
+  async googleAuth(dto: GoogleAuthDto, ip?: string, userAgent?: string) {
+    const payload = await this.verifyGoogleIdToken(dto.credential, dto.nonce);
 
     const { email, sub: googleId, name, picture } = payload;
     const hd = (payload as any).hd;
@@ -429,7 +439,11 @@ export class AuthService {
     const accessToken = await this.tokens.signAccessToken(user);
     const refreshToken = await this.tokens.generateRefreshToken(user.id);
 
-    return { accessToken, refreshToken, user: this.tokens.sanitizeUser(user) };
+    return {
+      accessToken,
+      refreshToken,
+      user: this.tokens.sanitizeUser(user),
+    };
   }
 
   async verifyEmail(userId: string, code: string) {

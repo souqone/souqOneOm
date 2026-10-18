@@ -26,6 +26,9 @@ const mockPrisma = {
   carrierProfile: {
     findMany: jest.fn(),
   },
+  user: {
+    findUnique: jest.fn().mockResolvedValue({ id: 'u1', deletionScheduledAt: null }),
+  },
   $transaction: jest.fn(),
 };
 

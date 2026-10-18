@@ -36,6 +36,7 @@ model User {
   statusChangedAt         DateTime?
   statusChangedById       String?
   deletedAt               DateTime?
+  deletionScheduledAt     DateTime?
   tokenVersion            Int            @default(0)
   country                 String?
   governorate             String?

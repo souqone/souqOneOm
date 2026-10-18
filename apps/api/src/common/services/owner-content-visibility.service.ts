@@ -68,6 +68,17 @@ export class OwnerContentVisibilityService {
    * Cross-vertical isolation: failures in one vertical do not abort others; errors are aggregated and rethrown.
    */
   async restoreAllForUser(userId: string): Promise<VisibilityMutationResult> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { deletionScheduledAt: true },
+    });
+    if (user?.deletionScheduledAt != null) {
+      this.logger.debug(
+        `Skipping restoreAllForUser for user ${userId} — account is scheduled for deletion`,
+      );
+      return { userId, affectedCounts: {}, totalAffected: 0 };
+    }
+
     return this.mutateOwnerVisibility(userId, {
       fromStatus: true,
       toStatus: false,
@@ -138,8 +149,16 @@ export class OwnerContentVisibilityService {
     }
 
     const ownerStatusCondition = options.toStatus
-      ? { status: { not: 'ACTIVE' } }
-      : { status: 'ACTIVE' };
+      ? {
+          OR: [
+            { status: { not: 'ACTIVE' } },
+            { deletionScheduledAt: { not: null } },
+          ],
+        }
+      : {
+          status: 'ACTIVE',
+          deletionScheduledAt: null,
+        };
 
     let verticalCount = 0;
 

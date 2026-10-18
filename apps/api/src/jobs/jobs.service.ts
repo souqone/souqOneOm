@@ -461,6 +461,16 @@ export class JobsService {
 
   /* ───── APPLY TO JOB ───── */
   async apply(jobId: string, applicantId: string, dto: ApplyJobDto) {
+    const applicant = await this.prisma.user.findUnique({
+      where: { id: applicantId },
+      select: { deletionScheduledAt: true },
+    });
+    if (applicant?.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لاستئناف التقديم على الوظائف.',
+      );
+    }
+
     const job = await this.prisma.driverJob.findFirst({
       where: { OR: [{ id: jobId }, { slug: jobId }] },
     });

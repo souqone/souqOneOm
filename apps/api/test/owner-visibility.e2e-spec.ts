@@ -552,4 +552,122 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
       expect(phone.length).toBeGreaterThan(0);
     });
   });
+
+  describe('Account Deletion Lifecycle with Scheduled Deletion Visibility Guard (PR 2A)', () => {
+    it('should hide content on delete-account, keep hidden across cron and admin unsuspension, and restore on cancel-deletion', async () => {
+      const prisma = getPrisma();
+      const admin = await registerAdmin({
+        email: 'del_admin_1@example.test',
+        username: 'deladmin1',
+      });
+      const user = await registerUser({
+        email: 'del_user_1@example.test',
+        username: 'deluser1',
+        password: 'Password123!',
+      });
+      const userId = user.user.id;
+      const { brandId, carModelId } = await getTestBrandAndModel();
+
+      // 1. Create an ACTIVE listing for the user with hiddenByOwnerStatus = false
+      const car = await prisma.listing.create({
+        data: {
+          title: 'Car For Deletion Test',
+          slug: `car-del-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          description: 'Car For Deletion Test Desc',
+          make: 'Toyota',
+          model: 'Land Cruiser',
+          year: 2023,
+          price: 15000,
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          sellerId: userId,
+          brandId,
+          carModelId,
+        },
+      });
+
+      // 2. User requests account deletion via POST /api/users/me/delete-account
+      await request(getApp().getHttpServer())
+        .post('/api/users/me/delete-account')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          password: 'Password123!',
+          confirmation: 'حذف حسابي',
+        })
+        .expect(201);
+
+      // Verify user has deletionScheduledAt set and status is ACTIVE
+      const dbUserAfterSchedule = await prisma.user.findUnique({ where: { id: userId } });
+      expect(dbUserAfterSchedule?.deletionScheduledAt).not.toBeNull();
+      expect(dbUserAfterSchedule?.status).toBe('ACTIVE');
+
+      // Verify hiddenByOwnerStatus = true in DB
+      await waitFor(
+        async () => {
+          const updatedCar = await prisma.listing.findUnique({ where: { id: car.id } });
+          return updatedCar?.hiddenByOwnerStatus === true;
+        },
+        { timeoutMs: 5000, intervalMs: 50, description: 'listing hiddenByOwnerStatus === true after delete-account' },
+      );
+
+      const hiddenCar = await prisma.listing.findUnique({ where: { id: car.id } });
+      expect(hiddenCar?.hiddenByOwnerStatus).toBe(true);
+
+      // 3. Run VisibilityReconciliationCron.reconcile() and verify listing remains hidden
+      await reconciliationCron.reconcile();
+
+      const carAfterCron = await prisma.listing.findUnique({ where: { id: car.id } });
+      expect(carAfterCron?.hiddenByOwnerStatus).toBe(true);
+
+      // 4. Admin unsuspends user (status changed to ACTIVE) while deletionScheduledAt is set
+      await prisma.user.update({
+        where: { id: userId },
+        data: { status: 'SUSPENDED', suspendedUntil: new Date(Date.now() + 86400000) },
+      });
+
+      await request(getApp().getHttpServer())
+        .post(`/api/admin/users/${userId}/unsuspend`)
+        .set('Authorization', `Bearer ${admin.accessToken}`)
+        .send({ reason: 'Admin unsuspension test while deletion scheduled' })
+        .expect(200);
+
+      // Allow async event listener to run
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Verify listing is STILL hidden
+      const carAfterUnsuspend = await prisma.listing.findUnique({ where: { id: car.id } });
+      expect(carAfterUnsuspend?.hiddenByOwnerStatus).toBe(true);
+
+      // 5. User cancels deletion via POST /api/users/me/cancel-deletion
+      // Login again to get a fresh valid token since tokenVersion was incremented
+      const userLogin = await request(getApp().getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: 'del_user_1@example.test',
+          password: 'Password123!',
+        })
+        .expect(201);
+
+      await request(getApp().getHttpServer())
+        .post('/api/users/me/cancel-deletion')
+        .set('Authorization', `Bearer ${userLogin.body.accessToken}`)
+        .expect(201);
+
+      // Verify deletionScheduledAt is now null
+      const dbUserAfterCancel = await prisma.user.findUnique({ where: { id: userId } });
+      expect(dbUserAfterCancel?.deletionScheduledAt).toBeNull();
+
+      // Verify listing returns visible (hiddenByOwnerStatus === false)
+      await waitFor(
+        async () => {
+          const restoredCar = await prisma.listing.findUnique({ where: { id: car.id } });
+          return restoredCar?.hiddenByOwnerStatus === false;
+        },
+        { timeoutMs: 5000, intervalMs: 50, description: 'listing hiddenByOwnerStatus === false after cancel-deletion' },
+      );
+
+      const finalCar = await prisma.listing.findUnique({ where: { id: car.id } });
+      expect(finalCar?.hiddenByOwnerStatus).toBe(false);
+    });
+  });
 });

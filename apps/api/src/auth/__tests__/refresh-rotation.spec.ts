@@ -6,6 +6,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { GeoService } from '../../locations/geo.service';
 import { AccessTokenGate } from '../access-token-gate.service';
+import { AuthService } from '../auth.service';
+import { OwnerContentVisibilityService } from '../../common/services/owner-content-visibility.service';
+import { MailService } from '../../mail/mail.service';
 import { REFRESH_GRACE_SECONDS } from '../auth.constants';
 
 describe('RefreshToken Rotation & Family Tracking Suite', () => {
@@ -122,6 +125,9 @@ describe('RefreshToken Rotation & Family Tracking Suite', () => {
       providers: [
         AuthTokenService,
         UsersService,
+        { provide: AuthService, useValue: {} },
+        { provide: OwnerContentVisibilityService, useValue: { hideAllForUser: jest.fn(), restoreAllForUser: jest.fn() } },
+        { provide: MailService, useValue: {} },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: GeoService, useValue: mockGeo },

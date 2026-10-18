@@ -2,6 +2,7 @@ import {
   Injectable,
   HttpException,
   HttpStatus,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -42,19 +43,26 @@ export class ActiveListingsLimitService {
     // 1. Role exemption: ADMIN and MODERATOR are exempt from active listings limit
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { role: true, deletionScheduledAt: true },
     });
     if (user?.role === 'ADMIN' || user?.role === 'MODERATOR') {
       return;
     }
 
-    // 2. Transactional advisory lock per user: serializes concurrent creations/activations
+    // 2. Account deletion scheduled check: non-admin scheduled accounts cannot publish or activate ads
+    if (user?.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لاستئناف نشر أو تفعيل الإعلانات.',
+      );
+    }
+
+    // 3. Transactional advisory lock per user: serializes concurrent creations/activations
     const lockKey = hashToBigInt(
       crypto.createHash('sha256').update(`active_ads_cap:${userId}`).digest('hex'),
     );
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey}::bigint)`;
 
-    // 3. Count public active listings across all 7 verticals
+    // 4. Count public active listings across all 7 verticals
     const [cars, buses, equipment, parts, services, jobs, operators] =
       await Promise.all([
         tx.listing.count({

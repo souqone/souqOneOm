@@ -52,6 +52,16 @@ export class TransportRequestService {
   ) {}
 
   async create(userId: string, dto: CreateTransportRequestDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { deletionScheduledAt: true },
+    });
+    if (user?.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لاستئناف نشر طلبات النقل.',
+      );
+    }
+
     const fromGovId = dto.fromGovernorateId ?? dto.pickupGovId;
     const fromWilayaId = dto.fromWilayaId ?? dto.pickupWilayaId;
     await this.geoService.validateLocationPair(fromGovId, fromWilayaId);

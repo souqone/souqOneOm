@@ -950,5 +950,83 @@ describe('AuthService', () => {
       });
     });
   });
+
+  describe('verifyGoogleIdToken helper', () => {
+    it('verifies token and returns payload when email is verified and audiences match', async () => {
+      const mockPayload = {
+        sub: 'google-sub-valid',
+        email: 'user@souqone.om',
+        email_verified: true,
+        name: 'Valid User',
+      };
+      (service as any).googleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue({
+          getPayload: () => mockPayload,
+        }),
+      };
+
+      const result = await service.verifyGoogleIdToken('valid-id-token');
+      expect(result).toEqual(mockPayload);
+      expect((service as any).googleClient.verifyIdToken).toHaveBeenCalledWith({
+        idToken: 'valid-id-token',
+        audience: expect.anything(),
+      });
+    });
+
+    it('validates nonce when nonce is provided', async () => {
+      const mockPayload = {
+        sub: 'google-sub-valid',
+        email: 'user@souqone.om',
+        email_verified: true,
+        nonce: 'correct-nonce-123',
+      };
+      (service as any).googleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue({
+          getPayload: () => mockPayload,
+        }),
+      };
+
+      // Mismatched nonce
+      await expect(
+        service.verifyGoogleIdToken('valid-token', 'wrong-nonce'),
+      ).rejects.toThrow('رمز التحقق (nonce) غير متطابق — محاولة غير آمنة');
+
+      // Matching nonce
+      const result = await service.verifyGoogleIdToken('valid-token', 'correct-nonce-123');
+      expect(result.nonce).toBe('correct-nonce-123');
+    });
+
+    it('rejects when Google verifyIdToken throws', async () => {
+      (service as any).googleClient = {
+        verifyIdToken: jest.fn().mockRejectedValue(new Error('Invalid signature')),
+      };
+
+      await expect(service.verifyGoogleIdToken('bad-token')).rejects.toThrow(
+        'رمز Google غير صالح',
+      );
+    });
+
+    it('rejects when email is missing or not verified', async () => {
+      (service as any).googleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue({
+          getPayload: () => ({ sub: 's1', email: 'u@s.om', email_verified: false }),
+        }),
+      };
+
+      await expect(service.verifyGoogleIdToken('token-unverified-email')).rejects.toThrow(
+        'البريد الإلكتروني لحساب Google غير موثق',
+      );
+
+      (service as any).googleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue({
+          getPayload: () => ({ sub: 's1', email: null, email_verified: true }),
+        }),
+      };
+
+      await expect(service.verifyGoogleIdToken('token-no-email')).rejects.toThrow(
+        'لم يتم العثور على بريد إلكتروني في حساب Google',
+      );
+    });
+  });
 });
 

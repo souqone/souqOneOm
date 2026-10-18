@@ -80,20 +80,39 @@ describe('ActiveListingsLimitService Unit Tests', () => {
       await expect(service.assertWithinLimit('admin-1', tx)).resolves.toBeUndefined();
       expect(tx.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'admin-1' },
-        select: { role: true },
+        select: { role: true, deletionScheduledAt: true },
       });
       expect(tx.$executeRaw).not.toHaveBeenCalled();
       expect(tx.listing.count).not.toHaveBeenCalled();
     });
 
-    it('exempts MODERATOR role without acquiring lock or querying counts', async () => {
+    it('exempts MODERATOR role without acquiring lock or querying counts even if deletionScheduledAt is set', async () => {
       const tx: any = {
-        user: { findUnique: jest.fn().mockResolvedValue({ role: 'MODERATOR' }) },
+        user: { findUnique: jest.fn().mockResolvedValue({ role: 'MODERATOR', deletionScheduledAt: new Date() }) },
         $executeRaw: jest.fn(),
         listing: { count: jest.fn() },
       };
 
       await expect(service.assertWithinLimit('mod-1', tx)).resolves.toBeUndefined();
+      expect(tx.$executeRaw).not.toHaveBeenCalled();
+      expect(tx.listing.count).not.toHaveBeenCalled();
+    });
+
+    it('rejects regular USER with 403 ForbiddenException when deletionScheduledAt is set', async () => {
+      const tx: any = {
+        user: {
+          findUnique: jest.fn().mockResolvedValue({
+            role: 'USER',
+            deletionScheduledAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+          }),
+        },
+        $executeRaw: jest.fn(),
+        listing: { count: jest.fn() },
+      };
+
+      await expect(service.assertWithinLimit('user-scheduled', tx)).rejects.toThrow(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لاستئناف نشر أو تفعيل الإعلانات.',
+      );
       expect(tx.$executeRaw).not.toHaveBeenCalled();
       expect(tx.listing.count).not.toHaveBeenCalled();
     });
