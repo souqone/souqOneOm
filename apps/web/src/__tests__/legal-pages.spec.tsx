@@ -1,4 +1,6 @@
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { LegalPageShell, LegalSectionItem } from '../components/legal/LegalPageShell';
@@ -88,6 +90,61 @@ describe('Legal Pages Content & Structural Audit', () => {
         expect(enTitle).not.toContain('سوق وان');
         expect(enTitle).not.toContain('SouqOne');
       }
+    });
+
+    it('fails if dummy phone "9999 0000" or old email "info@souqone.com" appears in messages or component files', () => {
+      const arJsonStr = JSON.stringify(ar);
+      const enJsonStr = JSON.stringify(en);
+
+      expect(arJsonStr).not.toContain('info@souqone.com');
+      expect(arJsonStr).not.toContain('9999 0000');
+      expect(enJsonStr).not.toContain('info@souqone.com');
+      expect(enJsonStr).not.toContain('9999 0000');
+
+      const footerCode = fs.readFileSync(path.join(__dirname, '../components/layout/footer.tsx'), 'utf8');
+      expect(footerCode).not.toContain('info@souqone.com');
+      expect(footerCode).not.toContain('9999 0000');
+
+      const legalFiles = ['LegalPageShell.tsx', 'LegalHeader.tsx', 'LegalFooter.tsx'];
+      for (const file of legalFiles) {
+        const code = fs.readFileSync(path.join(__dirname, '../components/legal', file), 'utf8');
+        expect(code).not.toContain('info@souqone.com');
+        expect(code).not.toContain('9999 0000');
+      }
+    });
+
+    it('enforces presence of paidServices in Terms with exactly 13 sections in ar and en', () => {
+      const arTerms = (ar.legalPages as any).terms.sections;
+      const enTerms = (en.legalPages as any).terms.sections;
+
+      expect(Object.keys(arTerms)).toHaveLength(13);
+      expect(Object.keys(enTerms)).toHaveLength(13);
+
+      expect(arTerms).toHaveProperty('paidServices');
+      expect(enTerms).toHaveProperty('paidServices');
+
+      expect(arTerms.paidServices.title).toBe('6. الخدمات المدفوعة');
+      expect(enTerms.paidServices.title).toBe('6. Paid Services');
+
+      // Content checks: must mention Thawani and payment types, no unauthorized refund terms
+      expect(arTerms.paidServices.content).toContain('ثواني');
+      expect(enTerms.paidServices.content).toContain('Thawani');
+      expect(arTerms.paidServices.content).not.toContain('استرجاع');
+      expect(enTerms.paidServices.content.toLowerCase()).not.toContain('refund');
+    });
+
+    it('enforces payment details in Privacy Policy across both languages', () => {
+      const arPriv = (ar.legalPages as any).privacy.sections;
+      const enPriv = (en.legalPages as any).privacy.sections;
+
+      expect(arPriv.dataCollected.content).toContain('سجلات المدفوعات والاشتراكات');
+      expect(enPriv.dataCollected.content).toContain('Payment and Subscription Records');
+
+      expect(arPriv.thirdPartyServices.content).toContain('بوابة الدفع ثواني');
+      expect(enPriv.thirdPartyServices.content).toContain('Thawani Payment Gateway');
+
+      expect(arPriv.dataRetention.content).toContain('سجلات المدفوعات والاشتراكات تُحفظ');
+      expect(enPriv.dataRetention.content).toContain('Payment and subscription transaction records are retained');
     });
   });
 

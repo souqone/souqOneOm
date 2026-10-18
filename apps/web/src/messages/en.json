@@ -85,9 +85,7 @@
     "followUs": "Follow Us",
     "driverJobs": "Driver Jobs",
     "allRightsReserved": "All rights reserved",
-    "address": "Sultanate of Oman, Muscat, Al Ghubra",
-    "phone": "+968 9999 0000",
-    "email": "info@souqone.com"
+    "email": "support@souqoneom.com"
   },
   "search": {
     "all": "All",
@@ -3596,7 +3594,7 @@
     "s5Title": "5. Your Rights",
     "s5Body": "You have the right to access, correct, export, or request deletion of your personal data at any time. You also have the right to object to or restrict processing of your data in certain cases.",
     "contactTitle": "Contact Us",
-    "contactBody": "If you have any questions about this Privacy Policy or to exercise your rights, contact us at info@souqone.com and we will respond within 48 hours."
+    "contactBody": "If you have any questions about this Privacy Policy or to exercise your rights, contact us at support@souqoneom.com and we will respond within 48 hours."
   },
   "bookings": {
     "myBookings": "My Bookings",
@@ -4164,7 +4162,7 @@
         },
         "dataCollected": {
           "title": "2. Information We Collect",
-          "content": "We collect and process only the data necessary to provide and secure our platform services, including:\n- Account Information: Display name, username, email address, international phone number, password stored securely in hashed/encrypted form, Google account ID, and avatar when signing in with Google.\n- Listings and Content Data: Details of advertised vehicles, equipment, parts, services, and jobs, including pricing, technical specifications, and uploaded images.\n- Messages and Chat Data: Message content, attachments, reactions, and timestamps exchanged between users on the platform.\n- Location Data: Administrative location (Governorate, Wilaya, and City in the Sultanate of Oman) and optional geographic coordinates (GPS) that you choose to provide for map visualization.\n- Audit and Security Logs: Internet Protocol (IP) address, browser and device user-agent, login attempt logs, and hashing of phone numbers and IP addresses for abuse prevention purposes.\n- Notification Tokens: Mobile push tokens (Expo Push Tokens) and web push subscriptions to send notifications regarding your account and listings."
+          "content": "We collect and process only the data necessary to provide and secure our platform services, including:\n- Account Information: Display name, username, email address, international phone number, password stored securely in hashed/encrypted form, Google account ID, and avatar when signing in with Google.\n- Listings and Content Data: Details of advertised vehicles, equipment, parts, services, and jobs, including pricing, technical specifications, and uploaded images.\n- Messages and Chat Data: Message content, attachments, reactions, and timestamps exchanged between users on the platform.\n- Location Data: Administrative location (Governorate, Wilaya, and City in the Sultanate of Oman) and optional geographic coordinates (GPS) that you choose to provide for map visualization.\n- Audit and Security Logs: Internet Protocol (IP) address, browser and device user-agent, login attempt logs, and hashing of phone numbers and IP addresses for abuse prevention purposes.\n- Notification Tokens: Mobile push tokens (Expo Push Tokens) and web push subscriptions to send notifications regarding your account and listings.\n- Payment and Subscription Records: Amount, currency, service type, transaction status, transaction identifiers, timestamps, and IP address when utilizing paid platform services."
         },
         "dataUsage": {
           "title": "3. How We Use Your Data",
@@ -4176,11 +4174,11 @@
         },
         "thirdPartyServices": {
           "title": "5. External Services and Data Processing",
-          "content": "The platform partners with trusted external service providers to process data and maintain infrastructure:\n- Railway: For hosting application servers, relational databases (PostgreSQL), and Redis caching and rate-limiting.\n- Vercel: For hosting the web frontend, Content Delivery Network (CDN), and page performance monitoring (Vercel Speed Insights).\n- Cloudinary: For cloud image hosting, optimization, and media delivery.\n- Email Delivery Provider (via SMTP): For sending account verification and recovery emails from an official address.\n- Meta Platforms (WhatsApp Business Cloud API): For delivering one-time passwords (OTP) via WhatsApp (active only when phone verification is enabled).\n- Expo Push Service: For dispatching push notifications to registered mobile devices.\n- OpenStreetMap and Google Fonts: For rendering interactive maps and Arabic typography; these external services receive your IP address upon page load to deliver the requested web assets."
+          "content": "The platform partners with trusted external service providers to process data and maintain infrastructure:\n- Railway: For hosting application servers, relational databases (PostgreSQL), and Redis caching and rate-limiting.\n- Vercel: For hosting the web frontend, Content Delivery Network (CDN), and page performance monitoring (Vercel Speed Insights).\n- Cloudinary: For cloud image hosting, optimization, and media delivery.\n- Email Delivery Provider (via SMTP): For sending account verification and recovery emails from an official address.\n- Meta Platforms (WhatsApp Business Cloud API): For delivering one-time passwords (OTP) via WhatsApp (active only when phone verification is enabled).\n- Expo Push Service: For dispatching push notifications to registered mobile devices.\n- OpenStreetMap and Google Fonts: For rendering interactive maps and Arabic typography; these external services receive your IP address upon page load to deliver the requested web assets.\n- Thawani Payment Gateway (Thawani): For processing financial transactions and electronic payments via its secure gateway; payment card details are entered directly on the payment gateway and processed by it, and are never accessed, received, or stored on platform servers."
         },
         "dataRetention": {
           "title": "6. Data Retention Period",
-          "content": "We retain your data for the period necessary for security, fraud prevention, and regulatory compliance:\n- Active account data and listings are retained as long as your account remains active.\n- Revoked session tokens and expired OTP challenges are automatically purged by automated system cleanup (tokens revoked over 7 days ago and WhatsApp verification logs older than 30 days are removed).\n- Security, login audits, and administrative logs are maintained for the period necessary for fraud prevention and system integrity.\n- Upon account deletion, direct personal data is removed within a maximum of 30 days, retaining only records required for security and regulatory compliance."
+          "content": "We retain your data for the period necessary for security, fraud prevention, and regulatory compliance:\n- Active account data and listings are retained as long as your account remains active.\n- Revoked session tokens and expired OTP challenges are automatically purged by automated system cleanup (tokens revoked over 7 days ago and WhatsApp verification logs older than 30 days are removed).\n- Security, login audits, and administrative logs are maintained for the period necessary for fraud prevention and system integrity.\n- Upon account deletion, direct personal data is removed within a maximum of 30 days, retaining only records required for security and regulatory compliance.\n- Payment and subscription transaction records are retained for the duration required by applicable statutory and accounting requirements in the Sultanate of Oman."
         },
         "security": {
           "title": "7. Data Security and Protection",
@@ -4234,32 +4232,36 @@
           "title": "5. Active Listings Cap",
           "content": "To maintain a fair, high-quality marketplace and prevent spamming, the platform enforces a general limit on the maximum number of active listings an individual user may have published concurrently. When reaching this limit, users must wait for existing listings to expire, be archived, or be removed before publishing new listings."
         },
+        "paidServices": {
+          "title": "6. Paid Services",
+          "content": "The platform may offer paid services, which currently include featured listing promotion and subscription plans. The price, terms, and specifications of each service are displayed clearly to the user prior to completing payment. Electronic payments are processed via the authorized Thawani payment gateway (Thawani), and the platform disclaims responsibility for any delays or technical outages occurring on the payment gateway outside its control."
+        },
         "intermediary": {
-          "title": "6. Platform Role (Independent Intermediary)",
+          "title": "7. Nature of Platform (Independent Intermediary)",
           "content": "Souqone operates solely as an independent digital marketplace and intermediary platform facilitating contact between buyers and sellers. The platform is not a party to any transaction, sale, rental, or service agreement, does not own or inspect listed items, and does not intervene in direct payments or arrangements between users. Users bear sole responsibility for verifying goods and negotiating terms."
         },
         "suspension": {
-          "title": "7. Suspension, Termination, and Banning",
+          "title": "8. Suspension, Termination, and Banning",
           "content": "The platform reserves the right to suspend or permanently terminate accounts or remove content in cases of:\n- Violation of these Terms and Conditions or the Privacy Policy.\n- Credible reports of fraudulent behavior or abuse.\n- Attempts to compromise platform security or bypass operational limits.\nUpon banning, cryptographic hashes of account identifiers are preserved to prevent evasion and safeguard the community."
         },
         "intellectualProperty": {
-          "title": "8. Intellectual Property",
+          "title": "9. Intellectual Property",
           "content": "All intellectual property rights, trademarks, software code, user interface designs, and database structures of Souqone belong exclusively to the platform and its operators. No content may be copied, reproduced, scraped, or commercially exploited without prior written authorization."
         },
         "disclaimer": {
-          "title": "9. Disclaimer and Limitation of Liability",
+          "title": "10. Disclaimer and Limitation of Liability",
           "content": "Services are provided on an \"as is\" and \"as available\" basis without warranties of any kind, express or implied. The platform and its operators disclaim liability for any direct, indirect, or consequential damages, loss of profits, or disputes arising between users from dealings conducted through the platform."
         },
         "governingLaw": {
-          "title": "10. Governing Law and Jurisdiction",
+          "title": "11. Governing Law and Jurisdiction",
           "content": "These Terms and Conditions shall be governed by and construed in accordance with the laws of the Sultanate of Oman. Any dispute arising out of or in connection with the platform shall fall under the jurisdiction of the competent courts in the Sultanate of Oman."
         },
         "modifications": {
-          "title": "11. Modifications to Terms",
+          "title": "12. Modifications to Terms",
           "content": "We reserve the right to revise these Terms and Conditions at any time. Changes become effective upon publication on this page with an updated revision date. Your continued use of the platform after updates signifies acceptance of the revised terms."
         },
         "contact": {
-          "title": "12. Contact Us",
+          "title": "13. Contact Us",
           "content": "For inquiries regarding these Terms and Conditions or to report a violation, please contact us at: support@souqoneom.com."
         }
       }
