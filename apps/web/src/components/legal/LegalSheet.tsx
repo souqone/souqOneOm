@@ -66,7 +66,18 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
         <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-outline-variant/15">
           <div>
             <h2 className="text-lg sm:text-xl font-black text-on-surface">{t('title')}</h2>
-            <p className="text-[11px] text-on-surface-variant mt-0.5">{t('lastUpdated')}</p>
+            <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
+              <p className="text-[11px] text-on-surface-variant">{t('lastUpdated')}</p>
+              <span className="text-[11px] text-outline-variant">•</span>
+              <a
+                href={type === 'privacy' ? '/privacy' : '/terms'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-bold text-primary hover:underline"
+              >
+                قراءة الصفحة الكاملة ↗
+              </a>
+            </div>
           </div>
           <button
             onClick={onClose}

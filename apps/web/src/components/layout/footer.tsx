@@ -119,14 +119,26 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-neutral-700 mt-6 pt-3">
-          <p className="text-gray-400 text-[11px]">
-            © {new Date().getFullYear()} {t('siteName')}. {tf('allRightsReserved')}.
-          </p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200 dark:border-neutral-700 mt-6 pt-3">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] text-gray-500">
+            <p>
+              © {new Date().getFullYear()} {t('siteName')}. {tf('allRightsReserved')}.
+            </p>
+            <span className="text-gray-300 dark:text-neutral-700 hidden sm:inline">|</span>
+            <Link href="/privacy" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+              {locale === 'ar' ? 'الخصوصية' : 'Privacy'}
+            </Link>
+            <Link href="/terms" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+              {locale === 'ar' ? 'الشروط والأحكام' : 'Terms'}
+            </Link>
+            <Link href="/delete-account" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+              {locale === 'ar' ? 'حذف الحساب' : 'Delete Account'}
+            </Link>
+          </div>
           {locale === 'ar' ? (
-            <Image src="/souq-one-ar.svg" alt="سوق وان" width={64} height={13} className="h-[13px] w-auto opacity-40" />
+            <Image src="/souq-one-ar.svg" alt="سوق ون" width={64} height={13} className="h-[13px] w-auto opacity-40" />
           ) : (
-            <Image src="/souq-one-en.svg" alt="SouqOne" width={74} height={15} className="h-[15px] w-auto object-contain opacity-40" />
+            <Image src="/souq-one-en.svg" alt="Souqone" width={74} height={15} className="h-[15px] w-auto object-contain opacity-40" />
           )}
         </div>
 

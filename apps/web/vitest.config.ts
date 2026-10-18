@@ -9,10 +9,16 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
     exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**'],
+    server: {
+      deps: {
+        inline: ['next-intl', 'next'],
+      },
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'next/server': require.resolve('next/server'),
     },
   },
 })

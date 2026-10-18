@@ -4,14 +4,26 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createMiddleware(routing);
 
+// Legal paths that are permitted in English
+const ALLOWED_ENGLISH_LEGAL_PATHS = [
+  '/en/privacy',
+  '/en/terms',
+  '/en/delete-account',
+];
+
 export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Temporarily redirect /en/* → /ar/* (re-enable by removing this block)
+  // Temporarily redirect /en/* → /ar/* EXCEPT for allowed legal pages
   if (pathname.startsWith('/en')) {
-    const url = req.nextUrl.clone();
-    url.pathname = pathname.replace(/^\/en/, '/ar');
-    return NextResponse.redirect(url, 308);
+    const isAllowed = ALLOWED_ENGLISH_LEGAL_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    );
+    if (!isAllowed) {
+      const url = req.nextUrl.clone();
+      url.pathname = pathname.replace(/^\/en/, '/ar');
+      return NextResponse.redirect(url, 308);
+    }
   }
 
   return intlMiddleware(req);
