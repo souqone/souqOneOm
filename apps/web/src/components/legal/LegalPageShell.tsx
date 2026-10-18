@@ -37,17 +37,17 @@ export function LegalPageShell({
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Page Hero Header */}
-        <header className="mb-8 sm:mb-12 border-b border-outline-variant/15 pb-6">
+        <header className="mb-8 sm:mb-12 border-b border-outline-variant/15 pb-6 print:border-none print:pb-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
             <span className="material-symbols-outlined text-[16px]">verified_user</span>
             <span>{LEGAL_CONFIG.brandName[locale]}</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-black text-on-surface tracking-tight mb-3">
+          <h1 className="text-[24px] sm:text-[30px] font-black text-on-surface tracking-tight mb-3">
             {title}
           </h1>
 
-          <p className="text-sm sm:text-base text-on-surface-variant max-w-2xl leading-relaxed mb-4">
+          <p className="text-[15px] text-on-surface-variant max-w-2xl leading-[1.7] mb-4">
             {subtitle}
           </p>
 
@@ -63,10 +63,10 @@ export function LegalPageShell({
         {/* Content Layout with Responsive Table of Contents */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Table of Contents (Sticky on Desktop, Collapsible Dropdown on Mobile) */}
-          <aside className="lg:col-span-4 lg:sticky lg:top-24 order-1 lg:order-2">
+          <aside className="lg:col-span-4 lg:sticky lg:top-24 order-1 lg:order-2 print:hidden">
             {/* Mobile Collapsible Dropdown */}
             <details className="lg:hidden p-4 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm group">
-              <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-sm text-on-surface">
+              <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-[13.5px] text-on-surface">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px] text-primary">toc</span>
                   <span>{tocTitle}</span>
@@ -76,7 +76,7 @@ export function LegalPageShell({
                 </span>
               </summary>
               <nav aria-label={`${tocTitle} (Mobile)`} className="mt-3 pt-3 border-t border-outline-variant/15">
-                <ul className="space-y-1.5 text-sm">
+                <ul className="space-y-1.5 text-[13.5px]">
                   {sections.map((section) => (
                     <li key={section.id}>
                       <a
@@ -96,12 +96,12 @@ export function LegalPageShell({
               aria-label={tocTitle}
               className="hidden lg:block p-5 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm"
             >
-              <div className="flex items-center gap-2 font-bold text-sm text-on-surface mb-3 pb-2 border-b border-outline-variant/15">
+              <div className="flex items-center gap-2 font-bold text-[13.5px] text-on-surface mb-3 pb-2 border-b border-outline-variant/15">
                 <span className="material-symbols-outlined text-[18px] text-primary">toc</span>
                 <span>{tocTitle}</span>
               </div>
 
-              <ul className="space-y-1.5 text-sm">
+              <ul className="space-y-1.5 text-[13.5px]">
                 {sections.map((section) => (
                   <li key={section.id}>
                     <a
@@ -117,19 +117,19 @@ export function LegalPageShell({
           </aside>
 
           {/* Main Document Sections */}
-          <article className="lg:col-span-8 order-2 lg:order-1 space-y-8 sm:space-y-10">
+          <article className="lg:col-span-8 order-2 lg:order-1 space-y-8 sm:space-y-10 print:w-full print:space-y-6">
             {sections.map((section) => (
               <section
                 key={section.id}
                 id={section.id}
-                className="scroll-mt-24 p-5 sm:p-7 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/15 shadow-sm transition-all"
+                className="scroll-mt-24 p-5 sm:p-7 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/15 shadow-sm transition-all print:p-0 print:border-none print:shadow-none print:break-inside-avoid"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-on-surface mb-3 sm:mb-4 flex items-center gap-2">
+                <h2 className="text-[17px] sm:text-[18px] font-bold text-on-surface mb-3 sm:mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-5 rounded-full bg-primary shrink-0" aria-hidden="true" />
                   <span>{section.title}</span>
                 </h2>
 
-                <div className="text-sm sm:text-base text-on-surface-variant leading-relaxed space-y-2 whitespace-pre-line font-normal">
+                <div className="text-[15px] text-on-surface-variant leading-[1.7] space-y-2 whitespace-pre-line font-normal">
                   {section.content}
                 </div>
               </section>

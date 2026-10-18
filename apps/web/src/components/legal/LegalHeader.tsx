@@ -24,7 +24,7 @@ export function LegalHeader({ locale }: LegalHeaderProps) {
   const backLabel = isArabic ? 'الرئيسية' : 'Home';
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-surface-container-lowest/90 dark:bg-surface-container/90 backdrop-blur-md border-b border-outline-variant/15 transition-colors">
+    <header className="sticky top-0 z-50 w-full bg-surface-container-lowest/90 dark:bg-surface-container/90 backdrop-blur-md border-b border-outline-variant/15 transition-colors print:hidden">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link
