@@ -69,7 +69,7 @@ export class EquipmentController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('images/:imageId')
   removeImage(@Param('imageId') imageId: string, @CurrentUser() user: JwtPayload) {
     return this.svc.removeImage(imageId, user.sub);

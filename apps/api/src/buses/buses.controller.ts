@@ -91,7 +91,7 @@ export class BusesController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('images/:imageId')
   removeImage(@Param('imageId') imageId: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.removeImage(imageId, user.sub);

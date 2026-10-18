@@ -22,7 +22,7 @@ function getThrottleTtl(target: any, propertyKey: string): number | undefined {
 describe('Rate Limit Part 2 — Metadata Verification', () => {
   describe('Verticals Mutation Routes (10 requests / 60 seconds)', () => {
     it('BusesController mutation routes have limit: 10, ttl: 60000', () => {
-      const endpoints = ['create', 'update', 'remove', 'addImages', 'removeImage'];
+      const endpoints = ['create', 'update', 'remove', 'addImages'];
       for (const endpoint of endpoints) {
         expect(getThrottleLimit(BusesController, endpoint)).toBe(10);
         expect(getThrottleTtl(BusesController, endpoint)).toBe(60000);
@@ -30,11 +30,18 @@ describe('Rate Limit Part 2 — Metadata Verification', () => {
     });
 
     it('EquipmentController mutation routes have limit: 10, ttl: 60000', () => {
-      const endpoints = ['create', 'update', 'remove', 'addImages', 'removeImage'];
+      const endpoints = ['create', 'update', 'remove', 'addImages'];
       for (const endpoint of endpoints) {
         expect(getThrottleLimit(EquipmentController, endpoint)).toBe(10);
         expect(getThrottleTtl(EquipmentController, endpoint)).toBe(60000);
       }
+    });
+
+    it('BusesController and EquipmentController removeImage have limit: 30, ttl: 60000', () => {
+      expect(getThrottleLimit(BusesController, 'removeImage')).toBe(30);
+      expect(getThrottleTtl(BusesController, 'removeImage')).toBe(60000);
+      expect(getThrottleLimit(EquipmentController, 'removeImage')).toBe(30);
+      expect(getThrottleTtl(EquipmentController, 'removeImage')).toBe(60000);
     });
 
     it('PartsController mutation routes have limit: 10, ttl: 60000', () => {
