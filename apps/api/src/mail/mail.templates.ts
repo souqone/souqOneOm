@@ -391,18 +391,15 @@ export function formatOmanDate(date: Date, locale: 'ar' | 'en' = 'ar'): string {
   }).format(d);
 }
 
-function sanitizeName(name?: string | null): string {
+/**
+ * Resolves trimmed display name with fallback for empty/whitespace input.
+ * Returns raw unescaped string so that plain-text email bodies receive unescaped characters.
+ */
+function resolveDisplayName(name?: string | null, fallback = 'المستخدم'): string {
   if (!name || typeof name !== 'string' || name.trim() === '') {
-    return 'المستخدم';
+    return fallback;
   }
-  return escapeHtml(name.trim());
-}
-
-function sanitizeNameEn(name?: string | null): string {
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    return 'User';
-  }
-  return escapeHtml(name.trim());
+  return name.trim();
 }
 
 /**
@@ -415,8 +412,10 @@ export function buildDeletionRequestEmail({
   displayName?: string | null;
   scheduledAt: Date;
 }): EmailTemplateResult {
-  const safeName = sanitizeName(displayName);
-  const safeNameEn = sanitizeNameEn(displayName);
+  const rawNameAr = resolveDisplayName(displayName, 'المستخدم');
+  const rawNameEn = resolveDisplayName(displayName, 'User');
+  const safeNameHtml = escapeHtml(rawNameAr);
+  const safeNameEnHtml = escapeHtml(rawNameEn);
   const formattedDateAr = formatOmanDate(scheduledAt, 'ar');
   const formattedDateEn = formatOmanDate(scheduledAt, 'en');
   const currentYear = new Date().getFullYear();
@@ -491,27 +490,27 @@ export function buildDeletionRequestEmail({
             <td align="center" style="padding: 0 0 24px 0; text-align: center;">
               <div class="content-block" style="max-width: 480px; margin: 0 auto; text-align: center;">
                 
-                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeName}</bdi>،</p>
+                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeNameHtml}</bdi>،</p>
                 <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">تلقينا طلباً لحذف حسابكم وبياناتكم في منصة <bdi dir="ltr">${BRAND_NAME}</bdi> (سوق ون). تم إخفاء كافة إعلاناتكم وخدماتكم من الظهور العام ومحرك البحث فوراً.</p>
                 
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto; width: 100%; max-width: 460px; background-color: #F8FAFC; border: 1.5px solid #009CB5; border-radius: 8px;">
                   <tr>
                     <td align="center" style="padding: 16px 20px; text-align: center;">
                       <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #007A8F;">موعد الحذف النهائي المجدول (فترة سماح 5 أيام):</p>
-                      <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #11232E; direction: rtl;"><bdi dir="rtl">${formattedDateAr}</bdi></p>
-                      <p style="margin: 0; font-size: 13px; color: #64748B; direction: ltr;"><bdi dir="ltr">${formattedDateEn} (Asia/Muscat)</bdi></p>
+                      <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #11232E; direction: rtl;"><bdi dir="rtl">${formattedDateAr} (بتوقيت عُمان)</bdi></p>
+                      <p style="margin: 0; font-size: 13px; color: #64748B; direction: ltr;"><bdi dir="ltr">${formattedDateEn} (Oman Time — Asia/Muscat)</bdi></p>
                     </td>
                   </tr>
                 </table>
 
-                <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.7; color: #11232E; text-align: center;"><strong>طريقة إلغاء الحذف:</strong> إذا كنت ترغب في الاحتفاظ بحسابك، يمكنك إلغاء الطلب في أي وقت قبل حلول الموعد أعلاه من داخل التطبيق: <strong>الإعدادات ثم حذف الحساب</strong> ثم الضغط على <strong>إلغاء طلب الحذف</strong>.</p>
-                <p style="margin: 0 0 18px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تكن أنت من قدم هذا الطلب، يرجى فتح التطبيق فوراً لإلغائه وتأمين حسابكم أو التواصل معنا عبر: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+                <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.7; color: #11232E; text-align: center;"><strong>طريقة إلغاء الحذف:</strong> إذا كنتم ترغبون في الاحتفاظ بحسابكم، يمكنكم إلغاء الطلب في أي وقت قبل حلول الموعد أعلاه من داخل التطبيق: <strong>الإعدادات ثم حذف الحساب</strong> ثم الضغط على <strong>إلغاء طلب الحذف</strong>.</p>
+                <p style="margin: 0 0 18px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تكونوا أنتم من قدّم هذا الطلب، يرجى فتح التطبيق فوراً لإلغائه وتأمين حسابكم أو التواصل معنا عبر: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
 
                 <!-- English Summary -->
                 <div style="margin: 24px auto 0 auto; padding-top: 16px; border-top: 1px dashed #E2E8F0; font-size: 13px; line-height: 1.6; color: #475569; text-align: center; direction: ltr;">
-                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deletion Request Received — Souqone</p>
-                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEn}, we received a request to delete your Souqone account. All your active listings have been hidden immediately.</p>
-                  <p style="margin: 0 0 8px 0;">Scheduled permanent deletion date: <strong>${formattedDateEn}</strong> (Oman Time).</p>
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deletion Request Received — ${BRAND_NAME}</p>
+                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEnHtml}, we received a request to delete your ${BRAND_NAME} account. All your active listings and services have been hidden immediately.</p>
+                  <p style="margin: 0 0 8px 0;">Scheduled permanent deletion date: <strong>${formattedDateEn}</strong> (Oman Time — Asia/Muscat).</p>
                   <p style="margin: 0 0 8px 0;"><strong>How to cancel:</strong> From the app: Settings then Delete Account, then tap <strong>Cancel Deletion</strong>.</p>
                   <p style="margin: 0;">If you did not request this, please contact us immediately at: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
                 </div>
@@ -554,27 +553,27 @@ export function buildDeletionRequestEmail({
 
   const text = `${subject}
 
-مرحباً ${safeName}،
+مرحباً ${rawNameAr}،
 
 تلقينا طلباً لحذف حسابكم وبياناتكم الشخصية في منصة ${BRAND_NAME} (سوق ون).
 تم إخفاء كافة إعلاناتكم وخدماتكم من الظهور العام ومحرك البحث فوراً.
 
 موعد الحذف النهائي المجدول (فترة سماح 5 أيام):
-- بالتوقيت المحلي: ${formattedDateAr}
+- بتوقيت عُمان: ${formattedDateAr}
 - بتوقيت عُمان: ${formattedDateEn} (Asia/Muscat)
 
 طريقة إلغاء الحذف:
-إذا كنت ترغب في الاحتفاظ بحسابك، يمكنك إلغاء الطلب في أي وقت قبل حلول الموعد أعلاه من داخل التطبيق: الإعدادات ثم حذف الحساب ثم الضغط على "إلغاء طلب الحذف".
+إذا كنتم ترغبون في الاحتفاظ بحسابكم، يمكنكم إلغاء الطلب في أي وقت قبل حلول الموعد أعلاه من داخل التطبيق: الإعدادات ثم حذف الحساب ثم الضغط على "إلغاء طلب الحذف".
 
-إذا لم تكن أنت من قدم هذا الطلب، يرجى فتح التطبيق فوراً لإلغائه أو التواصل معنا عبر: support@souqoneom.com.
+إذا لم تكونوا أنتم من قدّم هذا الطلب، يرجى فتح التطبيق فوراً لإلغائه وتأمين حسابكم أو التواصل معنا عبر: support@souqoneom.com.
 
 ---
-Account Deletion Request Received — Souqone
+Account Deletion Request Received — ${BRAND_NAME}
 
-Hello ${safeNameEn},
-We received a request to delete your Souqone account.
-All your active listings have been hidden immediately.
-Scheduled deletion date: ${formattedDateEn} (Asia/Muscat).
+Hello ${rawNameEn},
+We received a request to delete your ${BRAND_NAME} account.
+All your active listings and services have been hidden immediately.
+Scheduled deletion date: ${formattedDateEn} (Oman Time — Asia/Muscat).
 
 To cancel: From the app: Settings then Delete Account, then tap "Cancel Deletion".
 For support: support@souqoneom.com.
@@ -596,8 +595,10 @@ export function buildDeletionCancelledEmail({
 }: {
   displayName?: string | null;
 }): EmailTemplateResult {
-  const safeName = sanitizeName(displayName);
-  const safeNameEn = sanitizeNameEn(displayName);
+  const rawNameAr = resolveDisplayName(displayName, 'المستخدم');
+  const rawNameEn = resolveDisplayName(displayName, 'User');
+  const safeNameHtml = escapeHtml(rawNameAr);
+  const safeNameEnHtml = escapeHtml(rawNameEn);
   const currentYear = new Date().getFullYear();
 
   const subject = 'تم إلغاء طلب حذف حسابك بنجاح — سوق ون';
@@ -670,7 +671,7 @@ export function buildDeletionCancelledEmail({
             <td align="center" style="padding: 0 0 24px 0; text-align: center;">
               <div class="content-block" style="max-width: 480px; margin: 0 auto; text-align: center;">
                 
-                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeName}</bdi>،</p>
+                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeNameHtml}</bdi>،</p>
                 <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">نود إشعاركم بأنه قد تم إلغاء طلب حذف حسابكم في منصة <bdi dir="ltr">${BRAND_NAME}</bdi> (سوق ون) بنجاح.</p>
                 
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 16px auto; width: 100%; max-width: 460px; background-color: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 8px;">
@@ -681,12 +682,12 @@ export function buildDeletionCancelledEmail({
                   </tr>
                 </table>
 
-                <p style="margin: 0 0 16px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تكن أنت من قام بإلغاء هذا الطلب، أو كانت لديكم أي استفسارات، يسعدنا تواصلكم فوراً عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
+                <p style="margin: 0 0 16px 0; font-size: 13px; line-height: 1.6; color: #4A5568; text-align: center;">إذا لم تكونوا أنتم من قام بإلغاء هذا الطلب، أو كانت لديكم أي استفسارات، يسعدنا تواصلكم فوراً عبر البريد: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
 
                 <!-- English Summary -->
                 <div style="margin: 24px auto 0 auto; padding-top: 16px; border-top: 1px dashed #E2E8F0; font-size: 13px; line-height: 1.6; color: #475569; text-align: center; direction: ltr;">
-                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deletion Request Cancelled — Souqone</p>
-                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEn}, your request to delete your Souqone account has been successfully cancelled.</p>
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deletion Request Cancelled — ${BRAND_NAME}</p>
+                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEnHtml}, your request to delete your ${BRAND_NAME} account has been successfully cancelled.</p>
                   <p style="margin: 0 0 8px 0;">Your account is now fully active, and your previous listings and services have been restored to public view.</p>
                   <p style="margin: 0;">For assistance: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
                 </div>
@@ -729,19 +730,19 @@ export function buildDeletionCancelledEmail({
 
   const text = `${subject}
 
-مرحباً ${safeName}،
+مرحباً ${rawNameAr}،
 
 نود إشعاركم بأنه قد تم إلغاء طلب حذف حسابكم في منصة ${BRAND_NAME} (سوق ون) بنجاح.
 حسابكم نشط الآن بالكامل، وتمت استعادة ظهور إعلاناتكم وخدماتكم السابقة في السوق العام ومحرك البحث.
 
-إذا لم تكن أنت من قام بإلغاء الطلب، يرجى التواصل معنا عبر: support@souqoneom.com.
+إذا لم تكونوا أنتم من قام بإلغاء هذا الطلب، يرجى التواصل معنا عبر: support@souqoneom.com.
 
 ---
-Account Deletion Request Cancelled — Souqone
+Account Deletion Request Cancelled — ${BRAND_NAME}
 
-Hello ${safeNameEn},
-Your request to delete your Souqone account has been successfully cancelled.
-Your account is fully active and your listings have been restored.
+Hello ${rawNameEn},
+Your request to delete your ${BRAND_NAME} account has been successfully cancelled.
+Your account is fully active and your listings and services have been restored.
 For support: support@souqoneom.com.
 
 ---
@@ -761,8 +762,10 @@ export function buildFinalDeletionEmail({
 }: {
   displayName?: string | null;
 }): EmailTemplateResult {
-  const safeName = sanitizeName(displayName);
-  const safeNameEn = sanitizeNameEn(displayName);
+  const rawNameAr = resolveDisplayName(displayName, 'المستخدم');
+  const rawNameEn = resolveDisplayName(displayName, 'User');
+  const safeNameHtml = escapeHtml(rawNameAr);
+  const safeNameEnHtml = escapeHtml(rawNameEn);
   const currentYear = new Date().getFullYear();
 
   const subject = 'تم حذف حسابك — سوق ون';
@@ -835,14 +838,15 @@ export function buildFinalDeletionEmail({
             <td align="center" style="padding: 0 0 24px 0; text-align: center;">
               <div class="content-block" style="max-width: 480px; margin: 0 auto; text-align: center;">
                 
-                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeName}</bdi>،</p>
+                <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">مرحباً <bdi dir="rtl">${safeNameHtml}</bdi>،</p>
                 <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #11232E; text-align: center;">نود إشعاركم بأنه قد تم اكتمال حذف حسابكم وبياناتكم الشخصية في منصة <bdi dir="ltr">${BRAND_NAME}</bdi> (سوق ون) بنجاح.</p>
                 
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 16px auto; width: 100%; max-width: 460px; background-color: #F8FAFC; border: 1.5px solid #009CB5; border-radius: 8px;">
                   <tr>
                     <td align="center" style="padding: 16px 20px; text-align: center;">
                       <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #11232E;">تم إنهاء الجلسات النشطة ومسح بيانات الملف الشخصي وإزالة الإعلانات من الظهور العام.</p>
-                      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #4A5568;">نود إشعارك بأن بعض السجلات المالية وسجلات تدقيق الأمان المتبقية لا تتضمن بياناتك الشخصية المباشرة وتُحفظ لأغراض محاسبية وأمنية.</p>
+                      <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.6; color: #4A5568;">الرسائل التي أرسلتموها ضمن محادثات الأطراف الأخرى تبقى محفوظة لديهم دون ربطها باسمكم وتظهر باسم «مستخدم محذوف».</p>
+                      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #4A5568;">نود إشعاركم بأن بعض السجلات المالية وسجلات تدقيق الأمان المتبقية لا تتضمن بياناتكم الشخصية المباشرة وتُحفظ لأغراض محاسبية وأمنية.</p>
                     </td>
                   </tr>
                 </table>
@@ -852,8 +856,9 @@ export function buildFinalDeletionEmail({
 
                 <!-- English Summary -->
                 <div style="margin: 24px auto 0 auto; padding-top: 16px; border-top: 1px dashed #E2E8F0; font-size: 13px; line-height: 1.6; color: #475569; text-align: center; direction: ltr;">
-                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deleted — Souqone</p>
-                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEn}, your Souqone account and personal data have been deleted. Active sessions have been revoked and listings removed from public view.</p>
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #1E293B;">Account Deleted — ${BRAND_NAME}</p>
+                  <p style="margin: 0 0 8px 0;">Hello ${safeNameEnHtml}, your ${BRAND_NAME} account and personal data have been deleted. Active sessions have been revoked and listings removed from public view.</p>
+                  <p style="margin: 0 0 8px 0;">Please note that messages sent within conversations with other users remain visible to them without being linked to your name, appearing as "Deleted user".</p>
                   <p style="margin: 0 0 8px 0;">Please note that certain financial and security audit records are retained for accounting and security purposes and do not contain your direct personal data.</p>
                   <p style="margin: 0;">Your email address is now released and may be used to register a new account at any time. For support: <a href="mailto:support@souqoneom.com" style="color: #007A8F; text-decoration: underline;"><bdi dir="ltr">support@souqoneom.com</bdi></a>.</p>
                 </div>
@@ -896,22 +901,25 @@ export function buildFinalDeletionEmail({
 
   const text = `${subject}
 
-مرحباً ${safeName}،
+مرحباً ${rawNameAr}،
 
 نود إشعاركم بأنه قد تم اكتمال حذف حسابكم وبياناتكم الشخصية في منصة ${BRAND_NAME} (سوق ون) بنجاح.
 تم إنهاء الجلسات النشطة ومسح بيانات الملف الشخصي وإزالة الإعلانات من الظهور العام.
 
-نود إشعارك بأن بعض السجلات المالية وسجلات تدقيق الأمان المتبقية لا تتضمن بياناتك الشخصية المباشرة وتُحفظ لأغراض محاسبية وأمنية.
+الرسائل التي أرسلتموها ضمن محادثات الأطراف الأخرى تبقى محفوظة لديهم دون ربطها باسمكم وتظهر باسم «مستخدم محذوف».
+نود إشعاركم بأن بعض السجلات المالية وسجلات تدقيق الأمان المتبقية لا تتضمن بياناتكم الشخصية المباشرة وتُحفظ لأغراض محاسبية وأمنية.
 
 أصبح بريدكم الإلكتروني الآن متاحاً في حال رغبتم في إنشاء حساب جديد مستقبلاً.
+شكراً لثقتكم السابقة بمنصة سوق ون.
 لأي استفسار: support@souqoneom.com.
 
 ---
-Account Deleted — Souqone
+Account Deleted — ${BRAND_NAME}
 
-Hello ${safeNameEn},
-Your Souqone account and personal data have been deleted. Active sessions have been revoked and listings removed from public view.
+Hello ${rawNameEn},
+Your ${BRAND_NAME} account and personal data have been deleted. Active sessions have been revoked and listings removed from public view.
 
+Messages sent within conversations with other users remain without being linked to your name, appearing as "Deleted user".
 Please note that certain financial and security audit records are retained for accounting and security purposes and do not contain your direct personal data.
 Your email address is now released and may be used to register a new account at any time.
 For support: support@souqoneom.com.

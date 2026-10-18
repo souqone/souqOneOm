@@ -198,9 +198,9 @@ describe('MailService', () => {
 
       expect(callArgs.to).toBe('user@example.com');
       expect(callArgs.subject).toBe('تم حذف حسابك — سوق ون');
-      expect(callArgs.html).toContain('لا تتضمن بياناتك الشخصية المباشرة');
+      expect(callArgs.html).toContain('لا تتضمن بياناتكم الشخصية المباشرة');
       expect(callArgs.html).toContain('لأغراض محاسبية وأمنية');
-      expect(callArgs.text).toContain('لا تتضمن بياناتك الشخصية المباشرة');
+      expect(callArgs.text).toContain('لا تتضمن بياناتكم الشخصية المباشرة');
       expect(callArgs.text).toContain('لأغراض محاسبية وأمنية');
     });
 
