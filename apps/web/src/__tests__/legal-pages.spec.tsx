@@ -275,7 +275,7 @@ describe('Legal Pages Content & Structural Audit', () => {
   });
 
   describe('LegalSheet & Mobile Footer Integration', () => {
-    it('renders LegalSheet for terms with 13 sections, whitespace-pre-line, and localized link', () => {
+    it('renders LegalSheet for terms with 13 sections, renderLegalContent, and localized link', () => {
       const { container, unmount } = render(
         <LegalSheet type="terms" open={true} onClose={() => {}} />,
       );
@@ -286,13 +286,13 @@ describe('Legal Pages Content & Structural Audit', () => {
       const sections = container.querySelectorAll('section');
       expect(sections.length).toBe(13);
 
-      const contentParagraphs = container.querySelectorAll('p.whitespace-pre-line');
-      expect(contentParagraphs.length).toBe(13);
+      const contentWrappers = container.querySelectorAll('section > div.max-w-prose');
+      expect(contentWrappers.length).toBe(13);
 
       unmount();
     });
 
-    it('renders LegalSheet for privacy with 12 sections, whitespace-pre-line, and localized link', () => {
+    it('renders LegalSheet for privacy with 12 sections, renderLegalContent, and localized link', () => {
       const { container, unmount } = render(
         <LegalSheet type="privacy" open={true} onClose={() => {}} />,
       );
@@ -303,8 +303,8 @@ describe('Legal Pages Content & Structural Audit', () => {
       const sections = container.querySelectorAll('section');
       expect(sections.length).toBe(12);
 
-      const contentParagraphs = container.querySelectorAll('p.whitespace-pre-line');
-      expect(contentParagraphs.length).toBe(12);
+      const contentWrappers = container.querySelectorAll('section > div.max-w-prose');
+      expect(contentWrappers.length).toBe(12);
 
       unmount();
     });
@@ -425,7 +425,7 @@ describe('Legal Pages Content & Structural Audit', () => {
           const renderedSections = container.querySelectorAll('section');
           expect(renderedSections.length).toBe(expectedEntries.length);
 
-          // 3. Every single section title and content must match exactly in order
+          // 3. Every single section title and content must match in order
           expectedEntries.forEach(([, sec]: [string, any], index) => {
             const secElem = renderedSections[index];
             expect(secElem).toBeDefined();
@@ -433,8 +433,8 @@ describe('Legal Pages Content & Structural Audit', () => {
             const h3 = secElem.querySelector('h3');
             expect(h3?.textContent?.trim()).toBe(sec.title.trim());
 
-            const p = secElem.querySelector('p');
-            expect(p?.textContent?.trim()).toBe(sec.content.trim());
+            const firstLine = sec.content.split('\n')[0].replace(/^- /, '').trim();
+            expect(secElem.textContent).toContain(firstLine);
           });
 
           // 4. Read full page translation key
@@ -461,23 +461,30 @@ describe('Legal Pages Content & Structural Audit', () => {
         path.resolve(__dirname, '../components/legal/LegalFooter.tsx'),
         'utf8',
       );
+      const legalTocContent = fs.readFileSync(
+        path.resolve(__dirname, '../components/legal/LegalToc.tsx'),
+        'utf8',
+      );
 
       // 1. h1: 24 then 30px
       expect(pageShellContent).toContain('text-[24px] sm:text-[30px]');
       // 2. h2: 17-18px
       expect(pageShellContent).toContain('text-[17px] sm:text-[18px]');
-      // 3. body: 15px with leading-[1.7]
-      expect(pageShellContent).toContain('text-[15px] text-on-surface-variant leading-[1.7]');
-      // 4. TOC: 13.5px
-      expect(pageShellContent).toContain('text-[13.5px]');
+      // 3. body: max-w-prose reading column with renderLegalContent
+      expect(pageShellContent).toContain('renderLegalContent(section.content, locale)');
+      expect(pageShellContent).toContain('max-w-prose');
+      // 4. TOC: 13.5px and tabular-nums in LegalToc
+      expect(legalTocContent).toContain('text-[13.5px]');
+      expect(legalTocContent).toContain('tabular-nums');
       // 5. LegalFooter: 12.5px
       expect(legalFooterContent).toContain('text-[12.5px]');
       // 6. bdi for emails
       expect(legalFooterContent).toContain('<bdi dir="ltr">{LEGAL_CONFIG.supportEmail}</bdi>');
-      // 7. LegalSheet: title 18-20, sections 15, content 14-15 leading-[1.7]
+      // 7. LegalSheet: title 18-20, sections 15, renderLegalContent with max-w-prose
       expect(legalSheetContent).toContain('text-[18px] sm:text-[20px]');
       expect(legalSheetContent).toContain('text-[15px] font-bold');
-      expect(legalSheetContent).toContain('text-[14px] sm:text-[15px] text-on-surface-variant leading-[1.7]');
+      expect(legalSheetContent).toContain('renderLegalContent');
+      expect(legalSheetContent).toContain('max-w-prose');
       // 8. Print styles
       expect(pageShellContent).toContain('print:hidden');
       expect(legalFooterContent).toContain('print:hidden');

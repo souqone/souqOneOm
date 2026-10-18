@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { LEGAL_CONFIG } from '@/lib/legal-config';
+import { renderLegalContent } from './renderLegalContent';
 
 type LegalType = 'terms' | 'privacy';
 
@@ -99,15 +100,15 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-6">
           {sectionEntries.map(([key, sec]) => (
             <section key={key}>
               <h3 className="text-[15px] font-bold text-on-surface mb-2">
                 {sec?.title || tLegal(`sections.${key}.title`)}
               </h3>
-              <p className="text-[14px] sm:text-[15px] text-on-surface-variant leading-[1.7] whitespace-pre-line">
-                {sec?.content || tLegal(`sections.${key}.content`)}
-              </p>
+              <div className="text-[14px] sm:text-[15px] text-on-surface-variant max-w-prose">
+                {renderLegalContent(sec?.content || tLegal(`sections.${key}.content`), locale)}
+              </div>
             </section>
           ))}
         </div>

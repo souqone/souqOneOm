@@ -92,11 +92,11 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} className={almarai.variable} suppressHydrationWarning>
       <head>
-        {/* Material Symbols — loaded eagerly so icons render immediately */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        {/* Material Symbols — loaded eagerly with display=block to prevent ligature text flashes */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font, @next/next/google-font-display */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
           crossOrigin="anonymous"
         />
       </head>

@@ -990,3 +990,26 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* ── Material Symbols icon flicker & layout shift prevention ── */
+.material-symbols-outlined {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* ── Smooth scrolling with motion reduction preference ── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+
