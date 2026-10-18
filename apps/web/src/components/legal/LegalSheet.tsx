@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { LEGAL_CONFIG } from '@/lib/legal-config';
 import { renderLegalContent } from './renderLegalContent';
+import { splitSectionTitle } from './splitSectionTitle';
 
 type LegalType = 'terms' | 'privacy';
 
@@ -101,16 +102,25 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-6">
-          {sectionEntries.map(([key, sec]) => (
-            <section key={key}>
-              <h3 className="text-[15px] font-bold text-on-surface mb-2">
-                {sec?.title || tLegal(`sections.${key}.title`)}
-              </h3>
-              <div className="text-[14px] sm:text-[15px] text-on-surface-variant max-w-prose">
-                {renderLegalContent(sec?.content || tLegal(`sections.${key}.content`), locale)}
-              </div>
-            </section>
-          ))}
+          {sectionEntries.map(([key, sec]) => {
+            const rawTitle = sec?.title || tLegal(`sections.${key}.title`);
+            const parsedTitle = splitSectionTitle(rawTitle);
+            return (
+              <section key={key}>
+                <h3 className="text-[15px] font-bold text-on-surface mb-2 flex items-start gap-2">
+                  {parsedTitle.number && (
+                    <span className="inline-block w-5 shrink-0 tabular-nums font-mono text-xs text-on-surface-variant/70 text-start pt-0.5">
+                      {parsedTitle.number}
+                    </span>
+                  )}
+                  <span className="leading-snug">{parsedTitle.text}</span>
+                </h3>
+                <div className="text-[14px] sm:text-[15px] text-on-surface-variant max-w-prose">
+                  {renderLegalContent(sec?.content || tLegal(`sections.${key}.content`), locale)}
+                </div>
+              </section>
+            );
+          })}
         </div>
 
         <div className="px-5 sm:px-7 py-4 border-t border-outline-variant/15 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end bg-surface-container/40">

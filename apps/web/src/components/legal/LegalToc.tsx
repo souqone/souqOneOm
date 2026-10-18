@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { splitSectionTitle } from './splitSectionTitle';
 
 export interface TocSectionItem {
   id: string;
@@ -18,6 +19,7 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
   const backToTopLabel = isArabic ? 'العودة للأعلى' : 'Back to top';
   const [activeId, setActiveId] = useState<string>(sections[0]?.id || '');
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
+  const intersectingIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     // Show back to top button on mobile when scrolled down past 250px
@@ -38,12 +40,24 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
 
     if (sectionElements.length === 0) return;
 
+    // Reset intersection state on sections change
+    const intersectingIds = intersectingIdsRef.current;
+    intersectingIds.clear();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visibleEntries = entries.filter((entry) => entry.isIntersecting);
-        if (visibleEntries.length > 0) {
-          visibleEntries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-          setActiveId(visibleEntries[0].target.id);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            intersectingIds.add(entry.target.id);
+          } else {
+            intersectingIds.delete(entry.target.id);
+          }
+        });
+
+        // Pick the topmost intersecting section in document order (sections array order)
+        const activeSection = sections.find((s) => intersectingIds.has(s.id));
+        if (activeSection) {
+          setActiveId(activeSection.id);
         }
       },
       {
@@ -53,7 +67,10 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
     );
 
     sectionElements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      intersectingIds.clear();
+    };
   }, [sections]);
 
   const scrollToTop = () => {
@@ -79,23 +96,26 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
           </summary>
           <nav aria-label={`${tocTitle} (Mobile)`} className="mt-3 pt-3 border-t border-outline-variant/15">
             <ul className="space-y-1.5 text-[13.5px]">
-              {sections.map((section, idx) => {
+              {sections.map((section) => {
                 const isActive = activeId === section.id;
+                const parsedTitle = splitSectionTitle(section.title);
                 return (
                   <li key={section.id}>
                     <a
                       href={`#${section.id}`}
                       aria-current={isActive ? 'location' : undefined}
-                      className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
+                      className={`flex items-start gap-2 py-1.5 px-2.5 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
                         isActive
                           ? 'bg-primary/10 text-primary font-bold dark:bg-primary/20'
                           : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
                       }`}
                     >
-                      <span className="inline-block w-6 shrink-0 tabular-nums font-mono text-xs opacity-60 text-start">
-                        {String(idx + 1).padStart(2, '0')}
-                      </span>
-                      <span className="truncate">{section.title}</span>
+                      {parsedTitle.number && (
+                        <span className="inline-block w-5 shrink-0 tabular-nums font-mono text-xs opacity-60 text-start pt-0.5">
+                          {parsedTitle.number}
+                        </span>
+                      )}
+                      <span className="leading-snug break-words">{parsedTitle.text}</span>
                     </a>
                   </li>
                 );
@@ -115,23 +135,26 @@ export function LegalToc({ sections, locale }: LegalTocProps) {
           </div>
 
           <ul className="space-y-1 text-[13.5px]">
-            {sections.map((section, idx) => {
+            {sections.map((section) => {
               const isActive = activeId === section.id;
+              const parsedTitle = splitSectionTitle(section.title);
               return (
                 <li key={section.id}>
                   <a
                     href={`#${section.id}`}
                     aria-current={isActive ? 'location' : undefined}
-                    className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
+                    className={`flex items-start gap-2 py-1.5 px-2.5 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
                       isActive
                         ? 'bg-primary/10 text-primary font-bold dark:bg-primary/20'
                         : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
                     }`}
                   >
-                    <span className="inline-block w-6 shrink-0 tabular-nums font-mono text-xs opacity-60 text-start">
-                      {String(idx + 1).padStart(2, '0')}
-                    </span>
-                    <span className="truncate">{section.title}</span>
+                    {parsedTitle.number && (
+                      <span className="inline-block w-5 shrink-0 tabular-nums font-mono text-xs opacity-60 text-start pt-0.5">
+                        {parsedTitle.number}
+                      </span>
+                    )}
+                    <span className="leading-snug break-words">{parsedTitle.text}</span>
                   </a>
                 </li>
               );

@@ -3,6 +3,7 @@ import { LegalHeader } from './LegalHeader';
 import { LegalFooter } from './LegalFooter';
 import { LegalToc } from './LegalToc';
 import { renderLegalContent } from './renderLegalContent';
+import { splitSectionTitle } from './splitSectionTitle';
 import { LEGAL_CONFIG } from '@/lib/legal-config';
 
 export interface LegalSectionItem {
@@ -30,9 +31,10 @@ export function LegalPageShell({
 
   return (
     <div
+      data-legal-page="true"
       dir={isArabic ? 'rtl' : 'ltr'}
       lang={locale}
-      className="min-h-screen flex flex-col bg-surface text-on-surface antialiased transition-colors scroll-smooth motion-reduce:scroll-auto"
+      className="min-h-screen flex flex-col bg-surface text-on-surface antialiased transition-colors"
     >
       <LegalHeader locale={locale} />
 
@@ -70,25 +72,30 @@ export function LegalPageShell({
 
           {/* Main Document Sections */}
           <article className="lg:col-span-8 order-2 lg:order-1 space-y-8 sm:space-y-10 print:w-full print:space-y-6">
-            {sections.map((section, idx) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="scroll-mt-24 p-5 sm:p-7 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/15 shadow-sm transition-all print:p-0 print:border-none print:shadow-none print:break-inside-avoid"
-              >
-                <h2 className="text-[17px] sm:text-[18px] font-bold text-on-surface mb-3 sm:mb-4 flex items-center gap-2.5">
-                  <span className="w-1.5 h-5 rounded-full bg-primary shrink-0" aria-hidden="true" />
-                  <span className="inline-block w-6 shrink-0 tabular-nums font-mono text-xs text-on-surface-variant/70 text-start">
-                    {String(idx + 1).padStart(2, '0')}
-                  </span>
-                  <span>{section.title}</span>
-                </h2>
+            {sections.map((section) => {
+              const parsedTitle = splitSectionTitle(section.title);
+              return (
+                <section
+                  key={section.id}
+                  id={section.id}
+                  className="scroll-mt-24 p-5 sm:p-7 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/15 shadow-sm transition-all print:p-0 print:border-none print:shadow-none print:break-inside-avoid"
+                >
+                  <h2 className="text-[17px] sm:text-[18px] font-bold text-on-surface mb-3 sm:mb-4 flex items-start gap-2.5">
+                    <span className="w-1.5 h-5 rounded-full bg-primary shrink-0 mt-0.5" aria-hidden="true" />
+                    {parsedTitle.number && (
+                      <span className="inline-block w-5 shrink-0 tabular-nums font-mono text-xs text-on-surface-variant/70 text-start mt-0.5">
+                        {parsedTitle.number}
+                      </span>
+                    )}
+                    <span className="leading-snug">{parsedTitle.text}</span>
+                  </h2>
 
-                <div className="max-w-prose">
-                  {renderLegalContent(section.content, locale)}
-                </div>
-              </section>
-            ))}
+                  <div className="max-w-prose">
+                    {renderLegalContent(section.content, locale)}
+                  </div>
+                </section>
+              );
+            })}
           </article>
         </div>
       </main>
