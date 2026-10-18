@@ -53,9 +53,10 @@ export function Footer() {
   ];
 
   return (
-    <footer className="hidden lg:block bg-[#f4f5f5] dark:bg-neutral-900 w-full border-t border-gray-200 dark:border-neutral-700">
+    <footer className="bg-[#f4f5f5] dark:bg-neutral-900 w-full border-t border-gray-200 dark:border-neutral-700">
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-[30px]">
+      {/* Desktop view (hidden below lg) */}
+      <div className="hidden lg:block max-w-7xl mx-auto px-6 lg:px-10 py-[30px]">
 
         {/* Top row */}
         <div className="flex items-start justify-between gap-10">
@@ -144,6 +145,37 @@ export function Footer() {
         </div>
 
       </div>
+
+      {/* Mobile compact legal and contact bar (visible below lg, hidden on lg and above) */}
+      <div className="block lg:hidden px-4 py-5 pb-24 text-center">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-gray-600 dark:text-neutral-400 mb-2.5">
+          <Link href="/privacy" className="hover:underline hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+            {locale === 'ar' ? 'الخصوصية' : 'Privacy'}
+          </Link>
+          <span className="text-gray-300 dark:text-neutral-700">•</span>
+          <Link href="/terms" className="hover:underline hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+            {locale === 'ar' ? 'الشروط والأحكام' : 'Terms'}
+          </Link>
+          <span className="text-gray-300 dark:text-neutral-700">•</span>
+          <Link href="/delete-account" className="hover:underline hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+            {locale === 'ar' ? 'حذف الحساب' : 'Delete Account'}
+          </Link>
+        </div>
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 dark:text-neutral-400">
+          <span className="material-symbols-outlined text-[14px]">mail</span>
+          <a
+            href={`mailto:${LEGAL_CONFIG.supportEmail}`}
+            dir="ltr"
+            className="hover:underline hover:text-gray-800 dark:hover:text-gray-200 font-medium"
+          >
+            {LEGAL_CONFIG.supportEmail}
+          </a>
+        </div>
+        <p className="text-[10px] text-gray-400 dark:text-neutral-500 mt-2">
+          © {new Date().getFullYear()} {t('siteName')}. {tf('allRightsReserved')}.
+        </p>
+      </div>
+
     </footer>
   );
 }

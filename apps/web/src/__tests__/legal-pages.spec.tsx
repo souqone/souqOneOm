@@ -5,6 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { LegalPageShell, LegalSectionItem } from '../components/legal/LegalPageShell';
 import { LegalFooter } from '../components/legal/LegalFooter';
+import { LegalSheet } from '../components/legal/LegalSheet';
+import { Footer } from '../components/layout/footer';
 import { LEGAL_CONFIG } from '../lib/legal-config';
 import { generateMetadata as generatePrivacyMetadata } from '../app/[locale]/privacy/page';
 import { generateMetadata as generateTermsMetadata } from '../app/[locale]/terms/page';
@@ -236,6 +238,105 @@ describe('Legal Pages Content & Structural Audit', () => {
 
         unmount();
       });
+    });
+  });
+
+  describe('Obsolete Keys Elimination in terms & privacy namespaces', () => {
+    it('ensures terms namespace only contains title, agree, close', () => {
+      const arTermsKeys = Object.keys(ar.terms).sort();
+      const enTermsKeys = Object.keys(en.terms).sort();
+      expect(arTermsKeys).toEqual(['agree', 'close', 'title']);
+      expect(enTermsKeys).toEqual(['agree', 'close', 'title']);
+
+      // Ensure no obsolete s1Title..s5Body or lastUpdated
+      expect(ar.terms).not.toHaveProperty('lastUpdated');
+      expect(ar.terms).not.toHaveProperty('s1Title');
+      expect(en.terms).not.toHaveProperty('lastUpdated');
+      expect(en.terms).not.toHaveProperty('s1Title');
+    });
+
+    it('ensures privacy namespace only contains title, agree, close', () => {
+      const arPrivacyKeys = Object.keys(ar.privacy).sort();
+      const enPrivacyKeys = Object.keys(en.privacy).sort();
+      expect(arPrivacyKeys).toEqual(['agree', 'close', 'title']);
+      expect(enPrivacyKeys).toEqual(['agree', 'close', 'title']);
+
+      // Ensure no obsolete keys or promises
+      expect(ar.privacy).not.toHaveProperty('lastUpdated');
+      expect(ar.privacy).not.toHaveProperty('s1Title');
+      expect(ar.privacy).not.toHaveProperty('contactTitle');
+      expect(ar.privacy).not.toHaveProperty('contactBody');
+      expect(en.privacy).not.toHaveProperty('lastUpdated');
+      expect(en.privacy).not.toHaveProperty('s1Title');
+      expect(en.privacy).not.toHaveProperty('contactTitle');
+      expect(en.privacy).not.toHaveProperty('contactBody');
+    });
+  });
+
+  describe('LegalSheet & Mobile Footer Integration', () => {
+    it('renders LegalSheet for terms with 13 sections, whitespace-pre-line, and localized link', () => {
+      const { container, unmount } = render(
+        <LegalSheet type="terms" open={true} onClose={() => {}} />,
+      );
+
+      const link = container.querySelector('a[href="/ar/terms"]');
+      expect(link).toBeInTheDocument();
+
+      const sections = container.querySelectorAll('section');
+      expect(sections.length).toBe(13);
+
+      const contentParagraphs = container.querySelectorAll('p.whitespace-pre-line');
+      expect(contentParagraphs.length).toBe(13);
+
+      unmount();
+    });
+
+    it('renders LegalSheet for privacy with 12 sections, whitespace-pre-line, and localized link', () => {
+      const { container, unmount } = render(
+        <LegalSheet type="privacy" open={true} onClose={() => {}} />,
+      );
+
+      const link = container.querySelector('a[href="/ar/privacy"]');
+      expect(link).toBeInTheDocument();
+
+      const sections = container.querySelectorAll('section');
+      expect(sections.length).toBe(12);
+
+      const contentParagraphs = container.querySelectorAll('p.whitespace-pre-line');
+      expect(contentParagraphs.length).toBe(12);
+
+      unmount();
+    });
+
+    it('renders null when LegalSheet open is false', () => {
+      const { container, unmount } = render(
+        <LegalSheet type="terms" open={false} onClose={() => {}} />,
+      );
+      expect(container.firstChild).toBeNull();
+      unmount();
+    });
+
+    it('renders Footer with both desktop container (hidden lg:block) and mobile legal bar (block lg:hidden)', () => {
+      const { container, unmount } = render(<Footer />);
+
+      const desktopContainer = container.querySelector('div.hidden.lg\\:block');
+      expect(desktopContainer).toBeInTheDocument();
+
+      const mobileContainer = container.querySelector('div.block.lg\\:hidden');
+      expect(mobileContainer).toBeInTheDocument();
+
+      // Mobile legal links exist
+      const mobilePrivacy = mobileContainer?.querySelector('a[href="/privacy"]');
+      const mobileTerms = mobileContainer?.querySelector('a[href="/terms"]');
+      const mobileDelete = mobileContainer?.querySelector('a[href="/delete-account"]');
+      const mobileMail = mobileContainer?.querySelector(`a[href="mailto:${LEGAL_CONFIG.supportEmail}"]`);
+
+      expect(mobilePrivacy).toBeInTheDocument();
+      expect(mobileTerms).toBeInTheDocument();
+      expect(mobileDelete).toBeInTheDocument();
+      expect(mobileMail).toBeInTheDocument();
+
+      unmount();
     });
   });
 });

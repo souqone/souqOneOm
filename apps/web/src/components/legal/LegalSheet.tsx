@@ -1,44 +1,84 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useTranslations } from 'next-intl'
-import { X } from 'lucide-react'
-import { clsx } from 'clsx'
+import { useEffect } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { X } from 'lucide-react';
+import { clsx } from 'clsx';
+import { LEGAL_CONFIG } from '@/lib/legal-config';
 
-type LegalType = 'terms' | 'privacy'
+type LegalType = 'terms' | 'privacy';
 
 interface LegalSheetProps {
-  type: LegalType
-  open: boolean
-  onClose: () => void
-  onAgree?: () => void
+  type: LegalType;
+  open: boolean;
+  onClose: () => void;
+  onAgree?: () => void;
 }
 
-const SECTIONS: Record<LegalType, readonly string[]> = {
-  terms: ['s1', 's2', 's3', 's4', 's5'] as const,
-  privacy: ['s1', 's2', 's3', 's4', 's5', 'contact'] as const,
-}
+const LEGAL_SECTIONS: Record<LegalType, readonly string[]> = {
+  terms: [
+    'acceptance',
+    'eligibility',
+    'account',
+    'listingRules',
+    'activeListingsCap',
+    'paidServices',
+    'intermediary',
+    'suspension',
+    'intellectualProperty',
+    'liability',
+    'indemnity',
+    'amendments',
+    'governingLaw',
+  ],
+  privacy: [
+    'operator',
+    'dataCollected',
+    'dataUsage',
+    'googleData',
+    'thirdPartyServices',
+    'dataRetention',
+    'security',
+    'userRights',
+    'children',
+    'cookies',
+    'policyChanges',
+    'contact',
+  ],
+};
 
 export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
-  const t = useTranslations(type)
+  const tAction = useTranslations(type);
+  const tLegal = useTranslations(`legalPages.${type}`);
+  const tCommon = useTranslations('legalPages.common');
+  const locale = useLocale() as 'ar' | 'en';
+  const isArabic = locale === 'ar';
 
   useEffect(() => {
-    if (!open) return
-    const original = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = original }
-  }, [open])
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
 
   useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
 
-  const sections = SECTIONS[type]
+  const sectionKeys = LEGAL_SECTIONS[type];
+  const dateValue = LEGAL_CONFIG.lastUpdated[locale] || LEGAL_CONFIG.lastUpdated.ar;
+  const lastUpdatedText = tCommon('lastUpdated', { date: dateValue });
+  const fullPageHref = `/${locale}/${type}`;
+  const readFullPageLabel = isArabic ? 'قراءة الصفحة الكاملة ↗' : 'Read Full Page ↗';
 
   return (
     <div
@@ -65,17 +105,19 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
 
         <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-outline-variant/15">
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-on-surface">{t('title')}</h2>
+            <h2 className="text-lg sm:text-xl font-black text-on-surface">
+              {tLegal('title')}
+            </h2>
             <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
-              <p className="text-[11px] text-on-surface-variant">{t('lastUpdated')}</p>
+              <p className="text-[11px] text-on-surface-variant">{lastUpdatedText}</p>
               <span className="text-[11px] text-outline-variant">•</span>
               <a
-                href={type === 'privacy' ? '/privacy' : '/terms'}
+                href={fullPageHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[11px] font-bold text-primary hover:underline"
               >
-                قراءة الصفحة الكاملة ↗
+                {readFullPageLabel}
               </a>
             </div>
           </div>
@@ -89,11 +131,13 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-5">
-          {sections.map(s => (
-            <section key={s}>
-              <h3 className="text-[15px] font-bold text-on-surface mb-2">{t(`${s}Title`)}</h3>
-              <p className="text-[13px] sm:text-sm text-on-surface-variant leading-relaxed">
-                {t(`${s}Body`)}
+          {sectionKeys.map((key) => (
+            <section key={key}>
+              <h3 className="text-[15px] font-bold text-on-surface mb-2">
+                {tLegal(`sections.${key}.title`)}
+              </h3>
+              <p className="text-[13px] sm:text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">
+                {tLegal(`sections.${key}.content`)}
               </p>
             </section>
           ))}
@@ -102,20 +146,23 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
         <div className="px-5 sm:px-7 py-4 border-t border-outline-variant/15 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end bg-surface-container/40">
           {onAgree && (
             <button
-              onClick={() => { onAgree(); onClose() }}
+              onClick={() => {
+                onAgree();
+                onClose();
+              }}
               className="btn-primary order-1 sm:order-2 px-5 py-2.5 rounded-xl text-sm font-bold"
             >
-              {t('agree')}
+              {tAction('agree')}
             </button>
           )}
           <button
             onClick={onClose}
             className="order-2 sm:order-1 px-5 py-2.5 rounded-xl text-sm font-bold border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container transition-colors"
           >
-            {t('close')}
+            {tAction('close')}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
