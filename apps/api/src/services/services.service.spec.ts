@@ -7,6 +7,7 @@ import { GeoService } from '../locations/geo.service';
 import { RedisService } from '../redis/redis.service';
 import { SearchService } from '../search/search.service';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 // ── Mocks ──────────────────────────────────────────
 const mockPrisma = {
@@ -73,6 +74,10 @@ const mockItem = {
   user: { id: 'user-1', username: 'test', displayName: 'Test', avatarUrl: null },
 };
 
+const mockLimitService = {
+  assertWithinLimit: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('ServicesService', () => {
   let service: ServicesService;
 
@@ -88,6 +93,7 @@ describe('ServicesService', () => {
         { provide: GeoService, useValue: mockGeoService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: mockLimitService },
       ],
     }).compile();
 
@@ -261,6 +267,22 @@ describe('ServicesService', () => {
       mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
       const dto = { governorateId: 1, wilayaId: 10 } as any;
       await expect(service.update('svc-1', 'user-1', dto)).rejects.toThrow('Mismatch');
+    });
+
+    it('should not invoke assertWithinLimit when updating already-active listing without becoming active', async () => {
+      mockPrisma.carService.findUnique.mockResolvedValueOnce({ ...mockItem, status: 'ACTIVE', hiddenByOwnerStatus: false });
+      mockPrisma.carService.update.mockResolvedValueOnce({ ...mockItem, title: 'عنوان محدث' });
+
+      await service.update('svc-1', 'user-1', { title: 'عنوان محدث', status: 'ACTIVE' });
+      expect(mockLimitService.assertWithinLimit).not.toHaveBeenCalled();
+    });
+
+    it('should invoke assertWithinLimit when updating an INACTIVE listing to ACTIVE', async () => {
+      mockPrisma.carService.findUnique.mockResolvedValue({ ...mockItem, status: 'INACTIVE', hiddenByOwnerStatus: false });
+      mockPrisma.carService.update.mockResolvedValueOnce({ ...mockItem, status: 'ACTIVE' });
+
+      await service.update('svc-1', 'user-1', { status: 'ACTIVE' });
+      expect(mockLimitService.assertWithinLimit).toHaveBeenCalledWith('user-1', expect.anything());
     });
   });
 

@@ -15,24 +15,27 @@ const PUBLIC_LISTING_INCLUDE = {
 export class ListingsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: Prisma.ListingCreateInput) {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const listing = await tx.listing.create({
-          data,
-          include: PUBLIC_LISTING_INCLUDE,
-        });
-        await tx.outboxEvent.create({
-          data: {
-            entityType: ENTITY_TYPES.LISTING,
-            entityId: listing.id,
-            action: 'UPSERT',
-          },
-        });
-        return listing;
-      },
-      { maxWait: 15000, timeout: 20000 },
-    );
+  async create(data: Prisma.ListingCreateInput, tx?: Prisma.TransactionClient) {
+    const execute = async (client: Prisma.TransactionClient) => {
+      const listing = await client.listing.create({
+        data,
+        include: PUBLIC_LISTING_INCLUDE,
+      });
+      await client.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.LISTING,
+          entityId: listing.id,
+          action: 'UPSERT',
+        },
+      });
+      return listing;
+    };
+
+    if (tx) {
+      return execute(tx);
+    }
+
+    return this.prisma.$transaction(execute, { maxWait: 15000, timeout: 20000 });
   }
 
   async findMany(
@@ -64,25 +67,33 @@ export class ListingsRepository {
     });
   }
 
-  async update(id: string, data: Prisma.ListingUpdateInput, expectedVersion: number) {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const listing = await tx.listing.update({
-          where: { id, version: expectedVersion },
-          data: { ...data, version: { increment: 1 } },
-          include: PUBLIC_LISTING_INCLUDE,
-        });
-        await tx.outboxEvent.create({
-          data: {
-            entityType: ENTITY_TYPES.LISTING,
-            entityId: listing.id,
-            action: 'UPSERT',
-          },
-        });
-        return listing;
-      },
-      { maxWait: 15000, timeout: 20000 },
-    );
+  async update(
+    id: string,
+    data: Prisma.ListingUpdateInput,
+    expectedVersion: number,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const execute = async (client: Prisma.TransactionClient) => {
+      const listing = await client.listing.update({
+        where: { id, version: expectedVersion },
+        data: { ...data, version: { increment: 1 } },
+        include: PUBLIC_LISTING_INCLUDE,
+      });
+      await client.outboxEvent.create({
+        data: {
+          entityType: ENTITY_TYPES.LISTING,
+          entityId: listing.id,
+          action: 'UPSERT',
+        },
+      });
+      return listing;
+    };
+
+    if (tx) {
+      return execute(tx);
+    }
+
+    return this.prisma.$transaction(execute, { maxWait: 15000, timeout: 20000 });
   }
 
   async delete(id: string) {

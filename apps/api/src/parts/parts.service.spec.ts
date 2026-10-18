@@ -5,6 +5,7 @@ import { GeoService } from '../locations/geo.service';
 import { SearchService } from '../search/search.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 describe('PartsService', () => {
   let service: PartsService;
@@ -35,6 +36,7 @@ describe('PartsService', () => {
         { provide: SearchService, useValue: { indexDocument: jest.fn(), removeDocument: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

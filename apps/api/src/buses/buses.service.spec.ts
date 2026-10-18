@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { SearchService } from '../search/search.service';
 import { GeoService } from '../locations/geo.service';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 // ── Mocks ──
 
@@ -113,6 +114,7 @@ describe('BusesService', () => {
         { provide: GeoService, useValue: mockGeoService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = module.get<BusesService>(BusesService);

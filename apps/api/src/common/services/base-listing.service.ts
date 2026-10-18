@@ -14,6 +14,7 @@ import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 import { USER_SELECT_PUBLIC, USER_SELECT_LISTING_PUBLIC } from '../constants/user-select.constant';
 import { stripDeprecatedContactFields } from '../utils/contact.utils';
 import { SellerContactGate } from './seller-contact-gate.service';
+import { ActiveListingsLimitService } from './active-listings-limit.service';
 import { assertPublicOrOwner, VisibilityViewer } from '../public-visibility';
 
 export interface ListingConfig {
@@ -55,6 +56,7 @@ export abstract class BaseListingService {
     protected readonly redis: RedisService,
     protected readonly eventEmitter: EventEmitter2,
     protected readonly sellerContactGate?: SellerContactGate,
+    protected readonly activeListingsLimitService?: ActiveListingsLimitService,
   ) {
     this.logger = new Logger(this.constructor.name);
   }
@@ -118,6 +120,9 @@ export abstract class BaseListingService {
     const data = this.buildCreateData(cleanDto, slug, userId);
 
     const item = await this.prisma.$transaction(async (tx) => {
+      if (this.activeListingsLimitService) {
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      }
       const createdItem = await (tx as any)[this.config.modelName].create({
         data,
         include: this.getCreateInclude(),
@@ -266,6 +271,10 @@ export abstract class BaseListingService {
     const dates = new Set(this.config.dateFields ?? []);
 
     const cleanDto = stripDeprecatedContactFields(dto);
+    const becomesPublicActive =
+      cleanDto.status === 'ACTIVE' &&
+      (existing.status !== 'ACTIVE' || existing.hiddenByOwnerStatus === true);
+
     if (cleanDto.status === 'ACTIVE' && this.sellerContactGate) {
       await this.sellerContactGate.assertCanPublish(userId);
     }
@@ -281,6 +290,9 @@ export abstract class BaseListingService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (becomesPublicActive && this.activeListingsLimitService) {
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      }
       const res = await (tx as any)[this.config.modelName].update({
         where: { id },
         data,
@@ -353,6 +365,9 @@ export abstract class BaseListingService {
       await this.sellerContactGate.assertCanPublish(userId);
     }
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (newStatus === 'ACTIVE' && this.activeListingsLimitService) {
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      }
       const res = await (tx as any)[this.config.modelName].update({
         where: { id },
         data: { status: newStatus },

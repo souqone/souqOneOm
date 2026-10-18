@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 const prisma: any = {
   busListing: { findUnique: jest.fn(), update: jest.fn() },
@@ -41,6 +42,7 @@ describe('BusesService.update - optimistic concurrency (version)', () => {
         { provide: GeoService, useValue: { validateLocationPair: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);
@@ -117,6 +119,7 @@ describe('Slug cache invalidation', () => {
         { provide: GeoService, useValue: { validateLocationPair: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     service = mod.get(BusesService);

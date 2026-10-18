@@ -21,6 +21,7 @@ import { assertListingVisible } from './listing-visibility';
 import { VisibilityViewer } from '../common/public-visibility';
 import { incrementViewCount } from '../common/utils/view-count.helper';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 
 
@@ -35,6 +36,7 @@ export class ListingsService {
     private readonly repo: ListingsRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly sellerContactGate: SellerContactGate,
+    private readonly activeListingsLimitService: ActiveListingsLimitService,
   ) {}
 
   private generateSlug(title: string): string {
@@ -160,60 +162,66 @@ export class ListingsService {
 
     const slug = this.generateSlug(`${brand.name}-${carModel.name}-${dto.year}-${dto.title}`);
 
-    const listing = await this.repo.create({
-        title: cleanDto.title,
-        slug,
-        description: cleanDto.description,
-        make: brand.name,
-        model: carModel.name,
-        trim: trimName,
-        year: cleanDto.year,
-        price: new Prisma.Decimal(cleanDto.price),
-        mileage: cleanDto.mileage,
-        fuelType: cleanDto.fuelType,
-        transmission: cleanDto.transmission,
-        bodyType: cleanDto.bodyType,
-        exteriorColor: cleanDto.exteriorColor,
-        interior: cleanDto.interior,
-        engineSize: cleanDto.engineSize,
-        horsepower: cleanDto.horsepower,
-        doors: cleanDto.doors,
-        seats: cleanDto.seats,
-        driveType: cleanDto.driveType,
-        features: cleanDto.features ?? [],
-        currency: cleanDto.currency ?? 'OMR',
-        isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
-        condition: cleanDto.condition ?? 'USED',
-        listingType: cleanDto.listingType ?? 'SALE',
-        dailyPrice: cleanDto.dailyPrice ? new Prisma.Decimal(cleanDto.dailyPrice) : undefined,
-        monthlyPrice: cleanDto.monthlyPrice ? new Prisma.Decimal(cleanDto.monthlyPrice) : undefined,
-        withDriver: cleanDto.withDriver ?? false,
-        depositAmount: cleanDto.depositAmount !== undefined ? new Prisma.Decimal(cleanDto.depositAmount) : undefined,
-        minRentalDays: cleanDto.minRentalDays,
-        kmLimitPerDay: cleanDto.kmLimitPerDay,
-        cancellationPolicy: cleanDto.cancellationPolicy,
-        deliveryAvailable: cleanDto.deliveryAvailable ?? false,
-        insuranceIncluded: cleanDto.insuranceIncluded ?? false,
-        whatsappEnabled: cleanDto.whatsappEnabled ?? false,
-        governorateRef: { connect: { id: cleanDto.governorateId } },
-        wilayaRef: { connect: { id: cleanDto.wilayaId } },
-        latitude: cleanDto.latitude,
-        longitude: cleanDto.longitude,
-        ...(cleanDto.brandId    && { brand:    { connect: { id: cleanDto.brandId    } } }),
-        ...(cleanDto.carModelId && { carModel: { connect: { id: cleanDto.carModelId } } }),
-        ...(cleanDto.carTrimId  && { carTrim:  { connect: { id: cleanDto.carTrimId  } } }),
-        status: 'ACTIVE',
-        seller: { connect: { id: sellerId } },
-        ...(cleanDto.images && cleanDto.images.length > 0 && {
-          images: {
-            create: cleanDto.images.map((url, i) => ({
-              url,
-              order: i,
-              isPrimary: i === 0,
-            })),
-          },
-        }),
-    });
+    const listing = await this.prisma.$transaction(async (tx) => {
+      await this.activeListingsLimitService.assertWithinLimit(sellerId, tx);
+      return this.repo.create(
+        {
+          title: cleanDto.title,
+          slug,
+          description: cleanDto.description,
+          make: brand.name,
+          model: carModel.name,
+          trim: trimName,
+          year: cleanDto.year,
+          price: new Prisma.Decimal(cleanDto.price),
+          mileage: cleanDto.mileage,
+          fuelType: cleanDto.fuelType,
+          transmission: cleanDto.transmission,
+          bodyType: cleanDto.bodyType,
+          exteriorColor: cleanDto.exteriorColor,
+          interior: cleanDto.interior,
+          engineSize: cleanDto.engineSize,
+          horsepower: cleanDto.horsepower,
+          doors: cleanDto.doors,
+          seats: cleanDto.seats,
+          driveType: cleanDto.driveType,
+          features: cleanDto.features ?? [],
+          currency: cleanDto.currency ?? 'OMR',
+          isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
+          condition: cleanDto.condition ?? 'USED',
+          listingType: cleanDto.listingType ?? 'SALE',
+          dailyPrice: cleanDto.dailyPrice ? new Prisma.Decimal(cleanDto.dailyPrice) : undefined,
+          monthlyPrice: cleanDto.monthlyPrice ? new Prisma.Decimal(cleanDto.monthlyPrice) : undefined,
+          withDriver: cleanDto.withDriver ?? false,
+          depositAmount: cleanDto.depositAmount !== undefined ? new Prisma.Decimal(cleanDto.depositAmount) : undefined,
+          minRentalDays: cleanDto.minRentalDays,
+          kmLimitPerDay: cleanDto.kmLimitPerDay,
+          cancellationPolicy: cleanDto.cancellationPolicy,
+          deliveryAvailable: cleanDto.deliveryAvailable ?? false,
+          insuranceIncluded: cleanDto.insuranceIncluded ?? false,
+          whatsappEnabled: cleanDto.whatsappEnabled ?? false,
+          governorateRef: { connect: { id: cleanDto.governorateId } },
+          wilayaRef: { connect: { id: cleanDto.wilayaId } },
+          latitude: cleanDto.latitude,
+          longitude: cleanDto.longitude,
+          ...(cleanDto.brandId    && { brand:    { connect: { id: cleanDto.brandId    } } }),
+          ...(cleanDto.carModelId && { carModel: { connect: { id: cleanDto.carModelId } } }),
+          ...(cleanDto.carTrimId  && { carTrim:  { connect: { id: cleanDto.carTrimId  } } }),
+          status: 'ACTIVE',
+          seller: { connect: { id: sellerId } },
+          ...(cleanDto.images && cleanDto.images.length > 0 && {
+            images: {
+              create: cleanDto.images.map((url, i) => ({
+                url,
+                order: i,
+                isPrimary: i === 0,
+              })),
+            },
+          }),
+        },
+        tx,
+      );
+    }, { maxWait: 15000, timeout: 20000 });
 
     if (listing.latitude && listing.longitude) {
       await this.geoService.syncLocation('listings', listing.id, listing.latitude, listing.longitude);
@@ -659,7 +667,17 @@ export class ListingsService {
 
     let updated;
     try {
-      updated = await this.repo.update(id, { status: targetStatus }, expectedVersion);
+      if (targetStatus === 'ACTIVE') {
+        updated = await this.prisma.$transaction(
+          async (tx) => {
+            await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+            return this.repo.update(id, { status: targetStatus }, expectedVersion, tx);
+          },
+          { maxWait: 15000, timeout: 20000 },
+        );
+      } else {
+        updated = await this.repo.update(id, { status: targetStatus }, expectedVersion);
+      }
     } catch (e: any) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
         throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');

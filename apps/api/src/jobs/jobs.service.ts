@@ -50,6 +50,7 @@ const PUBLIC_USER_SELECT = {
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 
 @Injectable()
 export class JobsService {
@@ -61,6 +62,7 @@ export class JobsService {
     private redis: RedisService,
     private notifications: NotificationsService,
     private readonly sellerContactGate: SellerContactGate,
+    private readonly activeListingsLimitService: ActiveListingsLimitService,
   ) {}
 
   private cacheKey(suffix: string) { return `jobs:${suffix}`; }
@@ -121,6 +123,7 @@ export class JobsService {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const job = await this.prisma.$transaction(async (tx) => {
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
           const createdJob = await tx.driverJob.create({
             data: { ...createData, slug },
             include,
@@ -304,6 +307,9 @@ export class JobsService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.status === 'ACTIVE') {
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      }
       const res = await tx.driverJob.update({
         where: { id },
         data,

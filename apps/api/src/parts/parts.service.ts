@@ -16,6 +16,7 @@ import { USER_SELECT } from '../common/utils/entity.utils';
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 
@@ -28,6 +29,7 @@ export class PartsService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
     private readonly sellerContactGate: SellerContactGate,
+    private readonly activeListingsLimitService: ActiveListingsLimitService,
   ) {}
 
   private generateSlug(title: string): string {
@@ -50,6 +52,7 @@ export class PartsService {
     const slug = this.generateSlug(cleanDto.title);
 
     const part = await this.prisma.$transaction(async (tx) => {
+      await this.activeListingsLimitService.assertWithinLimit(sellerId, tx);
       const createdPart = await tx.sparePart.create({
         data: {
           title: dto.title,

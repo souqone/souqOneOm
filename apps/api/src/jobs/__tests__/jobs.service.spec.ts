@@ -7,6 +7,7 @@ import { SearchService } from '../../search/search.service';
 import { GeoService } from '../../locations/geo.service';
 import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { SellerContactGate } from '../../common/services/seller-contact-gate.service';
+import { ActiveListingsLimitService } from '../../common/services/active-listings-limit.service';
 
 const mockGeoService = {
   validateLocationPair: jest.fn(),
@@ -82,6 +83,7 @@ describe('JobsService', () => {
         { provide: SearchService, useValue: mockSearch },
         { provide: GeoService, useValue: mockGeoService },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 
