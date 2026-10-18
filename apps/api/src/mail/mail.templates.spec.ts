@@ -1,6 +1,10 @@
 import {
   buildVerificationEmail,
   buildPasswordResetEmail,
+  buildDeletionRequestEmail,
+  buildDeletionCancelledEmail,
+  buildFinalDeletionEmail,
+  formatOmanDate,
   BRAND_LOGO_URL,
   BRAND_NAME,
 } from './mail.templates';
@@ -422,6 +426,231 @@ describe('mail.templates', () => {
       expect(() => builder({ code: '1234567' })).toThrow();
       expect(() => builder({ code: '<script>123456</script>' })).toThrow();
       expect(() => builder({ code: '' })).toThrow();
+    });
+  });
+
+  describe('Account Deletion Email Templates (PR 1)', () => {
+    const fixedUtcDate = new Date('2026-10-23T12:00:00.000Z');
+
+    describe('formatOmanDate', () => {
+      it('should format date in Asia/Muscat timezone (+04:00) in Arabic', () => {
+        const formatted = formatOmanDate(fixedUtcDate, 'ar');
+        expect(formatted).toBeDefined();
+        expect(typeof formatted).toBe('string');
+        // 12:00 UTC is 16:00 in Muscat (UTC+4)
+        expect(formatted).toMatch(/2026/);
+        expect(formatted).toMatch(/16:00|4:00/);
+      });
+
+      it('should format date in Asia/Muscat timezone (+04:00) in English', () => {
+        const formatted = formatOmanDate(fixedUtcDate, 'en');
+        expect(formatted).toBeDefined();
+        expect(typeof formatted).toBe('string');
+        expect(formatted).toMatch(/2026/);
+        expect(formatted).toMatch(/16:00|4:00/);
+      });
+
+      it('should accept string or timestamp inputs gracefully', () => {
+        const formatted = formatOmanDate(new Date('2026-10-23T12:00:00.000Z'), 'en');
+        expect(formatted).toContain('2026');
+      });
+    });
+
+    describe('buildDeletionRequestEmail', () => {
+      it('should generate template with matching Arabic/English texts and safe parameters', () => {
+        const result = buildDeletionRequestEmail({
+          displayName: 'سالم الكندي',
+          scheduledAt: fixedUtcDate,
+        });
+
+        expect(result.subject).toBe('تم استلام طلب حذف حسابك — سوق ون');
+        expect(result.html).toContain('سالم الكندي');
+        expect(result.html).toContain('طلب حذف الحساب');
+        expect(result.html).toContain('الإعدادات ثم حذف الحساب');
+        expect(result.html).toContain('support@souqoneom.com');
+        expect(result.html).toContain(`Account Deletion Request Received — ${BRAND_NAME}`);
+        expect(result.html).toContain('Settings then Delete Account');
+
+        // Text version
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('سالم الكندي');
+        expect(result.text).toContain('الإعدادات ثم حذف الحساب');
+        expect(result.text).toContain(`Account Deletion Request Received — ${BRAND_NAME}`);
+
+        // No dead web links
+        expect(result.html).not.toMatch(/href=["']https?:\/\/[^"']*\/settings\/delete/);
+      });
+
+      it('should format both dates in plain text with "بتوقيت عُمان" and keep HTML consistent', () => {
+        const result = buildDeletionRequestEmail({
+          displayName: 'سالم الكندي',
+          scheduledAt: fixedUtcDate,
+        });
+        const lines = result.text.split('\n');
+        const omanLines = lines.filter((l) => l.includes('بتوقيت عُمان'));
+        expect(omanLines).toHaveLength(2);
+        expect(omanLines[0]).toMatch(/- بتوقيت عُمان:\s*.+/);
+        expect(omanLines[1]).toMatch(/- بتوقيت عُمان:\s*.+\(Asia\/Muscat\)/);
+        expect(result.text).not.toContain('بتوقيت غرينتش');
+        expect(result.text).not.toContain('UTC:');
+        expect(result.html).toContain('(بتوقيت عُمان)');
+        expect(result.html).toContain('(Oman Time — Asia/Muscat)');
+      });
+
+      it('should escape HTML tags in displayName and fallback safely when missing', () => {
+        const malicious = buildDeletionRequestEmail({
+          displayName: '<script>alert(1)</script>',
+          scheduledAt: fixedUtcDate,
+        });
+        expect(malicious.html).not.toContain('<script>');
+        expect(malicious.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+
+        const fallback = buildDeletionRequestEmail({
+          displayName: null,
+          scheduledAt: fixedUtcDate,
+        });
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
+      });
+    });
+
+    describe('buildDeletionCancelledEmail', () => {
+      it('should generate template confirming cancellation and restored listings', () => {
+        const result = buildDeletionCancelledEmail({
+          displayName: 'مريم البلوشية',
+        });
+
+        expect(result.subject).toBe('تم إلغاء طلب حذف حسابك بنجاح — سوق ون');
+        expect(result.html).toContain('مريم البلوشية');
+        expect(result.html).toContain('إلغاء حذف الحساب');
+        expect(result.html).toContain('تمت استعادة ظهور إعلاناتكم وخدماتكم');
+        expect(result.html).toContain(`Account Deletion Request Cancelled — ${BRAND_NAME}`);
+        expect(result.html).toContain('listings and services have been restored');
+        expect(result.html).toContain('support@souqoneom.com');
+
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('مريم البلوشية');
+        expect(result.text).toContain(`Account Deletion Request Cancelled — ${BRAND_NAME}`);
+      });
+
+      it('should escape HTML tags and fallback safely when missing', () => {
+        const malicious = buildDeletionCancelledEmail({
+          displayName: '<b>Hacked</b>',
+        });
+        expect(malicious.html).not.toContain('<b>Hacked</b>');
+        expect(malicious.html).toContain('&lt;b&gt;Hacked&lt;/b&gt;');
+
+        const fallback = buildDeletionCancelledEmail({ displayName: '   ' });
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
+      });
+    });
+
+    describe('buildFinalDeletionEmail', () => {
+      it('should generate template with exact approved wording and accounting/security notice', () => {
+        const result = buildFinalDeletionEmail({
+          displayName: 'خالد العامري',
+        });
+
+        expect(result.subject).toBe('تم حذف حسابك — سوق ون');
+        expect(result.html).toContain('خالد العامري');
+        expect(result.html).toContain('تم حذف الحساب');
+        // Exact wording replacements required by approved plan:
+        expect(result.html).toContain('لا تتضمن بياناتكم الشخصية المباشرة');
+        expect(result.html).toContain('لأغراض محاسبية وأمنية');
+        expect(result.html).not.toContain('دون أي إمكانية لربطها بهويتك');
+        expect(result.html).not.toContain('للامتثال للمتطلبات المحاسبية والتنظيمية في سلطنة عُمان');
+
+        // English text validation
+        expect(result.html).toContain(`Account Deleted — ${BRAND_NAME}`);
+        expect(result.html).toContain('do not contain your direct personal data');
+        expect(result.html).toContain('accounting and security purposes');
+
+        // Released email note
+        expect(result.html).toContain('أصبح بريدكم الإلكتروني الآن متاحاً');
+        expect(result.html).toContain('Your email address is now released');
+
+        // Text version
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('لا تتضمن بياناتكم الشخصية المباشرة');
+        expect(result.text).toContain('لأغراض محاسبية وأمنية');
+        expect(result.text).toContain(`Account Deleted — ${BRAND_NAME}`);
+        expect(result.text).toContain('do not contain your direct personal data');
+        expect(result.text).toContain('accounting and security purposes');
+      });
+
+      it('should contain message retention notice ("مستخدم محذوف" / "Deleted user") in HTML and text', () => {
+        const result = buildFinalDeletionEmail({
+          displayName: 'خالد العامري',
+        });
+        // Arabic HTML & text
+        expect(result.html).toContain('الرسائل التي أرسلتموها ضمن محادثات الأطراف الأخرى تبقى محفوظة لديهم دون ربطها باسمكم وتظهر باسم «مستخدم محذوف».');
+        expect(result.html).toContain('مستخدم محذوف');
+        expect(result.text).toContain('الرسائل التي أرسلتموها ضمن محادثات الأطراف الأخرى تبقى محفوظة لديهم دون ربطها باسمكم وتظهر باسم «مستخدم محذوف».');
+        expect(result.text).toContain('مستخدم محذوف');
+
+        // English HTML & text
+        expect(result.html).toContain('Please note that messages sent within conversations with other users remain visible to them without being linked to your name, appearing as "Deleted user".');
+        expect(result.html).toContain('Deleted user');
+        expect(result.text).toContain('Messages sent within conversations with other users remain without being linked to your name, appearing as "Deleted user".');
+        expect(result.text).toContain('Deleted user');
+      });
+
+      it('should escape HTML tags and fallback safely when missing', () => {
+        const malicious = buildFinalDeletionEmail({
+          displayName: '<img src=x onerror=alert(1)>',
+        });
+        expect(malicious.html).not.toContain('<img src=x');
+        expect(malicious.html).toContain('&lt;img src=x');
+
+        const fallback = buildFinalDeletionEmail({ displayName: undefined });
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
+      });
+    });
+
+    describe('raw plain-text name vs HTML-escaped name with &, \', < across all 3 templates', () => {
+      const specialName = "Ali & Sons <Tech> 'Pro'";
+
+      it('should keep raw characters in plain-text and escaped characters in HTML for buildDeletionRequestEmail', () => {
+        const result = buildDeletionRequestEmail({
+          displayName: specialName,
+          scheduledAt: fixedUtcDate,
+        });
+        expect(result.text).toContain(specialName);
+        expect(result.text).not.toContain('&amp;');
+        expect(result.text).not.toContain('&lt;');
+        expect(result.text).not.toContain('&#39;');
+
+        expect(result.html).toContain('Ali &amp; Sons &lt;Tech&gt; &#39;Pro&#39;');
+        expect(result.html).not.toContain('<Tech>');
+      });
+
+      it('should keep raw characters in plain-text and escaped characters in HTML for buildDeletionCancelledEmail', () => {
+        const result = buildDeletionCancelledEmail({
+          displayName: specialName,
+        });
+        expect(result.text).toContain(specialName);
+        expect(result.text).not.toContain('&amp;');
+        expect(result.text).not.toContain('&lt;');
+        expect(result.text).not.toContain('&#39;');
+
+        expect(result.html).toContain('Ali &amp; Sons &lt;Tech&gt; &#39;Pro&#39;');
+        expect(result.html).not.toContain('<Tech>');
+      });
+
+      it('should keep raw characters in plain-text and escaped characters in HTML for buildFinalDeletionEmail', () => {
+        const result = buildFinalDeletionEmail({
+          displayName: specialName,
+        });
+        expect(result.text).toContain(specialName);
+        expect(result.text).not.toContain('&amp;');
+        expect(result.text).not.toContain('&lt;');
+        expect(result.text).not.toContain('&#39;');
+
+        expect(result.html).toContain('Ali &amp; Sons &lt;Tech&gt; &#39;Pro&#39;');
+        expect(result.html).not.toContain('<Tech>');
+      });
     });
   });
 
