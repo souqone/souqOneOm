@@ -1,6 +1,9 @@
 import React from 'react';
 import { LegalHeader } from './LegalHeader';
 import { LegalFooter } from './LegalFooter';
+import { LegalToc } from './LegalToc';
+import { renderLegalContent } from './renderLegalContent';
+import { splitSectionTitle } from './splitSectionTitle';
 import { LEGAL_CONFIG } from '@/lib/legal-config';
 
 export interface LegalSectionItem {
@@ -23,12 +26,12 @@ export function LegalPageShell({
   sections,
 }: LegalPageShellProps) {
   const isArabic = locale === 'ar';
-  const tocTitle = isArabic ? 'فهرس الأقسام' : 'Table of Contents';
   const lastUpdatedLabel = isArabic ? 'آخر تحديث: ' : 'Last Updated: ';
   const dateValue = LEGAL_CONFIG.lastUpdated[locale];
 
   return (
     <div
+      data-legal-page="true"
       dir={isArabic ? 'rtl' : 'ltr'}
       lang={locale}
       className="min-h-screen flex flex-col bg-surface text-on-surface antialiased transition-colors"
@@ -62,78 +65,37 @@ export function LegalPageShell({
 
         {/* Content Layout with Responsive Table of Contents */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Table of Contents (Sticky on Desktop, Collapsible Dropdown on Mobile) */}
-          <aside className="lg:col-span-4 lg:sticky lg:top-24 order-1 lg:order-2 print:hidden">
-            {/* Mobile Collapsible Dropdown */}
-            <details className="lg:hidden p-4 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm group">
-              <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-[13.5px] text-on-surface">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-primary">toc</span>
-                  <span>{tocTitle}</span>
-                </div>
-                <span className="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-200 group-open:rotate-180">
-                  expand_more
-                </span>
-              </summary>
-              <nav aria-label={`${tocTitle} (Mobile)`} className="mt-3 pt-3 border-t border-outline-variant/15">
-                <ul className="space-y-1.5 text-[13.5px]">
-                  {sections.map((section) => (
-                    <li key={section.id}>
-                      <a
-                        href={`#${section.id}`}
-                        className="block py-1.5 px-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-1 focus:ring-primary"
-                      >
-                        {section.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </details>
-
-            {/* Desktop Sticky Navigation */}
-            <nav
-              aria-label={tocTitle}
-              className="hidden lg:block p-5 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm"
-            >
-              <div className="flex items-center gap-2 font-bold text-[13.5px] text-on-surface mb-3 pb-2 border-b border-outline-variant/15">
-                <span className="material-symbols-outlined text-[18px] text-primary">toc</span>
-                <span>{tocTitle}</span>
-              </div>
-
-              <ul className="space-y-1.5 text-[13.5px]">
-                {sections.map((section) => (
-                  <li key={section.id}>
-                    <a
-                      href={`#${section.id}`}
-                      className="block py-1.5 px-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      {section.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </aside>
+          {/* Table of Contents client component with scroll spy (hidden on print) */}
+          <div className="lg:col-span-4 lg:sticky lg:top-24 order-1 lg:order-2 print:hidden">
+            <LegalToc sections={sections} locale={locale} />
+          </div>
 
           {/* Main Document Sections */}
           <article className="lg:col-span-8 order-2 lg:order-1 space-y-8 sm:space-y-10 print:w-full print:space-y-6">
-            {sections.map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="scroll-mt-24 p-5 sm:p-7 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/15 shadow-sm transition-all print:p-0 print:border-none print:shadow-none print:break-inside-avoid"
-              >
-                <h2 className="text-[17px] sm:text-[18px] font-bold text-on-surface mb-3 sm:mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-5 rounded-full bg-primary shrink-0" aria-hidden="true" />
-                  <span>{section.title}</span>
-                </h2>
+            {sections.map((section) => {
+              const parsedTitle = splitSectionTitle(section.title);
+              return (
+                <section
+                  key={section.id}
+                  id={section.id}
+                  className="scroll-mt-24 p-5 sm:p-7 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/15 shadow-sm transition-all print:p-0 print:border-none print:shadow-none print:break-inside-avoid"
+                >
+                  <h2 className="text-[17px] sm:text-[18px] font-bold text-on-surface mb-3 sm:mb-4 flex items-start gap-2.5">
+                    <span className="w-1.5 h-5 rounded-full bg-primary shrink-0 mt-0.5" aria-hidden="true" />
+                    {parsedTitle.number && (
+                      <span className="inline-block w-5 shrink-0 tabular-nums font-mono text-xs text-on-surface-variant/70 text-start mt-0.5">
+                        {parsedTitle.number}
+                      </span>
+                    )}
+                    <span className="leading-snug">{parsedTitle.text}</span>
+                  </h2>
 
-                <div className="text-[15px] text-on-surface-variant leading-[1.7] space-y-2 whitespace-pre-line font-normal">
-                  {section.content}
-                </div>
-              </section>
-            ))}
+                  <div className="max-w-prose">
+                    {renderLegalContent(section.content, locale)}
+                  </div>
+                </section>
+              );
+            })}
           </article>
         </div>
       </main>

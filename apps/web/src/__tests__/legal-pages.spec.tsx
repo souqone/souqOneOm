@@ -1,9 +1,11 @@
 import React from 'react';
 import fs from 'fs';
 import path from 'path';
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import { LegalPageShell, LegalSectionItem } from '../components/legal/LegalPageShell';
+import { splitSectionTitle } from '../components/legal/splitSectionTitle';
+import { LegalToc } from '../components/legal/LegalToc';
 import { LegalFooter } from '../components/legal/LegalFooter';
 import { LegalSheet } from '../components/legal/LegalSheet';
 import { Footer } from '../components/layout/footer';
@@ -201,7 +203,12 @@ describe('Legal Pages Content & Structural Audit', () => {
           expect(sectionElem).toBeInTheDocument();
           const h2 = sectionElem?.querySelector('h2');
           expect(h2).toBeInTheDocument();
-          expect(h2?.textContent).toContain(sec.title);
+          const parsed = splitSectionTitle(sec.title);
+          expect(h2?.textContent).toContain(parsed.text);
+          if (parsed.number) {
+            expect(h2?.textContent).toContain(parsed.number);
+            expect(h2?.textContent).not.toContain('01');
+          }
         });
 
         unmount();
@@ -229,6 +236,7 @@ describe('Legal Pages Content & Structural Audit', () => {
         const rootDiv = container.firstChild as HTMLElement;
         expect(rootDiv.getAttribute('dir')).toBe('ltr');
         expect(rootDiv.getAttribute('lang')).toBe('en');
+        expect(rootDiv.getAttribute('data-legal-page')).toBe('true');
 
         const h1Elements = container.querySelectorAll('h1');
         expect(h1Elements.length).toBe(1);
@@ -236,6 +244,19 @@ describe('Legal Pages Content & Structural Audit', () => {
 
         const tocNavs = screen.getAllByRole('navigation', { name: /Table of Contents/i });
         expect(tocNavs.length).toBeGreaterThanOrEqual(1);
+
+        sections.forEach((sec) => {
+          const sectionElem = container.querySelector(`section#${sec.id}`);
+          expect(sectionElem).toBeInTheDocument();
+          const h2 = sectionElem?.querySelector('h2');
+          expect(h2).toBeInTheDocument();
+          const parsed = splitSectionTitle(sec.title);
+          expect(h2?.textContent).toContain(parsed.text);
+          if (parsed.number) {
+            expect(h2?.textContent).toContain(parsed.number);
+            expect(h2?.textContent).not.toContain('01');
+          }
+        });
 
         unmount();
       });
@@ -275,7 +296,7 @@ describe('Legal Pages Content & Structural Audit', () => {
   });
 
   describe('LegalSheet & Mobile Footer Integration', () => {
-    it('renders LegalSheet for terms with 13 sections, whitespace-pre-line, and localized link', () => {
+    it('renders LegalSheet for terms with 13 sections, renderLegalContent, and localized link', () => {
       const { container, unmount } = render(
         <LegalSheet type="terms" open={true} onClose={() => {}} />,
       );
@@ -286,13 +307,13 @@ describe('Legal Pages Content & Structural Audit', () => {
       const sections = container.querySelectorAll('section');
       expect(sections.length).toBe(13);
 
-      const contentParagraphs = container.querySelectorAll('p.whitespace-pre-line');
-      expect(contentParagraphs.length).toBe(13);
+      const contentWrappers = container.querySelectorAll('section > div.max-w-prose');
+      expect(contentWrappers.length).toBe(13);
 
       unmount();
     });
 
-    it('renders LegalSheet for privacy with 12 sections, whitespace-pre-line, and localized link', () => {
+    it('renders LegalSheet for privacy with 12 sections, renderLegalContent, and localized link', () => {
       const { container, unmount } = render(
         <LegalSheet type="privacy" open={true} onClose={() => {}} />,
       );
@@ -303,8 +324,8 @@ describe('Legal Pages Content & Structural Audit', () => {
       const sections = container.querySelectorAll('section');
       expect(sections.length).toBe(12);
 
-      const contentParagraphs = container.querySelectorAll('p.whitespace-pre-line');
-      expect(contentParagraphs.length).toBe(12);
+      const contentWrappers = container.querySelectorAll('section > div.max-w-prose');
+      expect(contentWrappers.length).toBe(12);
 
       unmount();
     });
@@ -425,16 +446,20 @@ describe('Legal Pages Content & Structural Audit', () => {
           const renderedSections = container.querySelectorAll('section');
           expect(renderedSections.length).toBe(expectedEntries.length);
 
-          // 3. Every single section title and content must match exactly in order
+          // 3. Every single section title and content must match in order
           expectedEntries.forEach(([, sec]: [string, any], index) => {
             const secElem = renderedSections[index];
             expect(secElem).toBeDefined();
 
             const h3 = secElem.querySelector('h3');
-            expect(h3?.textContent?.trim()).toBe(sec.title.trim());
+            const parsed = splitSectionTitle(sec.title);
+            expect(h3?.textContent).toContain(parsed.text);
+            if (parsed.number) {
+              expect(h3?.textContent).toContain(parsed.number);
+            }
 
-            const p = secElem.querySelector('p');
-            expect(p?.textContent?.trim()).toBe(sec.content.trim());
+            const firstLine = sec.content.split('\n')[0].replace(/^- /, '').trim();
+            expect(secElem.textContent).toContain(firstLine);
           });
 
           // 4. Read full page translation key
@@ -461,26 +486,238 @@ describe('Legal Pages Content & Structural Audit', () => {
         path.resolve(__dirname, '../components/legal/LegalFooter.tsx'),
         'utf8',
       );
+      const legalTocContent = fs.readFileSync(
+        path.resolve(__dirname, '../components/legal/LegalToc.tsx'),
+        'utf8',
+      );
 
       // 1. h1: 24 then 30px
       expect(pageShellContent).toContain('text-[24px] sm:text-[30px]');
       // 2. h2: 17-18px
       expect(pageShellContent).toContain('text-[17px] sm:text-[18px]');
-      // 3. body: 15px with leading-[1.7]
-      expect(pageShellContent).toContain('text-[15px] text-on-surface-variant leading-[1.7]');
-      // 4. TOC: 13.5px
-      expect(pageShellContent).toContain('text-[13.5px]');
+      // 3. body: max-w-prose reading column with renderLegalContent
+      expect(pageShellContent).toContain('renderLegalContent(section.content, locale)');
+      expect(pageShellContent).toContain('max-w-prose');
+      // 4. TOC: 13.5px and tabular-nums in LegalToc
+      expect(legalTocContent).toContain('text-[13.5px]');
+      expect(legalTocContent).toContain('tabular-nums');
       // 5. LegalFooter: 12.5px
       expect(legalFooterContent).toContain('text-[12.5px]');
       // 6. bdi for emails
       expect(legalFooterContent).toContain('<bdi dir="ltr">{LEGAL_CONFIG.supportEmail}</bdi>');
-      // 7. LegalSheet: title 18-20, sections 15, content 14-15 leading-[1.7]
+      // 7. LegalSheet: title 18-20, sections 15, renderLegalContent with max-w-prose
       expect(legalSheetContent).toContain('text-[18px] sm:text-[20px]');
       expect(legalSheetContent).toContain('text-[15px] font-bold');
-      expect(legalSheetContent).toContain('text-[14px] sm:text-[15px] text-on-surface-variant leading-[1.7]');
+      expect(legalSheetContent).toContain('renderLegalContent');
+      expect(legalSheetContent).toContain('max-w-prose');
       // 8. Print styles
       expect(pageShellContent).toContain('print:hidden');
       expect(legalFooterContent).toContain('print:hidden');
+    });
+  });
+
+  describe('Post-Review Fixes: Single Numbering, Scoped Smooth Scroll & TOC Observer State', () => {
+    describe('splitSectionTitle Helper Unit Tests', () => {
+      it('correctly splits numeric prefixes from titles', () => {
+        expect(splitSectionTitle('1. الجهة المشغلة للمنصة')).toEqual({
+          number: '1',
+          text: 'الجهة المشغلة للمنصة',
+        });
+        expect(splitSectionTitle('12. القانون الواجب التطبيق')).toEqual({
+          number: '12',
+          text: 'القانون الواجب التطبيق',
+        });
+        expect(splitSectionTitle('4. Google User Data')).toEqual({
+          number: '4',
+          text: 'Google User Data',
+        });
+        expect(splitSectionTitle('عنوان بدون ترقيم')).toEqual({
+          text: 'عنوان بدون ترقيم',
+        });
+        expect(splitSectionTitle('')).toEqual({
+          text: '',
+        });
+      });
+    });
+
+    describe('Source Code Invariants: No padStart, No 01, No truncate', () => {
+      it('ensures LegalPageShell and LegalToc do not use padStart or hardcoded 01', () => {
+        const shellCode = fs.readFileSync(
+          path.resolve(__dirname, '../components/legal/LegalPageShell.tsx'),
+          'utf8',
+        );
+        const tocCode = fs.readFileSync(
+          path.resolve(__dirname, '../components/legal/LegalToc.tsx'),
+          'utf8',
+        );
+
+        expect(shellCode).not.toContain('padStart');
+        expect(shellCode).not.toContain("'01'");
+        expect(shellCode).not.toContain('"01"');
+        expect(shellCode).toContain('data-legal-page="true"');
+        expect(shellCode).not.toContain('scroll-smooth');
+
+        expect(tocCode).not.toContain('padStart');
+        expect(tocCode).not.toContain("'01'");
+        expect(tocCode).not.toContain('"01"');
+        expect(tocCode).not.toContain('truncate');
+        expect(tocCode).toContain('items-start');
+        expect(tocCode).toContain('leading-snug');
+      });
+
+      it('verifies globals.css scopes smooth scrolling to data-legal-page and avoids unlayered Material Symbols', () => {
+        const cssCode = fs.readFileSync(
+          path.resolve(__dirname, '../app/globals.css'),
+          'utf8',
+        );
+
+        // Smooth scrolling must be scoped to data-legal-page
+        expect(cssCode).toContain('html:has([data-legal-page])');
+        expect(cssCode).not.toMatch(/html\s*\{\s*scroll-behavior:\s*smooth;\s*\}/);
+
+        // Material Symbols must be defined in @layer base
+        expect(cssCode).toMatch(/@layer\s+base\s*\{[\s\S]*\.material-symbols-outlined\s*\{[\s\S]*display:\s*inline-block/);
+      });
+    });
+
+    describe('Render Audit: Single Numbering in Headings and TOC', () => {
+      const locales = ['ar', 'en'] as const;
+
+      locales.forEach((locale) => {
+        pages.forEach((page) => {
+          it(`guarantees number appears exactly once per section title and TOC item for ${page} in ${locale}`, () => {
+            const pageData = (locale === 'ar' ? ar : en).legalPages[page];
+            const sections: LegalSectionItem[] = Object.entries(pageData.sections).map(
+              ([key, s]: [string, any]) => ({
+                id: key,
+                title: s.title,
+                content: s.content,
+              }),
+            );
+
+            const { container, unmount } = render(
+              <LegalPageShell
+                locale={locale}
+                title={pageData.title}
+                subtitle={pageData.subtitle}
+                sections={sections}
+              />,
+            );
+
+            // 1. Verify h2 section titles have single numbering
+            sections.forEach((sec) => {
+              const parsed = splitSectionTitle(sec.title);
+              const sectionElem = container.querySelector(`section#${sec.id}`);
+              const h2 = sectionElem?.querySelector('h2');
+              expect(h2).toBeInTheDocument();
+
+              if (parsed.number) {
+                // Number must appear in the tabular-nums span
+                const numberSpan = h2?.querySelector('span.tabular-nums');
+                expect(numberSpan).toBeInTheDocument();
+                expect(numberSpan?.textContent?.trim()).toBe(parsed.number);
+
+                // No double number in the text part
+                const textSpan = h2?.querySelector('span.leading-snug');
+                expect(textSpan?.textContent?.trim()).toBe(parsed.text.trim());
+                expect(textSpan?.textContent?.trim().startsWith(`${parsed.number}.`)).toBe(false);
+              }
+            });
+
+            // 2. Verify TOC links have single numbering and no truncate
+            const tocLinks = container.querySelectorAll('aside nav a, aside details a');
+            expect(tocLinks.length).toBeGreaterThanOrEqual(sections.length);
+
+            tocLinks.forEach((link) => {
+              // Ensure no truncate class in any child
+              expect(link.querySelector('.truncate')).toBeNull();
+              expect(link.className).toContain('items-start');
+
+              const textSpan = link.querySelector('span.leading-snug');
+              expect(textSpan).toBeInTheDocument();
+            });
+
+            unmount();
+          });
+        });
+      });
+    });
+
+    describe('LegalToc IntersectionObserver State Retention (CodeRabbit id 4307679682)', () => {
+      it('retains previous intersecting section across partial callbacks and avoids premature jump', () => {
+        const testSections = [
+          { id: 'sec1', title: '1. القسم الأول' },
+          { id: 'sec2', title: '2. القسم الثاني' },
+          { id: 'sec3', title: '3. القسم الثالث' },
+        ];
+
+        // Create DOM elements for sections in document
+        const elements: HTMLElement[] = [];
+        testSections.forEach((s) => {
+          const el = document.createElement('div');
+          el.id = s.id;
+          document.body.appendChild(el);
+          elements.push(el);
+        });
+
+        let observerCallback: (entries: Partial<IntersectionObserverEntry>[]) => void = () => {};
+        const disconnectMock = vi.fn();
+        const observeMock = vi.fn();
+
+        class MockIntersectionObserver {
+          constructor(cb: any) {
+            observerCallback = cb;
+          }
+          observe = observeMock;
+          disconnect = disconnectMock;
+          unobserve = vi.fn();
+        }
+
+        const originalIntersectionObserver = window.IntersectionObserver;
+        window.IntersectionObserver = MockIntersectionObserver as any;
+
+        const { container, unmount } = render(<LegalToc sections={testSections} locale="ar" />);
+
+        // Helper to get active link id from desktop nav
+        const getActiveLinkId = () => {
+          const activeLink = container.querySelector('nav[aria-label="فهرس الأقسام"] a[aria-current="location"]');
+          return activeLink?.getAttribute('href')?.replace('#', '');
+        };
+
+        // Initially activeId is sec1 (default fallback)
+        expect(getActiveLinkId()).toBe('sec1');
+
+        // Callback 1: sec1 starts intersecting
+        act(() => {
+          observerCallback([
+            { target: elements[0], isIntersecting: true },
+          ]);
+        });
+        expect(getActiveLinkId()).toBe('sec1');
+
+        // Callback 2: sec2 crosses threshold, callback reports ONLY sec2 (sec1 unchanged)
+        // With state retention via useRef<Set>, sec1 is still intersecting and comes first in document order
+        act(() => {
+          observerCallback([
+            { target: elements[1], isIntersecting: true },
+          ]);
+        });
+        expect(getActiveLinkId()).toBe('sec1');
+
+        // Callback 3: sec1 stops intersecting
+        act(() => {
+          observerCallback([
+            { target: elements[0], isIntersecting: false },
+          ]);
+        });
+        // Now sec2 is the topmost intersecting section
+        expect(getActiveLinkId()).toBe('sec2');
+
+        // Cleanup
+        unmount();
+        elements.forEach((el) => el.remove());
+        window.IntersectionObserver = originalIntersectionObserver;
+      });
     });
   });
 });

@@ -25,11 +25,11 @@ export function LegalHeader({ locale }: LegalHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-surface-container-lowest/90 dark:bg-surface-container/90 backdrop-blur-md border-b border-outline-variant/15 transition-colors print:hidden">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Brand / Logo */}
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+        {/* Brand / Logo — 44px min touch target */}
         <Link
           href={`/${locale}`}
-          className="flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-primary/40 rounded-lg p-1 transition-transform active:scale-95"
+          className="min-h-[44px] h-[44px] shrink-0 inline-flex items-center px-1 rounded-xl transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           aria-label={isArabic ? 'الانتقال إلى الرئيسية' : 'Go to Homepage'}
         >
           {isArabic ? (
@@ -68,11 +68,11 @@ export function LegalHeader({ locale }: LegalHeaderProps) {
           )}
         </Link>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        {/* Action Controls — Aligned on same vertical axis, 44px touch targets, no-wrap on 360px */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-nowrap">
           <Link
             href={`/${locale}`}
-            className="text-xs sm:text-sm font-bold text-on-surface-variant hover:text-on-surface hover:bg-surface-container px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="min-h-[44px] h-[44px] inline-flex items-center justify-center px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {backLabel}
           </Link>
@@ -80,10 +80,10 @@ export function LegalHeader({ locale }: LegalHeaderProps) {
           {/* Language Switcher for this legal page only */}
           <Link
             href={targetPath}
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-black text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="min-h-[44px] h-[44px] inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-primary hover:text-primary/85 bg-primary/10 hover:bg-primary/15 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             aria-label={isArabic ? 'Switch to English' : 'التبديل إلى اللغة العربية'}
           >
-            <span className="material-symbols-outlined text-[16px]">language</span>
+            <span className="material-symbols-outlined text-[17px] shrink-0">language</span>
             <span>{switchLabel}</span>
           </Link>
         </div>
