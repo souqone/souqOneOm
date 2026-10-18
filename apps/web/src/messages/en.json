@@ -85,9 +85,7 @@
     "followUs": "Follow Us",
     "driverJobs": "Driver Jobs",
     "allRightsReserved": "All rights reserved",
-    "address": "Sultanate of Oman, Muscat, Al Ghubra",
-    "phone": "+968 9999 0000",
-    "email": "info@souqone.com"
+    "email": "support@souqoneom.com"
   },
   "search": {
     "all": "All",
@@ -3596,7 +3594,7 @@
     "s5Title": "5. Your Rights",
     "s5Body": "You have the right to access, correct, export, or request deletion of your personal data at any time. You also have the right to object to or restrict processing of your data in certain cases.",
     "contactTitle": "Contact Us",
-    "contactBody": "If you have any questions about this Privacy Policy or to exercise your rights, contact us at info@souqone.com and we will respond within 48 hours."
+    "contactBody": "If you have any questions about this Privacy Policy or to exercise your rights, contact us at support@souqoneom.com and we will respond within 48 hours."
   },
   "bookings": {
     "myBookings": "My Bookings",
@@ -4135,5 +4133,170 @@
     "IN_PROGRESS": "In Progress",
     "COMPLETED": "Completed",
     "CANCELLED": "Cancelled"
+  },
+  "legalPages": {
+    "common": {
+      "lastUpdated": "Last Updated: {date}",
+      "tableOfContents": "Table of Contents",
+      "operatorTitle": "Platform Operator",
+      "operatorNotice": "Souqone is the trade name of the platform; legal entity details will be updated once the commercial registration is completed with the competent authorities in the Sultanate of Oman.",
+      "supportContact": "Contact and Technical Support: {email}",
+      "backToHome": "Back to Home",
+      "switchLanguage": "العربية",
+      "switchLanguageTarget": "ar",
+      "privacyLink": "Privacy Policy",
+      "termsLink": "Terms & Conditions",
+      "deleteAccountLink": "Delete Account",
+      "quickLinks": "Legal Pages",
+      "jurisdiction": "Sultanate of Oman"
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "subtitle": "This policy explains how your data is collected, used, and protected on Souqone",
+      "metaTitle": "Privacy Policy — Souqone",
+      "metaDescription": "Privacy policy and data protection on the Souqone platform in the Sultanate of Oman, outlining our commitment to user data security.",
+      "sections": {
+        "operator": {
+          "title": "1. Platform Operator",
+          "content": "The Souqone platform (referred to as \"the Platform\", \"we\", or \"us\") is a digital classifieds platform specialized in vehicles, equipment, parts, services, and related jobs in the Sultanate of Oman. Souqone is the trade name of the platform; legal entity details will be updated once the commercial registration is completed with the competent authorities in the Sultanate of Oman. You can contact our support team at any time via email: support@souqoneom.com."
+        },
+        "dataCollected": {
+          "title": "2. Information We Collect",
+          "content": "We collect and process only the data necessary to provide and secure our platform services, including:\n- Account Information: Display name, username, email address, international phone number, password stored securely in hashed/encrypted form, Google account ID, and avatar when signing in with Google.\n- Listings and Content Data: Details of advertised vehicles, equipment, parts, services, and jobs, including pricing, technical specifications, and uploaded images.\n- Messages and Chat Data: Message content, attachments, reactions, and timestamps exchanged between users on the platform.\n- Location Data: Administrative location (Governorate, Wilaya, and City in the Sultanate of Oman) and optional geographic coordinates (GPS) that you choose to provide for map visualization.\n- Audit and Security Logs: Internet Protocol (IP) address, browser and device user-agent, login attempt logs, and hashing of phone numbers and IP addresses for abuse prevention purposes.\n- Notification Tokens: Mobile push tokens (Expo Push Tokens) and web push subscriptions to send notifications regarding your account and listings.\n- Payment and Subscription Records: Amount, currency, service type, transaction status, transaction identifiers, timestamps, and IP address when utilizing paid platform services."
+        },
+        "dataUsage": {
+          "title": "3. How We Use Your Data",
+          "content": "We use your data solely for the following operational and security purposes:\n- Enabling account creation, authentication, and profile management.\n- Publishing and displaying listings and facilitating communication between buyers and sellers.\n- Delivering one-time verification codes (OTP), message alerts, and critical notifications.\n- Maintaining platform security, combating fraud, preventing prohibited conduct, and preventing banned accounts from returning.\n- Improving system performance, reliability, and responsiveness for web and mobile users."
+        },
+        "googleData": {
+          "title": "4. Google User Data",
+          "content": "When you choose to sign in using Google Sign-In, we access only the authorized basic profile information (name, email address, Google ID, and profile picture) strictly for creating your account and authenticating your identity. We confirm that Google user data is never sold, rented, or transferred to third parties, is never used for personalized advertising or profiling, and complies fully with the Google API Services User Data Policy, including its Limited Use requirements."
+        },
+        "thirdPartyServices": {
+          "title": "5. External Services and Data Processing",
+          "content": "The platform partners with trusted external service providers to process data and maintain infrastructure:\n- Railway: For hosting application servers, relational databases (PostgreSQL), and Redis caching and rate-limiting.\n- Vercel: For hosting the web frontend, Content Delivery Network (CDN), and page performance monitoring (Vercel Speed Insights).\n- Cloudinary: For cloud image hosting, optimization, and media delivery.\n- Email Delivery Provider (via SMTP): For sending account verification and recovery emails from an official address.\n- Meta Platforms (WhatsApp Business Cloud API): For delivering one-time passwords (OTP) via WhatsApp (active only when phone verification is enabled).\n- Expo Push Service: For dispatching push notifications to registered mobile devices.\n- OpenStreetMap and Google Fonts: For rendering interactive maps and Arabic typography; these external services receive your IP address upon page load to deliver the requested web assets.\n- Thawani Payment Gateway (Thawani): For processing financial transactions and electronic payments via its secure gateway; payment card details are entered directly on the payment gateway and processed by it, and are never accessed, received, or stored on platform servers."
+        },
+        "dataRetention": {
+          "title": "6. Data Retention Period",
+          "content": "We retain your data for the period necessary for security, fraud prevention, and regulatory compliance:\n- Active account data and listings are retained as long as your account remains active.\n- Revoked session tokens and expired OTP challenges are automatically purged by automated system cleanup (tokens revoked over 7 days ago and WhatsApp verification logs older than 30 days are removed).\n- Security, login audits, and administrative logs are maintained for the period necessary for fraud prevention and system integrity.\n- Upon account deletion, direct personal data is removed within a maximum of 30 days, retaining only records required for security and regulatory compliance.\n- Payment and subscription transaction records are retained for the duration required by applicable statutory and accounting requirements in the Sultanate of Oman."
+        },
+        "security": {
+          "title": "7. Data Security and Protection",
+          "content": "We implement advanced technical and organizational measures to safeguard your information against unauthorized access, alteration, disclosure, or destruction. This includes:\n- Full transit encryption using modern secure transport protocols (HTTPS / TLS).\n- Storing passwords and sensitive authentication identities in encrypted and hashed formats such that they cannot be read directly.\n- Database isolation, strict access controls, and rate-limiting to prevent brute-force and DDoS attacks."
+        },
+        "userRights": {
+          "title": "8. User Rights and Data Control",
+          "content": "Users enjoy the following rights regarding their personal data:\n- Reviewing and editing account profile information directly in settings.\n- Requesting rectification of inaccurate or outdated information.\n- Requesting permanent deletion of account and personal data (as detailed on the Delete Account page).\n- Revoking consent for push notifications via device or application settings.\nTo exercise any of these rights, contact us at support@souqoneom.com."
+        },
+        "children": {
+          "title": "9. Protection of Minors (18+)",
+          "content": "Souqone is exclusively intended for adult individuals aged 18 years or older who possess the full legal capacity to enter into commercial transactions in the Sultanate of Oman. We do not knowingly collect personal information from individuals under the age of 18. Any account found to belong to a minor will be terminated upon notification."
+        },
+        "cookies": {
+          "title": "10. Cookies and Local Storage",
+          "content": "Our website uses essential client-side storage technologies to provide core functionality:\n- Language Cookie (NEXT_LOCALE): Preserves your selected language preference (Arabic or English).\n- LocalStorage: Stores your secure authentication token, recent local search history to expedite navigation, and dark/light theme preference.\n- Performance Analytics (Vercel Speed Insights): Collects anonymous technical performance metrics regarding page loading times, free of advertising tracking or data selling."
+        },
+        "policyChanges": {
+          "title": "11. Changes to This Policy",
+          "content": "We reserve the right to update this Privacy Policy as necessary to reflect technical or regulatory developments. Updated versions will be published on this page with a revised \"Last Updated\" date. Continued use of the platform constitutes acceptance of the revised terms."
+        },
+        "contact": {
+          "title": "12. Contact Us",
+          "content": "If you have questions, feedback, or wish to exercise your data rights, please reach out to our support team at: support@souqoneom.com."
+        }
+      }
+    },
+    "terms": {
+      "title": "Terms & Conditions",
+      "subtitle": "User agreement and terms of service for the Souqone platform in the Sultanate of Oman",
+      "metaTitle": "Terms & Conditions — Souqone",
+      "metaDescription": "Terms and conditions governing the use of the Souqone platform for vehicles, equipment, and services in the Sultanate of Oman.",
+      "sections": {
+        "acceptance": {
+          "title": "1. Acceptance of Terms",
+          "content": "By accessing or using the Souqone website or mobile application, you acknowledge and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please discontinue using the platform. Souqone is the trade name of the platform; legal entity details will be updated once the commercial registration is completed with the competent authorities in the Sultanate of Oman."
+        },
+        "eligibility": {
+          "title": "2. Eligibility and Registration (18+)",
+          "content": "To register and use the platform, you must be at least 18 years of age and possess full legal capacity to enter into binding agreements under the laws of the Sultanate of Oman."
+        },
+        "account": {
+          "title": "3. User Account and Responsibilities",
+          "content": "You are solely responsible for maintaining the confidentiality of your login credentials and for all activities conducted under your account. Sharing credentials, creating fake accounts, or impersonating other individuals or entities is strictly prohibited. All information provided must be truthful, accurate, and kept up to date."
+        },
+        "listingRules": {
+          "title": "4. Listing Rules and Prohibited Content",
+          "content": "Users warrant that all listings and content posted are lawful, genuine, and accurate. The following are strictly prohibited:\n- Products or services violating the laws, regulations, or public morals of the Sultanate of Oman.\n- Misleading advertisements, counterfeit goods, or materials infringing third-party intellectual property.\n- Stolen items, deceptive offers, or fraudulent transactions.\n- Duplicate listings for the same item or manipulating categories and prices.\nThe platform reserves the right to review, edit, or remove any violating listing without prior notice."
+        },
+        "activeListingsCap": {
+          "title": "5. Active Listings Cap",
+          "content": "To maintain a fair, high-quality marketplace and prevent spamming, the platform enforces a general limit on the maximum number of active listings an individual user may have published concurrently. When reaching this limit, users must wait for existing listings to expire, be archived, or be removed before publishing new listings."
+        },
+        "paidServices": {
+          "title": "6. Paid Services",
+          "content": "The platform may offer paid services, which currently include featured listing promotion and subscription plans. The price, terms, and specifications of each service are displayed clearly to the user prior to completing payment. Electronic payments are processed via the authorized Thawani payment gateway (Thawani), and the platform disclaims responsibility for any delays or technical outages occurring on the payment gateway outside its control."
+        },
+        "intermediary": {
+          "title": "7. Nature of Platform (Independent Intermediary)",
+          "content": "Souqone operates solely as an independent digital marketplace and intermediary platform facilitating contact between buyers and sellers. The platform is not a party to any transaction, sale, rental, or service agreement, does not own or inspect listed items, and does not intervene in direct payments or arrangements between users. Users bear sole responsibility for verifying goods and negotiating terms."
+        },
+        "suspension": {
+          "title": "8. Suspension, Termination, and Banning",
+          "content": "The platform reserves the right to suspend or permanently terminate accounts or remove content in cases of:\n- Violation of these Terms and Conditions or the Privacy Policy.\n- Credible reports of fraudulent behavior or abuse.\n- Attempts to compromise platform security or bypass operational limits.\nUpon banning, cryptographic hashes of account identifiers are preserved to prevent evasion and safeguard the community."
+        },
+        "intellectualProperty": {
+          "title": "9. Intellectual Property",
+          "content": "All intellectual property rights, trademarks, software code, user interface designs, and database structures of Souqone belong exclusively to the platform and its operators. No content may be copied, reproduced, scraped, or commercially exploited without prior written authorization."
+        },
+        "disclaimer": {
+          "title": "10. Disclaimer and Limitation of Liability",
+          "content": "Services are provided on an \"as is\" and \"as available\" basis without warranties of any kind, express or implied. The platform and its operators disclaim liability for any direct, indirect, or consequential damages, loss of profits, or disputes arising between users from dealings conducted through the platform."
+        },
+        "governingLaw": {
+          "title": "11. Governing Law and Jurisdiction",
+          "content": "These Terms and Conditions shall be governed by and construed in accordance with the laws of the Sultanate of Oman. Any dispute arising out of or in connection with the platform shall fall under the jurisdiction of the competent courts in the Sultanate of Oman."
+        },
+        "modifications": {
+          "title": "12. Modifications to Terms",
+          "content": "We reserve the right to revise these Terms and Conditions at any time. Changes become effective upon publication on this page with an updated revision date. Your continued use of the platform after updates signifies acceptance of the revised terms."
+        },
+        "contact": {
+          "title": "13. Contact Us",
+          "content": "For inquiries regarding these Terms and Conditions or to report a violation, please contact us at: support@souqoneom.com."
+        }
+      }
+    },
+    "deleteAccount": {
+      "title": "Account Deletion Request",
+      "subtitle": "Procedures and guidelines for deleting your account and personal data from Souqone",
+      "metaTitle": "Account Deletion — Souqone",
+      "metaDescription": "Guidelines and procedures for requesting account and data deletion on the Souqone platform in the Sultanate of Oman.",
+      "sections": {
+        "overview": {
+          "title": "1. Overview and User Rights",
+          "content": "At Souqone, we respect your privacy and your right to control your personal data. Registered users may request the permanent deletion of their account and associated personal data at any time."
+        },
+        "emailMethod": {
+          "title": "2. Email Request Method",
+          "content": "Submitting a request via email is the approved method for requesting account deletion:\n- Send an email from your registered email address (or mention your registered phone number) to: support@souqoneom.com.\n- Subject line: \"Souqone Account Deletion Request\".\n- Body content: Specify your username, registered phone number, and registered email address.\n- Our support team may request identity verification to prevent unauthorized deletion requests.\n- You will receive confirmation upon receipt and processing of your request."
+        },
+        "whatIsDeleted": {
+          "title": "3. What Is Deleted Upon Processing",
+          "content": "Upon processing your deletion request, the following information is permanently removed:\n- Profile information (name, email, phone number, bio, avatar).\n- Active listings and drafts from public search and display.\n- Your messages are deleted or disassociated from your identity, so that your name or personal details no longer appear to the other party.\n- Active authentication sessions and device push notification tokens.\n- Saved favorites and personal search history."
+        },
+        "whatIsRetained": {
+          "title": "4. What May Be Retained and Why",
+          "content": "For strict security, fraud prevention, and legal compliance purposes, certain limited data may be retained:\n- Security and administrative audit logs (such as login attempt logs and IP records) for the period necessary to protect the platform and combat fraud.\n- Cryptographic hashes of previously banned accounts to prevent evasion.\n- Financial and subscription transaction records, if any (via the Thawani payment gateway), in compliance with accounting and statutory obligations in the Sultanate of Oman."
+        },
+        "timeframe": {
+          "title": "5. Execution Timeframe (Up to 30 Days)",
+          "content": "Account deletion requests are reviewed, executed, and completed within a maximum of 30 days from confirmation of the request. You will receive notification once deletion is finalized."
+        },
+        "contact": {
+          "title": "6. Assistance and Inquiries",
+          "content": "For assistance or inquiries regarding your deletion request, please contact our support team at: support@souqoneom.com."
+        }
+      }
+    }
   }
 }

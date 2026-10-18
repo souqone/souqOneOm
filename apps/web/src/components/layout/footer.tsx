@@ -3,12 +3,14 @@
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
+import { LEGAL_CONFIG } from '@/lib/legal-config';
 
-const socialLinks = [
-  { icon: 'smart_display', label: 'YouTube', href: '#' },
-  { icon: 'photo_camera', label: 'Instagram', href: '#' },
-  { icon: 'public', label: 'Facebook', href: '#' },
-];
+// Social links placeholder — awaiting official platform accounts
+// const socialLinks = [
+//   { icon: 'smart_display', label: 'YouTube', href: '#' },
+//   { icon: 'photo_camera', label: 'Instagram', href: '#' },
+//   { icon: 'public', label: 'Facebook', href: '#' },
+// ];
 
 /* ── Subcomponents ── */
 
@@ -47,9 +49,7 @@ export function Footer() {
   ];
 
   const contactItems = [
-    { icon: 'location_on', text: tf('address') },
-    { icon: 'call', text: tf('phone'), dir: 'ltr' as const },
-    { icon: 'mail', text: tf('email') },
+    { icon: 'mail', text: LEGAL_CONFIG.supportEmail, href: `mailto:${LEGAL_CONFIG.supportEmail}` },
   ];
 
   return (
@@ -72,15 +72,6 @@ export function Footer() {
             <p className="text-gray-400 text-[12px] leading-relaxed">
               {t('platformTagline')}
             </p>
-            {/* Social icons */}
-            <div className="flex items-center gap-2 mt-3">
-              {socialLinks.map((s) => (
-                <a key={s.label} href={s.href} aria-label={s.label}
-                  className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-700 transition-all">
-                  <span className="material-symbols-outlined text-[16px]">{s.icon}</span>
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Quick Links */}
@@ -110,7 +101,17 @@ export function Footer() {
               {contactItems.map((item, i) => (
                 <li key={i} className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-gray-400 text-[16px] shrink-0">{item.icon}</span>
-                  <span dir={item.dir} className="text-gray-500 text-[12px]">{item.text}</span>
+                  {item.href ? (
+                    <a
+                      href={item.href}
+                      dir="ltr"
+                      className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-[12px] transition-colors"
+                    >
+                      {item.text}
+                    </a>
+                  ) : (
+                    <span className="text-gray-500 text-[12px]">{item.text}</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -119,14 +120,26 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-neutral-700 mt-6 pt-3">
-          <p className="text-gray-400 text-[11px]">
-            © {new Date().getFullYear()} {t('siteName')}. {tf('allRightsReserved')}.
-          </p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200 dark:border-neutral-700 mt-6 pt-3">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] text-gray-500">
+            <p>
+              © {new Date().getFullYear()} {t('siteName')}. {tf('allRightsReserved')}.
+            </p>
+            <span className="text-gray-300 dark:text-neutral-700 hidden sm:inline">|</span>
+            <Link href="/privacy" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+              {locale === 'ar' ? 'الخصوصية' : 'Privacy'}
+            </Link>
+            <Link href="/terms" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+              {locale === 'ar' ? 'الشروط والأحكام' : 'Terms'}
+            </Link>
+            <Link href="/delete-account" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+              {locale === 'ar' ? 'حذف الحساب' : 'Delete Account'}
+            </Link>
+          </div>
           {locale === 'ar' ? (
-            <Image src="/souq-one-ar.svg" alt="سوق وان" width={64} height={13} className="h-[13px] w-auto opacity-40" />
+            <Image src="/souq-one-ar.svg" alt="سوق ون" width={64} height={13} className="h-[13px] w-auto opacity-40" />
           ) : (
-            <Image src="/souq-one-en.svg" alt="SouqOne" width={74} height={15} className="h-[15px] w-auto object-contain opacity-40" />
+            <Image src="/souq-one-en.svg" alt="Souqone" width={74} height={15} className="h-[15px] w-auto object-contain opacity-40" />
           )}
         </div>
 
