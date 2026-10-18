@@ -1,13 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
 import middleware from '../middleware';
+import { routing } from '../i18n/routing';
 
 describe('Middleware Locale & Legal Routes Protection', () => {
-  it('redirects /en/browse with 308 to /ar/browse', () => {
+  it('has alternateLinks set to false in routing configuration', () => {
+    expect(routing.alternateLinks).toBe(false);
+  });
+
+  it('redirects /en/browse with 308 to /ar/browse without injecting english alternate links', () => {
     const req = new NextRequest('https://souqoneom.com/en/browse');
     const res = middleware(req);
     expect(res.status).toBe(308);
     expect(res.headers.get('location')).toBe('https://souqoneom.com/ar/browse');
+    const linkHeader = res.headers.get('link');
+    expect(linkHeader || '').not.toContain('hreflang="en"');
   });
 
   it('redirects /en/cars with 308 to /ar/cars', () => {

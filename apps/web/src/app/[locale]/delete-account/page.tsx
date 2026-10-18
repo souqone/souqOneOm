@@ -27,7 +27,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const canonical = `${LEGAL_CONFIG.websiteUrl}/${locale}/delete-account`;
 
   return {
-    title,
+    title: {
+      absolute: title,
+    },
     description,
     alternates: {
       canonical,

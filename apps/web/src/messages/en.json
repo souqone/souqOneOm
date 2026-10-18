@@ -4164,7 +4164,7 @@
         },
         "dataCollected": {
           "title": "2. Information We Collect",
-          "content": "We collect and process only the data necessary to provide and secure our platform services, including:\n- Account Information: Display name, username, email address, international phone number, password stored securely in hashed/encrypted form, Google account ID, and avatar when signing in with Google.\n- Listings and Content Data: Details of advertised vehicles, equipment, parts, services, and jobs, including pricing, technical specifications, and uploaded images.\n- Messages and Chat Data: Message content, attachments, reactions, and timestamps exchanged between users on the platform.\n- Location Data: Administrative location (Governorate, Wilaya, and City in the Sultanate of Oman) and optional geographic coordinates (GPS) that you choose to provide for map visualization.\n- Audit and Security Logs: Internet Protocol (IP) address, browser and device user-agent, login attempt logs, and verification phone hashes to combat fraud and abuse.\n- Notification Tokens: Mobile push tokens (Expo Push Tokens) and web push subscriptions to send notifications regarding your account and listings."
+          "content": "We collect and process only the data necessary to provide and secure our platform services, including:\n- Account Information: Display name, username, email address, international phone number, password stored securely in hashed/encrypted form, Google account ID, and avatar when signing in with Google.\n- Listings and Content Data: Details of advertised vehicles, equipment, parts, services, and jobs, including pricing, technical specifications, and uploaded images.\n- Messages and Chat Data: Message content, attachments, reactions, and timestamps exchanged between users on the platform.\n- Location Data: Administrative location (Governorate, Wilaya, and City in the Sultanate of Oman) and optional geographic coordinates (GPS) that you choose to provide for map visualization.\n- Audit and Security Logs: Internet Protocol (IP) address, browser and device user-agent, login attempt logs, and hashing of phone numbers and IP addresses for abuse prevention purposes.\n- Notification Tokens: Mobile push tokens (Expo Push Tokens) and web push subscriptions to send notifications regarding your account and listings."
         },
         "dataUsage": {
           "title": "3. How We Use Your Data",
@@ -4184,7 +4184,7 @@
         },
         "security": {
           "title": "7. Data Security and Protection",
-          "content": "We implement advanced technical and organizational measures to safeguard your information against unauthorized access, alteration, disclosure, or destruction. This includes:\n- Full transit encryption using modern secure transport protocols (HTTPS / TLS).\n- Storing passwords and sensitive authentication tokens in one-way encrypted/hashed format that cannot be read in plaintext.\n- Database isolation, strict access controls, and rate-limiting to prevent brute-force and DDoS attacks."
+          "content": "We implement advanced technical and organizational measures to safeguard your information against unauthorized access, alteration, disclosure, or destruction. This includes:\n- Full transit encryption using modern secure transport protocols (HTTPS / TLS).\n- Storing passwords and sensitive authentication identities in encrypted and hashed formats such that they cannot be read directly.\n- Database isolation, strict access controls, and rate-limiting to prevent brute-force and DDoS attacks."
         },
         "userRights": {
           "title": "8. User Rights and Data Control",
@@ -4275,27 +4275,23 @@
           "content": "At Souqone, we respect your privacy and your right to control your personal data. Registered users may request the permanent deletion of their account and associated personal data at any time."
         },
         "emailMethod": {
-          "title": "2. Email Request Method (Primary Method)",
-          "content": "Email submission is the primary recognized method for requesting account deletion:\n- Send an email from your registered email address (or mention your registered phone number) to: support@souqoneom.com.\n- Subject line: \"Souqone Account Deletion Request\".\n- Body content: Specify your username, registered phone number, and registered email address.\n- Our support team may request identity verification to prevent unauthorized deletion requests.\n- You will receive confirmation upon receipt and processing of your request."
-        },
-        "appMethod": {
-          "title": "3. In-App Deletion Steps",
-          "content": "You may also submit a deletion request directly within the mobile application:\n- Open the Souqone app and sign in to your account.\n- Navigate to the \"Profile\" screen and tap \"Settings\".\n- Select \"Account Management\" or \"Delete Account\" and follow the on-screen prompts to confirm your request."
+          "title": "2. Email Request Method",
+          "content": "Submitting a request via email is the approved method for requesting account deletion:\n- Send an email from your registered email address (or mention your registered phone number) to: support@souqoneom.com.\n- Subject line: \"Souqone Account Deletion Request\".\n- Body content: Specify your username, registered phone number, and registered email address.\n- Our support team may request identity verification to prevent unauthorized deletion requests.\n- You will receive confirmation upon receipt and processing of your request."
         },
         "whatIsDeleted": {
-          "title": "4. What Is Deleted Upon Processing",
-          "content": "Upon processing your deletion request, the following information is permanently removed:\n- Profile information (name, email, phone number, bio, avatar).\n- Active listings and drafts from public search and display.\n- Active authentication tokens and device push notification tokens.\n- Saved favorites and personal search history."
+          "title": "3. What Is Deleted Upon Processing",
+          "content": "Upon processing your deletion request, the following information is permanently removed:\n- Profile information (name, email, phone number, bio, avatar).\n- Active listings and drafts from public search and display.\n- Your messages are deleted or disassociated from your identity, so that your name or personal details no longer appear to the other party.\n- Active authentication sessions and device push notification tokens.\n- Saved favorites and personal search history."
         },
         "whatIsRetained": {
-          "title": "5. What May Be Retained and Why",
-          "content": "For strict security, fraud prevention, and legal compliance purposes, certain limited data may be retained:\n- Security and administrative audit logs (such as login attempt logs and IP records) for the period necessary to protect the platform and combat fraud.\n- Cryptographic hashes of previously banned accounts to prevent evasion.\n- Financial and transaction records, if applicable, in compliance with the laws of the Sultanate of Oman."
+          "title": "4. What May Be Retained and Why",
+          "content": "For strict security, fraud prevention, and legal compliance purposes, certain limited data may be retained:\n- Security and administrative audit logs (such as login attempt logs and IP records) for the period necessary to protect the platform and combat fraud.\n- Cryptographic hashes of previously banned accounts to prevent evasion.\n- Financial and subscription transaction records, if any (via the Thawani payment gateway), in compliance with accounting and statutory obligations in the Sultanate of Oman."
         },
         "timeframe": {
-          "title": "6. Execution Timeframe (30 Days Maximum)",
+          "title": "5. Execution Timeframe (Up to 30 Days)",
           "content": "Account deletion requests are reviewed, executed, and completed within a maximum of 30 days from confirmation of the request. You will receive notification once deletion is finalized."
         },
         "contact": {
-          "title": "7. Assistance and Inquiries",
+          "title": "6. Assistance and Inquiries",
           "content": "For assistance or inquiries regarding your deletion request, please contact our support team at: support@souqoneom.com."
         }
       }

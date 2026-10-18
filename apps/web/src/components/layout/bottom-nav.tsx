@@ -22,8 +22,9 @@ export function BottomNav() {
   const { searchOpen, toggleSearch } = useSearch();
   const unreadMessages = 0; // TODO: wire up unread messages count
 
-  // Hide on chat detail pages (full-screen experience)
+  // Hide on chat detail pages and legal policy pages
   if (pathname.startsWith('/messages/') && pathname !== '/messages') return null;
+  if (['/privacy', '/terms', '/delete-account'].some((p) => pathname.includes(p))) return null;
 
   return (
     <>

@@ -62,18 +62,46 @@ export function LegalPageShell({
 
         {/* Content Layout with Responsive Table of Contents */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Table of Contents (Sticky on Desktop) */}
+          {/* Table of Contents (Sticky on Desktop, Collapsible Dropdown on Mobile) */}
           <aside className="lg:col-span-4 lg:sticky lg:top-24 order-1 lg:order-2">
+            {/* Mobile Collapsible Dropdown */}
+            <details className="lg:hidden p-4 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm group">
+              <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-sm text-on-surface">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-primary">toc</span>
+                  <span>{tocTitle}</span>
+                </div>
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-200 group-open:rotate-180">
+                  expand_more
+                </span>
+              </summary>
+              <nav aria-label={`${tocTitle} (Mobile)`} className="mt-3 pt-3 border-t border-outline-variant/15">
+                <ul className="space-y-1.5 text-sm">
+                  {sections.map((section) => (
+                    <li key={section.id}>
+                      <a
+                        href={`#${section.id}`}
+                        className="block py-1.5 px-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        {section.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </details>
+
+            {/* Desktop Sticky Navigation */}
             <nav
               aria-label={tocTitle}
-              className="p-5 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm"
+              className="hidden lg:block p-5 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-outline-variant/20 shadow-sm"
             >
               <div className="flex items-center gap-2 font-bold text-sm text-on-surface mb-3 pb-2 border-b border-outline-variant/15">
                 <span className="material-symbols-outlined text-[18px] text-primary">toc</span>
                 <span>{tocTitle}</span>
               </div>
 
-              <ul className="space-y-1.5 text-xs sm:text-sm">
+              <ul className="space-y-1.5 text-sm">
                 {sections.map((section) => (
                   <li key={section.id}>
                     <a
@@ -101,7 +129,7 @@ export function LegalPageShell({
                   <span>{section.title}</span>
                 </h2>
 
-                <div className="text-xs sm:text-sm text-on-surface-variant leading-relaxed space-y-2 whitespace-pre-line font-normal">
+                <div className="text-sm sm:text-base text-on-surface-variant leading-relaxed space-y-2 whitespace-pre-line font-normal">
                   {section.content}
                 </div>
               </section>

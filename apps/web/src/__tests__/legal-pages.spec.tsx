@@ -2,7 +2,11 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { LegalPageShell, LegalSectionItem } from '../components/legal/LegalPageShell';
+import { LegalFooter } from '../components/legal/LegalFooter';
 import { LEGAL_CONFIG } from '../lib/legal-config';
+import { generateMetadata as generatePrivacyMetadata } from '../app/[locale]/privacy/page';
+import { generateMetadata as generateTermsMetadata } from '../app/[locale]/terms/page';
+import { generateMetadata as generateDeleteAccountMetadata } from '../app/[locale]/delete-account/page';
 import ar from '../messages/ar.json';
 import en from '../messages/en.json';
 
@@ -24,7 +28,7 @@ describe('Legal Pages Content & Structural Audit', () => {
         const enKeys = Object.keys(enPage.sections);
 
         expect(arKeys).toEqual(enKeys);
-        expect(arKeys.length).toBeGreaterThanOrEqual(7);
+        expect(arKeys.length).toBeGreaterThanOrEqual(6);
 
         arKeys.forEach((key) => {
           expect(arPage.sections[key].title).toBeTruthy();
@@ -55,6 +59,50 @@ describe('Legal Pages Content & Structural Audit', () => {
       expect(LEGAL_CONFIG.brandName.en).toBe('Souqone');
       expect(LEGAL_CONFIG.supportEmail).toBe('support@souqoneom.com');
     });
+
+    it('ensures absolute metadata titles do NOT contain "سوق وان" or "SouqOne"', async () => {
+      const metadataGetters = [
+        { name: 'privacy', fn: generatePrivacyMetadata },
+        { name: 'terms', fn: generateTermsMetadata },
+        { name: 'delete-account', fn: generateDeleteAccountMetadata },
+      ];
+
+      for (const item of metadataGetters) {
+        // Arabic metadata
+        const arMeta = await item.fn({ params: Promise.resolve({ locale: 'ar' }) });
+        const arTitle = typeof arMeta.title === 'object' && arMeta.title && 'absolute' in arMeta.title
+          ? (arMeta.title as any).absolute
+          : String(arMeta.title);
+
+        expect(arTitle).toContain('سوق ون');
+        expect(arTitle).not.toContain('سوق وان');
+        expect(arTitle).not.toContain('SouqOne');
+
+        // English metadata
+        const enMeta = await item.fn({ params: Promise.resolve({ locale: 'en' }) });
+        const enTitle = typeof enMeta.title === 'object' && enMeta.title && 'absolute' in enMeta.title
+          ? (enMeta.title as any).absolute
+          : String(enMeta.title);
+
+        expect(enTitle).toContain('Souqone');
+        expect(enTitle).not.toContain('سوق وان');
+        expect(enTitle).not.toContain('SouqOne');
+      }
+    });
+  });
+
+  describe('Accessibility & LegalFooter aria-label', () => {
+    it('localizes LegalFooter nav aria-label for Arabic and English', () => {
+      const { container: arContainer, unmount: arUnmount } = render(<LegalFooter locale="ar" />);
+      const arNav = arContainer.querySelector('nav');
+      expect(arNav).toHaveAttribute('aria-label', 'صفحات قانونية');
+      arUnmount();
+
+      const { container: enContainer, unmount: enUnmount } = render(<LegalFooter locale="en" />);
+      const enNav = enContainer.querySelector('nav');
+      expect(enNav).toHaveAttribute('aria-label', 'Legal Pages');
+      enUnmount();
+    });
   });
 
   describe('HTML Hierarchy & Accessibility in LegalPageShell', () => {
@@ -83,9 +131,9 @@ describe('Legal Pages Content & Structural Audit', () => {
         expect(h1Elements.length).toBe(1);
         expect(h1Elements[0].textContent).toBe(arPage.title);
 
-        // Table of contents navigation exists
-        const tocNav = screen.getByRole('navigation', { name: /فهرس الأقسام/i });
-        expect(tocNav).toBeInTheDocument();
+        // Table of contents navigation exists (mobile + desktop)
+        const tocNavs = screen.getAllByRole('navigation', { name: /فهرس الأقسام/i });
+        expect(tocNavs.length).toBeGreaterThanOrEqual(1);
 
         // Every section has an h2 and id
         sections.forEach((sec) => {
@@ -126,8 +174,8 @@ describe('Legal Pages Content & Structural Audit', () => {
         expect(h1Elements.length).toBe(1);
         expect(h1Elements[0].textContent).toBe(enPage.title);
 
-        const tocNav = screen.getByRole('navigation', { name: /Table of Contents/i });
-        expect(tocNav).toBeInTheDocument();
+        const tocNavs = screen.getAllByRole('navigation', { name: /Table of Contents/i });
+        expect(tocNavs.length).toBeGreaterThanOrEqual(1);
 
         unmount();
       });

@@ -29,7 +29,10 @@ export function LegalFooter({ locale }: LegalFooterProps) {
         {/* Middle: Links & Contact */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
           {/* Legal Navigation Links */}
-          <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6" aria-label="Legal Links">
+          <nav
+            className="flex flex-wrap items-center justify-center gap-4 sm:gap-6"
+            aria-label={isArabic ? 'صفحات قانونية' : 'Legal Pages'}
+          >
             {links.map((link) => (
               <Link
                 key={link.href}
