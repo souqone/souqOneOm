@@ -221,7 +221,7 @@ export class ListingsService {
         },
         tx,
       );
-    });
+    }, { maxWait: 15000, timeout: 20000 });
 
     if (listing.latitude && listing.longitude) {
       await this.geoService.syncLocation('listings', listing.id, listing.latitude, listing.longitude);
@@ -668,10 +668,13 @@ export class ListingsService {
     let updated;
     try {
       if (targetStatus === 'ACTIVE') {
-        updated = await this.prisma.$transaction(async (tx) => {
-          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
-          return this.repo.update(id, { status: targetStatus }, expectedVersion, tx);
-        });
+        updated = await this.prisma.$transaction(
+          async (tx) => {
+            await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+            return this.repo.update(id, { status: targetStatus }, expectedVersion, tx);
+          },
+          { maxWait: 15000, timeout: 20000 },
+        );
       } else {
         updated = await this.repo.update(id, { status: targetStatus }, expectedVersion);
       }

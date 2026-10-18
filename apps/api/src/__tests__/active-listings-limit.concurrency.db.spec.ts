@@ -62,7 +62,7 @@ describeOrSkip('Active Listings Cap Real PostgreSQL Concurrency (127.0.0.1)', ()
 
     // 2. Push Prisma schema into temporary database
     execSync('npx prisma db push --skip-generate --accept-data-loss', {
-      cwd: path.resolve(__dirname, '..'),
+      cwd: path.resolve(__dirname, '..', '..'),
       env: {
         ...process.env,
         DATABASE_URL: TEST_DB_URL,

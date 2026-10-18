@@ -271,6 +271,10 @@ export abstract class BaseListingService {
     const dates = new Set(this.config.dateFields ?? []);
 
     const cleanDto = stripDeprecatedContactFields(dto);
+    const becomesPublicActive =
+      cleanDto.status === 'ACTIVE' &&
+      (existing.status !== 'ACTIVE' || existing.hiddenByOwnerStatus === true);
+
     if (cleanDto.status === 'ACTIVE' && this.sellerContactGate) {
       await this.sellerContactGate.assertCanPublish(userId);
     }
@@ -286,7 +290,7 @@ export abstract class BaseListingService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      if (cleanDto.status === 'ACTIVE' && this.activeListingsLimitService) {
+      if (becomesPublicActive && this.activeListingsLimitService) {
         await this.activeListingsLimitService.assertWithinLimit(userId, tx);
       }
       const res = await (tx as any)[this.config.modelName].update({
