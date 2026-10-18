@@ -11,6 +11,7 @@ import {
 import { OwnerContentVisibilityService } from '../src/common/services/owner-content-visibility.service';
 import { VisibilityReconciliationCron } from '../src/common/crons/visibility-reconciliation.cron';
 import { SellerContactGate } from '../src/common/services/seller-contact-gate.service';
+import { AccountDeletionJob } from '../src/users/account-deletion.job';
 import { HttpException, UnauthorizedException } from '@nestjs/common';
 import { ENTITY_TYPES } from '../src/common/constants/entity-types.constants';
 
@@ -668,6 +669,131 @@ describe('Owner Content Visibility & Lifecycle Integration (e2e)', () => {
 
       const finalCar = await prisma.listing.findUnique({ where: { id: car.id } });
       expect(finalCar?.hiddenByOwnerStatus).toBe(false);
+    });
+
+    it('executes full account deletion lifecycle: request -> scheduledAt in past -> job execution -> data anonymized -> listings hidden -> conversation/messages preserved', async () => {
+      const prisma = getPrisma();
+      const deletionJob = getApp().get(AccountDeletionJob);
+
+      // 1. Create seller user and buyer user
+      const seller = await registerUser({
+        email: 'del_e2e_seller@example.test',
+        username: 'dele2eseller',
+        password: 'Password123!',
+      });
+      const buyer = await registerUser({
+        email: 'del_e2e_buyer@example.test',
+        username: 'dele2ebuyer',
+        password: 'Password123!',
+      });
+      const sellerId = seller.user.id;
+      const buyerId = buyer.user.id;
+
+      const { brandId, carModelId } = await getTestBrandAndModel();
+
+      // 2. Create listing with an image for seller
+      const car = await prisma.listing.create({
+        data: {
+          title: 'Car for Final Deletion',
+          slug: `car-final-del-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          description: 'Original detailed car description with PII phone 96891234567',
+          make: 'Toyota',
+          model: 'Land Cruiser',
+          year: 2023,
+          price: 25000,
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          sellerId,
+          brandId,
+          carModelId,
+        },
+      });
+
+      await prisma.listingImage.create({
+        data: {
+          listingId: car.id,
+          url: 'https://res.cloudinary.com/carone/image/upload/v123456789/carone/listings/test_car.jpg',
+        },
+      });
+
+      // 3. Create conversation and message from buyer to seller on this listing
+      const conversation = await prisma.conversation.create({
+        data: {
+          listingId: car.id,
+          participants: {
+            create: [
+              { userId: sellerId },
+              { userId: buyerId },
+            ],
+          },
+        },
+      });
+
+      const message = await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          senderId: buyerId,
+          content: 'السلام عليكم، هل السيارة لا زالت متوفرة؟',
+        },
+      });
+
+      // 4. Seller requests deletion via POST /api/users/me/delete-account
+      await request(getApp().getHttpServer())
+        .post('/api/users/me/delete-account')
+        .set('Authorization', `Bearer ${seller.accessToken}`)
+        .send({
+          password: 'Password123!',
+          confirmation: 'حذف حسابي',
+        })
+        .expect(201);
+
+      // Verify deletionScheduledAt is set
+      const dbSellerAfterSchedule = await prisma.user.findUnique({ where: { id: sellerId } });
+      expect(dbSellerAfterSchedule?.deletionScheduledAt).not.toBeNull();
+      expect(dbSellerAfterSchedule?.status).toBe('ACTIVE');
+
+      // 5. Shift deletionScheduledAt to the past
+      await prisma.user.update({
+        where: { id: sellerId },
+        data: {
+          deletionScheduledAt: new Date(Date.now() - 60000), // 1 minute ago
+        },
+      });
+
+      // 6. Execute AccountDeletionJob
+      const jobResult = await deletionJob.runAccountDeletion();
+      expect(jobResult.processedCount).toBeGreaterThanOrEqual(1);
+
+      // 7. Verify Seller is anonymized and status is DELETED
+      const deletedUser = await prisma.user.findUnique({ where: { id: sellerId } });
+      expect(deletedUser?.status).toBe('DELETED');
+      expect(deletedUser?.email).toBeNull();
+      expect(deletedUser?.phone).toBeNull();
+      expect(deletedUser?.displayName).toBe('مستخدم محذوف');
+      expect(deletedUser?.username).toMatch(/^deleted_\d+_/);
+      expect(deletedUser?.deletionScheduledAt).toBeNull();
+      expect(deletedUser?.deletedAt).not.toBeNull();
+
+      // 8. Verify listing remains hidden and description is anonymized
+      const anonymizedCar = await prisma.listing.findUnique({ where: { id: car.id } });
+      expect(anonymizedCar?.hiddenByOwnerStatus).toBe(true);
+      expect(anonymizedCar?.description).toBe('[تم حذف التفاصيل بواسطة المستخدم]');
+
+      // 9. Verify listing images were wiped from DB
+      const remainingImages = await prisma.listingImage.count({ where: { listingId: car.id } });
+      expect(remainingImages).toBe(0);
+
+      // 10. Verify Conversation and Messages are PRESERVED
+      const remainingConversation = await prisma.conversation.findUnique({
+        where: { id: conversation.id },
+      });
+      expect(remainingConversation).not.toBeNull();
+
+      const remainingMessage = await prisma.message.findUnique({
+        where: { id: message.id },
+      });
+      expect(remainingMessage).not.toBeNull();
+      expect(remainingMessage?.content).toBe('السلام عليكم، هل السيارة لا زالت متوفرة؟');
     });
   });
 });

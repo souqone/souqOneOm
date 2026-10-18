@@ -51,5 +51,21 @@ export class TokenCleanupService {
     if (whatsappCount > 0) {
       this.logger.log(`Cleaned up ${whatsappCount} old WhatsApp message logs`);
     }
+
+    // Cleanup LoginAudit records older than 90 days (separate try/catch so failures don't abort other cleanups)
+    try {
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const { count: loginAuditCount } = await this.prisma.loginAudit.deleteMany({
+        where: {
+          createdAt: { lt: ninetyDaysAgo },
+        },
+      });
+
+      if (loginAuditCount > 0) {
+        this.logger.log(`Cleaned up ${loginAuditCount} old LoginAudit records (>90d)`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to clean up old LoginAudit records: ${(error as Error)?.message || error}`);
+    }
   }
 }
