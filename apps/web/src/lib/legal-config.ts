@@ -3,6 +3,8 @@
  * Centralized constants for legal pages (Privacy, Terms, Account Deletion)
  */
 
+export const INSTAGRAM_URL = 'https://www.instagram.com/souqone.om/';
+
 export const LEGAL_CONFIG = {
   brandName: {
     ar: 'سوق ون',
@@ -10,6 +12,7 @@ export const LEGAL_CONFIG = {
   },
   supportEmail: 'support@souqoneom.com',
   websiteUrl: 'https://souqoneom.com',
+  instagramUrl: INSTAGRAM_URL,
   country: {
     ar: 'سلطنة عُمان',
     en: 'Sultanate of Oman',

@@ -85,7 +85,8 @@
     "followUs": "تابعنا",
     "driverJobs": "وظائف سائقين",
     "allRightsReserved": "جميع الحقوق محفوظة",
-    "email": "support@souqoneom.com"
+    "email": "support@souqoneom.com",
+    "instagramAria": "تابعنا على إنستجرام"
   },
   "search": {
     "all": "الكل",
@@ -4174,7 +4175,8 @@
       "termsLink": "الشروط والأحكام",
       "deleteAccountLink": "حذف الحساب",
       "quickLinks": "صفحات قانونية",
-      "jurisdiction": "سلطنة عُمان"
+      "jurisdiction": "سلطنة عُمان",
+      "readFullPage": "قراءة الصفحة الكاملة ↗"
     },
     "privacy": {
       "title": "سياسة الخصوصية",

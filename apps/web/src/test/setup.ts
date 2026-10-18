@@ -19,10 +19,46 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 
-vi.mock('next-intl', () => ({
-  useLocale: () => 'ar',
-  useTranslations: () => (key: string) => key,
-}))
+let currentTestLocale = 'ar';
+export const setTestLocale = (loc: string) => { currentTestLocale = loc; };
+
+vi.mock('next-intl', async () => {
+  const ar = (await import('../messages/ar.json')).default;
+  const en = (await import('../messages/en.json')).default;
+  const messagesMap: Record<string, any> = { ar, en };
+
+  return {
+    useLocale: () => currentTestLocale,
+    useTranslations: (namespace?: string) => {
+      const messages = messagesMap[currentTestLocale] || ar;
+      const getNested = (obj: any, path: string) => {
+        if (!path) return obj;
+        return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+      };
+      const nsObj = namespace ? getNested(messages, namespace) : messages;
+
+      const t = (key: string, values?: Record<string, any>) => {
+        const val = getNested(nsObj, key);
+        if (typeof val === 'string') {
+          if (values) {
+            return Object.entries(values).reduce(
+              (acc, [k, v]) => acc.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v)),
+              val,
+            );
+          }
+          return val;
+        }
+        return key;
+      };
+
+      t.raw = (key: string) => {
+        return getNested(nsObj, key);
+      };
+
+      return t;
+    },
+  };
+});
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, className, ...rest }: any) =>

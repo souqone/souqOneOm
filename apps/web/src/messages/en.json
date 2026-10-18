@@ -85,7 +85,8 @@
     "followUs": "Follow Us",
     "driverJobs": "Driver Jobs",
     "allRightsReserved": "All rights reserved",
-    "email": "support@souqoneom.com"
+    "email": "support@souqoneom.com",
+    "instagramAria": "Follow us on Instagram"
   },
   "search": {
     "all": "All",
@@ -4124,7 +4125,8 @@
       "termsLink": "Terms & Conditions",
       "deleteAccountLink": "Delete Account",
       "quickLinks": "Legal Pages",
-      "jurisdiction": "Sultanate of Oman"
+      "jurisdiction": "Sultanate of Oman",
+      "readFullPage": "Read Full Page ↗"
     },
     "privacy": {
       "title": "Privacy Policy",

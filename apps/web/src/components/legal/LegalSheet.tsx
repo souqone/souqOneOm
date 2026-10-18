@@ -15,44 +15,11 @@ interface LegalSheetProps {
   onAgree?: () => void;
 }
 
-const LEGAL_SECTIONS: Record<LegalType, readonly string[]> = {
-  terms: [
-    'acceptance',
-    'eligibility',
-    'account',
-    'listingRules',
-    'activeListingsCap',
-    'paidServices',
-    'intermediary',
-    'suspension',
-    'intellectualProperty',
-    'liability',
-    'indemnity',
-    'amendments',
-    'governingLaw',
-  ],
-  privacy: [
-    'operator',
-    'dataCollected',
-    'dataUsage',
-    'googleData',
-    'thirdPartyServices',
-    'dataRetention',
-    'security',
-    'userRights',
-    'children',
-    'cookies',
-    'policyChanges',
-    'contact',
-  ],
-};
-
 export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
   const tAction = useTranslations(type);
   const tLegal = useTranslations(`legalPages.${type}`);
   const tCommon = useTranslations('legalPages.common');
   const locale = useLocale() as 'ar' | 'en';
-  const isArabic = locale === 'ar';
 
   useEffect(() => {
     if (!open) return;
@@ -74,11 +41,13 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
 
   if (!open) return null;
 
-  const sectionKeys = LEGAL_SECTIONS[type];
+  const rawSections = (tLegal.raw('sections') as Record<string, { title: string; content: string }>) || {};
+  const sectionEntries = Object.entries(rawSections);
+
   const dateValue = LEGAL_CONFIG.lastUpdated[locale] || LEGAL_CONFIG.lastUpdated.ar;
   const lastUpdatedText = tCommon('lastUpdated', { date: dateValue });
   const fullPageHref = `/${locale}/${type}`;
-  const readFullPageLabel = isArabic ? 'قراءة الصفحة الكاملة ↗' : 'Read Full Page ↗';
+  const readFullPageLabel = tCommon('readFullPage');
 
   return (
     <div
@@ -105,7 +74,7 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
 
         <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-outline-variant/15">
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-on-surface">
+            <h2 className="text-[18px] sm:text-[20px] font-black text-on-surface">
               {tLegal('title')}
             </h2>
             <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
@@ -131,13 +100,13 @@ export function LegalSheet({ type, open, onClose, onAgree }: LegalSheetProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-5">
-          {sectionKeys.map((key) => (
+          {sectionEntries.map(([key, sec]) => (
             <section key={key}>
               <h3 className="text-[15px] font-bold text-on-surface mb-2">
-                {tLegal(`sections.${key}.title`)}
+                {sec?.title || tLegal(`sections.${key}.title`)}
               </h3>
-              <p className="text-[13px] sm:text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">
-                {tLegal(`sections.${key}.content`)}
+              <p className="text-[14px] sm:text-[15px] text-on-surface-variant leading-[1.7] whitespace-pre-line">
+                {sec?.content || tLegal(`sections.${key}.content`)}
               </p>
             </section>
           ))}
