@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, Req,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -19,6 +20,7 @@ export class BusesController {
   constructor(private readonly busesService: BusesService) {}
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post()
   create(@Body() dto: CreateBusListingDto, @CurrentUser() user: JwtPayload) {
     return this.busesService.create(dto, user.sub);
@@ -68,24 +70,28 @@ export class BusesController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateBusListingDto, @CurrentUser() user: JwtPayload) {
     return this.busesService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.remove(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post(':id/images')
   addImages(@Param('id') id: string, @Body() body: { urls: string[] }, @CurrentUser() user: JwtPayload) {
     return this.busesService.addImages(id, user.sub, body.urls);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('images/:imageId')
   removeImage(@Param('imageId') imageId: string, @CurrentUser() user: JwtPayload) {
     return this.busesService.removeImage(imageId, user.sub);

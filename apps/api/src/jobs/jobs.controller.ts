@@ -37,6 +37,7 @@ export class JobsController {
   ) {}
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post()
   create(@Body() dto: CreateJobDto, @CurrentUser() user: JwtPayload) {
     return this.jobsService.create(user.sub, dto);
@@ -60,6 +61,7 @@ export class JobsController {
 
   // ─── Driver Profile ───
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('driver-profile')
   createDriverProfile(@Body() dto: CreateDriverProfileDto, @CurrentUser() user: JwtPayload) {
     return this.driverProfileService.create(user.sub, dto);
@@ -73,6 +75,7 @@ export class JobsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch('driver-profile')
   updateDriverProfile(@Body() dto: UpdateDriverProfileDto, @CurrentUser() user: JwtPayload) {
     return this.driverProfileService.update(user.sub, dto);
@@ -96,6 +99,7 @@ export class JobsController {
 
   // ─── Employer Profile ───
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('employer-profile')
   createEmployerProfile(@Body() dto: CreateEmployerProfileDto, @CurrentUser() user: JwtPayload) {
     return this.employerProfileService.create(user.sub, dto);
@@ -109,6 +113,7 @@ export class JobsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch('employer-profile')
   updateEmployerProfile(@Body() dto: UpdateEmployerProfileDto, @CurrentUser() user: JwtPayload) {
     return this.employerProfileService.update(user.sub, dto);
@@ -122,6 +127,7 @@ export class JobsController {
 
   // ─── Verification ───
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('verification/submit')
   submitVerification(
     @Body() body: { licenseImageUrl: string; licenseBackImageUrl?: string; idImageUrl: string; idBackImageUrl?: string; notes?: string },
@@ -194,12 +200,14 @@ export class JobsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateJobDto, @CurrentUser() user: JwtPayload) {
     return this.jobsService.update(decodeURIComponent(id), user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.jobsService.remove(decodeURIComponent(id), user.sub);

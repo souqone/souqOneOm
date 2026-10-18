@@ -1,4 +1,5 @@
 import { Body, Controller, DefaultValuePipe, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
@@ -12,6 +13,7 @@ import { GetMessagesDto } from './dto/get-messages.dto';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('conversations')
   createConversation(@Body() dto: CreateConversationDto, @CurrentUser() user: JwtPayload) {
     return this.chatService.createOrGetConversation(dto, user.sub);
@@ -45,6 +47,7 @@ export class ChatController {
     return this.chatService.searchMessages(id, user!.sub, q, page);
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('conversations/:id/messages')
   sendMessage(
     @Param('id') id: string,

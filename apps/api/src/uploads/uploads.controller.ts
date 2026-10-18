@@ -37,6 +37,7 @@ export class UploadsController {
 
   /** Upload multiple image files (max 10) */
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('multiple')
   @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadMultiple(@UploadedFiles() files: Express.Multer.File[]) {
@@ -56,6 +57,7 @@ export class UploadsController {
 
   /** Upload & attach image to a listing */
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('listings/:listingId/images')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async addImage(
@@ -75,6 +77,7 @@ export class UploadsController {
 
   /** Attach an already-uploaded image URL to a listing */
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('listings/:listingId/images/url')
   async addImageByUrl(
     @Param('listingId') listingId: string,
@@ -92,6 +95,7 @@ export class UploadsController {
 
   /** Remove an image from a listing */
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('listings/:listingId/images/:imageId')
   async removeImage(
     @Param('imageId') imageId: string,
@@ -102,6 +106,7 @@ export class UploadsController {
 
   /** Reorder images for a listing */
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Patch('listings/:listingId/images/reorder')
   async reorderImages(
     @Param('listingId') listingId: string,
@@ -114,6 +119,7 @@ export class UploadsController {
   // ─── Spare Part Image Management ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('parts/:partId/images')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async addPartImage(
@@ -127,6 +133,7 @@ export class UploadsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('parts/images/:imageId')
   async removePartImage(
     @Param('imageId') imageId: string,
@@ -138,6 +145,7 @@ export class UploadsController {
   // ─── Car Service Image Management ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('services/:serviceId/images')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async addServiceImage(
@@ -151,6 +159,7 @@ export class UploadsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('services/images/:imageId')
   async removeServiceImage(
     @Param('imageId') imageId: string,
@@ -162,6 +171,7 @@ export class UploadsController {
   // ─── Bus Listing Image Management ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('buses/:busId/images')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async addBusImage(
@@ -177,6 +187,7 @@ export class UploadsController {
   // ─── Equipment Image Management ───
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('equipment/:equipmentId/images')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async addEquipmentImage(

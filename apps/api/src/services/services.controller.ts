@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, Req,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
@@ -18,6 +19,7 @@ export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post()
   create(@Body() dto: CreateServiceDto, @CurrentUser() user: JwtPayload) {
     return this.servicesService.create(dto, user.sub);
@@ -47,18 +49,21 @@ export class ServicesController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch(':id/status')
   toggleStatus(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.servicesService.toggleStatus(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateServiceDto, @CurrentUser() user: JwtPayload) {
     return this.servicesService.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.servicesService.remove(id, user.sub);

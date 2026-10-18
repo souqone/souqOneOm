@@ -1,6 +1,7 @@
 import { GlobalExceptionFilter } from './http-exception.filter';
 import { ArgumentsHost, BadRequestException, ForbiddenException, HttpStatus, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { CustomThrottlerGuard } from '../guards/custom-throttler.guard';
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
@@ -197,6 +198,28 @@ describe('GlobalExceptionFilter', () => {
       statusCode: HttpStatus.UNAUTHORIZED,
       message: 'الحساب غير نشط أو محظور',
       code: 'ACCOUNT_SUSPENDED',
+      timestamp: expect.any(String),
+    });
+  });
+
+  it('correctly formats RATE_LIMITED exception thrown by CustomThrottlerGuard', async () => {
+    const guard = new CustomThrottlerGuard({} as any, {} as any, {} as any);
+    let thrownError: any;
+    try {
+      await (guard as any).throwThrottlingException();
+    } catch (err) {
+      thrownError = err;
+    }
+
+    expect(thrownError).toBeDefined();
+
+    filter.catch(thrownError, mockArgumentsHost);
+
+    expect(mockStatus).toHaveBeenCalledWith(HttpStatus.TOO_MANY_REQUESTS);
+    expect(mockJson).toHaveBeenCalledWith({
+      statusCode: HttpStatus.TOO_MANY_REQUESTS,
+      code: 'RATE_LIMITED',
+      message: 'عدد طلباتك كبير خلال وقت قصير. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.',
       timestamp: expect.any(String),
     });
   });

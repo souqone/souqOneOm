@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -17,6 +18,7 @@ export class EquipmentController {
   constructor(private readonly svc: EquipmentListingsService) {}
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post()
   create(@Body() dto: CreateEquipmentListingDto, @CurrentUser() user: JwtPayload) {
     return this.svc.create(dto, user.sub);
@@ -46,24 +48,28 @@ export class EquipmentController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateEquipmentListingDto, @CurrentUser() user: JwtPayload) {
     return this.svc.update(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.svc.remove(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post(':id/images')
   addImages(@Param('id') id: string, @Body() body: { urls: string[] }, @CurrentUser() user: JwtPayload) {
     return this.svc.addImages(id, user.sub, body.urls);
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('images/:imageId')
   removeImage(@Param('imageId') imageId: string, @CurrentUser() user: JwtPayload) {
     return this.svc.removeImage(imageId, user.sub);

@@ -1,5 +1,5 @@
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
 import { verifyAccessToken } from '../../config/jwt.config';
 
 /**
@@ -67,6 +67,17 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
 
   protected generateKey(context: ExecutionContext, suffix: string, name: string): string {
     return `${name}:${suffix}:${context.getClass().name}-${context.getHandler().name}`;
+  }
+
+  protected async throwThrottlingException(): Promise<void> {
+    throw new HttpException(
+      {
+        statusCode: HttpStatus.TOO_MANY_REQUESTS,
+        code: 'RATE_LIMITED',
+        message: 'عدد طلباتك كبير خلال وقت قصير. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.',
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 }
 

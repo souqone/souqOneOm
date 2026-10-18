@@ -8,7 +8,7 @@ import {
   MessageBody,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, OnModuleDestroy } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
@@ -31,13 +31,17 @@ import { AccessTokenGate } from '../auth/access-token-gate.service';
   },
   namespace: '/chat',
 })
-export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
   @WebSocketServer()
   server!: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
   private readonly connectedUsers = new Map<string, Set<string>>(); // userId → Set<socketId>
   private readonly typingCooldown = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly messageRateLimits = new Map<string, number[]>(); // userId → timestamps
+  private readonly MESSAGE_RATE_LIMIT_WINDOW_MS = 10_000;
+  private readonly MESSAGE_RATE_LIMIT_MAX = 5;
+  private rateLimitCleanupTimer?: NodeJS.Timeout;
 
   constructor(
     private readonly chatService: ChatService,
@@ -47,9 +51,34 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   async afterInit() {
     this.logger.log('ChatGateway initialized');
-    // subscribeToRedis() call removed — broadcasting now goes directly
-    // through the Socket.IO Redis Adapter (see redis-io.adapter.ts),
-    // no manual relay needed
+    this.rateLimitCleanupTimer = setInterval(() => {
+      this.cleanupRateLimits();
+    }, 60_000);
+    this.rateLimitCleanupTimer.unref();
+  }
+
+  onModuleDestroy() {
+    if (this.rateLimitCleanupTimer) {
+      clearInterval(this.rateLimitCleanupTimer);
+      this.rateLimitCleanupTimer = undefined;
+    }
+    this.messageRateLimits.clear();
+    for (const timer of this.typingCooldown.values()) {
+      clearTimeout(timer);
+    }
+    this.typingCooldown.clear();
+  }
+
+  private cleanupRateLimits(): void {
+    const now = Date.now();
+    for (const [userId, timestamps] of this.messageRateLimits.entries()) {
+      const valid = timestamps.filter((t) => now - t < this.MESSAGE_RATE_LIMIT_WINDOW_MS);
+      if (valid.length === 0) {
+        this.messageRateLimits.delete(userId);
+      } else {
+        this.messageRateLimits.set(userId, valid);
+      }
+    }
   }
 
   async handleConnection(client: Socket) {
@@ -161,6 +190,20 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { conversationId: string; content: string; type?: string; mediaUrl?: string },
   ) {
     const user = client.data.user as JwtPayload;
+
+    const now = Date.now();
+    const timestamps = (this.messageRateLimits.get(user.sub) ?? []).filter(
+      (t) => now - t < this.MESSAGE_RATE_LIMIT_WINDOW_MS,
+    );
+
+    if (timestamps.length >= this.MESSAGE_RATE_LIMIT_MAX) {
+      const errorMessage = 'أنت ترسل الرسائل بسرعة كبيرة. يرجى الانتظار ثوانٍ ثم إعادة المحاولة.';
+      client.emit('error', { message: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+
+    timestamps.push(now);
+    this.messageRateLimits.set(user.sub, timestamps);
 
     try {
       const dto: SendMessageDto = {
