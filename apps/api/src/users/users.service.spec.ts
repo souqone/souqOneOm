@@ -661,8 +661,8 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
     });
   });
 
-  describe('Phone-only account restrictions', () => {
-    it('throws 403 PHONE_CHANGE_NOT_SUPPORTED when phone-verified account without password or googleId tries to change phone', async () => {
+  describe('Last login method protection', () => {
+    it('throws 400 LAST_LOGIN_METHOD when phone-verified account without other login method tries to change phone', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-phone-only',
         phone: '+96891234567',
@@ -676,13 +676,79 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
         service.updateProfile('user-phone-only', { phone: '97654321' }),
       ).rejects.toThrow(
         expect.objectContaining({
-          status: 403,
+          status: 400,
           response: expect.objectContaining({
-            code: 'PHONE_CHANGE_NOT_SUPPORTED',
-            message: 'لا يمكن تغيير رقم الهاتف مباشرة للحسابات المسجلة برقم الهاتف. مسار التغيير بالرمز سيتوفر قريباً.',
+            code: 'LAST_LOGIN_METHOD',
+            message:
+              'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
           }),
         }),
       );
+    });
+
+    it('throws 400 LAST_LOGIN_METHOD when user has password but UNVERIFIED email and no googleId', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-unverified-email',
+        phone: '+96891234567',
+        phoneE164: '+96891234567',
+        phoneVerifiedAt: new Date(),
+        passwordHash: '$2b$10$somehashedpassword',
+        email: 'unverified@example.com',
+        emailVerifiedAt: null,
+        isVerified: false,
+        googleId: null,
+      });
+
+      await expect(
+        service.updateProfile('user-unverified-email', { phone: '97654321' }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: 400,
+          response: expect.objectContaining({
+            code: 'LAST_LOGIN_METHOD',
+            message:
+              'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+          }),
+        }),
+      );
+    });
+
+    it('throws 400 LAST_LOGIN_METHOD when phone-only account attempts to clear phone (phone: null)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-phone-only',
+        phone: '+96891234567',
+        phoneE164: '+96891234567',
+        phoneVerifiedAt: new Date(),
+        passwordHash: null,
+        googleId: null,
+      });
+
+      await expect(
+        service.updateProfile('user-phone-only', { phone: null as any }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: 400,
+          response: expect.objectContaining({
+            code: 'LAST_LOGIN_METHOD',
+            message:
+              'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+          }),
+        }),
+      );
+    });
+
+    it('throws 400 "رقم الهاتف مطلوب ولا يمكن حذفه" when multi-method account attempts to clear phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-multi-method',
+        phone: '+96891234567',
+        phoneE164: '+96891234567',
+        phoneVerifiedAt: new Date(),
+        googleId: 'google-sub-id',
+      });
+
+      await expect(
+        service.updateProfile('user-multi-method', { phone: null as any }),
+      ).rejects.toThrow('رقم الهاتف مطلوب ولا يمكن حذفه');
     });
 
     it('changePassword throws Arabic message distinguishing phone-only from Google accounts', async () => {
