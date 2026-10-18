@@ -65,4 +65,15 @@ describe('TokenCleanupService', () => {
     expect(mockPrisma.whatsappMessageLog.deleteMany).toHaveBeenCalled();
     expect(mockPrisma.loginAudit.deleteMany).toHaveBeenCalled();
   });
+
+  it('does not throw or stop subsequent cleanups if refreshToken deleteMany throws an error', async () => {
+    mockPrisma.refreshToken.deleteMany.mockRejectedValue(new Error('DB connection error'));
+
+    await expect(service.cleanupExpiredTokens()).resolves.not.toThrow();
+
+    expect(mockPrisma.refreshToken.deleteMany).toHaveBeenCalled();
+    expect(mockPrisma.otpChallenge.deleteMany).toHaveBeenCalled();
+    expect(mockPrisma.whatsappMessageLog.deleteMany).toHaveBeenCalled();
+    expect(mockPrisma.loginAudit.deleteMany).toHaveBeenCalled();
+  });
 });

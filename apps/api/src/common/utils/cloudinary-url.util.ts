@@ -34,14 +34,16 @@ export function extractCloudinaryPublicId(url: string | null | undefined): strin
     return null;
   }
 
-  const deliveryIndex = pathParts.findIndex((part) =>
-    ['upload', 'authenticated', 'private'].includes(part),
-  );
-  if (deliveryIndex === -1 || deliveryIndex === pathParts.length - 1) {
+  const assetType = pathParts[1];
+  const deliveryType = pathParts[2];
+  if (assetType !== 'image' || deliveryType !== 'upload') {
     return null;
   }
 
-  const afterDelivery = pathParts.slice(deliveryIndex + 1);
+  const afterDelivery = pathParts.slice(3);
+  if (afterDelivery.length === 0) {
+    return null;
+  }
 
   // Check if there is a version segment (e.g. v123456789 or v1)
   const versionIndex = afterDelivery.findIndex((segment) => /^v\d+$/.test(segment));
@@ -77,5 +79,9 @@ export function extractCloudinaryPublicId(url: string | null | undefined): strin
     return null;
   }
 
-  return decodeURIComponent(withoutExt);
+  try {
+    return decodeURIComponent(withoutExt);
+  } catch {
+    return null;
+  }
 }

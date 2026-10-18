@@ -31,17 +31,28 @@ describe('extractCloudinaryPublicId', () => {
     expect(extractCloudinaryPublicId(url)).toBe('sample');
   });
 
-  it('handles raw delivery type (e.g. resumes/documents)', () => {
+  it('returns null for raw asset type (e.g. resumes/documents)', () => {
     const url = 'https://res.cloudinary.com/carone/raw/upload/v1700000000/resumes/applicant_cv.pdf';
-    expect(extractCloudinaryPublicId(url)).toBe('resumes/applicant_cv');
+    expect(extractCloudinaryPublicId(url)).toBeNull();
   });
 
-  it('handles authenticated and private delivery types', () => {
+  it('returns null for authenticated and private delivery types', () => {
     const authUrl = 'https://res.cloudinary.com/carone/image/authenticated/s--xyz--/v12345/docs/id_card.jpg';
-    expect(extractCloudinaryPublicId(authUrl)).toBe('docs/id_card');
+    expect(extractCloudinaryPublicId(authUrl)).toBeNull();
 
     const privUrl = 'https://res.cloudinary.com/carone/image/private/v12345/docs/secret.png';
-    expect(extractCloudinaryPublicId(privUrl)).toBe('docs/secret');
+    expect(extractCloudinaryPublicId(privUrl)).toBeNull();
+  });
+
+  it('handles cloud name or folder named upload without breaking extraction', () => {
+    const url = 'https://res.cloudinary.com/upload/image/upload/v1234/folder/upload/image.jpg';
+    expect(extractCloudinaryPublicId(url)).toBe('folder/upload/image');
+  });
+
+  it('returns null for malformed URL-encoded sequences without throwing an exception', () => {
+    const malformedUrl = 'https://res.cloudinary.com/carone/image/upload/v1/bad%99%url.jpg';
+    expect(() => extractCloudinaryPublicId(malformedUrl)).not.toThrow();
+    expect(extractCloudinaryPublicId(malformedUrl)).toBeNull();
   });
 
   it('handles URL-encoded public IDs and paths', () => {

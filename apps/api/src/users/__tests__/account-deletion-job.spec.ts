@@ -80,16 +80,35 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
       user: {
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        count: jest.fn().mockResolvedValue(0),
       },
       payment: {
         count: jest.fn().mockResolvedValue(0),
       },
-      operatorListing: { findMany: jest.fn().mockResolvedValue([]) },
-      listingImage: { findMany: jest.fn().mockResolvedValue([]) },
-      busListingImage: { findMany: jest.fn().mockResolvedValue([]) },
-      equipmentListingImage: { findMany: jest.fn().mockResolvedValue([]) },
-      sparePartImage: { findMany: jest.fn().mockResolvedValue([]) },
-      carServiceImage: { findMany: jest.fn().mockResolvedValue([]) },
+      operatorListing: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      listingImage: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      busListingImage: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      equipmentListingImage: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      sparePartImage: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      carServiceImage: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
       jobApplication: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(async (cb: any, _config?: any) => {
         return cb(txMock);
@@ -271,6 +290,40 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
       expect(mockVisibility.hideAllForUser).toHaveBeenCalledTimes(2);
       expect(mockVisibility.hideAllForUser).toHaveBeenCalledWith(candidateBase.id);
       expect(mockPrisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('skips candidate if hideAllForUser fails all 3 attempts without transaction or clearing schedule', async () => {
+      mockPrisma.user.findMany
+        .mockResolvedValueOnce([candidateBase])
+        .mockResolvedValueOnce([]);
+      mockVisibility.hideAllForUser.mockRejectedValue(new Error('Persistent visibility failure'));
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.skippedCount).toBe(1);
+      expect(result.processedCount).toBe(0);
+      expect(mockVisibility.hideAllForUser).toHaveBeenCalledTimes(3);
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('isolates candidate errors so an unexpected exception on one candidate does not block the next and increments failedCount', async () => {
+      const candidate1 = { ...candidateBase, id: 'cand-err-1', email: 'err1@example.com' };
+      const candidate2 = { ...candidateBase, id: 'cand-ok-2', email: 'ok2@example.com' };
+
+      mockPrisma.user.findMany
+        .mockResolvedValueOnce([candidate1, candidate2])
+        .mockResolvedValueOnce([]);
+
+      // Make candidate1 fail unexpectedly during operatorListing query
+      mockPrisma.operatorListing.findMany
+        .mockRejectedValueOnce(new Error('Database network blip'))
+        .mockResolvedValueOnce([]);
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.failedCount).toBe(1);
+      expect(result.processedCount).toBe(1);
     });
   });
 
@@ -550,7 +603,7 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
       expect(mockCloudinary.delete).toHaveBeenCalledWith('listings/car1');
       expect(mockCloudinary.delete).toHaveBeenCalledWith('bus/bus1');
       expect(mockCloudinary.delete).toHaveBeenCalledWith('parts/part1');
-      expect(mockCloudinary.delete).toHaveBeenCalledWith('resumes/cv');
+      expect(mockCloudinary.delete).not.toHaveBeenCalledWith('resumes/cv');
       expect(mockCloudinary.delete).not.toHaveBeenCalledWith(expect.stringContaining('local-image'));
     });
 
@@ -560,7 +613,58 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
       const result = await job.runAccountDeletion();
 
       expect(result.processedCount).toBe(1);
-      expect(mockCloudinary.delete).toHaveBeenCalledTimes(6);
+      expect(mockCloudinary.delete).toHaveBeenCalledTimes(5);
+    });
+
+    it('does not delete Cloudinary asset if still referenced by another record, and deletes unshared asset', async () => {
+      // Mock listingImage.count to return 1 for listings/car1 (shared) and 0 for others
+      mockPrisma.listingImage.count.mockImplementation(async ({ where }: any) => {
+        if (where?.url?.contains === 'listings/car1') {
+          return 1;
+        }
+        return 0;
+      });
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      // listings/car1 is shared, so must NOT be deleted
+      expect(mockCloudinary.delete).not.toHaveBeenCalledWith('listings/car1');
+      // unshared ones ARE deleted
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('users/avatar');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('ops/operator');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('bus/bus1');
+      expect(mockCloudinary.delete).toHaveBeenCalledWith('parts/part1');
+    });
+
+    it('skips deletion of Cloudinary asset if reference check throws an error (fail-safe) without failing the job', async () => {
+      mockPrisma.listingImage.count.mockRejectedValue(new Error('DB read error during reference check'));
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      // Because reference check failed, CloudinaryService.delete was not invoked
+      expect(mockCloudinary.delete).not.toHaveBeenCalled();
+    });
+
+    it('never deletes JobApplication.resumeUrl from Cloudinary even if it contains a Cloudinary URL', async () => {
+      // Only job application has a Cloudinary URL, avatar is null, all listing images are empty
+      mockPrisma.user.findMany.mockReset();
+      mockPrisma.user.findMany
+        .mockResolvedValueOnce([{ ...candidate, avatarUrl: null }])
+        .mockResolvedValueOnce([]);
+      mockPrisma.operatorListing.findMany.mockResolvedValue([]);
+      mockPrisma.listingImage.findMany.mockResolvedValue([]);
+      mockPrisma.busListingImage.findMany.mockResolvedValue([]);
+      mockPrisma.sparePartImage.findMany.mockResolvedValue([]);
+      mockPrisma.jobApplication.findMany.mockResolvedValue([
+        { resumeUrl: 'https://res.cloudinary.com/carone/image/upload/v12345/resumes/applicant.pdf' },
+      ]);
+
+      const result = await job.runAccountDeletion();
+
+      expect(result.processedCount).toBe(1);
+      expect(mockCloudinary.delete).not.toHaveBeenCalled();
     });
 
     it('invalidates accessTokenGate and sends final deletion email after successful commit', async () => {
