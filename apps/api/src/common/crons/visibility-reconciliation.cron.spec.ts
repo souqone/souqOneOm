@@ -110,4 +110,44 @@ describe('VisibilityReconciliationCron', () => {
 
     expect(mockRedis.del).toHaveBeenCalledWith(RECONCILIATION_LOCK_KEY);
   });
+
+  it('Scan A considers scheduled user "must hide" and Scan B excludes scheduled users from restoration', async () => {
+    mockRedis.isReady.mockReturnValue(true);
+    mockRedis.setNX.mockResolvedValueOnce(true);
+
+    const capturedWhereQueries: any[] = [];
+
+    mockPrisma.listing.findMany.mockImplementation(async (args: any) => {
+      capturedWhereQueries.push(args.where);
+      if (args.where.hiddenByOwnerStatus === false) {
+        // Scheduled user found unhidden in Scan A
+        return [{ sellerId: 'scheduled-active-user' }];
+      }
+      return [];
+    });
+
+    const result = await cron.reconcile();
+
+    // Verify Scan A query structure includes OR with deletionScheduledAt
+    const scanAQuery = capturedWhereQueries.find((q) => q.hiddenByOwnerStatus === false);
+    expect(scanAQuery.seller).toEqual({
+      OR: [
+        { status: { not: 'ACTIVE' } },
+        { deletionScheduledAt: { not: null } },
+      ],
+    });
+
+    // Verify Scan B query structure requires deletionScheduledAt: null alongside ACTIVE status
+    const scanBQuery = capturedWhereQueries.find((q) => q.hiddenByOwnerStatus === true);
+    expect(scanBQuery.seller).toEqual({
+      status: 'ACTIVE',
+      deletionScheduledAt: null,
+    });
+
+    // Scheduled user was queued for hide, never for restore
+    expect(mockVisibilityService.hideAllForUser).toHaveBeenCalledWith('scheduled-active-user');
+    expect(mockVisibilityService.restoreAllForUser).not.toHaveBeenCalledWith('scheduled-active-user');
+    expect(result.hiddenOwnersCount).toBe(1);
+    expect(result.restoredOwnersCount).toBe(0);
+  });
 });

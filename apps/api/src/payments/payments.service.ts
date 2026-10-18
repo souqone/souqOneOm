@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ServiceUnavailableException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PaymentStatus, Prisma, SubscriptionPlan, ListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -169,6 +170,17 @@ export class PaymentsService {
 
   async createFeaturedPayment(dto: CreateFeaturedPaymentDto, userId: string, ip?: string, idempotencyKey?: string) {
     this.assertEnabled();
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { deletionScheduledAt: true },
+    });
+    if (user?.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'لا يمكن إجراء عمليات دفع أثناء جدولة حذف الحساب. يرجى إلغاء طلب الحذف أولاً.',
+      );
+    }
+
     await this.checkFraud(userId, ip);
     await this.assertFeaturedEntityEligible(dto.entityType, dto.entityId, userId);
 
@@ -258,6 +270,17 @@ export class PaymentsService {
 
   async createSubscriptionPayment(dto: CreateSubscriptionPaymentDto, userId: string, ip?: string, idempotencyKey?: string) {
     this.assertEnabled();
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { deletionScheduledAt: true },
+    });
+    if (user?.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'لا يمكن إجراء عمليات دفع أثناء جدولة حذف الحساب. يرجى إلغاء طلب الحذف أولاً.',
+      );
+    }
+
     await this.checkFraud(userId, ip);
 
     const planInfo = PLAN_PRICES[dto.plan];

@@ -36,6 +36,7 @@ const mockPrisma: any = {
   // AUTH-1: profile type lookups
   driverProfile: { findUnique: jest.fn() },
   employerProfile: { findUnique: jest.fn() },
+  user: { findUnique: jest.fn().mockResolvedValue({ id: 'u1', deletionScheduledAt: null }) },
   cleanupPolymorphicOrphans: jest.fn().mockResolvedValue(undefined),
   $transaction: jest.fn().mockImplementation((fn: (tx: any) => any) => fn(mockPrisma)),
   outboxEvent: {

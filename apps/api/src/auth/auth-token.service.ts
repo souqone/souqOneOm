@@ -93,7 +93,7 @@ export class AuthTokenService {
     });
   }
 
-  async rotateRefreshToken(rawToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+  async rotateRefreshToken(rawToken: string): Promise<{ accessToken: string; refreshToken: string; deletionScheduledAt: string | null } | null> {
     const hashedToken = this.hashToken(rawToken);
     const now = new Date();
 
@@ -106,7 +106,7 @@ export class AuthTokenService {
 
     const effectiveFamilyId = stored.familyId || stored.id;
 
-    const handleRevoked = async (tokenRow: typeof stored): Promise<{ accessToken: string; refreshToken: string } | null> => {
+    const handleRevoked = async (tokenRow: typeof stored): Promise<{ accessToken: string; refreshToken: string; deletionScheduledAt: string | null } | null> => {
       if (tokenRow.rotatedAt) {
         const diffSeconds = (now.getTime() - tokenRow.rotatedAt.getTime()) / 1000;
         if (diffSeconds <= REFRESH_GRACE_SECONDS) {
@@ -117,7 +117,11 @@ export class AuthTokenService {
           }
           const accessToken = await this.signAccessToken(user);
           const refreshToken = await this.generateRefreshToken(user.id, effectiveFamilyId);
-          return { accessToken, refreshToken };
+          return {
+            accessToken,
+            refreshToken,
+            deletionScheduledAt: user.deletionScheduledAt ? user.deletionScheduledAt.toISOString() : null,
+          };
         } else {
           // Beyond grace period: malicious reuse of rotated token!
           // Revoke the entire family
@@ -185,7 +189,11 @@ export class AuthTokenService {
       });
 
       const accessToken = await this.signAccessToken(user);
-      return { accessToken, refreshToken: newTokenRaw };
+      return {
+        accessToken,
+        refreshToken: newTokenRaw,
+        deletionScheduledAt: user.deletionScheduledAt ? user.deletionScheduledAt.toISOString() : null,
+      };
     });
   }
 

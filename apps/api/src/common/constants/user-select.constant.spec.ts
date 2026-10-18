@@ -93,10 +93,12 @@ describe('user-select.constant', () => {
       email: true,
       phone: true,
       updatedAt: true,
+      deletionScheduledAt: true,
     });
     expect('role' in USER_SELECT_PROFILE_PRIVATE).toBe(true);
     expect(USER_SELECT_PROFILE_PRIVATE.role).toBe(true);
     expect('passwordHash' in USER_SELECT_PROFILE_PRIVATE).toBe(false);
     expect('tokenVersion' in USER_SELECT_PROFILE_PRIVATE).toBe(false);
+    expect('deletionScheduledAt' in USER_SELECT_PROFILE_PRIVATE).toBe(true);
   });
 });

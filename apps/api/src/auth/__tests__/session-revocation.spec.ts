@@ -13,6 +13,7 @@ import { GeoService } from '../../locations/geo.service';
 import { AccessTokenGate } from '../access-token-gate.service';
 import { AccountStatusService } from '../account-status.service';
 import { BanBlacklistService } from '../../ban-blacklist/ban-blacklist.service';
+import { OwnerContentVisibilityService } from '../../common/services/owner-content-visibility.service';
 import * as bcrypt from 'bcryptjs';
 
 describe('B1: Session Revocation on Password Change and Reset', () => {
@@ -79,6 +80,7 @@ describe('B1: Session Revocation on Password Change and Reset', () => {
         AuthTokenService,
         AuthAuditService,
         UsersService,
+        { provide: OwnerContentVisibilityService, useValue: { hideAllForUser: jest.fn(), restoreAllForUser: jest.fn() } },
         { provide: OtpService, useValue: mockOtp },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },

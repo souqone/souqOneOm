@@ -7,6 +7,7 @@ import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { ExpoPushService } from '../notifications/expo-push.service';
 import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
@@ -61,6 +62,20 @@ export class UsersController {
   @Get('me/login-history')
   getLoginHistory(@CurrentUser() user: JwtPayload) {
     return this.usersService.getLoginHistory(user.sub);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Post('me/delete-account')
+  deleteAccount(@CurrentUser() user: JwtPayload, @Body() dto: DeleteAccountDto) {
+    return this.usersService.scheduleAccountDeletion(user.sub, dto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Post('me/cancel-deletion')
+  cancelDeletion(@CurrentUser() user: JwtPayload) {
+    return this.usersService.cancelAccountDeletion(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -19,6 +19,7 @@ import { RedisService } from '../../redis/redis.service';
 import { GeoService } from '../../locations/geo.service';
 import { AccountStatus, AuthProvider, OtpPurpose } from '@prisma/client';
 import { BanBlacklistService } from '../../ban-blacklist/ban-blacklist.service';
+import { OwnerContentVisibilityService } from '../../common/services/owner-content-visibility.service';
 import * as bcrypt from 'bcryptjs';
 
 const TEST_JWT_SECRET = 'super-secret-key-at-least-32-chars-long-for-test!!';
@@ -127,6 +128,7 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
         AccessTokenGate,
         JwtStrategy,
         UsersService,
+        { provide: OwnerContentVisibilityService, useValue: { hideAllForUser: jest.fn(), restoreAllForUser: jest.fn() } },
         WsJwtGuard,
         ChatGateway,
         { provide: PrismaService, useValue: mockPrisma },

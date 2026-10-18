@@ -43,6 +43,9 @@ const createMockPrisma = () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ id: 'u1', deletionScheduledAt: null }),
+    },
     $transaction: jest.fn((arg: any) => {
       if (typeof arg === 'function') return arg(mock);
       return Promise.all(arg);

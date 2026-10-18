@@ -2,13 +2,22 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+  ConflictException,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { AuthTokenService } from '../auth/auth-token.service';
 import { AccessTokenGate } from '../auth/access-token-gate.service';
+import { AuthService } from '../auth/auth.service';
+import { OwnerContentVisibilityService } from '../common/services/owner-content-visibility.service';
+import { OWNER_VISIBILITY_REGISTRY } from '../common/constants/owner-visibility.registry';
+import { MailService } from '../mail/mail.service';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import * as bcrypt from 'bcryptjs';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -20,14 +29,18 @@ import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 import { normalizePhone, normalizePhoneStrict } from '../common/utils/normalize-phone';
 import { getLoginMethods } from '../auth/login-methods.util';
 
-
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly geoService: GeoService,
     private readonly authTokenService: AuthTokenService,
     private readonly accessTokenGate: AccessTokenGate,
+    private readonly authService: AuthService,
+    private readonly visibilityService: OwnerContentVisibilityService,
+    private readonly mailService: MailService,
   ) {}
 
   async getProfile(userId: string) {
@@ -368,5 +381,208 @@ export class UsersService {
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
+  }
+
+  async scheduleAccountDeletion(userId: string, dto: DeleteAccountDto) {
+    // 1. Fetch user for re-authentication and initial checks
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        role: true,
+        status: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    // 2. Re-authentication rule (applied even on duplicate requests)
+    if (user.passwordHash) {
+      if (!dto.password) {
+        throw new UnauthorizedException('كلمة المرور مطلوبة لتأكيد حذف الحساب');
+      }
+      const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('كلمة المرور غير صحيحة');
+      }
+    } else if (user.googleId) {
+      if (!dto.googleIdToken) {
+        throw new UnauthorizedException('رمز Google مطلوب لتأكيد حذف الحساب');
+      }
+      let payload: any;
+      try {
+        payload = await this.authService.verifyGoogleIdToken(dto.googleIdToken);
+      } catch (err: any) {
+        throw new UnauthorizedException(err?.message || 'رمز Google غير صالح');
+      }
+      if (payload.sub !== user.googleId) {
+        throw new UnauthorizedException('حساب Google غير مطابق لحسابك المسجل');
+      }
+    }
+    // Else: confirmation phrase is sufficient (validated by class-validator)
+
+    // 3. Atomic transaction with extended timeout options
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        // (a) Role check: ADMIN and MODERATOR rejected
+        if (user.role === 'ADMIN' || user.role === 'MODERATOR') {
+          throw new ForbiddenException('لا يمكن حذف حساب إداري عبر هذا المسار');
+        }
+
+        // (b) Status check: BANNED and SUSPENDED rejected
+        if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+          throw new ForbiddenException('لا يمكن حذف حساب موقوف أو محظور');
+        }
+
+        // (c) Payments check: PENDING or PROCESSING rejected
+        const activePayment = await tx.payment.findFirst({
+          where: {
+            userId,
+            status: { in: ['PENDING', 'PROCESSING'] },
+          },
+        });
+        if (activePayment) {
+          throw new ConflictException(
+            'لا يمكن جدولة حذف الحساب أثناء وجود معاملة دفع قيد المعالجة. يرجى الانتظار حتى اكتمال الدفعة أو إلغائها.',
+          );
+        }
+
+        // (d) Idempotency: if already scheduled, return existing date without extending
+        if (user.deletionScheduledAt != null) {
+          return {
+            isExisting: true,
+            deletionScheduledAt: user.deletionScheduledAt,
+          };
+        }
+
+        // (e) Schedule deletion: now + 5 days
+        const scheduledDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            deletionScheduledAt: scheduledDate,
+            tokenVersion: { increment: 1 },
+          },
+        });
+
+        // (f) Set autoRenew = false on active subscriptions
+        await tx.subscription.updateMany({
+          where: { userId, status: 'ACTIVE' },
+          data: { autoRenew: false },
+        });
+
+        return {
+          isExisting: false,
+          deletionScheduledAt: scheduledDate,
+        };
+      },
+      { maxWait: 15000, timeout: 20000 },
+    );
+
+    // 4. Post-commit hooks (only executed when initially scheduled)
+    if (!result.isExisting) {
+      // (a) Invalidate token cache
+      await this.accessTokenGate.invalidate(userId);
+
+      // (b) Hide all content with 2 retries (total 3 attempts)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await this.visibilityService.hideAllForUser(userId);
+          break;
+        } catch (err: any) {
+          this.logger.error(
+            `Attempt ${attempt} to hide content for user ${userId} failed: ${err.message}`,
+          );
+        }
+      }
+
+      // (c) Post-hiding audit count across the 11 entities in OWNER_VISIBILITY_REGISTRY
+      let unhiddenCount = 0;
+      for (const config of OWNER_VISIBILITY_REGISTRY) {
+        const delegate = (this.prisma as any)[config.prismaDelegate];
+        if (delegate && typeof delegate.count === 'function') {
+          const count = await delegate.count({
+            where: {
+              hiddenByOwnerStatus: false,
+              [config.ownerField]: userId,
+            },
+          });
+          unhiddenCount += count;
+        }
+      }
+      if (unhiddenCount > 0) {
+        this.logger.warn(
+          `User ${userId} scheduled for deletion has ${unhiddenCount} unhidden records across verticals. Background reconciliation cron will retry.`,
+        );
+      }
+
+      // (d) Fail-safe email send
+      if (user.email) {
+        this.mailService
+          .sendDeletionRequestEmail(user.email, result.deletionScheduledAt, user.displayName)
+          .catch((err: any) => {
+            this.logger.error(
+              `Failed to send deletion request email for user ${userId}: ${err.message}`,
+            );
+          });
+      }
+    }
+
+    return {
+      success: true,
+      deletionScheduledAt: result.deletionScheduledAt.toISOString(),
+      message: result.isExisting
+        ? 'حسابك مجدول للحذف بالفعل'
+        : 'تمت جدولة حذف الحساب بنجاح',
+    };
+  }
+
+  async cancelAccountDeletion(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user || user.deletionScheduledAt == null) {
+      throw new BadRequestException('الحساب غير مجدول للحذف');
+    }
+
+    // 1. Reset deletionScheduledAt first in DB
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { deletionScheduledAt: null },
+    });
+
+    // 2. Restore all content for user
+    await this.visibilityService.restoreAllForUser(userId);
+
+    // 3. Send cancellation email (fail-safe)
+    if (user.email) {
+      this.mailService
+        .sendDeletionCancelledEmail(user.email, user.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send deletion cancelled email for user ${userId}: ${err.message}`,
+          );
+        });
+    }
+
+    return {
+      success: true,
+      message: 'تم إلغاء طلب حذف الحساب واستعادة إعلاناتك بنجاح',
+    };
   }
 }

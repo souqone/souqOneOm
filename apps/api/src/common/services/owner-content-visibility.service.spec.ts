@@ -24,6 +24,9 @@ describe('OwnerContentVisibilityService', () => {
       $transaction: jest.fn(async (cb: (tx: any) => Promise<any>) => {
         return cb(mockPrisma);
       }),
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ deletionScheduledAt: null }),
+      },
       outboxEvent: {
         createMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
@@ -207,6 +210,22 @@ describe('OwnerContentVisibilityService', () => {
 
       expect(result.affectedCounts[ENTITY_TYPES.SPARE_PART]).toBe(0);
       expect(mockPrisma.sparePart.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.outboxEvent.createMany).not.toHaveBeenCalled();
+    });
+
+    it('should skip restore and return empty result if user is scheduled for deletion (deletionScheduledAt != null)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        deletionScheduledAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      });
+
+      const result = await service.restoreAllForUser('user-scheduled-123');
+
+      expect(result).toEqual({
+        userId: 'user-scheduled-123',
+        affectedCounts: {},
+        totalAffected: 0,
+      });
+      expect(mockPrisma.listing.findMany).not.toHaveBeenCalled();
       expect(mockPrisma.outboxEvent.createMany).not.toHaveBeenCalled();
     });
   });

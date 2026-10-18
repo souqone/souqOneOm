@@ -2,6 +2,7 @@ import {
   Injectable,
   HttpException,
   HttpStatus,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -42,10 +43,17 @@ export class ActiveListingsLimitService {
     // 1. Role exemption: ADMIN and MODERATOR are exempt from active listings limit
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { role: true, deletionScheduledAt: true },
     });
     if (user?.role === 'ADMIN' || user?.role === 'MODERATOR') {
       return;
+    }
+
+    // 2. Account deletion scheduled check: non-admin scheduled accounts cannot publish or activate ads
+    if (user?.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لاستئناف نشر أو تفعيل الإعلانات.',
+      );
     }
 
     // 2. Transactional advisory lock per user: serializes concurrent creations/activations
