@@ -49,6 +49,11 @@ describe('B2: Escalating Lockout (AuthAuditService & AuthService)', () => {
       const entry = redisStore.get(key);
       return entry ? entry.ttlSeconds : -2;
     }),
+    trySetNX: jest.fn().mockImplementation(async (key: string, value: string, ttlSeconds: number) => {
+      if (redisStore.has(key)) return 'exists';
+      redisStore.set(key, { value, ttlSeconds });
+      return 'acquired';
+    }),
   };
 
   const mockPrisma = {

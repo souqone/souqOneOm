@@ -192,6 +192,11 @@ describe('AUTH-4A-1 Email Normalization & Validation', () => {
           const entry = redisStore.get(key);
           return entry ? entry.ttlSeconds : -2;
         }),
+        trySetNX: jest.fn().mockImplementation(async (key: string, value: string, ttlSeconds: number) => {
+          if (redisStore.has(key)) return 'exists';
+          redisStore.set(key, { value, ttlSeconds });
+          return 'acquired';
+        }),
       };
 
       mockPrisma = {
