@@ -18,6 +18,7 @@ import {
 } from '../common/constants/user-select.constant';
 import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 import { normalizePhone, normalizePhoneStrict } from '../common/utils/normalize-phone';
+import { getLoginMethods } from '../auth/login-methods.util';
 
 
 @Injectable()
@@ -136,15 +137,18 @@ export class UsersService {
       const isVerifiedCurrently = Boolean(user.phoneVerifiedAt && user.phoneE164);
       const passwordHash = user.passwordHash;
 
-      if (isVerifiedCurrently && !passwordHash && !user.googleId) {
-        throw new HttpException(
-          {
-            statusCode: 403,
-            code: 'PHONE_CHANGE_NOT_SUPPORTED',
-            message: 'لا يمكن تغيير رقم الهاتف مباشرة للحسابات المسجلة برقم الهاتف. مسار التغيير بالرمز سيتوفر قريباً.',
-          },
-          HttpStatus.FORBIDDEN,
-        );
+      if (isVerifiedCurrently) {
+        const methods = getLoginMethods(user);
+        const remainingMethods =
+          Number(methods.hasPassword) + Number(methods.hasGoogle);
+
+        if (remainingMethods === 0) {
+          throw new BadRequestException({
+            code: 'LAST_LOGIN_METHOD',
+            message:
+              'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+          });
+        }
       }
 
       if (isVerifiedCurrently && passwordHash) {
