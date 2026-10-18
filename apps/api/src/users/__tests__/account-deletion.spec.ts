@@ -834,4 +834,98 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
       expect(res).toBeNull();
     });
   });
+
+  describe('9. Deletion Re-Authentication Method (PR 2C: GET /users/me)', () => {
+    it("returns deletionReauthMethod: 'password' when user has passwordHash", async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-pass',
+        username: 'passuser',
+        displayName: 'Pass User',
+        email: 'pass@souqone.om',
+        phone: '96891234567',
+        role: 'USER',
+        deletionScheduledAt: null,
+        phoneVerifiedAt: new Date(),
+        phoneE164: '+96891234567',
+        passwordHash: validPasswordHash,
+        googleId: null,
+      });
+
+      const profile = await usersService.getProfile('u-pass');
+      expect(profile).toHaveProperty('deletionReauthMethod', 'password');
+      expect((profile as any).passwordHash).toBeUndefined();
+      expect((profile as any).googleId).toBeUndefined();
+      expect(Object.keys(profile)).not.toContain('passwordHash');
+      expect(Object.keys(profile)).not.toContain('googleId');
+    });
+
+    it("returns deletionReauthMethod: 'google' when user has googleId and no passwordHash", async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-google',
+        username: 'googleuser',
+        displayName: 'Google User',
+        email: 'google@souqone.om',
+        phone: '96891234568',
+        role: 'USER',
+        deletionScheduledAt: null,
+        phoneVerifiedAt: new Date(),
+        phoneE164: '+96891234568',
+        passwordHash: null,
+        googleId: 'google-sub-12345',
+      });
+
+      const profile = await usersService.getProfile('u-google');
+      expect(profile).toHaveProperty('deletionReauthMethod', 'google');
+      expect((profile as any).passwordHash).toBeUndefined();
+      expect((profile as any).googleId).toBeUndefined();
+      expect(Object.keys(profile)).not.toContain('passwordHash');
+      expect(Object.keys(profile)).not.toContain('googleId');
+    });
+
+    it("returns deletionReauthMethod: 'confirmation' for phone-only user with neither password nor googleId", async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-phone',
+        username: 'phoneuser',
+        displayName: 'Phone User',
+        email: null,
+        phone: '96891234569',
+        role: 'USER',
+        deletionScheduledAt: null,
+        phoneVerifiedAt: new Date(),
+        phoneE164: '+96891234569',
+        passwordHash: null,
+        googleId: null,
+      });
+
+      const profile = await usersService.getProfile('u-phone');
+      expect(profile).toHaveProperty('deletionReauthMethod', 'confirmation');
+      expect((profile as any).passwordHash).toBeUndefined();
+      expect((profile as any).googleId).toBeUndefined();
+      expect(Object.keys(profile)).not.toContain('passwordHash');
+      expect(Object.keys(profile)).not.toContain('googleId');
+    });
+
+    it("prioritizes 'password' if user has both passwordHash and googleId", async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-both',
+        username: 'bothuser',
+        displayName: 'Both User',
+        email: 'both@souqone.om',
+        phone: '96891234570',
+        role: 'USER',
+        deletionScheduledAt: null,
+        phoneVerifiedAt: new Date(),
+        phoneE164: '+96891234570',
+        passwordHash: validPasswordHash,
+        googleId: 'google-sub-99999',
+      });
+
+      const profile = await usersService.getProfile('u-both');
+      expect(profile).toHaveProperty('deletionReauthMethod', 'password');
+      expect((profile as any).passwordHash).toBeUndefined();
+      expect((profile as any).googleId).toBeUndefined();
+      expect(Object.keys(profile)).not.toContain('passwordHash');
+      expect(Object.keys(profile)).not.toContain('googleId');
+    });
+  });
 });

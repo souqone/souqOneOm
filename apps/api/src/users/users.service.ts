@@ -28,6 +28,7 @@ import {
 import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 import { normalizePhone, normalizePhoneStrict } from '../common/utils/normalize-phone';
 import { getLoginMethods } from '../auth/login-methods.util';
+import { getDeletionReauthMethod } from './deletion-reauth-method.util';
 
 @Injectable()
 export class UsersService {
@@ -50,6 +51,8 @@ export class UsersService {
         ...USER_SELECT_PROFILE_PRIVATE,
         phoneVerifiedAt: true,
         phoneE164: true,
+        passwordHash: true,
+        googleId: true,
       },
     });
 
@@ -57,10 +60,11 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
-    const { phoneVerifiedAt, phoneE164, ...profile } = user;
+    const { phoneVerifiedAt, phoneE164, passwordHash, googleId, ...profile } = user;
     const phoneVerified = Boolean(phoneVerifiedAt && phoneE164);
+    const deletionReauthMethod = getDeletionReauthMethod({ passwordHash, googleId });
 
-    return { ...profile, phoneVerified };
+    return { ...profile, phoneVerified, deletionReauthMethod };
   }
 
   async getPublicProfile(userId: string) {
@@ -404,15 +408,16 @@ export class UsersService {
     }
 
     // 2. Re-authentication rule (applied even on duplicate requests)
-    if (user.passwordHash) {
+    const reauthMethod = getDeletionReauthMethod(user);
+    if (reauthMethod === 'password') {
       if (!dto.password) {
         throw new UnauthorizedException('كلمة المرور مطلوبة لتأكيد حذف الحساب');
       }
-      const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+      const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash!);
       if (!isPasswordValid) {
         throw new UnauthorizedException('كلمة المرور غير صحيحة');
       }
-    } else if (user.googleId) {
+    } else if (reauthMethod === 'google') {
       if (!dto.googleIdToken) {
         throw new UnauthorizedException('رمز Google مطلوب لتأكيد حذف الحساب');
       }
