@@ -50,6 +50,7 @@ describeOrSkip('Active Listings Cap Real PostgreSQL Concurrency (127.0.0.1)', ()
   const originalEnv = { ...process.env };
   const TEST_USER_ID = 'test-cap-user-concurrency-1';
   const ADMIN_USER_ID = 'test-cap-admin-concurrency-1';
+  let testWilayaId: number;
 
   beforeAll(async () => {
     // 1. Create fresh isolated temporary database
@@ -84,18 +85,36 @@ describeOrSkip('Active Listings Cap Real PostgreSQL Concurrency (127.0.0.1)', ()
       data: [
         {
           id: TEST_USER_ID,
+          username: 'test-cap-user-concurrency-1',
           email: 'user-cap@example.com',
           phoneE164: '+96891230001',
           role: 'USER',
         },
         {
           id: ADMIN_USER_ID,
+          username: 'test-cap-admin-concurrency-1',
           email: 'admin-cap@example.com',
           phoneE164: '+96891230002',
           role: 'ADMIN',
         },
       ],
     });
+
+    // 6. Seed location data for operator listings
+    const gov = await prisma.governorate.create({
+      data: {
+        nameAr: 'Muscat-Ar',
+        nameEn: 'Muscat',
+        wilayas: {
+          create: {
+            nameAr: 'Seeb-Ar',
+            nameEn: 'Seeb',
+          },
+        },
+      },
+      include: { wilayas: true },
+    });
+    testWilayaId = gov.wilayas[0].id;
   }, 45000);
 
   afterAll(async () => {
@@ -254,8 +273,8 @@ describeOrSkip('Active Listings Cap Real PostgreSQL Concurrency (127.0.0.1)', ()
             title: 'Service E',
             slug: `svc-e-${Date.now()}`,
             description: 'Service E desc',
-            serviceType: 'OIL_CHANGE',
-            providerType: 'GARAGE',
+            serviceType: 'MAINTENANCE',
+            providerType: 'WORKSHOP',
             providerName: 'Garage E',
             userId: TEST_USER_ID,
             status: 'ACTIVE',
@@ -287,8 +306,8 @@ describeOrSkip('Active Listings Cap Real PostgreSQL Concurrency (127.0.0.1)', ()
             title: 'Operator G',
             slug: `op-g-${Date.now()}`,
             description: 'Operator G desc',
-            operatorType: 'HEAVY_EQUIPMENT',
-            wilayaId: 1,
+            operatorType: 'OPERATOR',
+            wilayaId: testWilayaId,
             userId: TEST_USER_ID,
             status: 'ACTIVE',
             hiddenByOwnerStatus: false,
@@ -337,8 +356,8 @@ describeOrSkip('Active Listings Cap Real PostgreSQL Concurrency (127.0.0.1)', ()
             title: 'Service J',
             slug: `svc-j-${Date.now()}`,
             description: 'Service J desc',
-            serviceType: 'TIRES',
-            providerType: 'SHOP',
+            serviceType: 'MAINTENANCE',
+            providerType: 'WORKSHOP',
             providerName: 'Shop J',
             userId: TEST_USER_ID,
             status: 'ACTIVE',
