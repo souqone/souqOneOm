@@ -121,6 +121,17 @@ export class MockMailService {
     this.passwordResetEmails.set(to.toLowerCase(), code);
   }
 
+  async sendAccountSuspendedEmail(
+    _to: string,
+    _suspendedUntil?: Date | null,
+    _displayName?: string | null,
+  ): Promise<void> {}
+
+  async sendAccountBannedEmail(
+    _to: string,
+    _displayName?: string | null,
+  ): Promise<void> {}
+
   clear() {
     this.lastVerificationEmail = undefined;
     this.lastPasswordResetEmail = undefined;
