@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
+import { AppleAuthDto } from './dto/apple-auth.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -37,6 +38,13 @@ export class AuthController {
   @Post('google')
   googleAuth(@Body() dto: GoogleAuthDto, @Req() req: Request) {
     return this.authService.googleAuth(dto, req.ip, req.headers['user-agent']);
+  }
+
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @ExposePhone()
+  @Post('apple')
+  appleAuth(@Body() dto: AppleAuthDto, @Req() req: Request) {
+    return this.authService.appleAuth(dto, req.ip, req.headers['user-agent']);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 20 } })

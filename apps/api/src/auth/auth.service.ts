@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, Optional, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -7,6 +7,7 @@ import { OtpPurpose, AuthProvider, AccountStatus } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
+import { AppleAuthDto } from './dto/apple-auth.dto';
 import { MailService } from '../mail/mail.service';
 import { AuthTokenService } from './auth-token.service';
 import { AuthAuditService } from './auth-audit.service';
@@ -14,6 +15,7 @@ import { OtpService } from './otp.service';
 import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
 import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
+import { AppleTokenVerifierService } from './apple-token-verifier.service';
 import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 import { normalizePhoneStrict } from '../common/utils/normalize-phone';
@@ -36,6 +38,8 @@ export class AuthService {
     private readonly accessTokenGate: AccessTokenGate,
     private readonly accountStatusService: AccountStatusService,
     private readonly banBlacklistService: BanBlacklistService,
+    @Optional()
+    private readonly appleVerifier?: AppleTokenVerifierService,
   ) {
     this.googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
   }
@@ -136,6 +140,10 @@ export class AuthService {
     }
 
     if (!user.passwordHash) {
+      if (user.appleSub) {
+        await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'APPLE_ONLY', ip, userAgent });
+        throw new UnauthorizedException('هذا الحساب مسجل بواسطة Apple. استخدم تسجيل الدخول بـ Apple.');
+      }
       if (user.googleId) {
         await this.audit.logAudit({ email, userId: user.id, success: false, reason: 'GOOGLE_ONLY', ip, userAgent });
         throw new UnauthorizedException('هذا الحساب مسجل بواسطة Google. استخدم تسجيل الدخول بـ Google.');
@@ -447,6 +455,235 @@ export class AuthService {
     await this.accountStatusService.assertCanAuthenticate(user);
 
     await this.audit.logAudit({ email: normalizedEmail, userId: user.id, success: true, method: 'GOOGLE', ip, userAgent });
+
+    const accessToken = await this.tokens.signAccessToken(user);
+    const refreshToken = await this.tokens.generateRefreshToken(user.id);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: this.tokens.sanitizeUser(user),
+    };
+  }
+
+  async appleAuth(dto: AppleAuthDto, ip?: string, userAgent?: string) {
+    if (!this.appleVerifier) {
+      throw new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً');
+    }
+    const payload = await this.appleVerifier.verifyIdToken(dto.identityToken, dto.nonce);
+
+    const { sub: appleSub, email } = payload;
+    const normalizedEmail = email ? normalizeEmail(email) : undefined;
+
+    // 1. Blacklist check BEFORE anything
+    const isBlocked = await this.banBlacklistService.isAppleBlocked(appleSub);
+    if (isBlocked) {
+      if (normalizedEmail) {
+        await this.audit.logAudit({
+          email: normalizedEmail,
+          success: false,
+          reason: 'ACCOUNT_BANNED',
+          method: 'APPLE',
+          ip,
+          userAgent,
+        });
+      }
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    // 2. Check if user exists by appleSub
+    let user = await this.prisma.user.findUnique({ where: { appleSub } });
+
+    if (user) {
+      if (
+        !user.isVerified &&
+        normalizedEmail &&
+        user.email &&
+        normalizeEmail(user.email) === normalizedEmail &&
+        (user.status ?? 'ACTIVE') === 'ACTIVE'
+      ) {
+        const targetUserId = user.id;
+        user = await this.prisma.$transaction(async (tx) => {
+          const res = await tx.user.updateMany({
+            where: {
+              id: targetUserId,
+              isVerified: false,
+              status: { not: AccountStatus.BANNED },
+            },
+            data: {
+              isVerified: true,
+              emailVerifiedAt: new Date(),
+            },
+          });
+          if (res.count === 0) {
+            const fresh = await tx.user.findUnique({
+              where: { id: targetUserId },
+              select: { status: true },
+            });
+            if (fresh?.status === AccountStatus.BANNED) {
+              throw new ForbiddenException({
+                statusCode: 403,
+                code: 'ACCOUNT_BANNED',
+                message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+              });
+            }
+          }
+          if (res.count > 0) {
+            await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
+          }
+          return tx.user.findUnique({ where: { id: targetUserId } });
+        });
+      }
+    } else {
+      // User does NOT exist with this appleSub
+      // If token has no email for a new user, reject with APPLE_EMAIL_REQUIRED (400)
+      if (!normalizedEmail) {
+        throw new BadRequestException({
+          statusCode: 400,
+          code: 'APPLE_EMAIL_REQUIRED',
+          message:
+            'تعذّر الحصول على بريدك من Apple. افتح إعدادات Apple ID ثم تسجيل الدخول باستخدام Apple، وأزل تطبيق سوق ون ثم أعد المحاولة.',
+        });
+      }
+
+      // Check if user exists by email
+      user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+      if (!user) {
+        // Create new user from Apple with dual-write to auth_identities
+        const given = dto.fullName?.givenName?.trim() || '';
+        const family = dto.fullName?.familyName?.trim() || '';
+        const rawDisplayName = `${given} ${family}`.trim();
+        const displayName = rawDisplayName.length > 0 ? rawDisplayName : 'مستخدم سوق ون';
+
+        for (let attempt = 1; ; attempt++) {
+          try {
+            user = await this.prisma.$transaction(async (tx) => {
+              const username = `apple_${crypto.randomBytes(4).toString('hex')}`;
+              const createdUser = await tx.user.create({
+                data: {
+                  email: normalizedEmail,
+                  username,
+                  displayName,
+                  appleSub,
+                  isVerified: true,
+                  emailVerifiedAt: new Date(),
+                },
+              });
+
+              if (tx.authIdentity?.upsert) {
+                await tx.authIdentity.upsert({
+                  where: {
+                    provider_providerUserId: {
+                      provider: AuthProvider.APPLE,
+                      providerUserId: appleSub,
+                    },
+                  },
+                  update: { userId: createdUser.id },
+                  create: {
+                    userId: createdUser.id,
+                    provider: AuthProvider.APPLE,
+                    providerUserId: appleSub,
+                  },
+                });
+              }
+
+              return createdUser;
+            });
+            break;
+          } catch (err: any) {
+            if (attempt < 5 && err.code === 'P2002' && err.meta?.target?.includes('username')) {
+              continue;
+            }
+            throw err;
+          }
+        }
+
+        if (user && user.email) {
+          const newUserId = user.id;
+          this.mailService
+            .sendWelcomeEmail(user.email, user.displayName)
+            .catch((err: any) => {
+              this.logger.error(
+                `Failed to send welcome email for new Apple user ${newUserId}: ${redactEmails(err?.message || String(err))}`,
+              );
+            });
+        }
+      } else {
+        // User exists with this email
+        if (!user.isVerified) {
+          // Pre-hijacking mitigation: unverified account + authoritative Apple + dual-write
+          const targetUserId = user.id;
+          user = await this.prisma.$transaction(async (tx) => {
+            const res = await tx.user.updateMany({
+              where: {
+                id: targetUserId,
+                status: { not: AccountStatus.BANNED },
+              },
+              data: {
+                passwordHash: null,
+                appleSub,
+                isVerified: true,
+                emailVerifiedAt: new Date(),
+              },
+            });
+            if (res.count === 0) {
+              throw new ForbiddenException({
+                statusCode: 403,
+                code: 'ACCOUNT_BANNED',
+                message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+              });
+            }
+            if (tx.authIdentity?.upsert) {
+              await tx.authIdentity.upsert({
+                where: {
+                  provider_providerUserId: {
+                    provider: AuthProvider.APPLE,
+                    providerUserId: appleSub,
+                  },
+                },
+                update: { userId: targetUserId },
+                create: {
+                  userId: targetUserId,
+                  provider: AuthProvider.APPLE,
+                  providerUserId: appleSub,
+                },
+              });
+            }
+            await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
+            await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
+            await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
+            return tx.user.findUniqueOrThrow({ where: { id: targetUserId } });
+          });
+        } else {
+          // User exists and is verified with another login method: NEVER merge, NEVER modify
+          throw new ConflictException({
+            statusCode: 409,
+            code: 'ACCOUNT_LINK_REQUIRED',
+            message: 'هذا البريد مسجل بوسيلة دخول أخرى. سجّل الدخول بها ثم اربط حساب Apple من إعدادات الحساب.',
+          });
+        }
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('فشل تسجيل الدخول بواسطة Apple');
+    }
+
+    await this.accountStatusService.assertCanAuthenticate(user);
+
+    await this.audit.logAudit({
+      email: normalizedEmail || (user.email ? normalizeEmail(user.email) : 'apple_user'),
+      userId: user.id,
+      success: true,
+      method: 'APPLE',
+      ip,
+      userAgent,
+    });
 
     const accessToken = await this.tokens.signAccessToken(user);
     const refreshToken = await this.tokens.generateRefreshToken(user.id);

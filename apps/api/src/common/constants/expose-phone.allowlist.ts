@@ -65,6 +65,12 @@ export const EXPOSE_PHONE_ALLOWLIST: readonly ExposePhoneEntry[] = [
     justification: 'إرجاع بيانات الحساب للمستخدم نفسه عند تسجيل الدخول عبر Google',
   },
   {
+    routeKey: 'POST /auth/apple',
+    controller: 'AuthController',
+    handler: 'appleAuth',
+    justification: 'إرجاع بيانات الحساب للمستخدم نفسه عند تسجيل الدخول عبر Apple',
+  },
+  {
     routeKey: 'POST /auth/refresh',
     controller: 'AuthController',
     handler: 'refresh',

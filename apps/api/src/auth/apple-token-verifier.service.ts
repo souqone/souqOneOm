@@ -37,12 +37,14 @@ export interface AppleVerifierOptions {
   jwksUrl?: string;
   cacheTtlMs?: number;
   unknownKidCooldownMs?: number;
+  fetchFailureBackoffMs?: number;
   keysFetcher?: () => Promise<AppleJwkKey[]>;
 }
 
 const DEFAULT_APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const DEFAULT_UNKNOWN_KID_COOLDOWN_MS = 60 * 1000; // 60 seconds
+const DEFAULT_FETCH_FAILURE_BACKOFF_MS = 30 * 1000; // 30 seconds backoff on network/empty response failure
 const APPLE_ISSUER = 'https://appleid.apple.com';
 const PRIVATE_RELAY_DOMAIN = '@privaterelay.appleid.com';
 
@@ -66,19 +68,26 @@ export class AppleTokenVerifierService {
   private jwksCache = new Map<string, string>();
   private lastFetchTime = 0;
   private lastUnknownKidRefreshTime = 0;
+  private lastFetchFailureTime = 0;
   private inFlightRefreshPromise: Promise<void> | null = null;
 
   private readonly jwksUrl: string;
-  private readonly configuredClientId: string;
+  private readonly configuredClientId?: string;
+  private readonly hasExplicitClientId: boolean;
   private readonly cacheTtlMs: number;
   private readonly unknownKidCooldownMs: number;
+  private readonly fetchFailureBackoffMs: number;
   private customKeysFetcher?: () => Promise<AppleJwkKey[]>;
 
   constructor(@Optional() options?: AppleVerifierOptions) {
     this.jwksUrl = options?.jwksUrl || DEFAULT_APPLE_JWKS_URL;
-    this.configuredClientId = (options?.clientId ?? process.env.APPLE_CLIENT_ID ?? '').trim();
+    this.hasExplicitClientId = Boolean(
+      options !== undefined && 'clientId' in options && options.clientId !== undefined,
+    );
+    this.configuredClientId = options?.clientId;
     this.cacheTtlMs = options?.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
     this.unknownKidCooldownMs = options?.unknownKidCooldownMs ?? DEFAULT_UNKNOWN_KID_COOLDOWN_MS;
+    this.fetchFailureBackoffMs = options?.fetchFailureBackoffMs ?? DEFAULT_FETCH_FAILURE_BACKOFF_MS;
     this.customKeysFetcher = options?.keysFetcher;
   }
 
@@ -91,21 +100,26 @@ export class AppleTokenVerifierService {
   }
 
   /**
-   * Clear cached JWKS keys and reset cooldowns.
+   * Clear cached JWKS keys and reset cooldowns and backoff.
    */
   public clearCache(): void {
     this.jwksCache.clear();
     this.lastFetchTime = 0;
     this.lastUnknownKidRefreshTime = 0;
+    this.lastFetchFailureTime = 0;
     this.inFlightRefreshPromise = null;
   }
 
   /**
-   * Resolves effective Apple client ID (Audience) from environment or constructor options.
-   * Note: No hard-coded default fallback; if not configured, returns an empty string.
+   * Resolves effective Apple client ID (Audience):
+   * Prefers explicit constructor option clientId (even if empty string) before falling back to APPLE_CLIENT_ID.
+   * If neither is specified, returns an empty string.
    */
   public getClientId(): string {
-    return (process.env.APPLE_CLIENT_ID ?? this.configuredClientId ?? '').trim();
+    if (this.hasExplicitClientId) {
+      return (this.configuredClientId ?? '').trim();
+    }
+    return (process.env.APPLE_CLIENT_ID ?? '').trim();
   }
 
   /**
@@ -290,6 +304,17 @@ export class AppleTokenVerifierService {
    * Merges concurrent executions into a single in-flight Promise.
    */
   private async refreshJwksCache(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastFetchFailureTime < this.fetchFailureBackoffMs) {
+      if (this.jwksCache.size > 0) {
+        return;
+      }
+      this.logger.warn(
+        `Apple JWKS fetch throttled due to failure backoff (${this.fetchFailureBackoffMs}ms active)`,
+      );
+      throw new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً');
+    }
+
     if (this.inFlightRefreshPromise) {
       return this.inFlightRefreshPromise;
     }
@@ -311,18 +336,20 @@ export class AppleTokenVerifierService {
         }
       } catch (err: any) {
         this.logger.error(`Failed to fetch JWKS from Apple: ${err?.message || err}`);
+        this.lastFetchFailureTime = Date.now();
         // If we have stale cache keys, preserve them rather than failing completely
         if (this.jwksCache.size > 0) {
           this.logger.warn('Using existing stale JWKS cache due to Apple network fetch failure');
           return;
         }
-        throw new UnauthorizedException('فشل الاتصال بخوادم Apple للتحقق من الهوية');
+        throw new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً');
       }
 
       if (!Array.isArray(keys) || keys.length === 0) {
         this.logger.error('Received empty or invalid keys array from Apple JWKS');
+        this.lastFetchFailureTime = Date.now();
         if (this.jwksCache.size === 0) {
-          throw new UnauthorizedException('فشل الاتصال بخوادم Apple للتحقق من الهوية');
+          throw new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً');
         }
         return;
       }
@@ -343,6 +370,7 @@ export class AppleTokenVerifierService {
       if (newCache.size > 0) {
         this.jwksCache = newCache;
         this.lastFetchTime = Date.now();
+        this.lastFetchFailureTime = 0;
         this.logger.log(`Successfully cached ${newCache.size} Apple JWKS public keys`);
       }
     })().finally(() => {

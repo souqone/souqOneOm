@@ -158,7 +158,9 @@ export class UsersService {
       if (isVerifiedCurrently) {
         const methods = getLoginMethods(user);
         const remainingMethods =
-          Number(methods.hasPassword) + Number(methods.hasGoogle);
+          Number(methods.hasPassword) +
+          Number(methods.hasGoogle) +
+          Number(methods.hasApple);
 
         if (remainingMethods === 0) {
           throw new BadRequestException({
@@ -277,6 +279,9 @@ export class UsersService {
     }
 
     if (!user.passwordHash) {
+      if (user.appleSub) {
+        throw new BadRequestException('هذا الحساب مسجل بواسطة Apple ولا يحتوي على كلمة مرور.');
+      }
       if (user.googleId) {
         throw new BadRequestException('هذا الحساب مسجل بواسطة Google ولا يحتوي على كلمة مرور.');
       }

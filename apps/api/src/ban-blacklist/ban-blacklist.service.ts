@@ -5,11 +5,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { getAuthPepper } from '../config/pepper.config';
 
 export function computeBanBlacklistHash(
-  kind: 'PHONE' | 'GOOGLE' | BanBlacklistKind,
+  kind: 'PHONE' | 'GOOGLE' | 'APPLE' | BanBlacklistKind,
   rawValue: string,
   pepper: string = getAuthPepper(),
 ): string {
-  const prefix = kind === 'PHONE' ? 'BAN_BLACKLIST:PHONE:' : 'BAN_BLACKLIST:GOOGLE:';
+  const prefix =
+    kind === 'PHONE'
+      ? 'BAN_BLACKLIST:PHONE:'
+      : kind === 'APPLE' || (kind as any) === BanBlacklistKind.APPLE
+        ? 'BAN_BLACKLIST:APPLE:'
+        : 'BAN_BLACKLIST:GOOGLE:';
   return crypto
     .createHmac('sha256', pepper)
     .update(`${prefix}${rawValue}`)
@@ -28,13 +33,22 @@ export class BanBlacklistService {
     return computeBanBlacklistHash('GOOGLE', googleId, pepper);
   }
 
+  hashApple(appleSub: string, pepper?: string): string {
+    return computeBanBlacklistHash('APPLE', appleSub, pepper);
+  }
+
   /**
    * Adds blacklist entries for a user inside an existing Prisma transaction.
    * Idempotent (ignores duplicates if already blacklisted).
    */
   async addForUser(
     tx: Prisma.TransactionClient,
-    user: { id: string; phoneE164?: string | null; googleId?: string | null },
+    user: {
+      id: string;
+      phoneE164?: string | null;
+      googleId?: string | null;
+      appleSub?: string | null;
+    },
     reason?: string | null,
   ): Promise<number> {
     if (!user?.id || typeof user.id !== 'string' || user.id.trim() === '') {
@@ -64,11 +78,11 @@ export class BanBlacklistService {
       googleSubs.add(user.googleId.trim());
     }
 
-    const identities = await tx.authIdentity.findMany({
+    const googleIdentities = await tx.authIdentity.findMany({
       where: { userId: user.id, provider: AuthProvider.GOOGLE },
       select: { providerUserId: true },
     });
-    for (const identity of identities) {
+    for (const identity of googleIdentities) {
       if (identity?.providerUserId && identity.providerUserId.trim() !== '') {
         googleSubs.add(identity.providerUserId.trim());
       }
@@ -78,6 +92,31 @@ export class BanBlacklistService {
       entriesToCreate.push({
         kind: BanBlacklistKind.GOOGLE,
         hash: this.hashGoogle(sub),
+        userId: user.id,
+        reason: reason ?? null,
+      });
+    }
+
+    // 3. Apple hash: check user.appleSub or AuthIdentity with provider APPLE
+    const appleSubs = new Set<string>();
+    if (user.appleSub && user.appleSub.trim() !== '') {
+      appleSubs.add(user.appleSub.trim());
+    }
+
+    const appleIdentities = await tx.authIdentity.findMany({
+      where: { userId: user.id, provider: AuthProvider.APPLE },
+      select: { providerUserId: true },
+    });
+    for (const identity of appleIdentities) {
+      if (identity?.providerUserId && identity.providerUserId.trim() !== '') {
+        appleSubs.add(identity.providerUserId.trim());
+      }
+    }
+
+    for (const sub of appleSubs) {
+      entriesToCreate.push({
+        kind: BanBlacklistKind.APPLE,
+        hash: this.hashApple(sub),
         userId: user.id,
         reason: reason ?? null,
       });
@@ -151,14 +190,35 @@ export class BanBlacklistService {
     return !!entry;
   }
 
+  async isAppleBlocked(appleSub: string): Promise<boolean> {
+    if (!appleSub || appleSub.trim() === '') {
+      return false;
+    }
+    const hash = this.hashApple(appleSub.trim());
+    const entry = await this.prisma.banBlacklistEntry.findUnique({
+      where: {
+        kind_hash: {
+          kind: BanBlacklistKind.APPLE,
+          hash,
+        },
+      },
+      select: { id: true },
+    });
+    return !!entry;
+  }
+
   async isBlocked(identifiers: {
     phoneE164?: string | null;
     googleId?: string | null;
+    appleSub?: string | null;
   }): Promise<boolean> {
     if (identifiers.phoneE164 && (await this.isPhoneBlocked(identifiers.phoneE164))) {
       return true;
     }
     if (identifiers.googleId && (await this.isGoogleBlocked(identifiers.googleId))) {
+      return true;
+    }
+    if (identifiers.appleSub && (await this.isAppleBlocked(identifiers.appleSub))) {
       return true;
     }
     return false;
