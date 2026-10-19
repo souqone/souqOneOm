@@ -131,7 +131,7 @@ describe('Legal Pages Content & Structural Audit', () => {
       expect(LEGAL_CONFIG.operatorNotice.en).toContain(entityName);
       expect(LEGAL_CONFIG.operatorNotice.en.toLowerCase()).not.toContain('will be updated');
 
-      // 2. ar.json (common.operatorNotice & privacy.sections.operator.content)
+      // 2. ar.json (common.operatorNotice & privacy.sections.operator.content & terms.sections.acceptance.content)
       const arLegal = ar.legalPages as any;
       expect(arLegal.common.operatorNotice).toContain(crNumber);
       expect(arLegal.common.operatorNotice).toContain(entityName);
@@ -141,7 +141,12 @@ describe('Legal Pages Content & Structural Audit', () => {
       expect(arLegal.privacy.sections.operator.content).toContain(entityName);
       expect(arLegal.privacy.sections.operator.content).not.toContain('سيتم تحديث');
 
-      // 3. en.json (common.operatorNotice & privacy.sections.operator.content)
+      expect(arLegal.terms.sections.acceptance.content).toContain(crNumber);
+      expect(arLegal.terms.sections.acceptance.content).toContain(entityName);
+      expect(arLegal.terms.sections.acceptance.content).not.toContain('سيتم تحديث');
+      expect(arLegal.terms.sections.acceptance.content.toLowerCase()).not.toContain('legal entity details');
+
+      // 3. en.json (common.operatorNotice & privacy.sections.operator.content & terms.sections.acceptance.content)
       const enLegal = en.legalPages as any;
       expect(enLegal.common.operatorNotice).toContain(crNumber);
       expect(enLegal.common.operatorNotice).toContain(entityName);
@@ -150,6 +155,27 @@ describe('Legal Pages Content & Structural Audit', () => {
       expect(enLegal.privacy.sections.operator.content).toContain(crNumber);
       expect(enLegal.privacy.sections.operator.content).toContain(entityName);
       expect(enLegal.privacy.sections.operator.content.toLowerCase()).not.toContain('will be updated');
+
+      expect(enLegal.terms.sections.acceptance.content).toContain(crNumber);
+      expect(enLegal.terms.sections.acceptance.content).toContain(entityName);
+      expect(enLegal.terms.sections.acceptance.content.toLowerCase()).not.toContain('will be updated');
+      expect(enLegal.terms.sections.acceptance.content.toLowerCase()).not.toContain('legal entity details');
+    });
+
+    it('verifies that no legacy placeholder phrases exist across the entirety of ar.json and en.json', () => {
+      const arStr = JSON.stringify(ar);
+      const enStr = JSON.stringify(en);
+
+      const legacyPhrases = [
+        'سيتم تحديث',
+        'will be updated',
+        'legal entity details',
+      ];
+
+      for (const phrase of legacyPhrases) {
+        expect(arStr.toLowerCase()).not.toContain(phrase.toLowerCase());
+        expect(enStr.toLowerCase()).not.toContain(phrase.toLowerCase());
+      }
     });
 
     it('enforces presence of paidServices in Terms with exactly 13 sections in ar and en', () => {
