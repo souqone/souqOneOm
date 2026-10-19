@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { maskEmailSafe } from '../common/utils/mask-email';
 import {
   BRAND_NAME,
   buildVerificationEmail,
@@ -8,6 +9,10 @@ import {
   buildDeletionRequestEmail,
   buildDeletionCancelledEmail,
   buildFinalDeletionEmail,
+  buildPasswordChangedEmail,
+  buildWelcomeEmail,
+  buildAccountSuspendedEmail,
+  buildAccountBannedEmail,
   EmailTemplateResult,
 } from './mail.templates';
 
@@ -36,13 +41,15 @@ export class MailService {
         secure: port === 465,
         auth: { user, pass },
       });
-      this.logger.log(`Mail transporter configured → ${host}:${port} as ${user}`);
+      const maskedUser = user.includes('@') ? maskEmailSafe(user) : user;
+      this.logger.log(`Mail transporter configured → ${host}:${port} as ${maskedUser}`);
     }
   }
 
   private async send(to: string, { subject, html, text }: EmailTemplateResult): Promise<void> {
+    const maskedTo = maskEmailSafe(to);
     if (!this.transporter) {
-      this.logger.warn(`[DEV] Email to ${to} | Subject: ${subject}`);
+      this.logger.warn(`[DEV] Email to ${maskedTo} | Subject: ${subject}`);
       return;
     }
 
@@ -55,9 +62,9 @@ export class MailService {
         html,
         text,
       });
-      this.logger.log(`Email sent to ${to} | Subject: ${subject}`);
+      this.logger.log(`Email sent to ${maskedTo} | Subject: ${subject}`);
     } catch (error) {
-      this.logger.error(`Failed to send email to ${to}`, error);
+      this.logger.error(`Failed to send email to ${maskedTo}`, error);
       throw error;
     }
   }
@@ -85,7 +92,9 @@ export class MailService {
       const template = buildDeletionRequestEmail({ displayName, scheduledAt });
       await this.send(to, template);
     } catch (error) {
-      this.logger.warn(`Failed to send deletion request email to ${to}: ${(error as Error)?.message || error}`);
+      this.logger.warn(
+        `Failed to send deletion request email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
     }
   }
 
@@ -101,7 +110,9 @@ export class MailService {
       const template = buildDeletionCancelledEmail({ displayName });
       await this.send(to, template);
     } catch (error) {
-      this.logger.warn(`Failed to send deletion cancellation email to ${to}: ${(error as Error)?.message || error}`);
+      this.logger.warn(
+        `Failed to send deletion cancellation email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
     }
   }
 
@@ -117,8 +128,83 @@ export class MailService {
       const template = buildFinalDeletionEmail({ displayName });
       await this.send(to, template);
     } catch (error) {
-      this.logger.warn(`Failed to send final deletion email to ${to}: ${(error as Error)?.message || error}`);
+      this.logger.warn(
+        `Failed to send final deletion email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
+    }
+  }
+
+  /**
+   * Sends password changed confirmation email.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendPasswordChangedEmail(
+    to: string,
+    changedAt: Date,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildPasswordChangedEmail({ displayName, changedAt });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send password changed email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
+    }
+  }
+
+  /**
+   * Sends welcome email to newly registered or verified users.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendWelcomeEmail(
+    to: string,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildWelcomeEmail({ displayName });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send welcome email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
+    }
+  }
+
+  /**
+   * Sends account temporary suspension notice email.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendAccountSuspendedEmail(
+    to: string,
+    suspendedUntil?: Date | null,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildAccountSuspendedEmail({ displayName, suspendedUntil });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send account suspended email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
+    }
+  }
+
+  /**
+   * Sends account permanent ban notice email.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendAccountBannedEmail(
+    to: string,
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildAccountBannedEmail({ displayName });
+      await this.send(to, template);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send account banned email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+      );
     }
   }
 }
-

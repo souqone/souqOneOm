@@ -120,7 +120,12 @@ describe('MailService', () => {
     await service.sendVerificationEmail('dev@example.com', '112233');
 
     expect(mockSendMail).not.toHaveBeenCalled();
-    expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('[DEV] Email to dev@example.com'));
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[DEV] Email to d***@example.com'),
+    );
+    expect(loggerWarnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('dev@example.com'),
+    );
   });
 
   describe('Deletion Emails (PR 1)', () => {
@@ -154,7 +159,7 @@ describe('MailService', () => {
       ).resolves.toBeUndefined();
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to send deletion request email to user@example.com'),
+        expect.stringContaining('Failed to send deletion request email to u***@example.com'),
       );
     });
 
@@ -183,7 +188,7 @@ describe('MailService', () => {
       ).resolves.toBeUndefined();
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to send deletion cancellation email to user@example.com'),
+        expect.stringContaining('Failed to send deletion cancellation email to u***@example.com'),
       );
     });
 
@@ -213,8 +218,205 @@ describe('MailService', () => {
       ).resolves.toBeUndefined();
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to send final deletion email to user@example.com'),
+        expect.stringContaining('Failed to send final deletion email to u***@example.com'),
       );
+    });
+  });
+
+  describe('Security and Lifecycle Emails (PR 1)', () => {
+    const fixedDate = new Date('2026-10-23T12:00:00Z');
+
+    it('should send password changed email with Muscat formatted date', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-pwd' });
+      const service = new MailService();
+
+      await service.sendPasswordChangedEmail('user@example.com', fixedDate, 'أحمد الحارثي');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.subject).toBe('تم تغيير كلمة المرور — SouqOne');
+      expect(callArgs.html).toContain('أحمد الحارثي');
+      expect(callArgs.html).toContain('تم تغيير كلمة المرور الخاصة بحسابكم في <bdi dir="ltr">SouqOne</bdi> بتاريخ');
+      expect(callArgs.text).toContain('تم تغيير كلمة المرور الخاصة بحسابكم في SouqOne بتاريخ');
+      expect(callArgs.html).toContain('support@souqoneom.com');
+    });
+
+    it('should be fail-safe when sendPasswordChangedEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('SMTP connection dropped'));
+      const service = new MailService();
+
+      await expect(
+        service.sendPasswordChangedEmail('user@example.com', fixedDate, 'أحمد'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send password changed email to u***@example.com'),
+      );
+    });
+
+    it('should send welcome email with platform categories', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-wel' });
+      const service = new MailService();
+
+      await service.sendWelcomeEmail('user@example.com', 'سارة');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.subject).toBe('مرحباً بكم في SouqOne');
+      expect(callArgs.html).toContain('سارة');
+      expect(callArgs.html).toContain('السيارات');
+      expect(callArgs.html).toContain('الوظائف');
+    });
+
+    it('should be fail-safe when sendWelcomeEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('Network error'));
+      const service = new MailService();
+
+      await expect(
+        service.sendWelcomeEmail('user@example.com', 'سارة'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send welcome email to u***@example.com'),
+      );
+    });
+
+    it('should send account suspended email with optional date', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-susp' });
+      const service = new MailService();
+
+      await service.sendAccountSuspendedEmail('user@example.com', fixedDate, 'علي');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.subject).toBe('إشعار إيقاف الحساب مؤقتاً — SouqOne');
+      expect(callArgs.html).toContain('علي');
+      expect(callArgs.html).toContain('تم إيقاف حسابكم مؤقتاً للاشتباه في مخالفة سياسات الاستخدام');
+      expect(callArgs.html).toContain('تنتهي مدة الإيقاف بتاريخ');
+    });
+
+    it('should be fail-safe when sendAccountSuspendedEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('SMTP timeout'));
+      const service = new MailService();
+
+      await expect(
+        service.sendAccountSuspendedEmail('user@example.com', undefined, 'علي'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send account suspended email to u***@example.com'),
+      );
+    });
+
+    it('should send account banned email with neutral wording and no admin notes', async () => {
+      mockSendMail.mockResolvedValueOnce({ messageId: 'msg-ban' });
+      const service = new MailService();
+
+      await service.sendAccountBannedEmail('user@example.com', 'ماجد');
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(callArgs.to).toBe('user@example.com');
+      expect(callArgs.subject).toBe('إشعار حظر الحساب — SouqOne');
+      expect(callArgs.html).toContain('ماجد');
+      expect(callArgs.html).toContain('نحيطكم علماً بأنه قد تم حظر حسابكم نهائياً في منصة <bdi dir="ltr">SouqOne</bdi>');
+      expect(callArgs.text).toContain('نحيطكم علماً بأنه قد تم حظر حسابكم نهائياً في منصة SouqOne');
+    });
+
+    it('should be fail-safe when sendAccountBannedEmail fails (warns, does not throw)', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('Connection reset'));
+      const service = new MailService();
+
+      await expect(
+        service.sendAccountBannedEmail('user@example.com', 'ماجد'),
+      ).resolves.toBeUndefined();
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send account banned email to u***@example.com'),
+      );
+    });
+  });
+
+  describe('Log Privacy Verification Across All Methods and Paths (PR 1)', () => {
+    const rawTargetEmail = 'user@example.com';
+    const testDate = new Date('2026-10-23T12:00:00Z');
+
+    const verifyNoRawEmailInLogs = () => {
+      const allLogCalls = [
+        ...loggerLogSpy.mock.calls,
+        ...loggerWarnSpy.mock.calls,
+        ...loggerErrorSpy.mock.calls,
+      ];
+
+      expect(allLogCalls.length).toBeGreaterThan(0);
+      for (const call of allLogCalls) {
+        const text = call
+          .map((arg: any) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
+          .join(' ');
+        expect(text).not.toContain(rawTargetEmail);
+      }
+    };
+
+    it('never logs raw email on success paths', async () => {
+      mockSendMail.mockResolvedValue({ messageId: 'test-id' });
+      const service = new MailService();
+
+      await service.sendVerificationEmail(rawTargetEmail, '123456');
+      await service.sendPasswordResetEmail(rawTargetEmail, '654321');
+      await service.sendDeletionRequestEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendDeletionCancelledEmail(rawTargetEmail, 'Tester');
+      await service.sendFinalDeletionEmail(rawTargetEmail, 'Tester');
+      await service.sendPasswordChangedEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendWelcomeEmail(rawTargetEmail, 'Tester');
+      await service.sendAccountSuspendedEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendAccountBannedEmail(rawTargetEmail, 'Tester');
+
+      verifyNoRawEmailInLogs();
+    });
+
+    it('never logs raw email on failure / rejection paths', async () => {
+      mockSendMail.mockRejectedValue(new Error('Forced test error'));
+      const service = new MailService();
+
+      await expect(service.sendVerificationEmail(rawTargetEmail, '123456')).rejects.toThrow();
+      await expect(service.sendPasswordResetEmail(rawTargetEmail, '654321')).rejects.toThrow();
+
+      await service.sendDeletionRequestEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendDeletionCancelledEmail(rawTargetEmail, 'Tester');
+      await service.sendFinalDeletionEmail(rawTargetEmail, 'Tester');
+      await service.sendPasswordChangedEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendWelcomeEmail(rawTargetEmail, 'Tester');
+      await service.sendAccountSuspendedEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendAccountBannedEmail(rawTargetEmail, 'Tester');
+
+      verifyNoRawEmailInLogs();
+    });
+
+    it('never logs raw email in DEV mode when transporter is not configured', async () => {
+      delete process.env.MAIL_HOST;
+      delete process.env.MAIL_USER;
+      delete process.env.MAIL_PASS;
+
+      const service = new MailService();
+
+      await service.sendVerificationEmail(rawTargetEmail, '123456');
+      await service.sendPasswordResetEmail(rawTargetEmail, '654321');
+      await service.sendDeletionRequestEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendDeletionCancelledEmail(rawTargetEmail, 'Tester');
+      await service.sendFinalDeletionEmail(rawTargetEmail, 'Tester');
+      await service.sendPasswordChangedEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendWelcomeEmail(rawTargetEmail, 'Tester');
+      await service.sendAccountSuspendedEmail(rawTargetEmail, testDate, 'Tester');
+      await service.sendAccountBannedEmail(rawTargetEmail, 'Tester');
+
+      verifyNoRawEmailInLogs();
     });
   });
 });
