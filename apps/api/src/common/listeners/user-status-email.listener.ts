@@ -105,23 +105,24 @@ export class UserStatusEmailListener {
       }
 
       if (payload.status === AccountStatus.SUSPENDED) {
-        const effectiveSuspendedUntil =
-          payload.suspendedUntil ?? user.suspendedUntil ?? null;
+        // The database is the authoritative source for the latest suspension deadline post-commit.
+        // We do not fall back to payload.suspendedUntil to avoid sending a stale date if an extension occurred.
+        const effectiveSuspendedUntil = user.suspendedUntil ?? null;
         await this.mailService.sendAccountSuspendedEmail(
-          user.email,
+          trimmedEmail,
           effectiveSuspendedUntil,
           user.displayName,
         );
         this.logger.log(
-          `Sent account suspended email to ${maskEmailSafe(user.email)} for user ${payload.userId}`,
+          `Processed account suspended email request for user ${payload.userId} (${maskEmailSafe(trimmedEmail)})`,
         );
       } else if (payload.status === AccountStatus.BANNED) {
         await this.mailService.sendAccountBannedEmail(
-          user.email,
+          trimmedEmail,
           user.displayName,
         );
         this.logger.log(
-          `Sent account banned email to ${maskEmailSafe(user.email)} for user ${payload.userId}`,
+          `Processed account banned email request for user ${payload.userId} (${maskEmailSafe(trimmedEmail)})`,
         );
       }
     } catch (err: any) {

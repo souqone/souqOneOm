@@ -166,7 +166,7 @@ describe('UserStatusEmailListener', () => {
       expect(mockMailService.sendAccountBannedEmail).not.toHaveBeenCalled();
     });
 
-    it('should send suspended email without expiry date when suspendedUntil is null', async () => {
+    it('should send suspended email without expiry date when suspendedUntil is null in database', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         email: rawTestEmail,
         displayName: testDisplayName,
@@ -178,7 +178,7 @@ describe('UserStatusEmailListener', () => {
         userId: testUserId,
         previousStatus: AccountStatus.ACTIVE,
         status: AccountStatus.SUSPENDED,
-        suspendedUntil: null,
+        suspendedUntil: new Date('2026-11-01T12:00:00Z'),
         at: new Date(),
       };
 
@@ -192,13 +192,40 @@ describe('UserStatusEmailListener', () => {
       );
     });
 
-    it('should fall back to user.suspendedUntil if payload.suspendedUntil is null', async () => {
+    it('should send database suspendedUntil even if payload.suspendedUntil has a different date', async () => {
       const dbDate = new Date('2026-12-15T00:00:00Z');
+      const stalePayloadDate = new Date('2026-11-01T00:00:00Z');
       mockPrisma.user.findUnique.mockResolvedValue({
         email: rawTestEmail,
         displayName: testDisplayName,
         status: AccountStatus.SUSPENDED,
         suspendedUntil: dbDate,
+      });
+
+      const payload: UserStatusChangedPayload = {
+        userId: testUserId,
+        previousStatus: AccountStatus.ACTIVE,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: stalePayloadDate,
+        at: new Date(),
+      };
+
+      await listener.handleUserStatusChanged(payload);
+
+      expect(mockMailService.sendAccountSuspendedEmail).toHaveBeenCalledWith(
+        rawTestEmail,
+        dbDate,
+        testDisplayName,
+      );
+    });
+
+    it('should trim user email before passing to sendAccountSuspendedEmail and sendAccountBannedEmail', async () => {
+      const untrimmedEmail = '  target.user@example.com  ';
+      mockPrisma.user.findUnique.mockResolvedValue({
+        email: untrimmedEmail,
+        displayName: testDisplayName,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: null,
       });
 
       const payload: UserStatusChangedPayload = {
@@ -213,7 +240,30 @@ describe('UserStatusEmailListener', () => {
 
       expect(mockMailService.sendAccountSuspendedEmail).toHaveBeenCalledWith(
         rawTestEmail,
-        dbDate,
+        null,
+        testDisplayName,
+      );
+
+      mockMailService.sendAccountSuspendedEmail.mockClear();
+      mockPrisma.user.findUnique.mockResolvedValue({
+        email: untrimmedEmail,
+        displayName: testDisplayName,
+        status: AccountStatus.BANNED,
+        suspendedUntil: null,
+      });
+
+      const bannedPayload: UserStatusChangedPayload = {
+        userId: testUserId,
+        previousStatus: AccountStatus.ACTIVE,
+        status: AccountStatus.BANNED,
+        suspendedUntil: null,
+        at: new Date(),
+      };
+
+      await listener.handleUserStatusChanged(bannedPayload);
+
+      expect(mockMailService.sendAccountBannedEmail).toHaveBeenCalledWith(
+        rawTestEmail,
         testDisplayName,
       );
     });
@@ -404,11 +454,12 @@ describe('UserStatusEmailListener', () => {
   });
 
   describe('Privacy and PII protection in logs', () => {
-    it('should never log full raw email in success or error logs', async () => {
+    it('should never log full raw email or reason in success or error logs', async () => {
       const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
       const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation();
       const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
+      const sensitiveReason = 'Violated terms of service policy 42';
       mockPrisma.user.findUnique.mockResolvedValue({
         email: rawTestEmail,
         displayName: testDisplayName,
@@ -416,12 +467,13 @@ describe('UserStatusEmailListener', () => {
         suspendedUntil: null,
       });
 
-      const payload: UserStatusChangedPayload = {
+      const payload: UserStatusChangedPayload & { reason?: string } = {
         userId: testUserId,
         previousStatus: AccountStatus.ACTIVE,
         status: AccountStatus.SUSPENDED,
         suspendedUntil: null,
         at: new Date(),
+        reason: sensitiveReason,
       };
 
       await listener.handleUserStatusChanged(payload);
@@ -434,10 +486,67 @@ describe('UserStatusEmailListener', () => {
 
       for (const msg of allLoggedMessages) {
         expect(msg).not.toContain(rawTestEmail);
+        expect(msg).not.toContain(sensitiveReason);
       }
 
       // Verify masked email appears in the success log
       expect(allLoggedMessages.some((msg) => msg.includes('t***@example.com'))).toBe(true);
+    });
+
+    it('should log neutral request processing message and never contain the word Sent or Dispatched', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        email: rawTestEmail,
+        displayName: testDisplayName,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: new Date('2026-11-01T12:00:00Z'),
+      });
+
+      const suspendedPayload: UserStatusChangedPayload = {
+        userId: testUserId,
+        previousStatus: AccountStatus.ACTIVE,
+        status: AccountStatus.SUSPENDED,
+        suspendedUntil: new Date('2026-11-01T12:00:00Z'),
+        at: new Date(),
+      };
+
+      await listener.handleUserStatusChanged(suspendedPayload);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const suspendedMsg = String(logSpy.mock.calls[0][0]);
+      expect(suspendedMsg).toBe(
+        `Processed account suspended email request for user ${testUserId} (t***@example.com)`,
+      );
+      expect(suspendedMsg).not.toContain('Sent');
+      expect(suspendedMsg).not.toContain('Dispatched');
+
+      logSpy.mockClear();
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        email: rawTestEmail,
+        displayName: testDisplayName,
+        status: AccountStatus.BANNED,
+        suspendedUntil: null,
+      });
+
+      const bannedPayload: UserStatusChangedPayload = {
+        userId: testUserId,
+        previousStatus: AccountStatus.ACTIVE,
+        status: AccountStatus.BANNED,
+        suspendedUntil: null,
+        at: new Date(),
+      };
+
+      await listener.handleUserStatusChanged(bannedPayload);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const bannedMsg = String(logSpy.mock.calls[0][0]);
+      expect(bannedMsg).toBe(
+        `Processed account banned email request for user ${testUserId} (t***@example.com)`,
+      );
+      expect(bannedMsg).not.toContain('Sent');
+      expect(bannedMsg).not.toContain('Dispatched');
     });
 
     it('should redact any email inside error messages in error log', async () => {
