@@ -482,6 +482,30 @@ describe('AppleTokenVerifierService (Unit Tests)', () => {
       expect(networkCalls).toBe(1);
     });
 
+    it('يحافظ على الكاش ويعود دون ضرب الشبكة عند تفعيل backoff حتى لو طلب kid مجهول', async () => {
+      let networkCalls = 0;
+      service.setCustomKeysFetcher(async () => {
+        networkCalls++;
+        if (networkCalls === 1) {
+          return [jwk1];
+        }
+        throw new Error('Apple network down');
+      });
+
+      // Populate cache with jwk1
+      await service.verifyIdToken(createTestToken({ kid: 'test-key-1' }), DEFAULT_RAW_NONCE);
+      expect(networkCalls).toBe(1);
+
+      // Trigger failure and backoff on unknown kid
+      await (service as any).resolvePublicKeyForKid('nonexistent-kid-1');
+      expect(networkCalls).toBe(2);
+
+      // Second unknown kid during active backoff does not trigger network
+      const key = await (service as any).resolvePublicKeyForKid('nonexistent-kid-2');
+      expect(key).toBeUndefined();
+      expect(networkCalls).toBe(2);
+    });
+
     it('يرمي ServiceUnavailableException عندما ترجع خوادم Apple مصفوفة مفاتيح فارغة والكاش فارغ', async () => {
       service.setCustomKeysFetcher(async () => []);
 

@@ -305,7 +305,10 @@ export class AppleTokenVerifierService {
    */
   private async refreshJwksCache(): Promise<void> {
     const now = Date.now();
-    if (this.jwksCache.size === 0 && now - this.lastFetchFailureTime < this.fetchFailureBackoffMs) {
+    if (now - this.lastFetchFailureTime < this.fetchFailureBackoffMs) {
+      if (this.jwksCache.size > 0) {
+        return;
+      }
       this.logger.warn(
         `Apple JWKS fetch throttled due to failure backoff (${this.fetchFailureBackoffMs}ms active)`,
       );
