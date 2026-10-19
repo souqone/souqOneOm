@@ -25,6 +25,7 @@ model User {
   avatarUrl               String?
   passwordHash            String?
   googleId                String?        @unique
+  appleSub                String?        @unique
   bio                     String?
   phone                   String?
   phoneE164               String?        @unique
@@ -258,6 +259,7 @@ model AuthIdentity {
 enum BanBlacklistKind {
   PHONE
   GOOGLE
+  APPLE
 }
 
 model BanBlacklistEntry {

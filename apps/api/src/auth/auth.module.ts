@@ -12,6 +12,7 @@ import { VerificationGuard } from './verification.guard';
 import { TokenCleanupService } from './token-cleanup.service';
 import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
+import { AppleTokenVerifierService } from './apple-token-verifier.service';
 import { getJwtModuleOptions } from '../config/jwt.config';
 import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
 
@@ -35,7 +36,17 @@ import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
     TokenCleanupService,
     AccessTokenGate,
     AccountStatusService,
+    AppleTokenVerifierService,
   ],
-  exports: [AuthService, AuthTokenService, VerificationGuard, OtpService, AccessTokenGate, AccountStatusService, AuthAuditService],
+  exports: [
+    AuthService,
+    AuthTokenService,
+    VerificationGuard,
+    OtpService,
+    AccessTokenGate,
+    AccountStatusService,
+    AuthAuditService,
+    AppleTokenVerifierService,
+  ],
 })
 export class AuthModule {}
