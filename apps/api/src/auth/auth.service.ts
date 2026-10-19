@@ -560,13 +560,11 @@ export class AuthService {
         const rawDisplayName = `${given} ${family}`.trim();
         const displayName = rawDisplayName.length > 0 ? rawDisplayName : 'مستخدم سوق ون';
 
-        user = await this.prisma.$transaction(async (tx) => {
-          let createdUser: any;
-          let attempts = 0;
-          while (attempts < 5) {
-            try {
+        for (let attempt = 1; ; attempt++) {
+          try {
+            user = await this.prisma.$transaction(async (tx) => {
               const username = `apple_${crypto.randomBytes(4).toString('hex')}`;
-              createdUser = await tx.user.create({
+              const createdUser = await tx.user.create({
                 data: {
                   email: normalizedEmail,
                   username,
@@ -576,35 +574,34 @@ export class AuthService {
                   emailVerifiedAt: new Date(),
                 },
               });
-              break;
-            } catch (err: any) {
-              if (err.code === 'P2002' && err.meta?.target?.includes('username')) {
-                attempts++;
-                if (attempts >= 5) throw err;
-                continue;
-              }
-              throw err;
-            }
-          }
 
-          if (tx.authIdentity?.upsert) {
-            await tx.authIdentity.upsert({
-              where: {
-                provider_providerUserId: {
-                  provider: AuthProvider.APPLE,
-                  providerUserId: appleSub,
-                },
-              },
-              update: { userId: createdUser.id },
-              create: {
-                userId: createdUser.id,
-                provider: AuthProvider.APPLE,
-                providerUserId: appleSub,
-              },
+              if (tx.authIdentity?.upsert) {
+                await tx.authIdentity.upsert({
+                  where: {
+                    provider_providerUserId: {
+                      provider: AuthProvider.APPLE,
+                      providerUserId: appleSub,
+                    },
+                  },
+                  update: { userId: createdUser.id },
+                  create: {
+                    userId: createdUser.id,
+                    provider: AuthProvider.APPLE,
+                    providerUserId: appleSub,
+                  },
+                });
+              }
+
+              return createdUser;
             });
+            break;
+          } catch (err: any) {
+            if (attempt < 5 && err.code === 'P2002' && err.meta?.target?.includes('username')) {
+              continue;
+            }
+            throw err;
           }
-          return createdUser;
-        });
+        }
 
         if (user && user.email) {
           const newUserId = user.id;
