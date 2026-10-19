@@ -153,6 +153,78 @@ describe('Legal Pages Content & Structural Audit', () => {
     });
   });
 
+  describe('Account Deletion & Data Retention Legal Policy Alignment', () => {
+    it('(1) has matching deleteAccount.sections keys in ar and en in the exact same order', () => {
+      const arDelete = (ar.legalPages as any).deleteAccount.sections;
+      const enDelete = (en.legalPages as any).deleteAccount.sections;
+
+      const expectedKeys = [
+        'overview',
+        'inAppMethod',
+        'gracePeriod',
+        'emailMethod',
+        'whatIsDeleted',
+        'whatIsRetained',
+        'timeframe',
+        'contact',
+      ];
+
+      expect(Object.keys(arDelete)).toEqual(expectedKeys);
+      expect(Object.keys(enDelete)).toEqual(expectedKeys);
+    });
+
+    it('(2) contains "5 أيام" in Arabic and "5 days" in English for deleteAccount, and no "30 يوم" or "30 days"', () => {
+      const arDeleteStr = JSON.stringify((ar.legalPages as any).deleteAccount);
+      const enDeleteStr = JSON.stringify((en.legalPages as any).deleteAccount);
+
+      expect(arDeleteStr).toContain('5 أيام');
+      expect(enDeleteStr).toContain('5 days');
+
+      expect(arDeleteStr).not.toContain('30 يوم');
+      expect(arDeleteStr).not.toContain('30 يوماً');
+      expect(arDeleteStr).not.toContain('30 days');
+
+      expect(enDeleteStr).not.toContain('30 يوم');
+      expect(enDeleteStr).not.toContain('30 days');
+    });
+
+    it('(3) ensures privacy.sections.dataRetention does NOT contain "30 يوم" for account deletion', () => {
+      const arDataRetention = (ar.legalPages as any).privacy.sections.dataRetention.content;
+      const enDataRetention = (en.legalPages as any).privacy.sections.dataRetention.content;
+
+      // Account deletion clause must not mention 30 days
+      const arLines: string[] = arDataRetention.split('\n');
+      const arDeletionLine = arLines.find((l: string) => l.includes('عند طلب حذف الحساب'));
+      expect(arDeletionLine).toBeDefined();
+      expect(arDeletionLine).toContain('5 أيام');
+      expect(arDeletionLine).not.toContain('30 يوم');
+      expect(arDeletionLine).not.toContain('30 يوماً');
+
+      const enLines: string[] = enDataRetention.split('\n');
+      const enDeletionLine = enLines.find((l: string) => l.toLowerCase().includes('grace period'));
+      expect(enDeletionLine).toBeDefined();
+      expect(enDeletionLine).toContain('5-day');
+      expect(enDeletionLine).not.toContain('30 days');
+
+      // 90 days login logs check
+      expect(arDataRetention).toContain('90 يوماً');
+      expect(enDataRetention).toContain('90 days');
+    });
+
+    it('(4) inAppMethod section exists and mentions "حذف الحساب" in Arabic and "Delete Account" in English', () => {
+      const arInApp = (ar.legalPages as any).deleteAccount.sections.inAppMethod;
+      const enInApp = (en.legalPages as any).deleteAccount.sections.inAppMethod;
+
+      expect(arInApp).toBeDefined();
+      expect(arInApp.title).toContain('الحذف من داخل التطبيق');
+      expect(arInApp.content).toContain('حذف الحساب');
+
+      expect(enInApp).toBeDefined();
+      expect(enInApp.title).toContain('In-App Deletion');
+      expect(enInApp.content).toContain('Delete Account');
+    });
+  });
+
   describe('Accessibility & LegalFooter aria-label', () => {
     it('localizes LegalFooter nav aria-label for Arabic and English', () => {
       const { container: arContainer, unmount: arUnmount } = render(<LegalFooter locale="ar" />);

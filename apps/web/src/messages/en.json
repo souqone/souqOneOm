@@ -4156,7 +4156,7 @@
         },
         "dataRetention": {
           "title": "6. Data Retention Period",
-          "content": "We retain your data for the period necessary for security, fraud prevention, and regulatory compliance:\n- Active account data and listings are retained as long as your account remains active.\n- Revoked session tokens and expired OTP challenges are automatically purged by automated system cleanup (tokens revoked over 7 days ago and WhatsApp verification logs older than 30 days are removed).\n- Security, login audits, and administrative logs are maintained for the period necessary for fraud prevention and system integrity.\n- Upon account deletion, direct personal data is removed within a maximum of 30 days, retaining only records required for security and regulatory compliance.\n- Payment and subscription transaction records are retained for the duration required by applicable statutory and accounting requirements in the Sultanate of Oman."
+          "content": "We retain your data for the period necessary for security, fraud prevention, and regulatory compliance:\n- Active account data and listings are retained as long as your account remains active.\n- Revoked session tokens and expired OTP challenges are automatically purged by automated system cleanup (tokens revoked over 7 days ago and WhatsApp verification logs older than 30 days are removed).\n- Security and login logs are automatically purged after 90 days and separated from your identity upon account deletion. Administrative logs are retained for the period necessary for security purposes.\n- Upon requesting account deletion, a 5-day grace period begins, after which your personal data is permanently deleted, retaining only records required for security and regulatory compliance.\n- Payment and subscription transaction records are retained for the duration required by applicable statutory and accounting requirements in the Sultanate of Oman."
         },
         "security": {
           "title": "7. Data Security and Protection",
@@ -4164,7 +4164,7 @@
         },
         "userRights": {
           "title": "8. User Rights and Data Control",
-          "content": "Users enjoy the following rights regarding their personal data:\n- Reviewing and editing account profile information directly in settings.\n- Requesting rectification of inaccurate or outdated information.\n- Requesting permanent deletion of account and personal data (as detailed on the Delete Account page).\n- Revoking consent for push notifications via device or application settings.\nTo exercise any of these rights, contact us at support@souqoneom.com."
+          "content": "Users enjoy the following rights regarding their personal data:\n- Reviewing and editing account profile information directly in settings.\n- Requesting rectification of inaccurate or outdated information.\n- Requesting permanent deletion of your account and personal data from within the app (Settings → Account & Security → Delete Account) or via email as detailed on the Delete Account page.\n- Revoking consent for push notifications via device or application settings.\nTo exercise any of these rights, contact us at support@souqoneom.com."
         },
         "children": {
           "title": "9. Protection of Minors (18+)",
@@ -4252,27 +4252,35 @@
       "sections": {
         "overview": {
           "title": "1. Overview and User Rights",
-          "content": "At Souqone, we respect your privacy and your right to control your personal data. Registered users may request the permanent deletion of their account and associated personal data at any time."
+          "content": "At Souqone, we respect your privacy and your full right to control your account and personal data. You can request account deletion directly from within the app at any time, subject to a 5-day grace period before permanent deletion."
+        },
+        "inAppMethod": {
+          "title": "2. In-App Deletion (Fastest Method)",
+          "content": "- Open the Souqone app and sign in.\n- Go to: Settings → Account & Security → Delete Account.\n- Confirm your identity: by entering your password for email-registered accounts, or by confirming your Google account for Google-registered accounts.\n- Type the confirmation phrase \"حذف حسابي\" (or \"DELETE\") and tap \"Delete Account\".\n- You will receive a confirmation email indicating the scheduled deletion date."
+        },
+        "gracePeriod": {
+          "title": "3. 5-Day Grace Period and Cancellation",
+          "content": "Upon confirming your request: your listings and profile are hidden, you are logged out of all devices, and automatic renewal of any subscription is stopped.\n- You can cancel the request within 5 days: sign in to the app, then tap \"Cancel deletion request\" from Settings → Delete Account or from the banner at the top of the home screen.\n- Signing in alone does not cancel the request; you must tap \"Cancel deletion request\".\n- Once the grace period expires, deletion is executed automatically and cannot be undone."
         },
         "emailMethod": {
-          "title": "2. Email Request Method",
-          "content": "Submitting a request via email is the approved method for requesting account deletion:\n- Send an email from your registered email address (or mention your registered phone number) to: support@souqoneom.com.\n- Subject line: \"Souqone Account Deletion Request\".\n- Body content: Specify your username, registered phone number, and registered email address.\n- Our support team may request identity verification to prevent unauthorized deletion requests.\n- You will receive confirmation upon receipt and processing of your request."
+          "title": "4. Email Request Method (Alternative)",
+          "content": "If you are unable to access the app or your account, you can submit a deletion request via email:\n- Send an email from your registered email address (or from your email mentioning your registered phone number) to: support@souqoneom.com.\n- Subject line: \"Souqone Account Deletion Request\".\n- Body content: Specify your username, registered email address, and registered phone number.\n- Our support team may request identity verification to prevent unauthorized deletion requests."
         },
         "whatIsDeleted": {
-          "title": "3. What Is Deleted Upon Processing",
-          "content": "Upon processing your deletion request, the following information is permanently removed:\n- Profile information (name, email, phone number, bio, avatar).\n- Active listings and drafts from public search and display.\n- Your messages are deleted or disassociated from your identity, so that your name or personal details no longer appear to the other party.\n- Active authentication sessions and device push notification tokens.\n- Saved favorites and personal search history."
+          "title": "5. What Is Deleted After the Grace Period",
+          "content": "After the grace period expires, your personal data is permanently deleted, including:\n- Profile information (name, email address, phone number, bio, avatar), contact info, and location.\n- Your listings, associated media, and images, disappearing from search results and public view.\n- Uploaded verification images and documents.\n- Active login sessions and device push notification tokens.\n- Saved favorites and personal search history.\n- Messages you sent remain visible to the other party under the name \"Deleted user\" without any link to your identity."
         },
         "whatIsRetained": {
-          "title": "4. What May Be Retained and Why",
-          "content": "For strict security, fraud prevention, and legal compliance purposes, certain limited data may be retained:\n- Security and administrative audit logs (such as login attempt logs and IP records) for the period necessary to protect the platform and combat fraud.\n- Cryptographic hashes of previously banned accounts to prevent evasion.\n- Financial and subscription transaction records, if any (via the Thawani payment gateway), in compliance with accounting and statutory obligations in the Sultanate of Oman."
+          "title": "6. What May Be Retained and Why",
+          "content": "For strict security, accounting, and legal compliance purposes, limited data may be retained after being disassociated from your identity:\n- Security and login audit logs are separated from your identity upon final deletion and automatically purged after 90 days in accordance with internal fraud prevention and platform security policies.\n- Financial and subscription transaction records (if any) are retained in an anonymized format to comply with statutory and accounting requirements in the Sultanate of Oman; fees paid for subscriptions or services are non-refundable.\n- Cryptographic hashes of previously banned accounts to prevent evasion and ensure community safety."
         },
         "timeframe": {
-          "title": "5. Execution Timeframe (Up to 30 Days)",
-          "content": "Account deletion requests are reviewed, executed, and completed within a maximum of 30 days from confirmation of the request. You will receive notification once deletion is finalized."
+          "title": "7. Deletion Execution Timeframe",
+          "content": "Deletion is automatically executed immediately after the 5-day grace period ends, and you will receive an email confirming completion of the deletion."
         },
         "contact": {
-          "title": "6. Assistance and Inquiries",
-          "content": "For assistance or inquiries regarding your deletion request, please contact our support team at: support@souqoneom.com."
+          "title": "8. Assistance and Inquiries",
+          "content": "For assistance or inquiries regarding deletion procedures or tracking an existing request, please contact our support team at: support@souqoneom.com."
         }
       }
     }

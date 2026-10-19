@@ -167,7 +167,7 @@ describe('renderLegalContent pure function unit tests', () => {
         expect(totalLi).toBe(7);
       });
 
-      it(`verifies deleteAccount in ${lang} renders exactly 13 <li> elements and no raw "- " marks`, () => {
+      it(`verifies deleteAccount in ${lang} renders exactly 21 <li> elements and no raw "- " marks`, () => {
         let totalLi = 0;
         const sections = messages.legalPages.deleteAccount.sections as Record<string, { content: string }>;
 
@@ -182,7 +182,7 @@ describe('renderLegalContent pure function unit tests', () => {
           });
         }
 
-        expect(totalLi).toBe(13);
+        expect(totalLi).toBe(21);
       });
     });
   });
