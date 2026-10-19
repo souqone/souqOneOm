@@ -13,6 +13,7 @@ export const PUBLIC_ROUTES_ALLOWLIST = [
   'POST /auth/register',
   'POST /auth/login',
   'POST /auth/google',
+  'POST /auth/apple',
   'POST /auth/refresh',
   'POST /auth/logout',
   'POST /auth/verify-email',
