@@ -453,6 +453,70 @@ describe('Apple Auth Endpoint & Flow (AuthService.appleAuth)', () => {
       expect(res.user.id).toBe('u-collision-retry');
       expect(mockPrisma.user.create).toHaveBeenCalledTimes(2);
     });
+
+    it('re-fetches existing user when P2002 collision occurs on appleSub during registration race', async () => {
+      mockAppleVerifier.verifyIdToken.mockResolvedValue({
+        sub: '001234.sub-collision.sub',
+        email: 'subcollision@apple.com',
+      });
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null); // by appleSub
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null); // by email
+
+      const subCollisionErr: any = new Error('Unique constraint failed on appleSub');
+      subCollisionErr.code = 'P2002';
+      subCollisionErr.meta = { target: ['appleSub'] };
+
+      mockPrisma.user.create.mockRejectedValueOnce(subCollisionErr);
+
+      const existingWinner = {
+        id: 'u-sub-race-winner',
+        email: 'subcollision@apple.com',
+        username: 'apple_winner',
+        displayName: 'مستخدم سوق ون',
+        appleSub: '001234.sub-collision.sub',
+        isVerified: true,
+        status: AccountStatus.ACTIVE,
+        role: 'USER',
+        tokenVersion: 0,
+      };
+      mockPrisma.user.findUnique.mockResolvedValueOnce(existingWinner);
+
+      const res = await authService.appleAuth({
+        identityToken: 'mock-token',
+        nonce: 'raw-nonce-123',
+      });
+
+      expect(res.user.id).toBe('u-sub-race-winner');
+    });
+
+    it('throws 409 ACCOUNT_LINK_REQUIRED when P2002 collision occurs on email during registration race', async () => {
+      mockAppleVerifier.verifyIdToken.mockResolvedValue({
+        sub: '001234.email-collision.sub',
+        email: 'emailcollision@apple.com',
+      });
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null); // by appleSub
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null); // by email
+
+      const emailCollisionErr: any = new Error('Unique constraint failed on email');
+      emailCollisionErr.code = 'P2002';
+      emailCollisionErr.meta = { target: ['email'] };
+
+      mockPrisma.user.create.mockRejectedValueOnce(emailCollisionErr);
+
+      await expect(
+        authService.appleAuth({
+          identityToken: 'mock-token',
+          nonce: 'raw-nonce-123',
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 409,
+            code: 'ACCOUNT_LINK_REQUIRED',
+          }),
+        }),
+      );
+    });
   });
 
   describe('Existing email conflict & Pre-hijacking handling', () => {

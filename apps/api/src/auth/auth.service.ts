@@ -575,22 +575,20 @@ export class AuthService {
                 },
               });
 
-              if (tx.authIdentity?.upsert) {
-                await tx.authIdentity.upsert({
-                  where: {
-                    provider_providerUserId: {
-                      provider: AuthProvider.APPLE,
-                      providerUserId: appleSub,
-                    },
-                  },
-                  update: { userId: createdUser.id },
-                  create: {
-                    userId: createdUser.id,
+              await tx.authIdentity.upsert({
+                where: {
+                  provider_providerUserId: {
                     provider: AuthProvider.APPLE,
                     providerUserId: appleSub,
                   },
-                });
-              }
+                },
+                update: { userId: createdUser.id },
+                create: {
+                  userId: createdUser.id,
+                  provider: AuthProvider.APPLE,
+                  providerUserId: appleSub,
+                },
+              });
 
               return createdUser;
             });
@@ -598,6 +596,20 @@ export class AuthService {
           } catch (err: any) {
             if (attempt < 5 && err.code === 'P2002' && err.meta?.target?.includes('username')) {
               continue;
+            }
+            if (err.code === 'P2002' && (err.meta?.target?.includes('appleSub') || err.message?.includes('appleSub'))) {
+              const existing = await this.prisma.user.findUnique({ where: { appleSub } });
+              if (existing) {
+                user = existing;
+                break;
+              }
+            }
+            if (err.code === 'P2002' && (err.meta?.target?.includes('email') || err.message?.includes('email'))) {
+              throw new ConflictException({
+                statusCode: 409,
+                code: 'ACCOUNT_LINK_REQUIRED',
+                message: 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول وربط حساب Apple من الإعدادات',
+              });
             }
             throw err;
           }
@@ -638,22 +650,20 @@ export class AuthService {
                 message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
               });
             }
-            if (tx.authIdentity?.upsert) {
-              await tx.authIdentity.upsert({
-                where: {
-                  provider_providerUserId: {
-                    provider: AuthProvider.APPLE,
-                    providerUserId: appleSub,
-                  },
-                },
-                update: { userId: targetUserId },
-                create: {
-                  userId: targetUserId,
+            await tx.authIdentity.upsert({
+              where: {
+                provider_providerUserId: {
                   provider: AuthProvider.APPLE,
                   providerUserId: appleSub,
                 },
-              });
-            }
+              },
+              update: { userId: targetUserId },
+              create: {
+                userId: targetUserId,
+                provider: AuthProvider.APPLE,
+                providerUserId: appleSub,
+              },
+            });
             await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
             await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
             await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
