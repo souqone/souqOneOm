@@ -54,6 +54,8 @@ const mockJwt = {
 const mockMail = {
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+  sendPasswordChangedEmail: jest.fn().mockResolvedValue(undefined),
+  sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockRedis = {
@@ -478,6 +480,76 @@ describe('AuthService', () => {
       expect((result as any).refreshToken).toBeUndefined();
       expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
     });
+
+    it('should send welcome email when user is verified for the first time', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-verify-first',
+        isVerified: false,
+        email: 'newuser@example.com',
+        displayName: 'المستخدم الجديد',
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({
+        id: 'u-verify-first',
+        isVerified: true,
+        email: 'newuser@example.com',
+        displayName: 'المستخدم الجديد',
+        role: 'USER',
+      });
+
+      await service.verifyEmail('u-verify-first', '123456');
+
+      expect(mockMail.sendWelcomeEmail).toHaveBeenCalledTimes(1);
+      expect(mockMail.sendWelcomeEmail).toHaveBeenCalledWith(
+        'newuser@example.com',
+        'المستخدم الجديد',
+      );
+    });
+
+    it('should NOT send welcome email on re-verification if user is already verified', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-already-verified',
+        isVerified: true,
+        email: 'verified@example.com',
+        displayName: 'المستخدم',
+      });
+
+      await service.verifyEmail('u-already-verified', '123456');
+
+      expect(mockMail.sendWelcomeEmail).not.toHaveBeenCalled();
+    });
+
+    it('should NOT send welcome email if verifyEmail OTP fails', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-otp-fail',
+        isVerified: false,
+        email: 'fail@example.com',
+      });
+      mockOtp.verify.mockResolvedValueOnce('INVALID');
+
+      await expect(service.verifyEmail('u-otp-fail', '000000')).rejects.toThrow(BadRequestException);
+
+      expect(mockMail.sendWelcomeEmail).not.toHaveBeenCalled();
+    });
+
+    it('should not break verifyEmail if sendWelcomeEmail rejects (fail-safe)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-smtp-fail',
+        isVerified: false,
+        email: 'smtp@example.com',
+        displayName: 'المستخدم',
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({
+        id: 'u-smtp-fail',
+        isVerified: true,
+        email: 'smtp@example.com',
+        displayName: 'المستخدم',
+        role: 'USER',
+      });
+      mockMail.sendWelcomeEmail.mockRejectedValueOnce(new Error('SMTP down'));
+
+      const result = await service.verifyEmail('u-smtp-fail', '123456');
+      expect(result.accessToken).toBe('mock-access-token');
+    });
   });
 
   /* ═══════ FORGOT PASSWORD ═══════ */
@@ -587,6 +659,77 @@ describe('AuthService', () => {
       expect(nonExistentError.message).toBe('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
       expect(noChallengeError.message).toBe('رمز إعادة التعيين منتهي. اطلب رمزاً جديداً.');
       expect(nonExistentError.message).toBe(noChallengeError.message);
+    });
+
+    it('should send password changed email with correct arguments upon successful resetPassword', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-reset-success',
+        email: 'resetuser@example.com',
+        displayName: 'مستخدم إعادة التعيين',
+        passwordHash: 'oldHash',
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({});
+      mockOtp.verify.mockResolvedValueOnce('OK');
+
+      const result = await service.resetPassword('resetuser@example.com', '123456', 'NewSecurePass123!');
+
+      expect(result.message).toBe('تم تغيير كلمة المرور بنجاح');
+      expect(mockMail.sendPasswordChangedEmail).toHaveBeenCalledTimes(1);
+      expect(mockMail.sendPasswordChangedEmail).toHaveBeenCalledWith(
+        'resetuser@example.com',
+        expect.any(Date),
+        'مستخدم إعادة التعيين',
+      );
+    });
+
+    it('should send password changed email when Google-only user sets first password via resetPassword', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-google-first-pass',
+        email: 'googlefirst@example.com',
+        displayName: 'Google User',
+        passwordHash: null,
+        googleId: 'google-sub-789',
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({});
+      mockOtp.verify.mockResolvedValueOnce('OK');
+
+      const result = await service.resetPassword('googlefirst@example.com', '123456', 'FirstPass123!');
+
+      expect(result.message).toBe('تم تغيير كلمة المرور بنجاح');
+      expect(mockMail.sendPasswordChangedEmail).toHaveBeenCalledWith(
+        'googlefirst@example.com',
+        expect.any(Date),
+        'Google User',
+      );
+    });
+
+    it('should NOT send password changed email if reset code is invalid', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-invalid-code',
+        email: 'invalid@example.com',
+      });
+      mockOtp.verify.mockResolvedValueOnce('INVALID');
+
+      await expect(
+        service.resetPassword('invalid@example.com', '000000', 'NewPass123!'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockMail.sendPasswordChangedEmail).not.toHaveBeenCalled();
+    });
+
+    it('should not fail resetPassword if sendPasswordChangedEmail rejects (fail-safe)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u-failsafe-reset',
+        email: 'failsafe@example.com',
+        displayName: 'المستخدم',
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({});
+      mockOtp.verify.mockResolvedValueOnce('OK');
+      mockMail.sendPasswordChangedEmail.mockRejectedValueOnce(new Error('SMTP down'));
+
+      const result = await service.resetPassword('failsafe@example.com', '123456', 'NewSecurePass123!');
+
+      expect(result.message).toBe('تم تغيير كلمة المرور بنجاح');
     });
   });
 

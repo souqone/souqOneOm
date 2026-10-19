@@ -420,7 +420,7 @@ export function buildDeletionRequestEmail({
   const formattedDateEn = formatOmanDate(scheduledAt, 'en');
   const currentYear = new Date().getFullYear();
 
-  const subject = 'تم استلام طلب حذف حسابك — سوق ون';
+  const subject = `تم استلام طلب حذف حسابك — ${BRAND_NAME}`;
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -601,7 +601,7 @@ export function buildDeletionCancelledEmail({
   const safeNameEnHtml = escapeHtml(rawNameEn);
   const currentYear = new Date().getFullYear();
 
-  const subject = 'تم إلغاء طلب حذف حسابك بنجاح — سوق ون';
+  const subject = `تم إلغاء طلب حذف حسابك بنجاح — ${BRAND_NAME}`;
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -768,7 +768,7 @@ export function buildFinalDeletionEmail({
   const safeNameEnHtml = escapeHtml(rawNameEn);
   const currentYear = new Date().getFullYear();
 
-  const subject = 'تم حذف حسابك — سوق ون';
+  const subject = `تم حذف حسابك — ${BRAND_NAME}`;
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">

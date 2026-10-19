@@ -49,6 +49,7 @@ describe('B1: Session Revocation on Password Change and Reset', () => {
 
   const mockMail = {
     sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendPasswordChangedEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockRedis = {

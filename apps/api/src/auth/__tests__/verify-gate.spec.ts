@@ -105,6 +105,7 @@ describe('AUTH-VERIFY-GATE Backend Specification Suite', () => {
   const mockMail = {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
     sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const redisStore = new Map<string, any>();

@@ -86,6 +86,8 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
     mockMail = {
       sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
       sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+      sendPasswordChangedEmail: jest.fn().mockResolvedValue(undefined),
+      sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
     };
 
     mockAudit = {

@@ -80,6 +80,7 @@ describe('B2: Escalating Lockout (AuthAuditService & AuthService)', () => {
 
   const mockMail = {
     sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendPasswordChangedEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
