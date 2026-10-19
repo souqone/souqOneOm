@@ -449,19 +449,68 @@ describe('AppleTokenVerifierService (Unit Tests)', () => {
       expect(result.sub).toBe('user.1');
     });
 
-    it('يرمي استثناء عند فشل جلب المفاتيح من الشبكة والكاش فارغ', async () => {
+    it('يرمي ServiceUnavailableException برسالة عربية رسمية عند فشل جلب المفاتيح من الشبكة والكاش فارغ', async () => {
       service.setCustomKeysFetcher(async () => {
         throw new Error('Network timeout');
       });
 
       const token = createTestToken();
       await expect(service.verifyIdToken(token, DEFAULT_RAW_NONCE)).rejects.toThrow(
-        new UnauthorizedException('فشل الاتصال بخوادم Apple للتحقق من الهوية'),
+        new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً'),
+      );
+    });
+
+    it('يطبق backoff عند فشل جلب المفاتيح بحيث الطلبات المتتالية لا تعيد طلب الشبكة وترفض فوراً', async () => {
+      let networkCalls = 0;
+      service.setCustomKeysFetcher(async () => {
+        networkCalls++;
+        throw new Error('Apple network down');
+      });
+
+      const token = createTestToken();
+
+      // First call triggers network failure and sets backoff
+      await expect(service.verifyIdToken(token, DEFAULT_RAW_NONCE)).rejects.toThrow(
+        new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً'),
+      );
+      expect(networkCalls).toBe(1);
+
+      // Second immediate call rejects immediately without calling fetcher again
+      await expect(service.verifyIdToken(token, DEFAULT_RAW_NONCE)).rejects.toThrow(
+        new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً'),
+      );
+      expect(networkCalls).toBe(1);
+    });
+
+    it('يرمي ServiceUnavailableException عندما ترجع خوادم Apple مصفوفة مفاتيح فارغة والكاش فارغ', async () => {
+      service.setCustomKeysFetcher(async () => []);
+
+      const token = createTestToken();
+      await expect(service.verifyIdToken(token, DEFAULT_RAW_NONCE)).rejects.toThrow(
+        new ServiceUnavailableException('خدمة تسجيل الدخول بواسطة Apple غير متوفرة حالياً'),
       );
     });
   });
 
   describe('8. حالة تعطيل الخدمة والإعدادات الصريحة (Explicit Configuration & Disabled State)', () => {
+    it('يفضل options.clientId الصريح (حتى لو فارغاً) ولا يتأثر بقيمة APPLE_CLIENT_ID في البيئة', () => {
+      process.env.APPLE_CLIENT_ID = 'ambient-env-client-id';
+
+      // Explicit empty string
+      const emptyExplicitService = new AppleTokenVerifierService({ clientId: '' });
+      expect(emptyExplicitService.getClientId()).toBe('');
+      expect(emptyExplicitService.isEnabled()).toBe(false);
+
+      // Explicit custom clientId
+      const customService = new AppleTokenVerifierService({ clientId: 'explicit-custom-id' });
+      expect(customService.getClientId()).toBe('explicit-custom-id');
+      expect(customService.isEnabled()).toBe(true);
+
+      // Fallback to env when clientId option is omitted
+      const fallbackService = new AppleTokenVerifierService({});
+      expect(fallbackService.getClientId()).toBe('ambient-env-client-id');
+    });
+
     it('يرمي ServiceUnavailableException ويكون isEnabled()=false إذا كان APPLE_CLIENT_ID فارغاً', async () => {
       // Service instantiated with no client ID and empty env
       const unconfiguredService = new AppleTokenVerifierService({
