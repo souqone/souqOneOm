@@ -53,6 +53,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
   const mockMail = {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
     sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockRedis = {
@@ -188,6 +189,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
       where: { googleId: 'existing-google-id' },
     });
+    expect(mockMail.sendWelcomeEmail).not.toHaveBeenCalled();
   });
 
   /* Matrix 3: No user exists with email => creates new user */
@@ -226,6 +228,36 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
         }),
       }),
     );
+    expect(mockMail.sendWelcomeEmail).toHaveBeenCalledTimes(1);
+    expect(mockMail.sendWelcomeEmail).toHaveBeenCalledWith('newuser@gmail.com', 'New Google User');
+  });
+
+  it('Matrix 3 (Fail-safe): should not break new Google user registration if sendWelcomeEmail rejects', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'newuser2@gmail.com',
+        sub: 'google-new-sub-2',
+        email_verified: true,
+        name: 'New Google User 2',
+      }),
+    });
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.create.mockResolvedValue({
+      id: 'u-new-2',
+      email: 'newuser2@gmail.com',
+      username: 'newuser2_abc123',
+      displayName: 'New Google User 2',
+      googleId: 'google-new-sub-2',
+      isVerified: true,
+      role: 'USER',
+    });
+    mockPrisma.refreshToken.create.mockResolvedValue({ token: 'rt' });
+    mockMail.sendWelcomeEmail.mockRejectedValueOnce(new Error('SMTP down'));
+
+    const result = await authService.googleAuth({ credential: 'valid-cred' });
+
+    expect(result.accessToken).toBe('jwt-access-token-123');
   });
 
   /* Matrix 4: User exists, but Google is NOT authoritative */
@@ -569,6 +601,7 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
       where: { userId: 'u-victim', revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
+    expect(mockMail.sendWelcomeEmail).not.toHaveBeenCalled();
   });
 
   /* Matrix 8: Existing user found by googleId, unverified, authoritative Google -> auto-verified inside transaction */

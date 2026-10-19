@@ -42,6 +42,12 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    $transaction: jest.fn().mockImplementation(async (cb: any) => {
+      if (typeof cb === 'function') {
+        return cb(mockPrisma);
+      }
+      return Promise.all(cb);
+    }),
   };
 
   const mockGeoService = {
@@ -72,6 +78,7 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
   const mockMailService = {
     sendDeletionRequestEmail: jest.fn().mockResolvedValue(true),
     sendDeletionCancelledEmail: jest.fn().mockResolvedValue(true),
+    sendPasswordChangedEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -806,6 +813,92 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
           newPassword: 'NewPassword123!',
         }),
       ).rejects.toThrow('هذا الحساب مسجل بواسطة Google ولا يحتوي على كلمة مرور.');
+    });
+
+    it('should send password changed email with correct arguments upon successful changePassword', async () => {
+      const hashed = await bcrypt.hash('CurrentPass123!', 10);
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        passwordHash: hashed,
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({
+        ...mockUser,
+        passwordHash: 'newHashed',
+      });
+      mockAuthTokenService.signAccessToken.mockResolvedValueOnce('new-acc-tok');
+      mockAuthTokenService.generateRefreshToken.mockResolvedValueOnce('new-ref-tok');
+
+      const res = await service.changePassword(mockUser.id, {
+        currentPassword: 'CurrentPass123!',
+        newPassword: 'NewPass123!456',
+      });
+
+      expect(res.message).toBe('تم تغيير كلمة المرور بنجاح');
+      expect(mockMailService.sendPasswordChangedEmail).toHaveBeenCalledTimes(1);
+      expect(mockMailService.sendPasswordChangedEmail).toHaveBeenCalledWith(
+        mockUser.email,
+        expect.any(Date),
+        mockUser.displayName,
+      );
+    });
+
+    it('should NOT send email if changePassword fails due to incorrect currentPassword', async () => {
+      const hashed = await bcrypt.hash('CurrentPass123!', 10);
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        passwordHash: hashed,
+      });
+
+      await expect(
+        service.changePassword(mockUser.id, {
+          currentPassword: 'WrongPassword!',
+          newPassword: 'NewPass123!456',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockMailService.sendPasswordChangedEmail).not.toHaveBeenCalled();
+    });
+
+    it('should not break changePassword if sendPasswordChangedEmail rejects (fail-safe)', async () => {
+      const hashed = await bcrypt.hash('CurrentPass123!', 10);
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        passwordHash: hashed,
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({
+        ...mockUser,
+        passwordHash: 'newHashed',
+      });
+      mockMailService.sendPasswordChangedEmail.mockRejectedValueOnce(new Error('SMTP connection failure'));
+
+      const res = await service.changePassword(mockUser.id, {
+        currentPassword: 'CurrentPass123!',
+        newPassword: 'NewPass123!456',
+      });
+
+      expect(res.message).toBe('تم تغيير كلمة المرور بنجاح');
+    });
+
+    it('should NOT send email if user has no email address', async () => {
+      const hashed = await bcrypt.hash('CurrentPass123!', 10);
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        email: null,
+        passwordHash: hashed,
+      });
+      mockPrisma.user.update.mockResolvedValueOnce({
+        ...mockUser,
+        email: null,
+        passwordHash: 'newHashed',
+      });
+
+      const res = await service.changePassword(mockUser.id, {
+        currentPassword: 'CurrentPass123!',
+        newPassword: 'NewPass123!456',
+      });
+
+      expect(res.message).toBe('تم تغيير كلمة المرور بنجاح');
+      expect(mockMailService.sendPasswordChangedEmail).not.toHaveBeenCalled();
     });
   });
 });

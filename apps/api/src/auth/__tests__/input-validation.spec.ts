@@ -142,6 +142,8 @@ describe('Auth & Input Validation Suite', () => {
       mockMailService = {
         sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
         sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+        sendPasswordChangedEmail: jest.fn().mockResolvedValue(undefined),
+        sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
       };
       mockTokens = {
         safeCompare: (a: string, b: string) => tokenService.safeCompare(a, b),

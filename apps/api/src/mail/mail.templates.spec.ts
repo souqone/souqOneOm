@@ -467,7 +467,7 @@ describe('mail.templates', () => {
           scheduledAt: fixedUtcDate,
         });
 
-        expect(result.subject).toBe('تم استلام طلب حذف حسابك — سوق ون');
+        expect(result.subject).toBe('تم استلام طلب حذف حسابك — SouqOne');
         expect(result.html).toContain('سالم الكندي');
         expect(result.html).toContain('طلب حذف الحساب');
         expect(result.html).toContain('الإعدادات ثم حذف الحساب');
@@ -524,7 +524,7 @@ describe('mail.templates', () => {
           displayName: 'مريم البلوشية',
         });
 
-        expect(result.subject).toBe('تم إلغاء طلب حذف حسابك بنجاح — سوق ون');
+        expect(result.subject).toBe('تم إلغاء طلب حذف حسابك بنجاح — SouqOne');
         expect(result.html).toContain('مريم البلوشية');
         expect(result.html).toContain('إلغاء حذف الحساب');
         expect(result.html).toContain('تمت استعادة ظهور إعلاناتكم وخدماتكم');
@@ -556,7 +556,7 @@ describe('mail.templates', () => {
           displayName: 'خالد العامري',
         });
 
-        expect(result.subject).toBe('تم حذف حسابك — سوق ون');
+        expect(result.subject).toBe('تم حذف حسابك — SouqOne');
         expect(result.html).toContain('خالد العامري');
         expect(result.html).toContain('تم حذف الحساب');
         // Exact wording replacements required by approved plan:

@@ -143,7 +143,7 @@ describe('MailService', () => {
       expect(callArgs.to).toBe('user@example.com');
       expect(callArgs.from).toBe('"SouqOne" <noreply@mail.souqoneom.com>');
       expect(callArgs.replyTo).toBe('support@souqoneom.com');
-      expect(callArgs.subject).toBe('تم استلام طلب حذف حسابك — سوق ون');
+      expect(callArgs.subject).toBe('تم استلام طلب حذف حسابك — SouqOne');
       expect(callArgs.html).toContain('أحمد العماني');
       expect(callArgs.html).toContain('الإعدادات ثم حذف الحساب');
       expect(callArgs.text).toContain('الإعدادات ثم حذف الحساب');
@@ -173,7 +173,7 @@ describe('MailService', () => {
       const callArgs = mockSendMail.mock.calls[0][0];
 
       expect(callArgs.to).toBe('user@example.com');
-      expect(callArgs.subject).toBe('تم إلغاء طلب حذف حسابك بنجاح — سوق ون');
+      expect(callArgs.subject).toBe('تم إلغاء طلب حذف حسابك بنجاح — SouqOne');
       expect(callArgs.html).toContain('أحمد العماني');
       expect(callArgs.html).toContain('تمت استعادة ظهور إعلاناتكم');
       expect(callArgs.text).toContain('تمت استعادة ظهور إعلاناتكم');
@@ -202,7 +202,7 @@ describe('MailService', () => {
       const callArgs = mockSendMail.mock.calls[0][0];
 
       expect(callArgs.to).toBe('user@example.com');
-      expect(callArgs.subject).toBe('تم حذف حسابك — سوق ون');
+      expect(callArgs.subject).toBe('تم حذف حسابك — SouqOne');
       expect(callArgs.html).toContain('لا تتضمن بياناتكم الشخصية المباشرة');
       expect(callArgs.html).toContain('لأغراض محاسبية وأمنية');
       expect(callArgs.text).toContain('لا تتضمن بياناتكم الشخصية المباشرة');

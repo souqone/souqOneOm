@@ -17,6 +17,7 @@ import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 import { OTP_TTL_SECONDS } from './auth.constants';
 import { isValidNormalizedEmail, normalizeEmail } from './auth.validators';
 import { normalizePhoneStrict } from '../common/utils/normalize-phone';
+import { redactEmails } from '../common/utils/mask-email';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
@@ -344,6 +345,17 @@ export class AuthService {
           }
           return u;
         });
+
+        if (user && user.email) {
+          const newUserId = user.id;
+          this.mailService
+            .sendWelcomeEmail(user.email, user.displayName)
+            .catch((err: any) => {
+              this.logger.error(
+                `Failed to send welcome email for new Google user ${newUserId}: ${redactEmails(err?.message || String(err))}`,
+              );
+            });
+        }
       } else {
         // User exists with this email
         if (!isGoogleAuthoritative) {
@@ -475,6 +487,16 @@ export class AuthService {
       data: { isVerified: true, emailVerifiedAt: new Date() },
     });
 
+    if (!user.isVerified && updated.email) {
+      this.mailService
+        .sendWelcomeEmail(updated.email, updated.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send welcome email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
     const accessToken = await this.tokens.signAccessToken(updated);
     const refreshToken = await this.tokens.generateRefreshToken(updated.id);
 
@@ -563,6 +585,17 @@ export class AuthService {
     });
 
     await this.accessTokenGate.invalidate(user.id);
+
+    const changedAt = new Date();
+    if (user.email) {
+      this.mailService
+        .sendPasswordChangedEmail(user.email, changedAt, user.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send password changed email on reset for user ${user.id}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
 
     return { message: 'تم تغيير كلمة المرور بنجاح' };
   }

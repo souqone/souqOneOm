@@ -17,6 +17,7 @@ import { AuthService } from '../auth/auth.service';
 import { OwnerContentVisibilityService } from '../common/services/owner-content-visibility.service';
 import { OWNER_VISIBILITY_REGISTRY } from '../common/constants/owner-visibility.registry';
 import { MailService } from '../mail/mail.service';
+import { redactEmails } from '../common/utils/mask-email';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import * as bcrypt from 'bcryptjs';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -300,6 +301,17 @@ export class UsersService {
     });
 
     await this.accessTokenGate.invalidate(userId);
+
+    const changedAt = new Date();
+    if (updatedUser.email) {
+      this.mailService
+        .sendPasswordChangedEmail(updatedUser.email, changedAt, updatedUser.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send password changed email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
 
     const accessToken = await this.authTokenService.signAccessToken(updatedUser);
     const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
