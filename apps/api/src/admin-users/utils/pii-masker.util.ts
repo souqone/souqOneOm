@@ -7,19 +7,7 @@
  * - Phone: country code + '***' + last 2 digits (e.g. +968***67)
  */
 
-export function maskEmail(email?: string | null): string | null {
-  if (!email || typeof email !== 'string') {
-    return null;
-  }
-  const trimmed = email.trim();
-  const atIndex = trimmed.indexOf('@');
-  if (atIndex <= 0 || atIndex === trimmed.length - 1) {
-    return null;
-  }
-  const firstChar = trimmed.charAt(0);
-  const domain = trimmed.slice(atIndex + 1);
-  return `${firstChar}***@${domain}`;
-}
+export { maskEmail } from '../../common/utils/mask-email';
 
 export function maskPhone(phone?: string | null): string | null {
   if (!phone || typeof phone !== 'string') {

@@ -4,6 +4,10 @@ import {
   buildDeletionRequestEmail,
   buildDeletionCancelledEmail,
   buildFinalDeletionEmail,
+  buildPasswordChangedEmail,
+  buildWelcomeEmail,
+  buildAccountSuspendedEmail,
+  buildAccountBannedEmail,
   formatOmanDate,
   BRAND_LOGO_URL,
   BRAND_NAME,
@@ -650,6 +654,237 @@ describe('mail.templates', () => {
 
         expect(result.html).toContain('Ali &amp; Sons &lt;Tech&gt; &#39;Pro&#39;');
         expect(result.html).not.toContain('<Tech>');
+      });
+    });
+  });
+
+  describe('Security and Lifecycle Email Templates (PR 1)', () => {
+    const fixedUtcDate = new Date('2026-10-23T12:00:00.000Z');
+
+    const checkCommonInvariants = (result: { subject: string; html: string; text: string }) => {
+      expect(result.html).toContain('dir="rtl"');
+      expect(result.html).toContain('lang="ar"');
+
+      expect(emojiRegex.test(result.subject)).toBe(false);
+      expect(emojiRegex.test(result.html)).toBe(false);
+      expect(emojiRegex.test(result.text)).toBe(false);
+
+      expect(result.subject).not.toContain('!');
+      expect(result.text).not.toContain('!');
+      const visibleHtmlText = result.html
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<[^>]+>/g, ' ');
+      expect(visibleHtmlText).not.toContain('!');
+
+      const urls = result.html.match(/https?:\/\/[^\s"'<>]+/g) || [];
+      expect(urls).toEqual([BRAND_LOGO_URL]);
+
+      expect(result.subject).toContain('SouqOne');
+      expect(result.html).toContain('SouqOne');
+      expect(result.text).toContain('SouqOne');
+      expect(result.subject).not.toContain('سوق ون');
+      expect(result.subject).not.toContain('سوق وان');
+      expect(result.text).not.toContain('سوق وان');
+
+      expect(result.html).toContain('support@souqoneom.com');
+      expect(result.text).toContain('support@souqoneom.com');
+    };
+
+    describe('buildPasswordChangedEmail', () => {
+      it('should generate password changed email with Muscat time and western digits 0-9', () => {
+        const result = buildPasswordChangedEmail({
+          displayName: 'أحمد الحارثي',
+          changedAt: fixedUtcDate,
+        });
+
+        expect(result.subject).toBe('تم تغيير كلمة المرور — SouqOne');
+        expect(result.html).toContain('أحمد الحارثي');
+        expect(result.html).toContain('تم تغيير كلمة المرور الخاصة بحسابكم في <bdi dir="ltr">SouqOne</bdi> بتاريخ');
+        expect(result.html).toContain('إذا لم تكونوا أنتم من قام بذلك، يرجى التواصل فوراً مع فريق الدعم عبر');
+        expect(result.html).toContain('support@souqoneom.com');
+        expect(result.html).toContain('Password Changed — SouqOne');
+
+        expect(result.html).toMatch(/2026/);
+        expect(result.html).toMatch(/16:00|4:00/);
+        expect(result.html).not.toMatch(/[\u0660-\u0669]/);
+        expect(result.text).not.toMatch(/[\u0660-\u0669]/);
+
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('أحمد الحارثي');
+        expect(result.text).toContain('تم تغيير كلمة المرور الخاصة بحسابكم في SouqOne بتاريخ');
+        expect(result.text).toContain('support@souqoneom.com');
+
+        checkCommonInvariants(result);
+      });
+
+      it('should escape HTML tags in displayName and fallback safely when missing', () => {
+        const malicious = buildPasswordChangedEmail({
+          displayName: '<script>alert("xss")</script>',
+          changedAt: fixedUtcDate,
+        });
+        expect(malicious.html).not.toContain('<script>');
+        expect(malicious.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+
+        const fallback = buildPasswordChangedEmail({
+          displayName: undefined,
+          changedAt: fixedUtcDate,
+        });
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
+      });
+    });
+
+    describe('buildWelcomeEmail', () => {
+      it('should generate welcome email mentioning all 7 categories without restricting to vehicles', () => {
+        const result = buildWelcomeEmail({
+          displayName: 'سارة البوسعيدية',
+        });
+
+        expect(result.subject).toBe('مرحباً بكم في SouqOne');
+        expect(result.html).toContain('سارة البوسعيدية');
+        expect(result.html).toContain('انضمامكم إلى منصة <bdi dir="ltr">SouqOne</bdi>');
+        expect(result.html).toContain('السيارات');
+        expect(result.html).toContain('الحافلات');
+        expect(result.html).toContain('المعدات');
+        expect(result.html).toContain('المشغّلون');
+        expect(result.html).toContain('الوظائف');
+        expect(result.html).toContain('قطع الغيار');
+        expect(result.html).toContain('الخدمات');
+
+        expect(result.html).toContain('Welcome to SouqOne');
+
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('سارة البوسعيدية');
+        expect(result.text).toContain('انضمامكم إلى منصة SouqOne');
+        expect(result.text).toContain('السيارات');
+        expect(result.text).toContain('الحافلات');
+        expect(result.text).toContain('المعدات');
+        expect(result.text).toContain('المشغّلون');
+        expect(result.text).toContain('الوظائف');
+        expect(result.text).toContain('قطع الغيار');
+        expect(result.text).toContain('الخدمات');
+
+        checkCommonInvariants(result);
+      });
+
+      it('should escape HTML tags in displayName and fallback safely when missing', () => {
+        const malicious = buildWelcomeEmail({
+          displayName: '<script>alert(1)</script>',
+        });
+        expect(malicious.html).not.toContain('<script>');
+        expect(malicious.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+
+        const fallback = buildWelcomeEmail({});
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
+      });
+    });
+
+    describe('buildAccountSuspendedEmail', () => {
+      it('should generate suspended email with Muscat date when suspendedUntil is provided', () => {
+        const result = buildAccountSuspendedEmail({
+          displayName: 'علي المعمري',
+          suspendedUntil: fixedUtcDate,
+        });
+
+        expect(result.subject).toBe('إشعار إيقاف الحساب مؤقتاً — SouqOne');
+        expect(result.html).toContain('علي المعمري');
+        expect(result.html).toContain('تم إيقاف حسابكم مؤقتاً للاشتباه في مخالفة سياسات الاستخدام المنصوص عليها في المنصة.');
+        expect(result.html).toContain('تنتهي مدة الإيقاف بتاريخ');
+        expect(result.html).toContain('خلال هذه الفترة تم إخفاء إعلاناتكم وتعليق إمكانية النشر.');
+        expect(result.html).toContain('للاستفسار أو تقديم التماس:');
+        expect(result.html).toContain('support@souqoneom.com');
+        expect(result.html).toContain('Account Temporarily Suspended — SouqOne');
+        expect(result.html).toContain('The suspension is scheduled to end on');
+        expect(result.text).toContain('The suspension is scheduled to end on');
+
+        expect(result.html).toMatch(/2026/);
+        expect(result.html).toMatch(/16:00|4:00/);
+        expect(result.html).not.toMatch(/[\u0660-\u0669]/);
+        expect(result.text).not.toMatch(/[\u0660-\u0669]/);
+
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('علي المعمري');
+        expect(result.text).toContain('تنتهي مدة الإيقاف بتاريخ');
+        expect(result.text).toContain('support@souqoneom.com');
+
+        checkCommonInvariants(result);
+      });
+
+      it('should omit the date sentence entirely when suspendedUntil is undefined or empty', () => {
+        const result = buildAccountSuspendedEmail({
+          displayName: 'علي المعمري',
+        });
+
+        expect(result.subject).toBe('إشعار إيقاف الحساب مؤقتاً — SouqOne');
+        expect(result.html).toContain('تم إيقاف حسابكم مؤقتاً للاشتباه في مخالفة سياسات الاستخدام المنصوص عليها في المنصة.');
+        expect(result.html).not.toContain('تنتهي مدة الإيقاف بتاريخ');
+        expect(result.html).not.toContain('The suspension is scheduled to end on');
+        expect(result.html).toContain('خلال هذه الفترة تم إخفاء إعلاناتكم وتعليق إمكانية النشر.');
+        expect(result.html).toContain('للاستفسار أو تقديم التماس:');
+        expect(result.html).toContain('support@souqoneom.com');
+
+        expect(result.text).not.toContain('تنتهي مدة الإيقاف بتاريخ');
+        expect(result.text).not.toContain('The suspension is scheduled to end on');
+        expect(result.text).toContain('خلال هذه الفترة تم إخفاء إعلاناتكم وتعليق إمكانية النشر.');
+        expect(result.text).toContain('للاستفسار أو تقديم التماس: support@souqoneom.com.');
+
+        checkCommonInvariants(result);
+      });
+
+      it('should escape HTML tags in displayName and fallback safely when missing', () => {
+        const malicious = buildAccountSuspendedEmail({
+          displayName: '<script>alert(1)</script>',
+        });
+        expect(malicious.html).not.toContain('<script>');
+        expect(malicious.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+
+        const fallback = buildAccountSuspendedEmail({});
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
+      });
+    });
+
+    describe('buildAccountBannedEmail', () => {
+      it('should generate banned email with neutral wording and without admin notes', () => {
+        const result = buildAccountBannedEmail({
+          displayName: 'ماجد الريامي',
+        });
+
+        expect(result.subject).toBe('إشعار حظر الحساب — SouqOne');
+        expect(result.html).toContain('ماجد الريامي');
+        expect(result.html).toContain(
+          'نحيطكم علماً بأنه قد تم حظر حسابكم نهائياً في منصة <bdi dir="ltr">SouqOne</bdi> لمخالفة شروط وسياسات الاستخدام، وتم إلغاء الجلسات النشطة وإزالة إعلاناتكم.',
+        );
+        expect(result.html).toContain('Account Banned Notice — SouqOne');
+
+        expect(result.html).not.toContain('ملاحظات الأدمن');
+        expect(result.html).not.toContain('السبب الداخلي');
+        expect(result.text).not.toContain('ملاحظات الأدمن');
+
+        expect(result.text).toContain(result.subject);
+        expect(result.text).toContain('ماجد الريامي');
+        expect(result.text).toContain(
+          'نحيطكم علماً بأنه قد تم حظر حسابكم نهائياً في منصة SouqOne لمخالفة شروط وسياسات الاستخدام، وتم إلغاء الجلسات النشطة وإزالة إعلاناتكم.',
+        );
+        expect(result.text).toContain('للاستفسار أو تقديم التماس: support@souqoneom.com.');
+
+        checkCommonInvariants(result);
+      });
+
+      it('should escape HTML tags in displayName and fallback safely when missing', () => {
+        const malicious = buildAccountBannedEmail({
+          displayName: '<script>alert("banned")</script>',
+        });
+        expect(malicious.html).not.toContain('<script>');
+        expect(malicious.html).toContain('&lt;script&gt;alert(&quot;banned&quot;)&lt;/script&gt;');
+
+        const fallback = buildAccountBannedEmail({});
+        expect(fallback.html).toContain('المستخدم');
+        expect(fallback.html).toContain('User');
       });
     });
   });
