@@ -798,6 +798,8 @@ describe('mail.templates', () => {
         expect(result.html).toContain('للاستفسار أو تقديم التماس:');
         expect(result.html).toContain('support@souqoneom.com');
         expect(result.html).toContain('Account Temporarily Suspended — SouqOne');
+        expect(result.html).toContain('The suspension is scheduled to end on');
+        expect(result.text).toContain('The suspension is scheduled to end on');
 
         expect(result.html).toMatch(/2026/);
         expect(result.html).toMatch(/16:00|4:00/);
@@ -820,13 +822,13 @@ describe('mail.templates', () => {
         expect(result.subject).toBe('إشعار إيقاف الحساب مؤقتاً — SouqOne');
         expect(result.html).toContain('تم إيقاف حسابكم مؤقتاً للاشتباه في مخالفة سياسات الاستخدام المنصوص عليها في المنصة.');
         expect(result.html).not.toContain('تنتهي مدة الإيقاف بتاريخ');
-        expect(result.html).not.toContain('The suspension period ends on');
+        expect(result.html).not.toContain('The suspension is scheduled to end on');
         expect(result.html).toContain('خلال هذه الفترة تم إخفاء إعلاناتكم وتعليق إمكانية النشر.');
         expect(result.html).toContain('للاستفسار أو تقديم التماس:');
         expect(result.html).toContain('support@souqoneom.com');
 
         expect(result.text).not.toContain('تنتهي مدة الإيقاف بتاريخ');
-        expect(result.text).not.toContain('The suspension period ends on');
+        expect(result.text).not.toContain('The suspension is scheduled to end on');
         expect(result.text).toContain('خلال هذه الفترة تم إخفاء إعلاناتكم وتعليق إمكانية النشر.');
         expect(result.text).toContain('للاستفسار أو تقديم التماس: support@souqoneom.com.');
 

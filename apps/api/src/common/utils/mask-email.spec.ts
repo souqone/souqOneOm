@@ -1,4 +1,4 @@
-import { maskEmail, maskEmailSafe } from './mask-email';
+import { maskEmail, maskEmailSafe, redactEmails } from './mask-email';
 
 describe('maskEmail', () => {
   it('masks standard email addresses properly', () => {
@@ -23,6 +23,8 @@ describe('maskEmail', () => {
     expect(maskEmail('notanemail')).toBeNull();
     expect(maskEmail('@domain.com')).toBeNull();
     expect(maskEmail('user@')).toBeNull();
+    expect(maskEmail('x@user@example.com')).toBeNull();
+    expect(maskEmail('user@@example.com')).toBeNull();
   });
 });
 
@@ -36,5 +38,21 @@ describe('maskEmailSafe', () => {
     expect(maskEmailSafe(undefined)).toBe('***');
     expect(maskEmailSafe('')).toBe('***');
     expect(maskEmailSafe('invalid')).toBe('***');
+    expect(maskEmailSafe('x@user@example.com')).toBe('***');
+  });
+});
+
+describe('redactEmails', () => {
+  it('redacts all email occurrences in text while keeping context', () => {
+    const errorText = 'Recipient command failed: 553 5.1.2 <victim@example.com> rejected';
+    expect(redactEmails(errorText)).toBe(
+      'Recipient command failed: 553 5.1.2 <v***@example.com> rejected',
+    );
+  });
+
+  it('handles null, undefined, or text without emails safely', () => {
+    expect(redactEmails(null)).toBe('');
+    expect(redactEmails(undefined)).toBe('');
+    expect(redactEmails('Connection timeout')).toBe('Connection timeout');
   });
 });

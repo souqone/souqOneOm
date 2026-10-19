@@ -381,8 +381,10 @@ describe('MailService', () => {
       verifyNoRawEmailInLogs();
     });
 
-    it('never logs raw email on failure / rejection paths', async () => {
-      mockSendMail.mockRejectedValue(new Error('Forced test error'));
+    it('never logs raw email on failure / rejection paths, even if error message contains email', async () => {
+      mockSendMail.mockRejectedValue(
+        new Error(`SMTP 553 error sending to ${rawTargetEmail}: recipient rejected`),
+      );
       const service = new MailService();
 
       await expect(service.sendVerificationEmail(rawTargetEmail, '123456')).rejects.toThrow();

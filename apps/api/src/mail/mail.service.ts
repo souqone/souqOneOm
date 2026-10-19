@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
-import { maskEmailSafe } from '../common/utils/mask-email';
+import { maskEmailSafe, redactEmails } from '../common/utils/mask-email';
 import {
   BRAND_NAME,
   buildVerificationEmail,
@@ -64,7 +64,8 @@ export class MailService {
       });
       this.logger.log(`Email sent to ${maskedTo} | Subject: ${subject}`);
     } catch (error) {
-      this.logger.error(`Failed to send email to ${maskedTo}`, error);
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
+      this.logger.error(`Failed to send email to ${maskedTo}: ${sanitizedMsg}`);
       throw error;
     }
   }
@@ -92,8 +93,9 @@ export class MailService {
       const template = buildDeletionRequestEmail({ displayName, scheduledAt });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send deletion request email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send deletion request email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
@@ -110,8 +112,9 @@ export class MailService {
       const template = buildDeletionCancelledEmail({ displayName });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send deletion cancellation email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send deletion cancellation email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
@@ -128,8 +131,9 @@ export class MailService {
       const template = buildFinalDeletionEmail({ displayName });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send final deletion email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send final deletion email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
@@ -147,8 +151,9 @@ export class MailService {
       const template = buildPasswordChangedEmail({ displayName, changedAt });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send password changed email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send password changed email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
@@ -165,8 +170,9 @@ export class MailService {
       const template = buildWelcomeEmail({ displayName });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send welcome email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send welcome email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
@@ -184,8 +190,9 @@ export class MailService {
       const template = buildAccountSuspendedEmail({ displayName, suspendedUntil });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send account suspended email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send account suspended email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
@@ -202,8 +209,9 @@ export class MailService {
       const template = buildAccountBannedEmail({ displayName });
       await this.send(to, template);
     } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
-        `Failed to send account banned email to ${maskEmailSafe(to)}: ${(error as Error)?.message || error}`,
+        `Failed to send account banned email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }
