@@ -118,6 +118,40 @@ describe('Legal Pages Content & Structural Audit', () => {
       }
     });
 
+    it('enforces operating entity details (CR 1373251 & «هامة المجد الوطنية للتجارة») and absence of placeholder text', () => {
+      const crNumber = '1373251';
+      const entityName = '«هامة المجد الوطنية للتجارة»';
+
+      // 1. LEGAL_CONFIG
+      expect(LEGAL_CONFIG.operatorNotice.ar).toContain(crNumber);
+      expect(LEGAL_CONFIG.operatorNotice.ar).toContain(entityName);
+      expect(LEGAL_CONFIG.operatorNotice.ar).not.toContain('سيتم تحديث');
+
+      expect(LEGAL_CONFIG.operatorNotice.en).toContain(crNumber);
+      expect(LEGAL_CONFIG.operatorNotice.en).toContain(entityName);
+      expect(LEGAL_CONFIG.operatorNotice.en.toLowerCase()).not.toContain('will be updated');
+
+      // 2. ar.json (common.operatorNotice & privacy.sections.operator.content)
+      const arLegal = ar.legalPages as any;
+      expect(arLegal.common.operatorNotice).toContain(crNumber);
+      expect(arLegal.common.operatorNotice).toContain(entityName);
+      expect(arLegal.common.operatorNotice).not.toContain('سيتم تحديث');
+
+      expect(arLegal.privacy.sections.operator.content).toContain(crNumber);
+      expect(arLegal.privacy.sections.operator.content).toContain(entityName);
+      expect(arLegal.privacy.sections.operator.content).not.toContain('سيتم تحديث');
+
+      // 3. en.json (common.operatorNotice & privacy.sections.operator.content)
+      const enLegal = en.legalPages as any;
+      expect(enLegal.common.operatorNotice).toContain(crNumber);
+      expect(enLegal.common.operatorNotice).toContain(entityName);
+      expect(enLegal.common.operatorNotice.toLowerCase()).not.toContain('will be updated');
+
+      expect(enLegal.privacy.sections.operator.content).toContain(crNumber);
+      expect(enLegal.privacy.sections.operator.content).toContain(entityName);
+      expect(enLegal.privacy.sections.operator.content.toLowerCase()).not.toContain('will be updated');
+    });
+
     it('enforces presence of paidServices in Terms with exactly 13 sections in ar and en', () => {
       const arTerms = (ar.legalPages as any).terms.sections;
       const enTerms = (en.legalPages as any).terms.sections;

@@ -22,7 +22,7 @@ export const LEGAL_CONFIG = {
     en: 'October 2026',
   },
   operatorNotice: {
-    ar: 'سوق ون هو الاسم التجاري للمنصة، وسيتم تحديث بيانات الكيان القانوني بعد استكمال السجل التجاري لدى الجهات المختصة في سلطنة عُمان.',
-    en: 'Souqone is the trade name of the platform; legal entity details will be updated once the commercial registration is completed with the competent authorities in the Sultanate of Oman.',
+    ar: 'سوق ون هو الاسم التجاري للمنصة، وتشغّلها «هامة المجد الوطنية للتجارة» (تاجر فرد، سجل تجاري رقم 1373251، الخابورة، محافظة شمال الباطنة، سلطنة عُمان).',
+    en: 'Souqone is the trade name of the platform, operated by «هامة المجد الوطنية للتجارة» (individual firm, Commercial Registration No. 1373251, Al Khabura, North Al Batinah Governorate, Sultanate of Oman).',
   },
 } as const;
