@@ -127,12 +127,14 @@ describe('LoginMethodsUtil', () => {
       expect(getLoginMethods(null, prodEnabledEnv)).toEqual({
         hasPassword: false,
         hasGoogle: false,
+        hasApple: false,
         hasPhone: false,
         totalMethods: 0,
       });
       expect(getLoginMethods(undefined, prodEnabledEnv)).toEqual({
         hasPassword: false,
         hasGoogle: false,
+        hasApple: false,
         hasPhone: false,
         totalMethods: 0,
       });
@@ -149,6 +151,7 @@ describe('LoginMethodsUtil', () => {
       expect(result).toEqual({
         hasPassword: true,
         hasGoogle: false,
+        hasApple: false,
         hasPhone: false,
         totalMethods: 1,
       });
@@ -197,6 +200,21 @@ describe('LoginMethodsUtil', () => {
       expect(result).toEqual({
         hasPassword: false,
         hasGoogle: true,
+        hasApple: false,
+        hasPhone: false,
+        totalMethods: 1,
+      });
+    });
+
+    it('identifies Apple login method when appleSub is present', () => {
+      const user: LoginMethodsUser = {
+        appleSub: '000123.apple.sub.456',
+      };
+      const result = getLoginMethods(user, prodEnabledEnv);
+      expect(result).toEqual({
+        hasPassword: false,
+        hasGoogle: false,
+        hasApple: true,
         hasPhone: false,
         totalMethods: 1,
       });
@@ -211,6 +229,7 @@ describe('LoginMethodsUtil', () => {
       expect(result).toEqual({
         hasPassword: false,
         hasGoogle: false,
+        hasApple: false,
         hasPhone: true,
         totalMethods: 1,
       });
@@ -225,6 +244,7 @@ describe('LoginMethodsUtil', () => {
       expect(result).toEqual({
         hasPassword: false,
         hasGoogle: false,
+        hasApple: false,
         hasPhone: false,
         totalMethods: 0,
       });
@@ -240,13 +260,14 @@ describe('LoginMethodsUtil', () => {
       expect(result.totalMethods).toBe(0);
     });
 
-    it('counts multiple login methods accurately for multi-method account', () => {
+    it('counts multiple login methods accurately for multi-method account (including Apple)', () => {
       const user: LoginMethodsUser = {
         passwordHash: '$2b$10$hashedpasswordstring',
         email: 'user@example.com',
         isVerified: true,
         emailVerifiedAt: new Date(),
         googleId: 'google-sub-id',
+        appleSub: 'apple-sub-id',
         phoneE164: '+96891234567',
         phoneVerifiedAt: new Date(),
       };
@@ -254,8 +275,9 @@ describe('LoginMethodsUtil', () => {
       expect(result).toEqual({
         hasPassword: true,
         hasGoogle: true,
+        hasApple: true,
         hasPhone: true,
-        totalMethods: 3,
+        totalMethods: 4,
       });
     });
   });

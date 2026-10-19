@@ -33,17 +33,21 @@ describe('BanBlacklistService', () => {
   });
 
   describe('computeBanBlacklistHash and domain separation', () => {
-    it('produces a hex hash that does NOT match the raw phone or raw googleId', () => {
+    it('produces a hex hash that does NOT match the raw phone, raw googleId, or raw appleSub', () => {
       const rawPhone = '+96891234567';
       const rawGoogleId = 'google-sub-123456';
+      const rawAppleSub = 'apple-sub-000123.456';
 
       const phoneHash = service.hashPhone(rawPhone);
       const googleHash = service.hashGoogle(rawGoogleId);
+      const appleHash = service.hashApple(rawAppleSub);
 
       expect(phoneHash).not.toBe(rawPhone);
       expect(googleHash).not.toBe(rawGoogleId);
+      expect(appleHash).not.toBe(rawAppleSub);
       expect(phoneHash).toMatch(/^[a-f0-9]{64}$/);
       expect(googleHash).toMatch(/^[a-f0-9]{64}$/);
+      expect(appleHash).toMatch(/^[a-f0-9]{64}$/);
     });
 
     it('changing pepper completely changes the generated hash', () => {
@@ -57,14 +61,17 @@ describe('BanBlacklistService', () => {
       expect(hash1).not.toBe(hash2);
     });
 
-    it('enforces domain separation: same input gives different hashes for PHONE and GOOGLE', () => {
+    it('enforces domain separation: same input gives different hashes for PHONE, GOOGLE, and APPLE', () => {
       const raw = '123456789';
       const pepper = 'test-pepper-domain-sep-32-chars-length!';
 
       const phoneHash = computeBanBlacklistHash('PHONE', raw, pepper);
       const googleHash = computeBanBlacklistHash('GOOGLE', raw, pepper);
+      const appleHash = computeBanBlacklistHash('APPLE', raw, pepper);
 
       expect(phoneHash).not.toBe(googleHash);
+      expect(googleHash).not.toBe(appleHash);
+      expect(phoneHash).not.toBe(appleHash);
     });
   });
 
@@ -85,11 +92,16 @@ describe('BanBlacklistService', () => {
     it('creates blacklist entries for both phone and google identities idempotently', async () => {
       const mockTx = {
         authIdentity: {
-          findMany: jest.fn().mockResolvedValue([
-            {
-              providerUserId: 'google-sub-from-auth-ident',
-            },
-          ]),
+          findMany: jest.fn().mockImplementation(({ where }: any) => {
+            if (where?.provider === AuthProvider.GOOGLE) {
+              return Promise.resolve([
+                {
+                  providerUserId: 'google-sub-from-auth-ident',
+                },
+              ]);
+            }
+            return Promise.resolve([]);
+          }),
         },
         banBlacklistEntry: {
           createMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -132,9 +144,12 @@ describe('BanBlacklistService', () => {
 
       const mockTx = {
         authIdentity: {
-          findMany: jest.fn().mockResolvedValue([
-            { providerUserId: secondaryGoogleSub },
-          ]),
+          findMany: jest.fn().mockImplementation(({ where }: any) => {
+            if (where?.provider === AuthProvider.GOOGLE) {
+              return Promise.resolve([{ providerUserId: secondaryGoogleSub }]);
+            }
+            return Promise.resolve([]);
+          }),
         },
         banBlacklistEntry: {
           createMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -178,7 +193,60 @@ describe('BanBlacklistService', () => {
       });
     });
 
-    it('returns 0 when user has neither phoneE164 nor googleId nor auth identities', async () => {
+    it('creates blacklist entries for user.appleSub and distinct auth identity with provider APPLE', async () => {
+      const rawAppleSub = 'apple-sub-primary-001';
+      const secondaryAppleSub = 'apple-sub-linked-secondary-002';
+
+      const mockTx = {
+        authIdentity: {
+          findMany: jest.fn().mockImplementation(({ where }: any) => {
+            if (where.provider === AuthProvider.APPLE) {
+              return Promise.resolve([{ providerUserId: secondaryAppleSub }]);
+            }
+            return Promise.resolve([]);
+          }),
+        },
+        banBlacklistEntry: {
+          createMany: jest.fn().mockResolvedValue({ count: 2 }),
+        },
+      } as any;
+
+      const user = {
+        id: 'u-apple-ban',
+        appleSub: rawAppleSub,
+      };
+
+      const count = await service.addForUser(mockTx, user, 'Apple user ban');
+
+      expect(count).toBe(2);
+      expect(mockTx.authIdentity.findMany).toHaveBeenCalledWith({
+        where: { userId: 'u-apple-ban', provider: AuthProvider.APPLE },
+        select: { providerUserId: true },
+      });
+
+      const hashPrimary = service.hashApple(rawAppleSub);
+      const hashSecondary = service.hashApple(secondaryAppleSub);
+
+      expect(mockTx.banBlacklistEntry.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            kind: BanBlacklistKind.APPLE,
+            hash: hashPrimary,
+            userId: 'u-apple-ban',
+            reason: 'Apple user ban',
+          },
+          {
+            kind: BanBlacklistKind.APPLE,
+            hash: hashSecondary,
+            userId: 'u-apple-ban',
+            reason: 'Apple user ban',
+          },
+        ],
+        skipDuplicates: true,
+      });
+    });
+
+    it('returns 0 when user has neither phoneE164 nor googleId nor appleSub nor auth identities', async () => {
       const mockTx = {
         authIdentity: {
           findMany: jest.fn().mockResolvedValue([]),
@@ -192,6 +260,7 @@ describe('BanBlacklistService', () => {
         id: 'u-empty',
         phoneE164: null,
         googleId: null,
+        appleSub: null,
       };
 
       const count = await service.addForUser(mockTx, user, 'No identity ban');
@@ -236,7 +305,7 @@ describe('BanBlacklistService', () => {
     });
   });
 
-  describe('isBlocked, isPhoneBlocked, isGoogleBlocked', () => {
+  describe('isBlocked, isPhoneBlocked, isGoogleBlocked, isAppleBlocked', () => {
     it('returns true when phone is blacklisted', async () => {
       mockPrisma.banBlacklistEntry.findUnique.mockResolvedValueOnce({
         id: 'b-1',
@@ -280,13 +349,40 @@ describe('BanBlacklistService', () => {
       });
     });
 
-    it('isBlocked checks both phone and googleId correctly', async () => {
+    it('returns true when appleSub is blacklisted', async () => {
+      mockPrisma.banBlacklistEntry.findUnique.mockResolvedValueOnce({
+        id: 'b-3',
+      });
+
+      const blocked = await service.isAppleBlocked('000123.apple.banned');
+      expect(blocked).toBe(true);
+      expect(mockPrisma.banBlacklistEntry.findUnique).toHaveBeenCalledWith({
+        where: {
+          kind_hash: {
+            kind: BanBlacklistKind.APPLE,
+            hash: expect.any(String),
+          },
+        },
+        select: { id: true },
+      });
+    });
+
+    it('returns false when appleSub is not blacklisted', async () => {
+      mockPrisma.banBlacklistEntry.findUnique.mockResolvedValueOnce(null);
+
+      const blocked = await service.isAppleBlocked('000123.apple.clean');
+      expect(blocked).toBe(false);
+    });
+
+    it('isBlocked checks phone, googleId, and appleSub correctly', async () => {
       jest.spyOn(service, 'isPhoneBlocked').mockResolvedValueOnce(false);
-      jest.spyOn(service, 'isGoogleBlocked').mockResolvedValueOnce(true);
+      jest.spyOn(service, 'isGoogleBlocked').mockResolvedValueOnce(false);
+      jest.spyOn(service, 'isAppleBlocked').mockResolvedValueOnce(true);
 
       const res = await service.isBlocked({
         phoneE164: '+96891234567',
         googleId: 'google-sub-999',
+        appleSub: 'apple-sub-888',
       });
 
       expect(res).toBe(true);

@@ -4,6 +4,7 @@ export interface LoginMethodsUser {
   emailVerifiedAt?: Date | null;
   isVerified?: boolean | null;
   googleId?: string | null;
+  appleSub?: string | null;
   phoneE164?: string | null;
   phoneVerifiedAt?: Date | null;
 }
@@ -11,6 +12,7 @@ export interface LoginMethodsUser {
 export interface LoginMethodsResult {
   hasPassword: boolean;
   hasGoogle: boolean;
+  hasApple: boolean;
   hasPhone: boolean;
   totalMethods: number;
 }
@@ -50,6 +52,7 @@ export function isPhoneLoginAvailable(
  * Inspects all verified, active login methods available for a user.
  * - Password: requires passwordHash + email + (emailVerifiedAt or isVerified)
  * - Google: requires linked googleId
+ * - Apple: requires linked appleSub
  * - Phone: requires phoneE164 + phoneVerifiedAt + phone login actively available
  */
 export function getLoginMethods(
@@ -60,6 +63,7 @@ export function getLoginMethods(
     return {
       hasPassword: false,
       hasGoogle: false,
+      hasApple: false,
       hasPhone: false,
       totalMethods: 0,
     };
@@ -72,15 +76,18 @@ export function getLoginMethods(
   );
 
   const hasGoogle = Boolean(user.googleId);
+  const hasApple = Boolean(user.appleSub);
 
   const phoneAvailable = isPhoneLoginAvailable(env);
   const hasPhone = Boolean(user.phoneE164 && user.phoneVerifiedAt && phoneAvailable);
 
-  const totalMethods = Number(hasPassword) + Number(hasGoogle) + Number(hasPhone);
+  const totalMethods =
+    Number(hasPassword) + Number(hasGoogle) + Number(hasApple) + Number(hasPhone);
 
   return {
     hasPassword,
     hasGoogle,
+    hasApple,
     hasPhone,
     totalMethods,
   };

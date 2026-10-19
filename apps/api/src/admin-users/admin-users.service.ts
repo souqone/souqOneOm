@@ -590,6 +590,7 @@ export class AdminUsersService {
           tokenVersion: true,
           phoneE164: true,
           googleId: true,
+          appleSub: true,
         },
       });
 
@@ -650,6 +651,7 @@ export class AdminUsersService {
           id: target.id,
           phoneE164: target.phoneE164,
           googleId: target.googleId,
+          appleSub: target.appleSub,
         },
         trimmedReason,
       );

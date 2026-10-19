@@ -417,6 +417,7 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
           phone: null,
           phoneE164: null,
           googleId: null,
+          appleSub: null,
           passwordHash: null,
           avatarUrl: null,
           bio: null,
@@ -444,7 +445,7 @@ describe('AccountDeletionJob (PR 2B Unit Tests)', () => {
       });
     });
 
-    it('deletes child rows from auxiliary tables', async () => {
+    it('deletes child rows from auxiliary tables including auth_identities (APPLE & GOOGLE providers)', async () => {
       await job.runAccountDeletion();
 
       expect(txMock.authIdentity.deleteMany).toHaveBeenCalledWith({ where: { userId: candidate.id } });

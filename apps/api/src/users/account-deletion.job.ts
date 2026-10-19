@@ -371,6 +371,7 @@ export class AccountDeletionJob {
                     phone: null,
                     phoneE164: null,
                     googleId: null,
+                    appleSub: null,
                     passwordHash: null,
                     avatarUrl: null,
                     bio: null,
