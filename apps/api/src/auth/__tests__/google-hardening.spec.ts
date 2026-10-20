@@ -40,6 +40,11 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
     loginAudit: {
       create: jest.fn().mockResolvedValue({}),
     },
+    authIdentity: {
+      upsert: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn().mockResolvedValue(null),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     $transaction: jest.fn().mockImplementation(async (cb: any) => {
       if (typeof cb === 'function') return cb(mockPrisma);
       return Promise.all(cb);
@@ -956,6 +961,77 @@ describe('B3: Google Hardening & Pre-Hijacking Mitigation (AuthService.googleAut
       code: 'ACCOUNT_BANNED',
     });
     expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  /* Matrix 18: P2002 collision handling on user creation race condition */
+  it('Matrix 18: re-fetches existing user when P2002 collision occurs on googleId during registration race', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'newuser-race@gmail.com',
+        sub: 'google-sub-race-1',
+        email_verified: true,
+        name: 'Race User',
+      }),
+    });
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(null) // lookup by googleId
+      .mockResolvedValueOnce(null); // lookup by email
+
+    const subCollisionErr: any = new Error('Unique constraint failed on googleId');
+    subCollisionErr.code = 'P2002';
+    subCollisionErr.meta = { target: ['googleId'] };
+    mockPrisma.user.create.mockRejectedValueOnce(subCollisionErr);
+
+    const winnerUser = {
+      id: 'u-winner-google',
+      email: 'newuser-race@gmail.com',
+      username: 'newuser_winner',
+      googleId: 'google-sub-race-1',
+      role: 'USER',
+      status: 'ACTIVE',
+      isVerified: true,
+    };
+    mockPrisma.user.findUnique.mockResolvedValueOnce(winnerUser); // recovery lookup by googleId
+
+    const result = await authService.googleAuth({ credential: 'token-race' });
+    expect(result).toHaveProperty('accessToken');
+    expect(mockPrisma.authIdentity.upsert).not.toHaveBeenCalled();
+  });
+
+  it('Matrix 19: throws 409 ACCOUNT_LINK_REQUIRED when P2002 collision occurs on email without user by googleId', async () => {
+    verifyIdTokenMock.mockResolvedValue({
+      getPayload: () => ({
+        email: 'collision-email@gmail.com',
+        sub: 'google-sub-race-2',
+        email_verified: true,
+      }),
+    });
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(null) // lookup by googleId
+      .mockResolvedValueOnce(null); // lookup by email
+
+    const emailCollisionErr: any = new Error('Unique constraint failed on email');
+    emailCollisionErr.code = 'P2002';
+    emailCollisionErr.meta = { target: 'email' };
+    mockPrisma.user.create.mockRejectedValueOnce(emailCollisionErr);
+
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null); // check by googleId returns null
+
+    let err: any;
+    try {
+      await authService.googleAuth({ credential: 'token-race-email' });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(ConflictException);
+    expect(err.getResponse()).toEqual({
+      statusCode: 409,
+      code: 'ACCOUNT_LINK_REQUIRED',
+      message: 'هذا البريد مسجل مسبقاً. يرجى تسجيل الدخول بحسابك أولاً، ثم ربط حساب Google من الملف الشخصي.',
+    });
   });
 });
 
