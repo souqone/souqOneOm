@@ -56,7 +56,10 @@ apps/api/uploads/
 
 # Windsurf / AI
 .windsurf/
-.agents/
+.agents/*
+!.agents/rules/
+.agents/rules/*
+!.agents/rules/souqone_hard_rules.md
 .claude/worktrees
 
 # Prompt / phase planning docs (local dev only)
