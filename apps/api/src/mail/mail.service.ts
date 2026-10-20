@@ -13,6 +13,8 @@ import {
   buildWelcomeEmail,
   buildAccountSuspendedEmail,
   buildAccountBannedEmail,
+  buildSocialLinkedEmail,
+  buildSocialUnlinkedEmail,
   EmailTemplateResult,
 } from './mail.templates';
 
@@ -212,6 +214,46 @@ export class MailService {
       const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
       this.logger.warn(
         `Failed to send account banned email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
+      );
+    }
+  }
+
+  /**
+   * Sends confirmation email when a social account (Google / Apple) is linked.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendSocialLinkedEmail(
+    to: string,
+    provider: 'Google' | 'Apple',
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildSocialLinkedEmail({ displayName, provider, linkedAt: new Date() });
+      await this.send(to, template);
+    } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
+      this.logger.warn(
+        `Failed to send social linked email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
+      );
+    }
+  }
+
+  /**
+   * Sends confirmation email when a social account (Google / Apple) is unlinked.
+   * Fail-safe: Any sending failure is logged as a warning and does NOT throw.
+   */
+  async sendSocialUnlinkedEmail(
+    to: string,
+    provider: 'Google' | 'Apple',
+    displayName?: string | null,
+  ): Promise<void> {
+    try {
+      const template = buildSocialUnlinkedEmail({ displayName, provider, unlinkedAt: new Date() });
+      await this.send(to, template);
+    } catch (error) {
+      const sanitizedMsg = redactEmails((error as Error)?.message || String(error));
+      this.logger.warn(
+        `Failed to send social unlinked email to ${maskEmailSafe(to)}: ${sanitizedMsg}`,
       );
     }
   }

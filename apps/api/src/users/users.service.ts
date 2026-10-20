@@ -1248,8 +1248,19 @@ export class UsersService {
       throw err;
     }
 
-    // Audit log
+    // Send security notification email
     const targetEmail = user.email || googleEmail;
+    if (targetEmail) {
+      this.mailService
+        .sendSocialLinkedEmail(targetEmail, 'Google', user.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Google linked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
+    // Audit log
     await this.logSecurityAudit({
       email: targetEmail || 'unknown',
       userId: user.id,
@@ -1457,8 +1468,19 @@ export class UsersService {
       throw err;
     }
 
-    // Audit log
+    // Send security notification email
     const targetEmail = user.email || appleEmail;
+    if (targetEmail) {
+      this.mailService
+        .sendSocialLinkedEmail(targetEmail, 'Apple', user.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Apple linked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
+    // Audit log
     await this.logSecurityAudit({
       email: targetEmail || 'unknown',
       userId: user.id,
@@ -1554,6 +1576,17 @@ export class UsersService {
     });
 
     await this.accessTokenGate.invalidate(userId);
+
+    // Send security notification email
+    if (updatedUser.email) {
+      this.mailService
+        .sendSocialUnlinkedEmail(updatedUser.email, 'Google', updatedUser.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Google unlinked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
 
     // Audit log
     await this.logSecurityAudit({
@@ -1659,6 +1692,17 @@ export class UsersService {
     });
 
     await this.accessTokenGate.invalidate(userId);
+
+    // Send security notification email
+    if (updatedUser.email) {
+      this.mailService
+        .sendSocialUnlinkedEmail(updatedUser.email, 'Apple', updatedUser.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Apple unlinked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
 
     // Audit log
     await this.logSecurityAudit({
