@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -8,6 +9,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { LinkGoogleDto } from './dto/link-google.dto';
+import { LinkAppleDto } from './dto/link-apple.dto';
 import { ExpoPushService } from '../notifications/expo-push.service';
 import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
@@ -76,6 +79,28 @@ export class UsersController {
   @Post('me/cancel-deletion')
   cancelDeletion(@CurrentUser() user: JwtPayload) {
     return this.usersService.cancelAccountDeletion(user.sub);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Post('me/link/google')
+  linkGoogle(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: LinkGoogleDto,
+    @Req() req: Request,
+  ) {
+    return this.usersService.linkGoogle(user.sub, dto, req.ip, req.headers['user-agent']);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Post('me/link/apple')
+  linkApple(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: LinkAppleDto,
+    @Req() req: Request,
+  ) {
+    return this.usersService.linkApple(user.sub, dto, req.ip, req.headers['user-agent']);
   }
 
   @UseGuards(JwtAuthGuard)

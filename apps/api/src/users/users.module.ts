@@ -9,6 +9,7 @@ import { VisibilityModule } from '../common/visibility.module';
 import { MailModule } from '../mail/mail.module';
 import { RedisModule } from '../redis/redis.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     MailModule,
     RedisModule,
     CloudinaryModule,
+    BanBlacklistModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, AccountDeletionJob],
