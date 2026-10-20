@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
   ConflictException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { UsersService } from '../users.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -25,9 +26,11 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { UserStatusVisibilityListener } from '../../common/listeners/user-status-visibility.listener';
 import { SellerContactGate } from '../../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../../common/services/active-listings-limit.service';
+import { AppleTokenVerifierService } from '../../auth/apple-token-verifier.service';
+import { AppleRevocationService } from '../../auth/apple-revocation.service';
 import * as bcrypt from 'bcryptjs';
 
-describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
+describe('Account Deletion (PR 2A & PR 2B) — Comprehensive Test Suite', () => {
   let usersService: UsersService;
   let paymentsService: PaymentsService;
   let transportRequestService: TransportRequestService;
@@ -45,6 +48,8 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
   let mockPaymentActivationService: any;
   let mockRedis: any;
   let mockNotifications: any;
+  let mockAppleTokenVerifier: any;
+  let mockAppleRevocationService: any;
 
   const validPassword = 'SecurePassword123!';
   let validPasswordHash: string;
@@ -105,6 +110,15 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
 
     mockNotifications = {
       create: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockAppleTokenVerifier = {
+      verifyIdToken: jest.fn(),
+    };
+
+    mockAppleRevocationService = {
+      exchangeAndRevoke: jest.fn().mockResolvedValue(undefined),
+      isRevocationConfigured: jest.fn().mockReturnValue(true),
     };
 
     mockPrisma = {
@@ -170,6 +184,8 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
+        { provide: AppleTokenVerifierService, useValue: mockAppleTokenVerifier },
+        { provide: AppleRevocationService, useValue: mockAppleRevocationService },
       ],
     }).compile();
 
@@ -306,6 +322,305 @@ describe('Account Deletion (PR 2A) — Comprehensive Test Suite', () => {
           confirmation: 'حذف حسابي',
         }),
       ).rejects.toThrow('كلمة المرور غير صحيحة');
+    });
+  });
+
+  describe('1b. Apple Re-authentication & Revocation Rules (PR 2B)', () => {
+    const appleUser = {
+      id: 'user-apple-only',
+      email: 'apple@souqone.om',
+      displayName: 'Apple User',
+      passwordHash: null,
+      googleId: null,
+      appleSub: '001234.user.apple.sub',
+      role: 'USER',
+      status: 'ACTIVE',
+      deletionScheduledAt: null,
+    };
+
+    it('requires Apple re-authentication for Apple-only user (no password, no Google)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(appleUser);
+
+      await expect(
+        usersService.scheduleAccountDeletion(appleUser.id, {
+          confirmation: 'حذف حسابي',
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 401,
+            code: 'APPLE_REAUTH_REQUIRED',
+          }),
+        }),
+      );
+    });
+
+    it('rejects partial Apple fields with 400 validation error', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(appleUser);
+
+      await expect(
+        usersService.scheduleAccountDeletion(appleUser.id, {
+          appleIdentityToken: 'some-token',
+          confirmation: 'حذف حسابي',
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 400,
+            message: 'يلزم إرسال جميع بيانات Apple معاً (رمز الهوية، رمز التحقق، ورمز التفويض)',
+          }),
+        }),
+      );
+    });
+
+    it('successfully verifies Apple token, calls exchangeAndRevoke, and schedules deletion', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(appleUser);
+      mockAppleTokenVerifier.verifyIdToken.mockResolvedValue({
+        sub: appleUser.appleSub,
+        email: appleUser.email,
+      });
+
+      const res = await usersService.scheduleAccountDeletion(appleUser.id, {
+        appleIdentityToken: 'valid-apple-identity-token',
+        appleNonce: 'raw-nonce-123',
+        appleAuthorizationCode: 'valid-auth-code',
+        confirmation: 'حذف حسابي',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('تمت جدولة حذف الحساب بنجاح');
+      expect(mockAppleTokenVerifier.verifyIdToken).toHaveBeenCalledWith(
+        'valid-apple-identity-token',
+        'raw-nonce-123',
+      );
+      expect(mockAppleRevocationService.exchangeAndRevoke).toHaveBeenCalledWith(
+        'valid-auth-code',
+        appleUser.appleSub,
+      );
+    });
+
+    it('rejects with 401 APPLE_SUB_MISMATCH if identity token sub does not match user.appleSub', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(appleUser);
+      mockAppleTokenVerifier.verifyIdToken.mockResolvedValue({
+        sub: 'attacker.sub.999',
+        email: 'attacker@apple.com',
+      });
+
+      await expect(
+        usersService.scheduleAccountDeletion(appleUser.id, {
+          appleIdentityToken: 'attacker-token',
+          appleNonce: 'raw-nonce-123',
+          appleAuthorizationCode: 'attacker-code',
+          confirmation: 'حذف حسابي',
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 401,
+            code: 'APPLE_SUB_MISMATCH',
+          }),
+        }),
+      );
+
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
+    });
+
+    it('rejects with 401 APPLE_TOKEN_INVALID when Apple token verification fails', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(appleUser);
+      mockAppleTokenVerifier.verifyIdToken.mockRejectedValue(
+        new UnauthorizedException('Invalid signature or nonce mismatch'),
+      );
+
+      await expect(
+        usersService.scheduleAccountDeletion(appleUser.id, {
+          appleIdentityToken: 'bad-token',
+          appleNonce: 'bad-nonce',
+          appleAuthorizationCode: 'bad-code',
+          confirmation: 'حذف حسابي',
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 401,
+            code: 'APPLE_TOKEN_INVALID',
+          }),
+        }),
+      );
+
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
+    });
+
+    it('throws 503 APPLE_SERVICE_ERROR when AppleTokenVerifierService throws ServiceUnavailableException', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(appleUser);
+      mockAppleTokenVerifier.verifyIdToken.mockRejectedValue(
+        new ServiceUnavailableException('JWKS unavailable'),
+      );
+
+      await expect(
+        usersService.scheduleAccountDeletion(appleUser.id, {
+          appleIdentityToken: 'token',
+          appleNonce: 'nonce',
+          appleAuthorizationCode: 'code',
+          confirmation: 'حذف حسابي',
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 503,
+            code: 'APPLE_SERVICE_ERROR',
+          }),
+        }),
+      );
+    });
+
+    it('on duplicate request for already-scheduled account: verifies Apple token and sub, skips exchangeAndRevoke, and returns already-scheduled message', async () => {
+      const scheduledDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...appleUser,
+        deletionScheduledAt: scheduledDate,
+      });
+      mockAppleTokenVerifier.verifyIdToken.mockResolvedValue({
+        sub: appleUser.appleSub,
+      });
+
+      const res = await usersService.scheduleAccountDeletion(appleUser.id, {
+        appleIdentityToken: 'token',
+        appleNonce: 'nonce',
+        appleAuthorizationCode: 'code',
+        confirmation: 'حذف حسابي',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('حسابك مجدول للحذف بالفعل');
+      expect(mockAppleTokenVerifier.verifyIdToken).toHaveBeenCalled();
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
+    });
+
+    it('when Apple exchange returns invalid_grant, re-reads DB and returns already-scheduled message if concurrent request won', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce(appleUser) // initial read: not scheduled yet
+        .mockResolvedValueOnce({
+          deletionScheduledAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        }); // re-read after invalid_grant
+
+      mockAppleTokenVerifier.verifyIdToken.mockResolvedValue({
+        sub: appleUser.appleSub,
+      });
+      mockAppleRevocationService.exchangeAndRevoke.mockRejectedValue(
+        new BadRequestException({
+          statusCode: 400,
+          code: 'APPLE_CODE_INVALID',
+          message: 'رمز تفويض Apple منتهي الصلاحية أو غير صالح',
+        }),
+      );
+
+      const res = await usersService.scheduleAccountDeletion(appleUser.id, {
+        appleIdentityToken: 'token',
+        appleNonce: 'nonce',
+        appleAuthorizationCode: 'already-used-code',
+        confirmation: 'حذف حسابي',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('حسابك مجدول للحذف بالفعل');
+    });
+
+    it('multi-provider account (password + Apple) deleting via password skips Apple re-auth and does not call Apple', async () => {
+      const multiUser = {
+        id: 'user-multi-pass-apple',
+        email: 'multi@souqone.om',
+        displayName: 'Multi User',
+        passwordHash: validPasswordHash,
+        googleId: null,
+        appleSub: '001234.multi.apple.sub',
+        role: 'USER',
+        status: 'ACTIVE',
+        deletionScheduledAt: null,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(multiUser);
+
+      const res = await usersService.scheduleAccountDeletion(multiUser.id, {
+        password: validPassword,
+        confirmation: 'حذف حسابي',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('تمت جدولة حذف الحساب بنجاح');
+      expect(mockAppleTokenVerifier.verifyIdToken).not.toHaveBeenCalled();
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
+    });
+
+    it('multi-provider account (google + Apple) deleting via google skips Apple re-auth and does not call Apple', async () => {
+      const multiUser = {
+        id: 'user-multi-google-apple',
+        email: 'multigoogle@souqone.om',
+        displayName: 'Multi Google User',
+        passwordHash: null,
+        googleId: 'google-sub-123',
+        appleSub: '001234.multi.apple.sub',
+        role: 'USER',
+        status: 'ACTIVE',
+        deletionScheduledAt: null,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(multiUser);
+      mockAuthService.verifyGoogleIdToken.mockResolvedValue({ sub: 'google-sub-123' });
+
+      const res = await usersService.scheduleAccountDeletion(multiUser.id, {
+        googleIdToken: 'valid-google-token',
+        confirmation: 'DELETE',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('تمت جدولة حذف الحساب بنجاح');
+      expect(mockAppleTokenVerifier.verifyIdToken).not.toHaveBeenCalled();
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
+    });
+
+    it('account without appleSub sending Apple fields ignores Apple fields and processes via normal path', async () => {
+      const passOnlyUser = {
+        id: 'user-pass-only',
+        email: 'passonly@souqone.om',
+        displayName: 'Pass Only User',
+        passwordHash: validPasswordHash,
+        googleId: null,
+        appleSub: null,
+        role: 'USER',
+        status: 'ACTIVE',
+        deletionScheduledAt: null,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(passOnlyUser);
+
+      const res = await usersService.scheduleAccountDeletion(passOnlyUser.id, {
+        password: validPassword,
+        appleIdentityToken: 'ignored-token',
+        appleNonce: 'ignored-nonce',
+        appleAuthorizationCode: 'ignored-code',
+        confirmation: 'حذف حسابي',
+      });
+
+      expect(res.success).toBe(true);
+      expect(mockAppleTokenVerifier.verifyIdToken).not.toHaveBeenCalled();
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
+    });
+
+    it('pre-checks (ADMIN, BANNED, PENDING payment) reject BEFORE Apple token verifier or revocation is invoked', async () => {
+      const adminWithApple = {
+        ...appleUser,
+        role: 'ADMIN',
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(adminWithApple);
+
+      await expect(
+        usersService.scheduleAccountDeletion(adminWithApple.id, {
+          appleIdentityToken: 'token',
+          appleNonce: 'nonce',
+          appleAuthorizationCode: 'code',
+          confirmation: 'حذف حسابي',
+        }),
+      ).rejects.toThrow('لا يمكن حذف حساب إداري عبر هذا المسار');
+
+      expect(mockAppleTokenVerifier.verifyIdToken).not.toHaveBeenCalled();
+      expect(mockAppleRevocationService.exchangeAndRevoke).not.toHaveBeenCalled();
     });
   });
 

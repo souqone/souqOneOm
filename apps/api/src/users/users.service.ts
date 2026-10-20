@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   UnauthorizedException,
   ConflictException,
+  ServiceUnavailableException,
   HttpException,
   HttpStatus,
   Logger,
@@ -29,7 +30,12 @@ import {
 import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 import { normalizePhone, normalizePhoneStrict } from '../common/utils/normalize-phone';
 import { getLoginMethods } from '../auth/login-methods.util';
-import { getDeletionReauthMethod } from './deletion-reauth-method.util';
+import {
+  getDeletionReauthMethod,
+  getAvailableDeletionReauthMethods,
+} from './deletion-reauth-method.util';
+import { AppleTokenVerifierService } from '../auth/apple-token-verifier.service';
+import { AppleRevocationService } from '../auth/apple-revocation.service';
 
 @Injectable()
 export class UsersService {
@@ -43,6 +49,8 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly visibilityService: OwnerContentVisibilityService,
     private readonly mailService: MailService,
+    private readonly appleTokenVerifier: AppleTokenVerifierService,
+    private readonly appleRevocationService: AppleRevocationService,
   ) {}
 
   async getProfile(userId: string) {
@@ -54,6 +62,7 @@ export class UsersService {
         phoneE164: true,
         passwordHash: true,
         googleId: true,
+        appleSub: true,
       },
     });
 
@@ -61,11 +70,16 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
-    const { phoneVerifiedAt, phoneE164, passwordHash, googleId, ...profile } = user;
+    const { phoneVerifiedAt, phoneE164, passwordHash, googleId, appleSub, ...profile } = user;
     const phoneVerified = Boolean(phoneVerifiedAt && phoneE164);
-    const deletionReauthMethod = getDeletionReauthMethod({ passwordHash, googleId });
+    const deletionReauthMethod = getDeletionReauthMethod({ passwordHash, googleId, appleSub });
+    const availableDeletionReauthMethods = getAvailableDeletionReauthMethods({
+      passwordHash,
+      googleId,
+      appleSub,
+    });
 
-    return { ...profile, phoneVerified, deletionReauthMethod };
+    return { ...profile, phoneVerified, deletionReauthMethod, availableDeletionReauthMethods };
   }
 
   async getPublicProfile(userId: string) {
@@ -414,6 +428,7 @@ export class UsersService {
         displayName: true,
         passwordHash: true,
         googleId: true,
+        appleSub: true,
         role: true,
         status: true,
         deletionScheduledAt: true,
@@ -424,31 +439,142 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
-    // 2. Re-authentication rule (applied even on duplicate requests)
-    const reauthMethod = getDeletionReauthMethod(user);
-    if (reauthMethod === 'password') {
-      if (!dto.password) {
-        throw new UnauthorizedException('كلمة المرور مطلوبة لتأكيد حذف الحساب');
-      }
-      const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash!);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('كلمة المرور غير صحيحة');
-      }
-    } else if (reauthMethod === 'google') {
-      if (!dto.googleIdToken) {
-        throw new UnauthorizedException('رمز Google مطلوب لتأكيد حذف الحساب');
-      }
+    // Pre-checks BEFORE any call to Apple (read-only outside transaction)
+    if (user.role === 'ADMIN' || user.role === 'MODERATOR') {
+      throw new ForbiddenException('لا يمكن حذف حساب إداري عبر هذا المسار');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException('لا يمكن حذف حساب موقوف أو محظور');
+    }
+
+    const preCheckPayment = await this.prisma.payment.findFirst({
+      where: {
+        userId,
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
+    });
+    if (preCheckPayment) {
+      throw new ConflictException(
+        'لا يمكن جدولة حذف الحساب أثناء وجود معاملة دفع قيد المعالجة. يرجى الانتظار حتى اكتمال الدفعة أو إلغائها.',
+      );
+    }
+
+    // 2. Validate Apple fields consistency: all three or none
+    const appleFields = [dto.appleIdentityToken, dto.appleNonce, dto.appleAuthorizationCode];
+    const providedAppleCount = appleFields.filter((f) => typeof f === 'string' && f.trim() !== '').length;
+    if (providedAppleCount > 0 && providedAppleCount < 3) {
+      throw new BadRequestException(
+        'يلزم إرسال جميع بيانات Apple معاً (رمز الهوية، رمز التحقق، ورمز التفويض)',
+      );
+    }
+
+    // 3. Method selection:
+    // If request has Apple fields AND user has appleSub -> Apple path
+    // Otherwise normal path. If user is Apple-only -> must use Apple.
+    // If account has no appleSub and sent Apple fields -> ignore Apple fields and proceed with normal path.
+    const hasCompleteAppleFields = providedAppleCount === 3;
+    const useAppleReauth = Boolean(hasCompleteAppleFields && user.appleSub);
+
+    if (useAppleReauth) {
       let payload: any;
       try {
-        payload = await this.authService.verifyGoogleIdToken(dto.googleIdToken);
+        payload = await this.appleTokenVerifier.verifyIdToken(
+          dto.appleIdentityToken!,
+          dto.appleNonce!,
+        );
       } catch (err: any) {
-        throw new UnauthorizedException(err?.message || 'رمز Google غير صالح');
+        if (err instanceof ServiceUnavailableException) {
+          throw new ServiceUnavailableException({
+            statusCode: 503,
+            code: 'APPLE_SERVICE_ERROR',
+            message: 'تعذّر تأكيد الإلغاء مع Apple، يرجى المحاولة بعد قليل',
+          });
+        }
+        throw new UnauthorizedException({
+          statusCode: 401,
+          code: 'APPLE_TOKEN_INVALID',
+          message: 'تعذّر التحقق من هويتك عبر Apple، يرجى المحاولة مرة أخرى',
+        });
       }
-      if (payload.sub !== user.googleId) {
-        throw new UnauthorizedException('حساب Google غير مطابق لحسابك المسجل');
+
+      if (payload.sub !== user.appleSub) {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          code: 'APPLE_SUB_MISMATCH',
+          message: 'حساب Apple المستخدم لا يطابق الحساب المسجل في سوق ون',
+        });
       }
+
+      // Check duplicate request after identity verification
+      if (user.deletionScheduledAt != null) {
+        return {
+          success: true,
+          deletionScheduledAt: user.deletionScheduledAt.toISOString(),
+          message: 'حسابك مجدول للحذف بالفعل',
+        };
+      }
+
+      try {
+        await this.appleRevocationService.exchangeAndRevoke(
+          dto.appleAuthorizationCode!,
+          user.appleSub,
+        );
+      } catch (err: any) {
+        if (
+          err instanceof BadRequestException &&
+          err.getResponse &&
+          (err.getResponse() as any)?.code === 'APPLE_CODE_INVALID'
+        ) {
+          const freshUser = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { deletionScheduledAt: true },
+          });
+          if (freshUser?.deletionScheduledAt != null) {
+            return {
+              success: true,
+              deletionScheduledAt: freshUser.deletionScheduledAt.toISOString(),
+              message: 'حسابك مجدول للحذف بالفعل',
+            };
+          }
+        }
+        throw err;
+      }
+    } else {
+      // User did not use Apple reauth
+      if (!user.passwordHash && !user.googleId && user.appleSub) {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          code: 'APPLE_REAUTH_REQUIRED',
+          message: 'يلزم إعادة تأكيد هويتك عبر Apple لتأكيد حذف الحساب',
+        });
+      }
+
+      const reauthMethod = getDeletionReauthMethod(user);
+      if (reauthMethod === 'password') {
+        if (!dto.password) {
+          throw new UnauthorizedException('كلمة المرور مطلوبة لتأكيد حذف الحساب');
+        }
+        const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash!);
+        if (!isPasswordValid) {
+          throw new UnauthorizedException('كلمة المرور غير صحيحة');
+        }
+      } else if (reauthMethod === 'google') {
+        if (!dto.googleIdToken) {
+          throw new UnauthorizedException('رمز Google مطلوب لتأكيد حذف الحساب');
+        }
+        let payload: any;
+        try {
+          payload = await this.authService.verifyGoogleIdToken(dto.googleIdToken);
+        } catch (err: any) {
+          throw new UnauthorizedException(err?.message || 'رمز Google غير صالح');
+        }
+        if (payload.sub !== user.googleId) {
+          throw new UnauthorizedException('حساب Google غير مطابق لحسابك المسجل');
+        }
+      }
+      // Else: confirmation phrase is sufficient (validated by class-validator)
     }
-    // Else: confirmation phrase is sufficient (validated by class-validator)
 
     // 3. Atomic transaction with extended timeout options
     const result = await this.prisma.$transaction(
