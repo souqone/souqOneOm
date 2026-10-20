@@ -37,6 +37,12 @@ import {
 } from './deletion-reauth-method.util';
 import { AppleTokenVerifierService } from '../auth/apple-token-verifier.service';
 import { AppleRevocationService } from '../auth/apple-revocation.service';
+import { AuthProvider } from '@prisma/client';
+import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
+import { AuthAuditService } from '../auth/auth-audit.service';
+import { LinkGoogleDto } from './dto/link-google.dto';
+import { LinkAppleDto } from './dto/link-apple.dto';
+import { UnlinkProviderDto } from './dto/unlink-provider.dto';
 
 @Injectable()
 export class UsersService {
@@ -54,6 +60,10 @@ export class UsersService {
     private readonly appleTokenVerifier?: AppleTokenVerifierService,
     @Optional()
     private readonly appleRevocationService?: AppleRevocationService,
+    @Optional()
+    private readonly banBlacklistService?: BanBlacklistService,
+    @Optional()
+    private readonly authAuditService?: AuthAuditService,
   ) {}
 
   async getProfile(userId: string) {
@@ -411,7 +421,12 @@ export class UsersService {
 
   async getLoginHistory(userId: string) {
     return this.prisma.loginAudit.findMany({
-      where: { userId },
+      where: {
+        userId,
+        method: {
+          notIn: ['LINK_GOOGLE', 'LINK_APPLE', 'UNLINK_GOOGLE', 'UNLINK_APPLE'],
+        },
+      },
       select: {
         id: true, success: true, method: true,
         ipAddress: true, userAgent: true, reason: true, createdAt: true,
@@ -779,6 +794,1023 @@ export class UsersService {
     return {
       success: true,
       message: 'تم إلغاء طلب حذف الحساب واستعادة إعلاناتك بنجاح',
+    };
+  }
+
+  private async logSecurityAudit(data: {
+    email: string;
+    userId?: string;
+    success: boolean;
+    method?: string;
+    reason?: string;
+    ip?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    if (this.authAuditService) {
+      await this.authAuditService.logAudit(data);
+    } else {
+      try {
+        await this.prisma.loginAudit.create({
+          data: {
+            email: data.email,
+            userId: data.userId,
+            success: data.success,
+            method: data.method || 'EMAIL',
+            ipAddress: data.ip,
+            userAgent: data.userAgent,
+            reason: data.reason,
+          },
+        });
+      } catch (err) {
+        this.logger.error('Failed to write login audit', err);
+      }
+    }
+  }
+
+  private async verifyStepUp(
+    user: {
+      id: string;
+      passwordHash?: string | null;
+      googleId?: string | null;
+      appleSub?: string | null;
+    },
+    dto: {
+      currentPassword?: string;
+      reauthGoogleIdToken?: string;
+      reauthAppleIdToken?: string;
+      reauthAppleNonce?: string;
+    },
+    action: 'link' | 'unlink',
+    provider: 'google' | 'apple',
+  ): Promise<void> {
+    const actionAr = action === 'link' ? 'ربط' : 'إلغاء ربط';
+
+    // 1. If user has a password set (regardless of email verification status)
+    if (user.passwordHash) {
+      if (!dto.currentPassword || typeof dto.currentPassword !== 'string' || !dto.currentPassword.trim()) {
+        throw new HttpException(
+          {
+            statusCode: 403,
+            code: 'STEP_UP_REQUIRED',
+            message: `يرجى إدخال كلمة المرور الحالية لتأكيد ${actionAr} الحساب`,
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      const isPasswordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new HttpException(
+          {
+            statusCode: 403,
+            code: 'STEP_UP_REQUIRED',
+            message: `كلمة المرور الحالية غير صحيحة لتأكيد ${actionAr} الحساب`,
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      return;
+    }
+
+    // 2. User has no password set:
+    if (action === 'link') {
+      // If linking Google and user already has Apple:
+      if (provider === 'google' && user.appleSub) {
+        if (!dto.reauthAppleIdToken || !dto.reauthAppleNonce) {
+          throw new HttpException(
+            {
+              statusCode: 403,
+              code: 'STEP_UP_REQUIRED',
+              message: 'يلزم إعادة تأكيد هويتك عبر Apple لتأكيد ربط الحساب',
+            },
+            HttpStatus.FORBIDDEN,
+          );
+        }
+        if (!this.appleTokenVerifier) {
+          throw new ServiceUnavailableException({
+            statusCode: 503,
+            code: 'APPLE_SERVICE_ERROR',
+            message: 'خدمة التحقق من Apple غير متوفرة حالياً، يرجى المحاولة لاحقاً',
+          });
+        }
+        let payload: any;
+        try {
+          payload = await this.appleTokenVerifier.verifyIdToken(
+            dto.reauthAppleIdToken,
+            dto.reauthAppleNonce,
+          );
+        } catch (err: any) {
+          if (err instanceof ServiceUnavailableException) {
+            throw new ServiceUnavailableException({
+              statusCode: 503,
+              code: 'APPLE_SERVICE_ERROR',
+              message: 'تعذّر تأكيد الرمز مع Apple، يرجى المحاولة بعد قليل',
+            });
+          }
+          throw new UnauthorizedException({
+            statusCode: 401,
+            code: 'APPLE_TOKEN_INVALID',
+            message: 'تعذّر التحقق من هويتك عبر Apple، يرجى المحاولة مرة أخرى',
+          });
+        }
+        if (payload.sub !== user.appleSub) {
+          throw new UnauthorizedException({
+            statusCode: 401,
+            code: 'APPLE_SUB_MISMATCH',
+            message: 'حساب Apple المستخدم لا يطابق الحساب المسجل في سوق ون',
+          });
+        }
+        return;
+      }
+
+      // If linking Apple and user already has Google:
+      if (provider === 'apple' && user.googleId) {
+        if (!dto.reauthGoogleIdToken) {
+          throw new HttpException(
+            {
+              statusCode: 403,
+              code: 'STEP_UP_REQUIRED',
+              message: 'يلزم إعادة تأكيد هويتك عبر Google لتأكيد ربط الحساب',
+            },
+            HttpStatus.FORBIDDEN,
+          );
+        }
+        let payload: any;
+        try {
+          payload = await this.authService.verifyGoogleIdToken(dto.reauthGoogleIdToken);
+        } catch (err: any) {
+          throw new UnauthorizedException(err?.message || 'رمز Google غير صالح');
+        }
+        if (payload.sub !== user.googleId) {
+          throw new UnauthorizedException('حساب Google غير مطابق لحسابك المسجل');
+        }
+        return;
+      }
+
+      // If linking and user has neither password nor another social provider (e.g. phone-only):
+      // Active JWT is sufficient.
+      return;
+    }
+
+    if (action === 'unlink') {
+      if (provider === 'google') {
+        if (dto.reauthGoogleIdToken) {
+          let payload: any;
+          try {
+            payload = await this.authService.verifyGoogleIdToken(dto.reauthGoogleIdToken);
+          } catch (err: any) {
+            throw new UnauthorizedException(err?.message || 'رمز Google غير صالح');
+          }
+          if (payload.sub !== user.googleId) {
+            throw new UnauthorizedException('حساب Google غير مطابق لحسابك المسجل');
+          }
+          return;
+        }
+
+        if (user.appleSub && dto.reauthAppleIdToken && dto.reauthAppleNonce) {
+          if (!this.appleTokenVerifier) {
+            throw new ServiceUnavailableException({
+              statusCode: 503,
+              code: 'APPLE_SERVICE_ERROR',
+              message: 'خدمة التحقق من Apple غير متوفرة حالياً، يرجى المحاولة لاحقاً',
+            });
+          }
+          let payload: any;
+          try {
+            payload = await this.appleTokenVerifier.verifyIdToken(
+              dto.reauthAppleIdToken,
+              dto.reauthAppleNonce,
+            );
+          } catch (err: any) {
+            if (err instanceof ServiceUnavailableException) {
+              throw new ServiceUnavailableException({
+                statusCode: 503,
+                code: 'APPLE_SERVICE_ERROR',
+                message: 'تعذّر تأكيد الرمز مع Apple، يرجى المحاولة بعد قليل',
+              });
+            }
+            throw new UnauthorizedException({
+              statusCode: 401,
+              code: 'APPLE_TOKEN_INVALID',
+              message: 'تعذّر التحقق من هويتك عبر Apple، يرجى المحاولة مرة أخرى',
+            });
+          }
+          if (payload.sub !== user.appleSub) {
+            throw new UnauthorizedException({
+              statusCode: 401,
+              code: 'APPLE_SUB_MISMATCH',
+              message: 'حساب Apple المستخدم لا يطابق الحساب المسجل في سوق ون',
+            });
+          }
+          return;
+        }
+
+        throw new HttpException(
+          {
+            statusCode: 403,
+            code: 'STEP_UP_REQUIRED',
+            message: user.appleSub
+              ? 'يلزم إعادة تأكيد هويتك عبر Google أو Apple لتأكيد إلغاء ربط الحساب'
+              : 'يلزم إعادة تأكيد هويتك عبر Google لتأكيد إلغاء ربط الحساب',
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      if (provider === 'apple') {
+        if (dto.reauthAppleIdToken && dto.reauthAppleNonce) {
+          if (!this.appleTokenVerifier) {
+            throw new ServiceUnavailableException({
+              statusCode: 503,
+              code: 'APPLE_SERVICE_ERROR',
+              message: 'خدمة التحقق من Apple غير متوفرة حالياً، يرجى المحاولة لاحقاً',
+            });
+          }
+          let payload: any;
+          try {
+            payload = await this.appleTokenVerifier.verifyIdToken(
+              dto.reauthAppleIdToken,
+              dto.reauthAppleNonce,
+            );
+          } catch (err: any) {
+            if (err instanceof ServiceUnavailableException) {
+              throw new ServiceUnavailableException({
+                statusCode: 503,
+                code: 'APPLE_SERVICE_ERROR',
+                message: 'تعذّر تأكيد الرمز مع Apple، يرجى المحاولة بعد قليل',
+              });
+            }
+            throw new UnauthorizedException({
+              statusCode: 401,
+              code: 'APPLE_TOKEN_INVALID',
+              message: 'تعذّر التحقق من هويتك عبر Apple، يرجى المحاولة مرة أخرى',
+            });
+          }
+          if (payload.sub !== user.appleSub) {
+            throw new UnauthorizedException({
+              statusCode: 401,
+              code: 'APPLE_SUB_MISMATCH',
+              message: 'حساب Apple المستخدم لا يطابق الحساب المسجل في سوق ون',
+            });
+          }
+          return;
+        }
+
+        if (user.googleId && dto.reauthGoogleIdToken) {
+          let payload: any;
+          try {
+            payload = await this.authService.verifyGoogleIdToken(dto.reauthGoogleIdToken);
+          } catch (err: any) {
+            throw new UnauthorizedException(err?.message || 'رمز Google غير صالح');
+          }
+          if (payload.sub !== user.googleId) {
+            throw new UnauthorizedException('حساب Google غير مطابق لحسابك المسجل');
+          }
+          return;
+        }
+
+        throw new HttpException(
+          {
+            statusCode: 403,
+            code: 'STEP_UP_REQUIRED',
+            message: user.googleId
+              ? 'يلزم إعادة تأكيد هويتك عبر Apple أو Google لتأكيد إلغاء ربط الحساب'
+              : 'يلزم إعادة تأكيد هويتك عبر Apple لتأكيد إلغاء ربط الحساب',
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+    }
+  }
+
+  async linkGoogle(
+    userId: string,
+    dto: LinkGoogleDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        appleSub: true,
+        role: true,
+        status: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    if (user.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لتعديل وسائل الدخول.',
+      );
+    }
+
+    // Step-up verification
+    await this.verifyStepUp(user, dto, 'link', 'google');
+
+    // Verify Google ID token
+    const payload = await this.authService.verifyGoogleIdToken(dto.credential, dto.nonce);
+    const googleId = payload.sub;
+    const googleEmail = payload.email;
+
+    // Check ban blacklist
+    if (this.banBlacklistService) {
+      const isBlocked = await this.banBlacklistService.isGoogleBlocked(googleId);
+      if (isBlocked) {
+        await this.logSecurityAudit({
+          email: user.email || googleEmail || 'unknown',
+          userId: user.id,
+          success: false,
+          reason: 'ACCOUNT_BANNED',
+          method: 'LINK_GOOGLE',
+          ip,
+          userAgent,
+        });
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'ACCOUNT_BANNED',
+          message: 'تم حظر هذا الحساب لمخالفة شروط الاستخدام',
+        });
+      }
+    }
+
+    // Idempotency: already linked to THIS user
+    if (user.googleId === googleId) {
+      return { message: 'تم ربط حساب Google بنجاح' };
+    }
+
+    if (user.googleId) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'PROVIDER_ALREADY_LINKED',
+        message: 'حسابك مرتبط بحساب Google آخر. يرجى إلغاء الربط أولاً.',
+      });
+    }
+
+    // Check collision on User
+    const existingUser = await this.prisma.user.findUnique({
+      where: { googleId },
+      select: { id: true },
+    });
+    if (existingUser && existingUser.id !== userId) {
+      await this.logSecurityAudit({
+        email: user.email || googleEmail || 'unknown',
+        userId: user.id,
+        success: false,
+        reason: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        method: 'LINK_GOOGLE',
+        ip,
+        userAgent,
+      });
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        message: 'حساب Google هذا مرتبط بحساب آخر بالفعل',
+      });
+    }
+
+    // Check collision on AuthIdentity
+    const existingIdentity = await this.prisma.authIdentity.findUnique({
+      where: {
+        provider_providerUserId: {
+          provider: AuthProvider.GOOGLE,
+          providerUserId: googleId,
+        },
+      },
+      select: { userId: true },
+    });
+    if (existingIdentity && existingIdentity.userId !== userId) {
+      await this.logSecurityAudit({
+        email: user.email || googleEmail || 'unknown',
+        userId: user.id,
+        success: false,
+        reason: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        method: 'LINK_GOOGLE',
+        ip,
+        userAgent,
+      });
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        message: 'حساب Google هذا مرتبط بحساب آخر بالفعل',
+      });
+    }
+
+    // Execute atomic dual-write transaction with P2002 race protection
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: { googleId },
+        });
+        await tx.authIdentity.upsert({
+          where: {
+            provider_providerUserId: {
+              provider: AuthProvider.GOOGLE,
+              providerUserId: googleId,
+            },
+          },
+          update: { userId },
+          create: {
+            userId,
+            provider: AuthProvider.GOOGLE,
+            providerUserId: googleId,
+          },
+        });
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        const fresh = await this.prisma.user.findUnique({
+          where: { googleId },
+          select: { id: true },
+        });
+        if (fresh && fresh.id === userId) {
+          return { message: 'تم ربط حساب Google بنجاح' };
+        }
+        await this.logSecurityAudit({
+          email: user.email || googleEmail || 'unknown',
+          userId: user.id,
+          success: false,
+          reason: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+          method: 'LINK_GOOGLE',
+          ip,
+          userAgent,
+        });
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+          message: 'حساب Google هذا مرتبط بحساب آخر بالفعل',
+        });
+      }
+      throw err;
+    }
+
+    // Send security notification email
+    const targetEmail = user.email || googleEmail;
+    if (targetEmail) {
+      this.mailService
+        .sendSocialLinkedEmail(targetEmail, 'Google', user.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Google linked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
+    // Audit log
+    await this.logSecurityAudit({
+      email: targetEmail || 'unknown',
+      userId: user.id,
+      success: true,
+      method: 'LINK_GOOGLE',
+      ip,
+      userAgent,
+    });
+
+    return { message: 'تم ربط حساب Google بنجاح' };
+  }
+
+  async linkApple(
+    userId: string,
+    dto: LinkAppleDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        appleSub: true,
+        role: true,
+        status: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    if (user.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لتعديل وسائل الدخول.',
+      );
+    }
+
+    // Step-up verification
+    await this.verifyStepUp(user, dto, 'link', 'apple');
+
+    // Verify Apple ID token
+    if (!this.appleTokenVerifier) {
+      throw new ServiceUnavailableException({
+        statusCode: 503,
+        code: 'APPLE_SERVICE_ERROR',
+        message: 'خدمة التحقق من Apple غير متوفرة حالياً، يرجى المحاولة لاحقاً',
+      });
+    }
+    let payload: any;
+    try {
+      payload = await this.appleTokenVerifier.verifyIdToken(dto.identityToken, dto.nonce);
+    } catch (err: any) {
+      if (err instanceof ServiceUnavailableException) {
+        throw new ServiceUnavailableException({
+          statusCode: 503,
+          code: 'APPLE_SERVICE_ERROR',
+          message: 'تعذّر تأكيد الرمز مع Apple، يرجى المحاولة بعد قليل',
+        });
+      }
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'APPLE_TOKEN_INVALID',
+        message: 'تعذّر التحقق من هويتك عبر Apple، يرجى المحاولة مرة أخرى',
+      });
+    }
+
+    const appleSub = payload.sub;
+    const appleEmail = payload.email;
+
+    // Check ban blacklist
+    if (this.banBlacklistService) {
+      const isBlocked = await this.banBlacklistService.isAppleBlocked(appleSub);
+      if (isBlocked) {
+        await this.logSecurityAudit({
+          email: user.email || appleEmail || 'unknown',
+          userId: user.id,
+          success: false,
+          reason: 'ACCOUNT_BANNED',
+          method: 'LINK_APPLE',
+          ip,
+          userAgent,
+        });
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'ACCOUNT_BANNED',
+          message: 'تم حظر هذا الحساب لمخالفة شروط الاستخدام',
+        });
+      }
+    }
+
+    // Idempotency: already linked to THIS user
+    if (user.appleSub === appleSub) {
+      return { message: 'تم ربط حساب Apple بنجاح' };
+    }
+
+    if (user.appleSub) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'PROVIDER_ALREADY_LINKED',
+        message: 'حسابك مرتبط بحساب Apple آخر. يرجى إلغاء الربط أولاً.',
+      });
+    }
+
+    // Check collision on User
+    const existingUser = await this.prisma.user.findUnique({
+      where: { appleSub },
+      select: { id: true },
+    });
+    if (existingUser && existingUser.id !== userId) {
+      await this.logSecurityAudit({
+        email: user.email || appleEmail || 'unknown',
+        userId: user.id,
+        success: false,
+        reason: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        method: 'LINK_APPLE',
+        ip,
+        userAgent,
+      });
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        message: 'حساب Apple هذا مرتبط بحساب آخر بالفعل',
+      });
+    }
+
+    // Check collision on AuthIdentity
+    const existingIdentity = await this.prisma.authIdentity.findUnique({
+      where: {
+        provider_providerUserId: {
+          provider: AuthProvider.APPLE,
+          providerUserId: appleSub,
+        },
+      },
+      select: { userId: true },
+    });
+    if (existingIdentity && existingIdentity.userId !== userId) {
+      await this.logSecurityAudit({
+        email: user.email || appleEmail || 'unknown',
+        userId: user.id,
+        success: false,
+        reason: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        method: 'LINK_APPLE',
+        ip,
+        userAgent,
+      });
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+        message: 'حساب Apple هذا مرتبط بحساب آخر بالفعل',
+      });
+    }
+
+    // Execute atomic dual-write transaction with P2002 race protection
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: { appleSub },
+        });
+        await tx.authIdentity.upsert({
+          where: {
+            provider_providerUserId: {
+              provider: AuthProvider.APPLE,
+              providerUserId: appleSub,
+            },
+          },
+          update: { userId },
+          create: {
+            userId,
+            provider: AuthProvider.APPLE,
+            providerUserId: appleSub,
+          },
+        });
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        const fresh = await this.prisma.user.findUnique({
+          where: { appleSub },
+          select: { id: true },
+        });
+        if (fresh && fresh.id === userId) {
+          return { message: 'تم ربط حساب Apple بنجاح' };
+        }
+        await this.logSecurityAudit({
+          email: user.email || appleEmail || 'unknown',
+          userId: user.id,
+          success: false,
+          reason: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+          method: 'LINK_APPLE',
+          ip,
+          userAgent,
+        });
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'SOCIAL_ACCOUNT_ALREADY_LINKED',
+          message: 'حساب Apple هذا مرتبط بحساب آخر بالفعل',
+        });
+      }
+      throw err;
+    }
+
+    // Send security notification email
+    const targetEmail = user.email || appleEmail;
+    if (targetEmail) {
+      this.mailService
+        .sendSocialLinkedEmail(targetEmail, 'Apple', user.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Apple linked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
+    // Audit log
+    await this.logSecurityAudit({
+      email: targetEmail || 'unknown',
+      userId: user.id,
+      success: true,
+      method: 'LINK_APPLE',
+      ip,
+      userAgent,
+    });
+
+    return { message: 'تم ربط حساب Apple بنجاح' };
+  }
+
+  async unlinkGoogle(
+    userId: string,
+    dto: UnlinkProviderDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; accessToken?: string; refreshToken?: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        appleSub: true,
+        phoneE164: true,
+        phoneVerifiedAt: true,
+        isVerified: true,
+        role: true,
+        status: true,
+        tokenVersion: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    if (user.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لتعديل وسائل الدخول.',
+      );
+    }
+
+    // Idempotency: if Google is not linked, return 200 OK without incrementing tokenVersion
+    if (!user.googleId) {
+      return { message: 'حساب Google غير مرتبط بالفعل' };
+    }
+
+    // LAST_LOGIN_METHOD protection
+    const methods = getLoginMethods(user);
+    const remaining = methods.totalMethods - (methods.hasGoogle ? 1 : 0);
+    if (remaining < 1) {
+      throw new BadRequestException({
+        code: 'LAST_LOGIN_METHOD',
+        message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+      });
+    }
+
+    // Step-up verification
+    await this.verifyStepUp(user, dto, 'unlink', 'google');
+
+    // Transaction: nullify User.googleId, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      // Row lock to serialize concurrent unlink attempts on this user
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId} FOR UPDATE`;
+
+      const txUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          passwordHash: true,
+          googleId: true,
+          appleSub: true,
+          phoneE164: true,
+          phoneVerifiedAt: true,
+          isVerified: true,
+        },
+      });
+
+      if (!txUser?.googleId) {
+        throw new BadRequestException({
+          code: 'PROVIDER_NOT_LINKED',
+          message: 'حساب Google غير مرتبط بالفعل',
+        });
+      }
+
+      const txMethods = getLoginMethods(txUser);
+      const txRemaining = txMethods.totalMethods - (txMethods.hasGoogle ? 1 : 0);
+      if (txRemaining < 1) {
+        throw new BadRequestException({
+          code: 'LAST_LOGIN_METHOD',
+          message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+        });
+      }
+
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: {
+          googleId: null,
+          tokenVersion: { increment: 1 },
+        },
+      });
+
+      await tx.authIdentity.deleteMany({
+        where: {
+          userId,
+          provider: AuthProvider.GOOGLE,
+        },
+      });
+
+      await this.authTokenService.revokeAllRefreshTokens(userId, tx);
+      return u;
+    });
+
+    await this.accessTokenGate.invalidate(userId);
+
+    // Send security notification email
+    if (updatedUser.email) {
+      this.mailService
+        .sendSocialUnlinkedEmail(updatedUser.email, 'Google', updatedUser.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Google unlinked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
+    // Audit log
+    await this.logSecurityAudit({
+      email: updatedUser.email || 'unknown',
+      userId: user.id,
+      success: true,
+      method: 'UNLINK_GOOGLE',
+      ip,
+      userAgent,
+    });
+
+    // Sign new session tokens
+    const accessToken = await this.authTokenService.signAccessToken(updatedUser);
+    const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
+
+    return {
+      message: 'تم إلغاء ربط حساب Google بنجاح',
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async unlinkApple(
+    userId: string,
+    dto: UnlinkProviderDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; accessToken?: string; refreshToken?: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        appleSub: true,
+        phoneE164: true,
+        phoneVerifiedAt: true,
+        isVerified: true,
+        role: true,
+        status: true,
+        tokenVersion: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    if (user.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لتعديل وسائل الدخول.',
+      );
+    }
+
+    // Idempotency: if Apple is not linked, return 200 OK without incrementing tokenVersion
+    if (!user.appleSub) {
+      return { message: 'حساب Apple غير مرتبط بالفعل' };
+    }
+
+    // LAST_LOGIN_METHOD protection
+    const methods = getLoginMethods(user);
+    const remaining = methods.totalMethods - (methods.hasApple ? 1 : 0);
+    if (remaining < 1) {
+      throw new BadRequestException({
+        code: 'LAST_LOGIN_METHOD',
+        message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+      });
+    }
+
+    // Step-up verification
+    await this.verifyStepUp(user, dto, 'unlink', 'apple');
+
+    // Transaction: nullify User.appleSub, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      // Row lock to serialize concurrent unlink attempts on this user
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId} FOR UPDATE`;
+
+      const txUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          passwordHash: true,
+          googleId: true,
+          appleSub: true,
+          phoneE164: true,
+          phoneVerifiedAt: true,
+          isVerified: true,
+        },
+      });
+
+      if (!txUser?.appleSub) {
+        throw new BadRequestException({
+          code: 'PROVIDER_NOT_LINKED',
+          message: 'حساب Apple غير مرتبط بالفعل',
+        });
+      }
+
+      const txMethods = getLoginMethods(txUser);
+      const txRemaining = txMethods.totalMethods - (txMethods.hasApple ? 1 : 0);
+      if (txRemaining < 1) {
+        throw new BadRequestException({
+          code: 'LAST_LOGIN_METHOD',
+          message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+        });
+      }
+
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: {
+          appleSub: null,
+          tokenVersion: { increment: 1 },
+        },
+      });
+
+      await tx.authIdentity.deleteMany({
+        where: {
+          userId,
+          provider: AuthProvider.APPLE,
+        },
+      });
+
+      await this.authTokenService.revokeAllRefreshTokens(userId, tx);
+      return u;
+    });
+
+    await this.accessTokenGate.invalidate(userId);
+
+    // Send security notification email
+    if (updatedUser.email) {
+      this.mailService
+        .sendSocialUnlinkedEmail(updatedUser.email, 'Apple', updatedUser.displayName)
+        .catch((err: any) => {
+          this.logger.error(
+            `Failed to send Apple unlinked email for user ${userId}: ${redactEmails(err?.message || String(err))}`,
+          );
+        });
+    }
+
+    // Audit log
+    await this.logSecurityAudit({
+      email: updatedUser.email || 'unknown',
+      userId: user.id,
+      success: true,
+      method: 'UNLINK_APPLE',
+      ip,
+      userAgent,
+    });
+
+    // Sign new session tokens
+    const accessToken = await this.authTokenService.signAccessToken(updatedUser);
+    const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
+
+    return {
+      message: 'تم إلغاء ربط حساب Apple بنجاح',
+      accessToken,
+      refreshToken,
     };
   }
 }

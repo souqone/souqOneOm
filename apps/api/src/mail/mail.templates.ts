@@ -1623,3 +1623,105 @@ ${BRAND_NAME}
   return { subject, html, text };
 }
 
+/**
+ * Builds email template for linking a social account (Google / Apple).
+ */
+export function buildSocialLinkedEmail({
+  displayName,
+  provider,
+  linkedAt,
+}: {
+  displayName?: string | null;
+  provider: 'Google' | 'Apple';
+  linkedAt: Date;
+}): EmailTemplateResult {
+  const rawNameAr = resolveDisplayName(displayName, 'المستخدم');
+  const safeNameHtml = escapeHtml(rawNameAr);
+  const formattedDateAr = formatOmanDate(linkedAt, 'ar');
+  const formattedDateEn = formatOmanDate(linkedAt, 'en');
+  const subject = `تم ربط حساب ${provider} — ${BRAND_NAME}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style type="text/css">
+    body { font-family: Tahoma, Arial, sans-serif; background-color: #FFFFFF; margin: 0; padding: 20px; text-align: center; direction: rtl; }
+    .card { max-width: 500px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 8px; padding: 24px; }
+  </style>
+</head>
+<body dir="rtl">
+  <div class="card">
+    <h2 style="color: #11232E;">تأكيد ربط وسيلة دخول جديدة</h2>
+    <p>مرحباً <b>${safeNameHtml}</b>،</p>
+    <p>تم ربط حساب <b>${provider}</b> كوسيلة دخول بحسابكم في ${BRAND_NAME} بتاريخ ${formattedDateAr}.</p>
+    <p style="font-size: 13px; color: #64748B;">إذا قمت بهذا الإجراء بنفسك، فلا داعي لاتخاذ أي خطوة أخرى.</p>
+    <p style="font-size: 13px; color: #B91C1C;">إذا لم تكن أنت من قام بهذا الإجراء، يرجى التواصل فوراً مع الدعم الفني: support@souqoneom.com</p>
+    <div style="margin-top: 16px; border-top: 1px dashed #E2E8F0; padding-top: 12px; font-size: 12px; color: #64748B; direction: ltr;">
+      Your ${provider} account was linked to your ${BRAND_NAME} account on ${formattedDateEn}.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `مرحباً ${rawNameAr}،
+تم ربط حساب ${provider} كوسيلة دخول بحسابكم في ${BRAND_NAME} بتاريخ ${formattedDateAr}.
+إذا لم تكن أنت من قام بهذا، يرجى التواصل فوراً مع الدعم: support@souqoneom.com
+`;
+
+  return { subject, html, text };
+}
+
+/**
+ * Builds email template for unlinking a social account (Google / Apple).
+ */
+export function buildSocialUnlinkedEmail({
+  displayName,
+  provider,
+  unlinkedAt,
+}: {
+  displayName?: string | null;
+  provider: 'Google' | 'Apple';
+  unlinkedAt: Date;
+}): EmailTemplateResult {
+  const rawNameAr = resolveDisplayName(displayName, 'المستخدم');
+  const safeNameHtml = escapeHtml(rawNameAr);
+  const formattedDateAr = formatOmanDate(unlinkedAt, 'ar');
+  const formattedDateEn = formatOmanDate(unlinkedAt, 'en');
+  const subject = `تم إلغاء ربط حساب ${provider} — ${BRAND_NAME}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style type="text/css">
+    body { font-family: Tahoma, Arial, sans-serif; background-color: #FFFFFF; margin: 0; padding: 20px; text-align: center; direction: rtl; }
+    .card { max-width: 500px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 8px; padding: 24px; }
+  </style>
+</head>
+<body dir="rtl">
+  <div class="card">
+    <h2 style="color: #11232E;">تأكيد إلغاء ربط وسيلة الدخول</h2>
+    <p>مرحباً <b>${safeNameHtml}</b>،</p>
+    <p>تم إلغاء ربط حساب <b>${provider}</b> من حسابكم في ${BRAND_NAME} بتاريخ ${formattedDateAr}.</p>
+    <p style="font-size: 13px; color: #64748B;">إذا قمت بهذا الإجراء بنفسك، فلا داعي لاتخاذ أي خطوة أخرى.</p>
+    <p style="font-size: 13px; color: #B91C1C;">إذا لم تكن أنت من قام بهذا الإجراء، يرجى التواصل فوراً مع الدعم الفني: support@souqoneom.com</p>
+    <div style="margin-top: 16px; border-top: 1px dashed #E2E8F0; padding-top: 12px; font-size: 12px; color: #64748B; direction: ltr;">
+      Your ${provider} account was unlinked from your ${BRAND_NAME} account on ${formattedDateEn}.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `مرحباً ${rawNameAr}،
+تم إلغاء ربط حساب ${provider} من حسابكم في ${BRAND_NAME} بتاريخ ${formattedDateAr}.
+إذا لم تكن أنت من قام بهذا، يرجى التواصل فوراً مع الدعم: support@souqoneom.com
+`;
+
+  return { subject, html, text };
+}
+

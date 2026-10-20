@@ -322,37 +322,79 @@ export class AuthService {
 
       if (!user) {
         // Create new user from Google with dual-write to auth_identities
-        const username = normalizedEmail.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex');
-        user = await this.prisma.$transaction(async (tx) => {
-          const u = await tx.user.create({
-            data: {
-              email: normalizedEmail,
-              username,
-              displayName: name || username,
-              googleId,
-              avatarUrl: picture,
-              isVerified: true,
-              emailVerifiedAt: new Date(),
-            },
-          });
-          if (tx.authIdentity?.upsert) {
-            await tx.authIdentity.upsert({
-              where: {
-                provider_providerUserId: {
+        for (let attempt = 1; ; attempt++) {
+          try {
+            user = await this.prisma.$transaction(async (tx) => {
+              const username = normalizedEmail.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex');
+              const u = await tx.user.create({
+                data: {
+                  email: normalizedEmail,
+                  username,
+                  displayName: name || username,
+                  googleId,
+                  avatarUrl: picture,
+                  isVerified: true,
+                  emailVerifiedAt: new Date(),
+                },
+              });
+              await tx.authIdentity.upsert({
+                where: {
+                  provider_providerUserId: {
+                    provider: AuthProvider.GOOGLE,
+                    providerUserId: googleId,
+                  },
+                },
+                update: { userId: u.id },
+                create: {
+                  userId: u.id,
                   provider: AuthProvider.GOOGLE,
                   providerUserId: googleId,
                 },
-              },
-              update: { userId: u.id },
-              create: {
-                userId: u.id,
-                provider: AuthProvider.GOOGLE,
-                providerUserId: googleId,
-              },
+              });
+              return u;
             });
+            break;
+          } catch (err: any) {
+            if (err?.code === 'P2002') {
+              const target = err?.meta?.target;
+              const targetContains = (field: string): boolean => {
+                if (Array.isArray(target)) {
+                  return target.includes(field);
+                }
+                if (typeof target === 'string') {
+                  return target.includes(field);
+                }
+                return false;
+              };
+
+              if (targetContains('username')) {
+                if (attempt < 5) {
+                  continue;
+                }
+                throw err;
+              }
+
+              // Any P2002 target other than username: check if user already exists by googleId
+              const existing = await this.prisma.user.findUnique({ where: { googleId } });
+              if (existing) {
+                user = existing;
+                break;
+              }
+
+              if (targetContains('email')) {
+                throw new ConflictException({
+                  statusCode: 409,
+                  code: 'ACCOUNT_LINK_REQUIRED',
+                  message: 'هذا البريد مسجل مسبقاً. يرجى تسجيل الدخول بحسابك أولاً، ثم ربط حساب Google من الملف الشخصي.',
+                });
+              }
+
+              throw err;
+            }
+
+            throw err;
           }
-          return u;
-        });
+        }
 
         if (user && user.email) {
           const newUserId = user.id;
@@ -399,22 +441,20 @@ export class AuthService {
                 message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
               });
             }
-            if (tx.authIdentity?.upsert) {
-              await tx.authIdentity.upsert({
-                where: {
-                  provider_providerUserId: {
-                    provider: AuthProvider.GOOGLE,
-                    providerUserId: googleId,
-                  },
-                },
-                update: { userId: targetUserId },
-                create: {
-                  userId: targetUserId,
+            await tx.authIdentity.upsert({
+              where: {
+                provider_providerUserId: {
                   provider: AuthProvider.GOOGLE,
                   providerUserId: googleId,
                 },
-              });
-            }
+              },
+              update: { userId: targetUserId },
+              create: {
+                userId: targetUserId,
+                provider: AuthProvider.GOOGLE,
+                providerUserId: googleId,
+              },
+            });
             await this.otp.invalidateActive(targetUserId, OtpPurpose.EMAIL_VERIFY, tx);
             await this.otp.invalidateActive(targetUserId, OtpPurpose.PASSWORD_RESET, tx);
             await this.tokens.revokeAllRefreshTokens(targetUserId, tx);
@@ -441,7 +481,7 @@ export class AuthService {
             throw new ConflictException({
               statusCode: 409,
               code: 'ACCOUNT_LINK_REQUIRED',
-              message: 'هذا البريد مسجل بالفعل. يرجى ربط حساب Google من إعدادات الحساب.',
+              message: 'هذا البريد مسجل مسبقاً. يرجى تسجيل الدخول بحسابك أولاً، ثم ربط حساب Google من الملف الشخصي.',
             });
           }
         }
@@ -624,7 +664,7 @@ export class AuthService {
                 throw new ConflictException({
                   statusCode: 409,
                   code: 'ACCOUNT_LINK_REQUIRED',
-                  message: 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول وربط حساب Apple من الإعدادات',
+                  message: 'هذا البريد مسجل مسبقاً. يرجى تسجيل الدخول بحسابك أولاً، ثم ربط حساب Apple من الملف الشخصي.',
                 });
               }
 
@@ -694,7 +734,7 @@ export class AuthService {
           throw new ConflictException({
             statusCode: 409,
             code: 'ACCOUNT_LINK_REQUIRED',
-            message: 'هذا البريد مسجل بوسيلة دخول أخرى. سجّل الدخول بها ثم اربط حساب Apple من إعدادات الحساب.',
+            message: 'هذا البريد مسجل بوسيلة دخول أخرى. سجّل الدخول بها أولاً، ثم اربط حساب Apple من الملف الشخصي.',
           });
         }
       }

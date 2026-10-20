@@ -717,7 +717,7 @@ describe('Apple Auth Endpoint & Flow (AuthService.appleAuth)', () => {
         statusCode: 409,
         code: 'ACCOUNT_LINK_REQUIRED',
         message:
-          'هذا البريد مسجل بوسيلة دخول أخرى. سجّل الدخول بها ثم اربط حساب Apple من إعدادات الحساب.',
+          'هذا البريد مسجل بوسيلة دخول أخرى. سجّل الدخول بها أولاً، ثم اربط حساب Apple من الملف الشخصي.',
       });
       expect(mockPrisma.user.create).not.toHaveBeenCalled();
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
