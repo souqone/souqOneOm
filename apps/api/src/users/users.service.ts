@@ -1577,6 +1577,9 @@ export class UsersService {
 
     // Transaction: nullify User.googleId, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
     const updatedUser = await this.prisma.$transaction(async (tx) => {
+      // Row lock to serialize concurrent unlink attempts on this user
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId} FOR UPDATE`;
+
       const txUser = await tx.user.findUnique({
         where: { id: userId },
         select: {
@@ -1724,6 +1727,9 @@ export class UsersService {
 
     // Transaction: nullify User.appleSub, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
     const updatedUser = await this.prisma.$transaction(async (tx) => {
+      // Row lock to serialize concurrent unlink attempts on this user
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId} FOR UPDATE`;
+
       const txUser = await tx.user.findUnique({
         where: { id: userId },
         select: {

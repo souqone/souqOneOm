@@ -109,6 +109,7 @@ describe('Account Linking & Unlinking (PR 3 — UsersService)', () => {
       loginAudit: {
         create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
       },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'mock-user' }]),
       $transaction: jest.fn(async (cb: any) => cb(mockPrisma)),
     };
 
