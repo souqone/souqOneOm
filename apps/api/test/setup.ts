@@ -108,6 +108,16 @@ class MockRedisService {
 export class MockMailService {
   public lastVerificationEmail?: { to: string; code: string };
   public lastPasswordResetEmail?: { to: string; code: string };
+  public lastSocialLinkedEmail?: {
+    to: string;
+    provider: 'Google' | 'Apple';
+    displayName?: string | null;
+  };
+  public lastSocialUnlinkedEmail?: {
+    to: string;
+    provider: 'Google' | 'Apple';
+    displayName?: string | null;
+  };
   public verificationEmails = new Map<string, string>();
   public passwordResetEmails = new Map<string, string>();
 
@@ -132,9 +142,27 @@ export class MockMailService {
     _displayName?: string | null,
   ): Promise<void> {}
 
+  async sendSocialLinkedEmail(
+    to: string,
+    provider: 'Google' | 'Apple',
+    displayName?: string | null,
+  ): Promise<void> {
+    this.lastSocialLinkedEmail = { to, provider, displayName };
+  }
+
+  async sendSocialUnlinkedEmail(
+    to: string,
+    provider: 'Google' | 'Apple',
+    displayName?: string | null,
+  ): Promise<void> {
+    this.lastSocialUnlinkedEmail = { to, provider, displayName };
+  }
+
   clear() {
     this.lastVerificationEmail = undefined;
     this.lastPasswordResetEmail = undefined;
+    this.lastSocialLinkedEmail = undefined;
+    this.lastSocialUnlinkedEmail = undefined;
     this.verificationEmails.clear();
     this.passwordResetEmails.clear();
   }

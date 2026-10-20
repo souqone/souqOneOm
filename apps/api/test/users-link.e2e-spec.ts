@@ -354,4 +354,59 @@ describe('Users Account Linking & Unlinking (e2e)', () => {
         .expect(200);
     });
   });
+
+  describe('Concurrent unlinking (OCC & row-level locking)', () => {
+    it('serializes concurrent DELETE requests so exactly one succeeds and one returns 400 LAST_LOGIN_METHOD', async () => {
+      const prisma = getPrisma();
+      const googleSub = `google-concurrent-${uniqueId()}`;
+      const appleSub = `apple-concurrent-${uniqueId()}`;
+      const nonce = `nonce-${uniqueId()}`;
+      const user = await prisma.user.create({
+        data: {
+          email: `concurrent-${uniqueId()}@example.com`,
+          username: `concurrent_${uniqueId()}`,
+          displayName: 'Concurrent User',
+          googleId: googleSub,
+          appleSub: appleSub,
+          passwordHash: null,
+          isVerified: true,
+        },
+      });
+
+      const authTokenService = getApp().get(AuthTokenService);
+      const token = await authTokenService.signAccessToken(user);
+
+      verifyGoogleSpy.mockResolvedValue({
+        sub: googleSub,
+        email: user.email,
+        email_verified: true,
+      });
+      verifyAppleSpy.mockResolvedValue({
+        sub: appleSub,
+        email: user.email,
+      });
+
+      const [resGoogle, resApple] = await Promise.all([
+        request(getApp().getHttpServer())
+          .delete('/api/users/me/link/google')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ reauthGoogleIdToken: 'google-tok' }),
+        request(getApp().getHttpServer())
+          .delete('/api/users/me/link/apple')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ reauthAppleIdToken: 'apple-tok', reauthAppleNonce: nonce }),
+      ]);
+
+      const statuses = [resGoogle.status, resApple.status].sort();
+      expect(statuses).toEqual([200, 400]);
+
+      const failedRes = resGoogle.status === 400 ? resGoogle : resApple;
+      expect(failedRes.body.code).toBe('LAST_LOGIN_METHOD');
+
+      const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const hasGoogle = !!freshUser?.googleId;
+      const hasApple = !!freshUser?.appleSub;
+      expect(hasGoogle !== hasApple).toBe(true);
+    });
+  });
 });
