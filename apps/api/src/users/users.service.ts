@@ -42,6 +42,7 @@ import { BanBlacklistService } from '../ban-blacklist/ban-blacklist.service';
 import { AuthAuditService } from '../auth/auth-audit.service';
 import { LinkGoogleDto } from './dto/link-google.dto';
 import { LinkAppleDto } from './dto/link-apple.dto';
+import { UnlinkProviderDto } from './dto/unlink-provider.dto';
 
 @Injectable()
 export class UsersService {
@@ -1468,5 +1469,215 @@ export class UsersService {
     });
 
     return { message: 'تم ربط حساب Apple بنجاح' };
+  }
+
+  async unlinkGoogle(
+    userId: string,
+    dto: UnlinkProviderDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; accessToken?: string; refreshToken?: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        appleSub: true,
+        phoneE164: true,
+        phoneVerifiedAt: true,
+        isVerified: true,
+        role: true,
+        status: true,
+        tokenVersion: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    if (user.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لتعديل وسائل الدخول.',
+      );
+    }
+
+    // Idempotency: if Google is not linked, return 200 OK without incrementing tokenVersion
+    if (!user.googleId) {
+      return { message: 'حساب Google غير مرتبط بالفعل' };
+    }
+
+    // LAST_LOGIN_METHOD protection
+    const methods = getLoginMethods(user);
+    const remaining = methods.totalMethods - (methods.hasGoogle ? 1 : 0);
+    if (remaining < 1) {
+      throw new BadRequestException({
+        code: 'LAST_LOGIN_METHOD',
+        message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+      });
+    }
+
+    // Step-up verification
+    await this.verifyStepUp(user, dto, 'unlink', 'google');
+
+    // Transaction: nullify User.googleId, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: {
+          googleId: null,
+          tokenVersion: { increment: 1 },
+        },
+      });
+
+      await tx.authIdentity.deleteMany({
+        where: {
+          userId,
+          provider: AuthProvider.GOOGLE,
+        },
+      });
+
+      await this.authTokenService.revokeAllRefreshTokens(userId, tx);
+      return u;
+    });
+
+    await this.accessTokenGate.invalidate(userId);
+
+    // Audit log
+    await this.logSecurityAudit({
+      email: updatedUser.email || 'unknown',
+      userId: user.id,
+      success: true,
+      method: 'UNLINK_GOOGLE',
+      ip,
+      userAgent,
+    });
+
+    // Sign new session tokens
+    const accessToken = await this.authTokenService.signAccessToken(updatedUser);
+    const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
+
+    return {
+      message: 'تم إلغاء ربط حساب Google بنجاح',
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async unlinkApple(
+    userId: string,
+    dto: UnlinkProviderDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; accessToken?: string; refreshToken?: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        passwordHash: true,
+        googleId: true,
+        appleSub: true,
+        phoneE164: true,
+        phoneVerifiedAt: true,
+        isVerified: true,
+        role: true,
+        status: true,
+        tokenVersion: true,
+        deletionScheduledAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ACCOUNT_BANNED',
+        message: 'تم حظر حسابك لمخالفة شروط الاستخدام',
+      });
+    }
+
+    if (user.deletionScheduledAt != null) {
+      throw new ForbiddenException(
+        'الحساب مجدول للحذف. يرجى إلغاء طلب الحذف أولاً لتعديل وسائل الدخول.',
+      );
+    }
+
+    // Idempotency: if Apple is not linked, return 200 OK without incrementing tokenVersion
+    if (!user.appleSub) {
+      return { message: 'حساب Apple غير مرتبط بالفعل' };
+    }
+
+    // LAST_LOGIN_METHOD protection
+    const methods = getLoginMethods(user);
+    const remaining = methods.totalMethods - (methods.hasApple ? 1 : 0);
+    if (remaining < 1) {
+      throw new BadRequestException({
+        code: 'LAST_LOGIN_METHOD',
+        message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+      });
+    }
+
+    // Step-up verification
+    await this.verifyStepUp(user, dto, 'unlink', 'apple');
+
+    // Transaction: nullify User.appleSub, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: {
+          appleSub: null,
+          tokenVersion: { increment: 1 },
+        },
+      });
+
+      await tx.authIdentity.deleteMany({
+        where: {
+          userId,
+          provider: AuthProvider.APPLE,
+        },
+      });
+
+      await this.authTokenService.revokeAllRefreshTokens(userId, tx);
+      return u;
+    });
+
+    await this.accessTokenGate.invalidate(userId);
+
+    // Audit log
+    await this.logSecurityAudit({
+      email: updatedUser.email || 'unknown',
+      userId: user.id,
+      success: true,
+      method: 'UNLINK_APPLE',
+      ip,
+      userAgent,
+    });
+
+    // Sign new session tokens
+    const accessToken = await this.authTokenService.signAccessToken(updatedUser);
+    const refreshToken = await this.authTokenService.generateRefreshToken(updatedUser.id);
+
+    return {
+      message: 'تم إلغاء ربط حساب Apple بنجاح',
+      accessToken,
+      refreshToken,
+    };
   }
 }

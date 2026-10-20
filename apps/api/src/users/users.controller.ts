@@ -11,6 +11,7 @@ import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { LinkGoogleDto } from './dto/link-google.dto';
 import { LinkAppleDto } from './dto/link-apple.dto';
+import { UnlinkProviderDto } from './dto/unlink-provider.dto';
 import { ExpoPushService } from '../notifications/expo-push.service';
 import { ExposePhone } from '../common/decorators/expose-phone.decorator';
 
@@ -101,6 +102,28 @@ export class UsersController {
     @Req() req: Request,
   ) {
     return this.usersService.linkApple(user.sub, dto, req.ip, req.headers['user-agent']);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/link/google')
+  unlinkGoogle(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UnlinkProviderDto,
+    @Req() req: Request,
+  ) {
+    return this.usersService.unlinkGoogle(user.sub, dto, req.ip, req.headers['user-agent']);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/link/apple')
+  unlinkApple(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UnlinkProviderDto,
+    @Req() req: Request,
+  ) {
+    return this.usersService.unlinkApple(user.sub, dto, req.ip, req.headers['user-agent']);
   }
 
   @UseGuards(JwtAuthGuard)
