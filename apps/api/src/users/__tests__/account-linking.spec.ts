@@ -527,6 +527,73 @@ describe('Account Linking & Unlinking (PR 3 — UsersService)', () => {
       expect(mockPrisma.authIdentity.upsert).not.toHaveBeenCalled();
     });
 
+    it('rejects with 409 PROVIDER_ALREADY_LINKED when attempting to link a different Google account while one is already linked', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user1@example.com',
+        displayName: 'User 1',
+        passwordHash: validPasswordHash,
+        googleId: 'existing-google-id',
+        appleSub: null,
+        status: AccountStatus.ACTIVE,
+        deletionScheduledAt: null,
+      });
+
+      mockAuthService.verifyGoogleIdToken.mockResolvedValue({
+        sub: 'new-different-google-id',
+        email: 'user1@gmail.com',
+      });
+
+      await expect(
+        service.linkGoogle('user-1', {
+          credential: 'google-token-new',
+          currentPassword: validPassword,
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: HttpStatus.CONFLICT,
+          response: expect.objectContaining({
+            code: 'PROVIDER_ALREADY_LINKED',
+            message: 'حسابك مرتبط بحساب Google آخر. يرجى إلغاء الربط أولاً.',
+          }),
+        }),
+      );
+    });
+
+    it('rejects with 409 PROVIDER_ALREADY_LINKED when attempting to link a different Apple account while one is already linked', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user1@example.com',
+        displayName: 'User 1',
+        passwordHash: validPasswordHash,
+        googleId: null,
+        appleSub: 'existing-apple-sub',
+        status: AccountStatus.ACTIVE,
+        deletionScheduledAt: null,
+      });
+
+      mockAppleTokenVerifier.verifyIdToken.mockResolvedValue({
+        sub: 'new-different-apple-sub',
+        email: 'user1@apple.com',
+      });
+
+      await expect(
+        service.linkApple('user-1', {
+          identityToken: 'apple-token-new',
+          nonce: 'nonce-123',
+          currentPassword: validPassword,
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: HttpStatus.CONFLICT,
+          response: expect.objectContaining({
+            code: 'PROVIDER_ALREADY_LINKED',
+            message: 'حسابك مرتبط بحساب Apple آخر. يرجى إلغاء الربط أولاً.',
+          }),
+        }),
+      );
+    });
+
     it('returns 200 OK without token revocation when unlinking a provider that is not linked', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',

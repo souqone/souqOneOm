@@ -421,7 +421,12 @@ export class UsersService {
 
   async getLoginHistory(userId: string) {
     return this.prisma.loginAudit.findMany({
-      where: { userId },
+      where: {
+        userId,
+        method: {
+          notIn: ['LINK_GOOGLE', 'LINK_APPLE', 'UNLINK_GOOGLE', 'UNLINK_APPLE'],
+        },
+      },
       select: {
         id: true, success: true, method: true,
         ipAddress: true, userAgent: true, reason: true, createdAt: true,
@@ -1150,6 +1155,14 @@ export class UsersService {
       return { message: 'تم ربط حساب Google بنجاح' };
     }
 
+    if (user.googleId) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'PROVIDER_ALREADY_LINKED',
+        message: 'حسابك مرتبط بحساب Google آخر. يرجى إلغاء الربط أولاً.',
+      });
+    }
+
     // Check collision on User
     const existingUser = await this.prisma.user.findUnique({
       where: { googleId },
@@ -1370,6 +1383,14 @@ export class UsersService {
       return { message: 'تم ربط حساب Apple بنجاح' };
     }
 
+    if (user.appleSub) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'PROVIDER_ALREADY_LINKED',
+        message: 'حسابك مرتبط بحساب Apple آخر. يرجى إلغاء الربط أولاً.',
+      });
+    }
+
     // Check collision on User
     const existingUser = await this.prisma.user.findUnique({
       where: { appleSub },
@@ -1556,6 +1577,37 @@ export class UsersService {
 
     // Transaction: nullify User.googleId, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
     const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const txUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          passwordHash: true,
+          googleId: true,
+          appleSub: true,
+          phoneE164: true,
+          phoneVerifiedAt: true,
+          isVerified: true,
+        },
+      });
+
+      if (!txUser?.googleId) {
+        throw new BadRequestException({
+          code: 'PROVIDER_NOT_LINKED',
+          message: 'حساب Google غير مرتبط بالفعل',
+        });
+      }
+
+      const txMethods = getLoginMethods(txUser);
+      const txRemaining = txMethods.totalMethods - (txMethods.hasGoogle ? 1 : 0);
+      if (txRemaining < 1) {
+        throw new BadRequestException({
+          code: 'LAST_LOGIN_METHOD',
+          message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+        });
+      }
+
       const u = await tx.user.update({
         where: { id: userId },
         data: {
@@ -1672,6 +1724,37 @@ export class UsersService {
 
     // Transaction: nullify User.appleSub, delete AuthIdentity, bump tokenVersion, revoke refresh tokens
     const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const txUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          passwordHash: true,
+          googleId: true,
+          appleSub: true,
+          phoneE164: true,
+          phoneVerifiedAt: true,
+          isVerified: true,
+        },
+      });
+
+      if (!txUser?.appleSub) {
+        throw new BadRequestException({
+          code: 'PROVIDER_NOT_LINKED',
+          message: 'حساب Apple غير مرتبط بالفعل',
+        });
+      }
+
+      const txMethods = getLoginMethods(txUser);
+      const txRemaining = txMethods.totalMethods - (txMethods.hasApple ? 1 : 0);
+      if (txRemaining < 1) {
+        throw new BadRequestException({
+          code: 'LAST_LOGIN_METHOD',
+          message: 'لا يمكن إزالة وسيلة الدخول الأخيرة لحسابك. يرجى إضافة وسيلة دخول أخرى أولا.',
+        });
+      }
+
       const u = await tx.user.update({
         where: { id: userId },
         data: {

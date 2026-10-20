@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createTestApp, closeTestApp, getApp, getPrisma, uniqueId, registerUser } from './setup';
 import { AppleTokenVerifierService } from '../src/auth/apple-token-verifier.service';
 import { AuthService } from '../src/auth/auth.service';
+import { AuthTokenService } from '../src/auth/auth-token.service';
 import { AuthProvider } from '@prisma/client';
 
 let appleVerifier: AppleTokenVerifierService;
@@ -216,7 +217,7 @@ describe('Users Account Linking & Unlinking (e2e)', () => {
       });
 
       // Login or generate access token for this solo user
-      const authTokenService = getApp().get('AuthTokenService');
+      const authTokenService = getApp().get(AuthTokenService);
       const token = await authTokenService.signAccessToken(soloUser);
 
       verifyGoogleSpy.mockResolvedValue({
