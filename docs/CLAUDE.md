@@ -1,3 +1,4 @@
+> **أولوية الدستور**: هذا الملف مرجع هيكل المشروع فقط، والقواعد المعتمدة في الدستور (.agents\rules\souqone_hard_rules.md).
 \# CLAUDE.md — Souq One Marketplace
 
 
