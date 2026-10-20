@@ -77,6 +77,10 @@ export class AppleRevocationService {
     );
   }
 
+  public isConfigured(): boolean {
+    return this.isRevocationConfigured();
+  }
+
   /**
    * Generates a short-lived (5-minute) client_secret JWT signed with ES256.
    */

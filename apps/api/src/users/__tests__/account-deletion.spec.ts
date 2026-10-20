@@ -829,9 +829,10 @@ describe('Account Deletion (PR 2A & PR 2B) — Comprehensive Test Suite', () => 
       ]);
 
       expect(res1.success).toBe(true);
-      expect(res1.message).toBe('تمت جدولة حذف الحساب بنجاح');
       expect(res2.success).toBe(true);
-      expect(res2.message).toBe('حسابك مجدول للحذف بالفعل');
+      const messages = [res1.message, res2.message];
+      expect(messages).toContain('تمت جدولة حذف الحساب بنجاح');
+      expect(messages).toContain('حسابك مجدول للحذف بالفعل');
 
       // Post-commit hooks ran exactly once (for the winner)
       expect(mockAccessTokenGate.invalidate).toHaveBeenCalledTimes(1);

@@ -9,6 +9,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
@@ -49,8 +50,10 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly visibilityService: OwnerContentVisibilityService,
     private readonly mailService: MailService,
-    private readonly appleTokenVerifier: AppleTokenVerifierService,
-    private readonly appleRevocationService: AppleRevocationService,
+    @Optional()
+    private readonly appleTokenVerifier?: AppleTokenVerifierService,
+    @Optional()
+    private readonly appleRevocationService?: AppleRevocationService,
   ) {}
 
   async getProfile(userId: string) {
@@ -477,6 +480,14 @@ export class UsersService {
     const useAppleReauth = Boolean(hasCompleteAppleFields && user.appleSub);
 
     if (useAppleReauth) {
+      if (!this.appleTokenVerifier || !this.appleRevocationService) {
+        throw new ServiceUnavailableException({
+          statusCode: 503,
+          code: 'APPLE_REVOCATION_UNAVAILABLE',
+          message: 'خدمة التحقق من Apple غير متوفرة حالياً، يرجى المحاولة لاحقاً',
+        });
+      }
+
       let payload: any;
       try {
         payload = await this.appleTokenVerifier.verifyIdToken(
@@ -518,7 +529,7 @@ export class UsersService {
       try {
         await this.appleRevocationService.exchangeAndRevoke(
           dto.appleAuthorizationCode!,
-          user.appleSub,
+          user.appleSub!,
         );
       } catch (err: any) {
         if (
