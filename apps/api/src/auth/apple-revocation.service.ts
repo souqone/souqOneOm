@@ -77,10 +77,6 @@ export class AppleRevocationService {
     );
   }
 
-  public isConfigured(): boolean {
-    return this.isRevocationConfigured();
-  }
-
   /**
    * Generates a short-lived (5-minute) client_secret JWT signed with ES256.
    */
@@ -161,21 +157,44 @@ export class AppleRevocationService {
       });
     }
 
-    // Verify sub in returned id_token if provided
-    if (id_token && typeof id_token === 'string') {
-      const decoded = jwt.decode(id_token) as Record<string, any> | null;
-      const tokenSub = decoded?.sub;
+    // Ensure id_token is present, is a string, is decodeable, and contains sub
+    if (!id_token || typeof id_token !== 'string') {
+      this.logger.error('Apple token exchange response missing or invalid id_token');
+      await this.revokeToken(refresh_token).catch(() => {});
+      throw new ServiceUnavailableException({
+        statusCode: 503,
+        code: 'APPLE_SERVICE_ERROR',
+        message: 'تعذّر تأكيد الإلغاء مع Apple، يرجى المحاولة بعد قليل',
+      });
+    }
 
-      if (!tokenSub || tokenSub !== expectedAppleSub) {
-        this.logger.warn('Apple token exchange id_token sub does not match user appleSub');
-        // Precautionary revocation of the received refresh_token
-        await this.revokeToken(refresh_token).catch(() => {});
-        throw new UnauthorizedException({
-          statusCode: 401,
-          code: 'APPLE_SUB_MISMATCH',
-          message: 'حساب Apple المستخدم لا يطابق الحساب المسجل في سوق ون',
-        });
-      }
+    let decoded: Record<string, any> | null = null;
+    try {
+      decoded = jwt.decode(id_token) as Record<string, any> | null;
+    } catch {
+      decoded = null;
+    }
+
+    const tokenSub = decoded?.sub;
+    if (!decoded || !tokenSub || typeof tokenSub !== 'string') {
+      this.logger.error('Apple token exchange id_token unparseable or missing sub');
+      await this.revokeToken(refresh_token).catch(() => {});
+      throw new ServiceUnavailableException({
+        statusCode: 503,
+        code: 'APPLE_SERVICE_ERROR',
+        message: 'تعذّر تأكيد الإلغاء مع Apple، يرجى المحاولة بعد قليل',
+      });
+    }
+
+    if (tokenSub !== expectedAppleSub) {
+      this.logger.warn('Apple token exchange id_token sub does not match user appleSub');
+      // Precautionary revocation of the received refresh_token
+      await this.revokeToken(refresh_token).catch(() => {});
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'APPLE_SUB_MISMATCH',
+        message: 'حساب Apple المستخدم لا يطابق الحساب المسجل في سوق ون',
+      });
     }
 
     return { refreshToken: refresh_token, idToken: id_token };

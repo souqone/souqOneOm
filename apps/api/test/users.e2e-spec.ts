@@ -10,7 +10,7 @@ let appleRevocation: AppleRevocationService;
 let authService: AuthService;
 let verifyIdTokenSpy: jest.SpyInstance;
 let exchangeAndRevokeSpy: jest.SpyInstance;
-let isConfiguredSpy: jest.SpyInstance;
+let isRevocationConfiguredSpy: jest.SpyInstance;
 let verifyGoogleTokenSpy: jest.SpyInstance;
 
 beforeAll(async () => {
@@ -20,7 +20,7 @@ beforeAll(async () => {
   authService = getApp().get(AuthService);
   verifyIdTokenSpy = jest.spyOn(appleVerifier, 'verifyIdToken');
   exchangeAndRevokeSpy = jest.spyOn(appleRevocation, 'exchangeAndRevoke');
-  isConfiguredSpy = jest.spyOn(appleRevocation, 'isRevocationConfigured');
+  isRevocationConfiguredSpy = jest.spyOn(appleRevocation, 'isRevocationConfigured');
   verifyGoogleTokenSpy = jest.spyOn(authService, 'verifyGoogleIdToken');
 });
 
@@ -31,8 +31,8 @@ afterAll(async () => {
 beforeEach(() => {
   verifyIdTokenSpy.mockReset();
   exchangeAndRevokeSpy.mockReset();
-  isConfiguredSpy.mockReset();
-  isConfiguredSpy.mockReturnValue(true);
+  isRevocationConfiguredSpy.mockReset();
+  isRevocationConfiguredSpy.mockReturnValue(true);
   verifyGoogleTokenSpy.mockReset();
 });
 
@@ -324,14 +324,10 @@ describe('Users API (e2e)', () => {
         data: { appleSub, passwordHash: null },
       });
 
-      isConfiguredSpy.mockReturnValue(false);
+      isRevocationConfiguredSpy.mockReturnValue(false);
       verifyIdTokenSpy.mockResolvedValueOnce({ sub: appleSub, email: user.email });
-      exchangeAndRevokeSpy.mockRejectedValueOnce(
-        new ServiceUnavailableException({
-          statusCode: 503,
-          code: 'APPLE_REVOCATION_UNAVAILABLE',
-          message: 'خدمة إلغاء Apple غير متوفرة حالياً، يرجى المحاولة لاحقاً',
-        }),
+      exchangeAndRevokeSpy.mockImplementationOnce((code: string, sub: string) =>
+        AppleRevocationService.prototype.exchangeAndRevoke.call(appleRevocation, code, sub),
       );
 
       const res = await request(getApp().getHttpServer())

@@ -594,23 +594,43 @@ export class AuthService {
             });
             break;
           } catch (err: any) {
-            if (attempt < 5 && err.code === 'P2002' && err.meta?.target?.includes('username')) {
-              continue;
-            }
-            if (err.code === 'P2002' && (err.meta?.target?.includes('appleSub') || err.message?.includes('appleSub'))) {
+            if (err?.code === 'P2002') {
+              const target = err?.meta?.target;
+              const targetContains = (field: string): boolean => {
+                if (Array.isArray(target)) {
+                  return target.includes(field);
+                }
+                if (typeof target === 'string') {
+                  return target.includes(field);
+                }
+                return false;
+              };
+
+              if (targetContains('username')) {
+                if (attempt < 5) {
+                  continue;
+                }
+                throw err;
+              }
+
+              // Any P2002 target other than username: check if user already exists by appleSub
               const existing = await this.prisma.user.findUnique({ where: { appleSub } });
               if (existing) {
                 user = existing;
                 break;
               }
+
+              if (targetContains('email')) {
+                throw new ConflictException({
+                  statusCode: 409,
+                  code: 'ACCOUNT_LINK_REQUIRED',
+                  message: 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول وربط حساب Apple من الإعدادات',
+                });
+              }
+
+              throw err;
             }
-            if (err.code === 'P2002' && (err.meta?.target?.includes('email') || err.message?.includes('email'))) {
-              throw new ConflictException({
-                statusCode: 409,
-                code: 'ACCOUNT_LINK_REQUIRED',
-                message: 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول وربط حساب Apple من الإعدادات',
-              });
-            }
+
             throw err;
           }
         }

@@ -231,6 +231,90 @@ describe('AppleRevocationService', () => {
         }),
       );
     });
+
+    it('throws 503 APPLE_SERVICE_ERROR and performs best-effort revocation when id_token is missing', async () => {
+      mockHttpClient.post
+        .mockResolvedValueOnce({
+          data: {
+            refresh_token: 'refresh-token-valid-1',
+            // id_token is missing
+          },
+        })
+        .mockResolvedValueOnce({ data: {} }); // for revokeToken
+
+      await expect(
+        service.exchangeCodeForTokens('some-code', 'user.sub'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 503,
+            code: 'APPLE_SERVICE_ERROR',
+            message: 'تعذّر تأكيد الإلغاء مع Apple، يرجى المحاولة بعد قليل',
+          }),
+        }),
+      );
+
+      // Verify revokeToken was invoked with the received refresh_token
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+      expect(mockHttpClient.post.mock.calls[1][0]).toBe('https://appleid.apple.com/auth/revoke');
+      expect(mockHttpClient.post.mock.calls[1][1]).toContain('token=refresh-token-valid-1');
+    });
+
+    it('throws 503 APPLE_SERVICE_ERROR and performs best-effort revocation when id_token is unparseable or missing sub', async () => {
+      mockHttpClient.post
+        .mockResolvedValueOnce({
+          data: {
+            refresh_token: 'refresh-token-valid-2',
+            id_token: 'unparseable.jwt.payload',
+          },
+        })
+        .mockResolvedValueOnce({ data: {} }); // for revokeToken
+
+      await expect(
+        service.exchangeCodeForTokens('some-code', 'user.sub'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 503,
+            code: 'APPLE_SERVICE_ERROR',
+            message: 'تعذّر تأكيد الإلغاء مع Apple، يرجى المحاولة بعد قليل',
+          }),
+        }),
+      );
+
+      // Verify revokeToken was invoked with the received refresh_token
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+      expect(mockHttpClient.post.mock.calls[1][0]).toBe('https://appleid.apple.com/auth/revoke');
+      expect(mockHttpClient.post.mock.calls[1][1]).toContain('token=refresh-token-valid-2');
+    });
+
+    it('throws 503 APPLE_SERVICE_ERROR even if best-effort revocation fails when id_token is missing sub', async () => {
+      const idTokenWithoutSub = jwt.sign({ aud: 'com.souqone.app' }, 'secret');
+      mockHttpClient.post
+        .mockResolvedValueOnce({
+          data: {
+            refresh_token: 'refresh-token-valid-3',
+            id_token: idTokenWithoutSub,
+          },
+        })
+        .mockRejectedValueOnce(new Error('Network error during revoke')); // revokeToken fails
+
+      await expect(
+        service.exchangeCodeForTokens('some-code', 'user.sub'),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            statusCode: 503,
+            code: 'APPLE_SERVICE_ERROR',
+            message: 'تعذّر تأكيد الإلغاء مع Apple، يرجى المحاولة بعد قليل',
+          }),
+        }),
+      );
+
+      // Verify revokeToken was still attempted
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+      expect(mockHttpClient.post.mock.calls[1][0]).toBe('https://appleid.apple.com/auth/revoke');
+    });
   });
 
   describe('revokeToken', () => {
