@@ -11,6 +11,8 @@ import { AccessTokenGate } from '../auth/access-token-gate.service';
 import { AuthService } from '../auth/auth.service';
 import { OwnerContentVisibilityService } from '../common/services/owner-content-visibility.service';
 import { MailService } from '../mail/mail.service';
+import { AppleTokenVerifierService } from '../auth/apple-token-verifier.service';
+import { AppleRevocationService } from '../auth/apple-revocation.service';
 import { USER_SELECT_PROFILE_PRIVATE } from '../common/constants/user-select.constant';
 import * as bcrypt from 'bcryptjs';
 
@@ -103,6 +105,14 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: OwnerContentVisibilityService, useValue: mockVisibilityService },
         { provide: MailService, useValue: mockMailService },
+        { provide: AppleTokenVerifierService, useValue: { verifyIdToken: jest.fn() } },
+        {
+          provide: AppleRevocationService,
+          useValue: {
+            exchangeAndRevoke: jest.fn().mockResolvedValue(undefined),
+            isRevocationConfigured: jest.fn().mockReturnValue(true),
+          },
+        },
       ],
     }).compile();
 

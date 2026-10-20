@@ -1,16 +1,14 @@
-export type DeletionReauthMethod = 'password' | 'google' | 'confirmation';
+export type DeletionReauthMethod = 'password' | 'google' | 'apple' | 'confirmation';
 
 export interface DeletionReauthCandidate {
   passwordHash?: string | null;
   googleId?: string | null;
+  appleSub?: string | null;
 }
 
 /**
- * Determines the required re-authentication method for account deletion.
- * Single source of truth shared between GET /users/me and POST /users/me/delete-account:
- * 1. If user has a passwordHash -> 'password'
- * 2. Else if user has a googleId -> 'google'
- * 3. Else (e.g. phone-only user) -> 'confirmation'
+ * Determines the primary re-authentication method for account deletion.
+ * In order: password -> google -> apple -> confirmation
  */
 export function getDeletionReauthMethod(
   user: DeletionReauthCandidate | null | undefined,
@@ -21,5 +19,30 @@ export function getDeletionReauthMethod(
   if (user?.googleId) {
     return 'google';
   }
+  if (user?.appleSub) {
+    return 'apple';
+  }
   return 'confirmation';
+}
+
+/**
+ * Returns all available re-authentication methods for the account.
+ */
+export function getAvailableDeletionReauthMethods(
+  user: DeletionReauthCandidate | null | undefined,
+): DeletionReauthMethod[] {
+  const methods: DeletionReauthMethod[] = [];
+  if (user?.passwordHash) {
+    methods.push('password');
+  }
+  if (user?.googleId) {
+    methods.push('google');
+  }
+  if (user?.appleSub) {
+    methods.push('apple');
+  }
+  if (methods.length === 0) {
+    methods.push('confirmation');
+  }
+  return methods;
 }

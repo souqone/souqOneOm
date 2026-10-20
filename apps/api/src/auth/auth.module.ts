@@ -13,6 +13,7 @@ import { TokenCleanupService } from './token-cleanup.service';
 import { AccessTokenGate } from './access-token-gate.service';
 import { AccountStatusService } from './account-status.service';
 import { AppleTokenVerifierService } from './apple-token-verifier.service';
+import { AppleRevocationService } from './apple-revocation.service';
 import { getJwtModuleOptions } from '../config/jwt.config';
 import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
 
@@ -37,6 +38,7 @@ import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
     AccessTokenGate,
     AccountStatusService,
     AppleTokenVerifierService,
+    AppleRevocationService,
   ],
   exports: [
     AuthService,
@@ -47,6 +49,7 @@ import { BanBlacklistModule } from '../ban-blacklist/ban-blacklist.module';
     AccountStatusService,
     AuthAuditService,
     AppleTokenVerifierService,
+    AppleRevocationService,
   ],
 })
 export class AuthModule {}
