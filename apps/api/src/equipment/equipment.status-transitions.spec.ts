@@ -402,6 +402,22 @@ describe('EquipmentListingsService - Status Transitions', () => {
       expect(prismaMock.equipmentListingStatusLog.create).not.toHaveBeenCalled();
     });
 
+    it('does NOT call assertWithinLimit when status is already ACTIVE (no-op status)', async () => {
+      prismaMock.equipmentListing.findUnique.mockResolvedValue({
+        ...baseItem,
+        status: 'ACTIVE',
+      });
+      prismaMock.equipmentListing.update.mockResolvedValue({
+        ...baseItem,
+        title: 'New title',
+        version: 2,
+      });
+
+      await service.update('eq-1', 'owner-1', { title: 'New title', status: 'ACTIVE' as any });
+
+      expect(activeListingsLimitServiceMock.assertWithinLimit).not.toHaveBeenCalled();
+    });
+
     it('does NOT create log row when status is omitted in dto', async () => {
       prismaMock.equipmentListing.findUnique.mockResolvedValue(baseItem);
       prismaMock.equipmentListing.update.mockResolvedValue({

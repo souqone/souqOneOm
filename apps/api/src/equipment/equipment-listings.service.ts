@@ -284,7 +284,7 @@ export class EquipmentListingsService {
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
     // Fail fast on a stale client; the version-guarded UPDATE below still protects against races.
-    if (dto.version !== undefined && dto.version !== item.version) {
+    if (dto.version != null && dto.version !== item.version) {
       throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
     }
 
@@ -389,12 +389,14 @@ export class EquipmentListingsService {
     let updated;
     try {
       updated = await this.prisma.$transaction(async (tx) => {
-        if (dto.status === 'ACTIVE') {
+        if (statusChanged && dto.status === 'ACTIVE') {
           await this.activeListingsLimitService.assertWithinLimit(userId, tx);
         }
 
+        const guardVersion =
+          dto.version != null ? dto.version : (dto.status !== undefined ? item.version : undefined);
         const whereClause: Prisma.EquipmentListingWhereUniqueInput =
-          dto.version !== undefined ? { id, version: dto.version } : { id };
+          guardVersion != null ? { id, version: guardVersion } : { id };
 
         const res = await tx.equipmentListing.update({
           where: whereClause,

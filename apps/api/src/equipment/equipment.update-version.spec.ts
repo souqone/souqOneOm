@@ -119,6 +119,14 @@ describe('EquipmentListingsService - Optimistic Concurrency (version)', () => {
     expect(callArg.data.title).toBe('updated title without version');
   });
 
+  it('version: null payload is treated as omitted (does not throw 409)', async () => {
+    const res = await service.update('eq-1', 'owner-1', { version: null as any, title: 'updated with null version' });
+    expect(res.version).toBe(4);
+    const callArg = prismaMock.equipmentListing.update.mock.calls[0][0];
+    expect(callArg.where).toEqual({ id: 'eq-1' });
+    expect(callArg.data.version).toEqual({ increment: 1 });
+  });
+
   it('returns the updated record carrying the incremented version', async () => {
     const res = await service.update('eq-1', 'owner-1', { version: 3, title: 'new title' } as any);
     expect(res.version).toBe(4);
