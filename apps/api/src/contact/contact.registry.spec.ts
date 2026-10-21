@@ -6,7 +6,7 @@ describe('CONTACT_REGISTRY targets unit tests', () => {
   const createMockPrisma = () => ({
     listing: { findUnique: jest.fn() },
     busListing: { findFirst: jest.fn() },
-    equipmentListing: { findUnique: jest.fn() },
+    equipmentListing: { findFirst: jest.fn(), findUnique: jest.fn() },
     operatorListing: { findUnique: jest.fn() },
     sparePart: { findUnique: jest.fn() },
     carService: { findUnique: jest.fn() },
@@ -115,12 +115,13 @@ describe('CONTACT_REGISTRY targets unit tests', () => {
   describe('EQUIPMENT_LISTING', () => {
     it('returns target when visible', async () => {
       const prisma = createMockPrisma();
-      prisma.equipmentListing.findUnique.mockResolvedValue({
+      prisma.equipmentListing.findFirst.mockResolvedValue({
         id: 'eq-1',
         userId: 'user-3',
         status: 'ACTIVE',
         whatsappEnabled: true,
         hiddenByOwnerStatus: false,
+        deletedAt: null,
       });
 
       const res = await CONTACT_REGISTRY[ENTITY_TYPES.EQUIPMENT_LISTING].loadTarget(prisma as any, 'eq-1');
@@ -129,13 +130,23 @@ describe('CONTACT_REGISTRY targets unit tests', () => {
 
     it('throws NotFoundException when hiddenByOwnerStatus is true', async () => {
       const prisma = createMockPrisma();
-      prisma.equipmentListing.findUnique.mockResolvedValue({
+      prisma.equipmentListing.findFirst.mockResolvedValue({
         id: 'eq-1',
         userId: 'user-3',
         status: 'ACTIVE',
         whatsappEnabled: true,
         hiddenByOwnerStatus: true,
+        deletedAt: null,
       });
+
+      await expect(
+        CONTACT_REGISTRY[ENTITY_TYPES.EQUIPMENT_LISTING].loadTarget(prisma as any, 'eq-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException when deletedAt is not null', async () => {
+      const prisma = createMockPrisma();
+      prisma.equipmentListing.findFirst.mockResolvedValue(null);
 
       await expect(
         CONTACT_REGISTRY[ENTITY_TYPES.EQUIPMENT_LISTING].loadTarget(prisma as any, 'eq-1'),

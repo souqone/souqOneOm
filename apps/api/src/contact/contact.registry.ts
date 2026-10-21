@@ -45,9 +45,9 @@ export const CONTACT_REGISTRY: Record<string, ContactRegistryEntry> = {
   [ENTITY_TYPES.EQUIPMENT_LISTING]: {
     entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
     loadTarget: async (prisma, entityId) => {
-      const item = await prisma.equipmentListing.findUnique({
-        where: { id: entityId },
-        select: { id: true, userId: true, status: true, whatsappEnabled: true, hiddenByOwnerStatus: true },
+      const item = await prisma.equipmentListing.findFirst({
+        where: { id: entityId, deletedAt: null },
+        select: { id: true, userId: true, status: true, whatsappEnabled: true, hiddenByOwnerStatus: true, deletedAt: true },
       });
       if (!item || !isEntityPubliclyVisible('equipmentListing', item)) {
         throw new NotFoundException('المعدة غير موجودة');

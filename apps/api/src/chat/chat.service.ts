@@ -78,7 +78,7 @@ export class ChatService {
       case 'EQUIPMENT_LISTING': {
         const e = await this.prisma.equipmentListing.findUnique({
           where: { id: entityId },
-          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
         });
         if (!e) throw new NotFoundException('إعلان المعدة غير موجود');
         return { ownerId: e.userId, title: e.title, entity: e, model: 'equipmentListing' };

@@ -176,7 +176,7 @@ export class SearchSyncWorker {
           where: { id: entityId },
           include: { images: { orderBy: { order: 'asc' }, take: 1 } },
         });
-        if (!equipment) {
+        if (!equipment || equipment.deletedAt) {
           await this.searchService.removeDocument(INDEXES.EQUIPMENT, entityId).catch(() => {});
           return;
         }

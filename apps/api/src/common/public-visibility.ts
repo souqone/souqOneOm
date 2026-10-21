@@ -33,7 +33,7 @@ export interface VisibilityViewer {
 export function getPublicListBaseCondition(
   model: VisibilityPrismaDelegateName,
 ): Record<string, any> {
-  if (model === 'busListing') {
+  if (model === 'busListing' || model === 'equipmentListing') {
     return {
       hiddenByOwnerStatus: false,
       deletedAt: null,
@@ -97,8 +97,8 @@ export function isEntityPubliclyVisible(
     return false;
   }
 
-  // 2. Soft-deleted bus listing is not visible to the public
-  if (model === 'busListing' && entity.deletedAt != null) {
+  // 2. Soft-deleted bus or equipment listing is not visible to the public
+  if ((model === 'busListing' || model === 'equipmentListing') && entity.deletedAt != null) {
     return false;
   }
 

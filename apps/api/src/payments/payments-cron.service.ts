@@ -151,7 +151,7 @@ export class PaymentsCronService {
 
     // ── Equipment Listings (owner = userId) ──
     const equipListings = await this.prisma.equipmentListing.findMany({
-      where: { isPremium: true, featuredUntil: { lt: now } },
+      where: { isPremium: true, featuredUntil: { lt: now }, deletedAt: null },
       select: { id: true, title: true, userId: true },
     });
     await Promise.allSettled(

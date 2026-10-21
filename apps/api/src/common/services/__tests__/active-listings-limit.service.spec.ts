@@ -262,7 +262,12 @@ describe('ActiveListingsLimitService Unit Tests', () => {
         },
       });
       expect(tx.equipmentListing.count).toHaveBeenCalledWith({
-        where: { userId: 'user-123', status: 'ACTIVE', hiddenByOwnerStatus: false },
+        where: {
+          userId: 'user-123',
+          status: 'ACTIVE',
+          hiddenByOwnerStatus: false,
+          deletedAt: null,
+        },
       });
       expect(tx.sparePart.count).toHaveBeenCalledWith({
         where: { sellerId: 'user-123', status: 'ACTIVE', hiddenByOwnerStatus: false },

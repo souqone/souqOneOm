@@ -185,7 +185,7 @@ async function main() {
 
   // ── Equipment ──
   const equipment = await prisma.equipmentListing.findMany({
-    where: { status: 'ACTIVE' },
+    where: { status: 'ACTIVE', deletedAt: null },
     include: { images: { take: 1, orderBy: { order: 'asc' } } },
   });
   const equipmentDocs = equipment.map(e => serialize({

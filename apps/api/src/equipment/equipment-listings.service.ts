@@ -148,7 +148,7 @@ export class EquipmentListingsService {
   async findAll(q: QueryEquipmentListingsDto) {
     const page = q.page ?? 1;
     const limit = Math.min(q.limit ?? 20, 50);
-    const where: Prisma.EquipmentListingWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
+    const where: Prisma.EquipmentListingWhereInput = { status: 'ACTIVE', deletedAt: null, hiddenByOwnerStatus: false };
 
     // ─── Existing filters ────────────────────────────────────────────────────
     if (q.equipmentType) where.equipmentType = q.equipmentType as EquipmentType;
@@ -232,7 +232,7 @@ export class EquipmentListingsService {
         wilayaRef: true,
       },
     });
-    if (!item) throw new NotFoundException('الإعلان غير موجود');
+    if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
     // TODO: migrate viewCount to Redis INCR + periodic sync for high traffic
     this.prisma.equipmentListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
@@ -249,7 +249,7 @@ export class EquipmentListingsService {
         wilayaRef: true,
       },
     });
-    if (!item) throw new NotFoundException('الإعلان غير موجود');
+    if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
     this.prisma.equipmentListing.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
     return item;
@@ -258,7 +258,7 @@ export class EquipmentListingsService {
   async my(userId: string, page = 1, limit = 20) {
     limit = Math.min(limit, 50);
     const skip = (page - 1) * limit;
-    const where = { userId };
+    const where: Prisma.EquipmentListingWhereInput = { userId, deletedAt: null };
 
     const [items, total] = await Promise.all([
       this.prisma.equipmentListing.findMany({
@@ -280,7 +280,7 @@ export class EquipmentListingsService {
 
   async update(id: string, userId: string, dto: UpdateEquipmentListingDto) {
     const item = await this.prisma.equipmentListing.findUnique({ where: { id } });
-    if (!item) throw new NotFoundException('الإعلان غير موجود');
+    if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
     // Fail fast on a stale client; the version-guarded UPDATE below still protects against races.
@@ -454,10 +454,16 @@ export class EquipmentListingsService {
 
   async remove(id: string, userId: string) {
     const item = await this.prisma.equipmentListing.findUnique({ where: { id } });
-    if (!item) throw new NotFoundException('الإعلان غير موجود');
+    if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك حذف إعلان غيرك');
     await this.prisma.$transaction(async (tx) => {
-      await tx.equipmentListing.delete({ where: { id } });
+      await tx.equipmentListing.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
       await tx.outboxEvent.create({
         data: {
           entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
@@ -477,7 +483,7 @@ export class EquipmentListingsService {
 
   async addImages(id: string, userId: string, urls: string[]) {
     const item = await this.prisma.equipmentListing.findUnique({ where: { id } });
-    if (!item) throw new NotFoundException('الإعلان غير موجود');
+    if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
     const count = await this.prisma.equipmentListingImage.count({ where: { equipmentListingId: id } });
@@ -502,8 +508,11 @@ export class EquipmentListingsService {
   }
 
   async removeImage(imageId: string, userId: string) {
-    const img = await this.prisma.equipmentListingImage.findUnique({ where: { id: imageId }, include: { equipmentListing: true } });
-    if (!img) throw new NotFoundException('الصورة غير موجودة');
+    const img = await this.prisma.equipmentListingImage.findUnique({
+      where: { id: imageId },
+      include: { equipmentListing: true },
+    });
+    if (!img || img.equipmentListing.deletedAt != null) throw new NotFoundException('الصورة غير موجودة');
     if (img.equipmentListing.userId !== userId) throw new ForbiddenException('لا يمكنك حذف صورة غيرك');
     
     await this.prisma.equipmentListingImage.delete({ where: { id: imageId } });
@@ -530,7 +539,7 @@ export class EquipmentListingsService {
 
   async getStatusHistory(listingId: string, userId: string) {
     const listing = await this.prisma.equipmentListing.findUnique({ where: { id: listingId } });
-    if (!listing) throw new NotFoundException('الإعلان غير موجود');
+    if (!listing || listing.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     if (listing.userId !== userId) throw new ForbiddenException('غير مصرح');
 
     return this.prisma.equipmentListingStatusLog.findMany({
@@ -541,7 +550,7 @@ export class EquipmentListingsService {
 
   async getStats(listingId: string, userId: string) {
     const listing = await this.prisma.equipmentListing.findUnique({ where: { id: listingId } });
-    if (!listing) throw new NotFoundException('الإعلان غير موجود');
+    if (!listing || listing.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     if (listing.userId !== userId) throw new ForbiddenException('غير مصرح');
 
     const [favoritesCount, conversationsCount, statusHistory] = await Promise.all([

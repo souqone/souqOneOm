@@ -126,6 +126,7 @@ describe('SearchService - Owner Relation & Visibility Filters', () => {
         expect.objectContaining({
           where: {
             status: 'ACTIVE',
+            deletedAt: null,
             hiddenByOwnerStatus: false,
             user: { status: 'ACTIVE' },
           },
