@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { EquipmentViewCounterService } from './equipment-view-counter.service';
 import { PUBLIC_ROUTES_ALLOWLIST } from '../common/constants/public-routes.allowlist';
 
 describe('EquipmentListingsService.findSimilar (Task EB4)', () => {
@@ -48,6 +49,7 @@ describe('EquipmentListingsService.findSimilar (Task EB4)', () => {
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn() } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn() } },
+        { provide: EquipmentViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
       ],
     }).compile();
 

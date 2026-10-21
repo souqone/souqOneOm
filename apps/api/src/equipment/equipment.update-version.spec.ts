@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { EquipmentViewCounterService } from './equipment-view-counter.service';
 
 describe('EquipmentListingsService - Optimistic Concurrency (version)', () => {
   let service: EquipmentListingsService;
@@ -51,6 +52,7 @@ describe('EquipmentListingsService - Optimistic Concurrency (version)', () => {
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
+        { provide: EquipmentViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
       ],
     }).compile();
 

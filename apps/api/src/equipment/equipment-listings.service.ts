@@ -23,6 +23,7 @@ import { ActiveListingsLimitService } from '../common/services/active-listings-l
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 import { findSimilarListings } from '../common/utils/similar-listings.util';
+import { EquipmentViewCounterService } from './equipment-view-counter.service';
 
 const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
   DRAFT:     ['ACTIVE'],
@@ -43,6 +44,7 @@ export class EquipmentListingsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly sellerContactGate: SellerContactGate,
     private readonly activeListingsLimitService: ActiveListingsLimitService,
+    private readonly viewCounterService: EquipmentViewCounterService,
   ) {}
 
   async create(dto: CreateEquipmentListingDto, userId: string) {
@@ -223,7 +225,7 @@ export class EquipmentListingsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
+  async findOne(id: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const item = await this.prisma.equipmentListing.findUnique({
       where: { id },
       include: {
@@ -235,12 +237,22 @@ export class EquipmentListingsService {
     });
     if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
-    // TODO: migrate viewCount to Redis INCR + periodic sync for high traffic
-    this.prisma.equipmentListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
+    this.viewCounterService.recordView({
+      listingId: item.id,
+      ownerId: item.userId,
+      status: item.status,
+      hiddenByOwnerStatus: item.hiddenByOwnerStatus,
+      deletedAt: item.deletedAt,
+      viewerId,
+      viewerIp: ip,
+    }).catch(() => {});
+
     return item;
   }
 
-  async findBySlug(slug: string, viewer?: VisibilityViewer | string | null) {
+  async findBySlug(slug: string, ip?: string, viewer?: VisibilityViewer | string | null) {
     const item = await this.prisma.equipmentListing.findUnique({
       where: { slug },
       include: {
@@ -252,7 +264,18 @@ export class EquipmentListingsService {
     });
     if (!item || item.deletedAt) throw new NotFoundException('الإعلان غير موجود');
     assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
-    this.prisma.equipmentListing.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+
+    const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
+    this.viewCounterService.recordView({
+      listingId: item.id,
+      ownerId: item.userId,
+      status: item.status,
+      hiddenByOwnerStatus: item.hiddenByOwnerStatus,
+      deletedAt: item.deletedAt,
+      viewerId,
+      viewerIp: ip,
+    }).catch(() => {});
+
     return item;
   }
 

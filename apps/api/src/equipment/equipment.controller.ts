@@ -1,8 +1,9 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards,
+  UseGuards, Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -37,8 +38,8 @@ export class EquipmentController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string, @CurrentUser() user?: JwtPayload) {
-    return this.svc.findBySlug(slug, user);
+  findBySlug(@Param('slug') slug: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.svc.findBySlug(slug, req.ip, user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -65,8 +66,8 @@ export class EquipmentController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
-    return this.svc.findOne(id, user);
+  findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.svc.findOne(id, req.ip, user);
   }
 
   @UseGuards(JwtAuthGuard)

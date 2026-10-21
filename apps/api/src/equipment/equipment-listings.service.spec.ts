@@ -6,6 +6,7 @@ import { GeoService } from '../locations/geo.service';
 import { InternalServerErrorException } from '@nestjs/common';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { EquipmentViewCounterService } from './equipment-view-counter.service';
 
 describe('EquipmentListingsService - Image Handling', () => {
   let service: EquipmentListingsService;
@@ -38,6 +39,7 @@ describe('EquipmentListingsService - Image Handling', () => {
         { provide: GeoService, useValue: {} },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
+        { provide: EquipmentViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
       ],
     }).compile();
 
