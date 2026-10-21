@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -8,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
-import { Prisma, EquipmentType, EquipmentListingType, ItemCondition } from '@prisma/client';
+import { Prisma, EquipmentType, EquipmentListingType, ItemCondition, ListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEquipmentListingDto } from './dto/create-equipment-listing.dto';
 import { UpdateEquipmentListingDto } from './dto/update-equipment-listing.dto';
@@ -21,6 +22,15 @@ import { SellerContactGate } from '../common/services/seller-contact-gate.servic
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
+
+const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
+  DRAFT:     ['ACTIVE'],
+  ACTIVE:    ['SOLD', 'RENTED', 'ARCHIVED', 'SUSPENDED'],
+  ARCHIVED:  ['ACTIVE'],
+  RENTED:    ['ACTIVE'],
+  SOLD:      [],
+  SUSPENDED: [],
+};
 
 @Injectable()
 export class EquipmentListingsService {
@@ -273,6 +283,11 @@ export class EquipmentListingsService {
     if (!item) throw new NotFoundException('الإعلان غير موجود');
     if (item.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
+    // Fail fast on a stale client; the version-guarded UPDATE below still protects against races.
+    if (dto.version !== undefined && dto.version !== item.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+
     const cleanDto = stripDeprecatedContactFields(dto);
 
     if (cleanDto.governorateId || cleanDto.wilayaId) {
@@ -283,9 +298,42 @@ export class EquipmentListingsService {
       }
     }
 
+    const effectiveListingType = dto.listingType ?? item.listingType;
+
+    // Status state machine validation
+    const statusChanged = Boolean(dto.status && dto.status !== item.status);
+    if (statusChanged && dto.status) {
+      const allowed = ALLOWED_TRANSITIONS[item.status] ?? [];
+      if (!allowed.includes(dto.status)) {
+        throw new BadRequestException(
+          `INVALID_STATUS_TRANSITION: ${item.status} → ${dto.status}`,
+        );
+      }
+
+      if (effectiveListingType === 'EQUIPMENT_WANTED' && (dto.status === 'SOLD' || dto.status === 'RENTED')) {
+        throw new BadRequestException(
+          `INVALID_STATUS_TRANSITION: EQUIPMENT_WANTED listings may only transition between ACTIVE and ARCHIVED`,
+        );
+      }
+      if (dto.status === 'SOLD' && effectiveListingType !== 'EQUIPMENT_SALE') {
+        throw new BadRequestException(
+          `INVALID_STATUS_TRANSITION: ${dto.status} is only allowed for EQUIPMENT_SALE`,
+        );
+      }
+      if (dto.status === 'RENTED' && effectiveListingType !== 'EQUIPMENT_RENT') {
+        throw new BadRequestException(
+          `INVALID_STATUS_TRANSITION: ${dto.status} is only allowed for EQUIPMENT_RENT`,
+        );
+      }
+
+      // Gate: re-activating a listing requires seller to have a profile phone
+      if (dto.status === 'ACTIVE') {
+        await this.sellerContactGate.assertCanPublish(userId);
+      }
+    }
+
     const data: Record<string, unknown> = {};
     
-    const effectiveListingType = dto.listingType ?? item.listingType;
     if (effectiveListingType === 'EQUIPMENT_WANTED') {
       dto.price = undefined; dto.dailyPrice = undefined; dto.monthlyPrice = undefined;
       dto.make = undefined; dto.model = undefined; dto.year = undefined; dto.condition = undefined;
@@ -333,29 +381,59 @@ export class EquipmentListingsService {
     if (dto.latitude !== undefined) data.latitude = dto.latitude;
     if (dto.longitude !== undefined) data.longitude = dto.longitude;
     if (dto.whatsappEnabled !== undefined) data.whatsappEnabled = dto.whatsappEnabled;
+    if (dto.status !== undefined) data.status = dto.status;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.equipmentListing.update({
-        where: { id },
-        data,
-        include: {
-          user: { select: USER_SELECT },
-          images: true,
-          governorateRef: true,
-          wilayaRef: true,
-        },
+    // Optimistic concurrency: increment version on every update
+    data.version = { increment: 1 };
+
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        if (dto.status === 'ACTIVE') {
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        }
+
+        const whereClause: Prisma.EquipmentListingWhereUniqueInput =
+          dto.version !== undefined ? { id, version: dto.version } : { id };
+
+        const res = await tx.equipmentListing.update({
+          where: whereClause,
+          data,
+          include: {
+            user: { select: USER_SELECT },
+            images: { orderBy: { order: 'asc' } },
+            governorateRef: true,
+            wilayaRef: true,
+          },
+        });
+
+        if (statusChanged) {
+          await tx.equipmentListingStatusLog.create({
+            data: {
+              equipmentListingId: id,
+              fromStatus: item.status,
+              toStatus: dto.status!,
+              changedBy: userId,
+            },
+          });
+        }
+
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
+
+        return res;
       });
-
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
-
-      return res;
-    });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
@@ -366,6 +444,9 @@ export class EquipmentListingsService {
     }
 
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    if (statusChanged) {
+      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
+    }
     return updated;
   }
 
@@ -439,6 +520,55 @@ export class EquipmentListingsService {
     }
 
     return { deleted: true };
+  }
+
+  // ════════════════════════════════════════════
+  // Observability & Owner Stats
+  // ════════════════════════════════════════════
+
+  async getStatusHistory(listingId: string, userId: string) {
+    const listing = await this.prisma.equipmentListing.findUnique({ where: { id: listingId } });
+    if (!listing) throw new NotFoundException('الإعلان غير موجود');
+    if (listing.userId !== userId) throw new ForbiddenException('غير مصرح');
+
+    return this.prisma.equipmentListingStatusLog.findMany({
+      where: { equipmentListingId: listingId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getStats(listingId: string, userId: string) {
+    const listing = await this.prisma.equipmentListing.findUnique({ where: { id: listingId } });
+    if (!listing) throw new NotFoundException('الإعلان غير موجود');
+    if (listing.userId !== userId) throw new ForbiddenException('غير مصرح');
+
+    const [favoritesCount, conversationsCount, statusHistory] = await Promise.all([
+      this.prisma.favorite.count({
+        where: {
+          entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
+          entityId: listingId,
+        },
+      }),
+      this.prisma.conversation.count({
+        where: {
+          entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
+          entityId: listingId,
+        },
+      }),
+      this.prisma.equipmentListingStatusLog.findMany({
+        where: { equipmentListingId: listingId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      viewCount: listing.viewCount,
+      favoritesCount,
+      conversationsCount,
+      status: listing.status,
+      createdAt: listing.createdAt,
+      statusHistory,
+    };
   }
 
   private emitListingEvent(event: string, item: any, status?: string) {

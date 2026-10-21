@@ -41,6 +41,18 @@ export class EquipmentController {
     return this.svc.findBySlug(slug, user);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/status-history')
+  getStatusHistory(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.svc.getStatusHistory(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/stats')
+  getStats(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.svc.getStats(id, user.sub);
+  }
+
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
