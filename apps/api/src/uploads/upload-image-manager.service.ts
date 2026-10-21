@@ -245,7 +245,9 @@ export class UploadImageManagerService {
   }
 
   async addImageToEquipment(equipmentId: string, userId: string, url: string, isPrimary: boolean) {
-    const equipment = await this.prisma.equipmentListing.findUnique({ where: { id: equipmentId } });
+    const equipment = await this.prisma.equipmentListing.findFirst({
+      where: { id: equipmentId, deletedAt: null },
+    });
     if (!equipment) throw new NotFoundException('إعلان المعدة غير موجود');
     if (equipment.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 

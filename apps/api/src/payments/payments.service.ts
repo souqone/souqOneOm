@@ -40,9 +40,9 @@ export const FEATURED_REGISTRY: Record<string, FeaturedEntityLoader> = {
   EQUIPMENT_LISTING: async (prisma, id) => {
     const item = await prisma.equipmentListing.findUnique({
       where: { id },
-      select: { userId: true, status: true },
+      select: { userId: true, status: true, deletedAt: true },
     });
-    return item ? { ownerId: item.userId, status: item.status } : null;
+    return item ? { ownerId: item.userId, status: item.status, isDeleted: item.deletedAt != null } : null;
   },
 };
 

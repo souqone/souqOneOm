@@ -29,7 +29,7 @@ describe('public-visibility Helper', () => {
       const condition = getPublicListBaseCondition(model);
       expect(condition.hiddenByOwnerStatus).toBe(false);
 
-      if (model === 'busListing') {
+      if (model === 'busListing' || model === 'equipmentListing') {
         expect(condition.deletedAt).toBeNull();
       } else {
         expect(condition.deletedAt).toBeUndefined();

@@ -77,7 +77,12 @@ export class ActiveListingsLimitService {
           },
         }),
         tx.equipmentListing.count({
-          where: { userId, status: 'ACTIVE', hiddenByOwnerStatus: false },
+          where: {
+            userId,
+            status: 'ACTIVE',
+            hiddenByOwnerStatus: false,
+            deletedAt: null,
+          },
         }),
         tx.sparePart.count({
           where: { sellerId: userId, status: 'ACTIVE', hiddenByOwnerStatus: false },

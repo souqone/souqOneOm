@@ -28,7 +28,10 @@ export class PaymentActivationService {
         await this.prisma.busListing.update({ where: { id: entityId }, data });
         break;
       case 'EQUIPMENT_LISTING':
-        await this.prisma.equipmentListing.update({ where: { id: entityId }, data });
+        await this.prisma.equipmentListing.updateMany({
+          where: { id: entityId, deletedAt: null },
+          data,
+        });
         break;
     }
   }

@@ -149,7 +149,7 @@ describe('EquipmentListingsService - Image Handling', () => {
         meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
       });
       expect(prisma.equipmentListing.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1' },
+        where: { userId: 'user-1', deletedAt: null },
         skip: 0,
         take: 20,
         orderBy: { createdAt: 'desc' },

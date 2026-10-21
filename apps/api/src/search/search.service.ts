@@ -775,6 +775,7 @@ export class SearchService implements OnModuleInit {
     const equipment = await this.prisma.equipmentListing.findMany({
       where: {
         status: 'ACTIVE',
+        deletedAt: null,
         hiddenByOwnerStatus: false,
         [getOwnerRelationForDelegate('equipmentListing')]: { status: 'ACTIVE' },
       },
