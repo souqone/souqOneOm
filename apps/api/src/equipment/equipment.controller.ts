@@ -54,6 +54,16 @@ export class EquipmentController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
+  @Get(':id/similar')
+  findSimilar(
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.svc.findSimilar(id, limit ? parseInt(limit, 10) : 8, user);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
     return this.svc.findOne(id, user);
