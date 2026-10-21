@@ -2,6 +2,8 @@ import {
   IsString, IsOptional, IsEnum, IsInt, IsBoolean,
   IsNumber, IsArray, Min, Max, MinLength, MaxLength, IsDateString, IsPositive
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ListingStatus } from '@prisma/client';
 
 const EQUIPMENT_TYPES = [
   'EXCAVATOR','CRANE','LOADER','BULLDOZER','FORKLIFT','CONCRETE_MIXER',
@@ -10,6 +12,13 @@ const EQUIPMENT_TYPES = [
 ];
 
 export class UpdateEquipmentListingDto {
+  /** Optimistic-concurrency token: the `version` the client last read. Mismatch -> 409. Optional for backward compatibility with existing mobile clients. */
+  @IsOptional()
+  @IsInt({ message: 'رقم النسخة يجب أن يكون رقماً صحيحاً' })
+  @Min(1)
+  @Type(() => Number)
+  version?: number;
+
   @IsOptional() 
   @IsString() 
   @MinLength(5)
@@ -148,4 +157,9 @@ export class UpdateEquipmentListingDto {
 
   @IsOptional() @IsBoolean()
   whatsappEnabled?: boolean;
+
+  // ── Status (validated by state machine in service) ──
+  @IsOptional()
+  @IsEnum(ListingStatus)
+  status?: ListingStatus;
 }
