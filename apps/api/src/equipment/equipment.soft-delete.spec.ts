@@ -308,4 +308,59 @@ describe('EquipmentListingsService - Soft Delete (Task EB3)', () => {
       expect(visible).toBe(false);
     });
   });
+
+  describe('4. cross-consumer soft-delete enforcement (Uploads, Favorites, Payments Activation)', () => {
+    it('UploadImageManagerService.addImageToEquipment throws 404 for soft-deleted listing', async () => {
+      const { UploadImageManagerService } = await import('../uploads/upload-image-manager.service');
+      const uploadService = new UploadImageManagerService(prismaMock as any);
+
+      // findFirst returns null when deletedAt: null is queried against deleted listing
+      prismaMock.equipmentListing.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        uploadService.addImageToEquipment(mockListing.id, mockListing.userId, 'https://cdn.example.com/new.jpg', false),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prismaMock.equipmentListing.findFirst).toHaveBeenCalledWith({
+        where: { id: mockListing.id, deletedAt: null },
+      });
+    });
+
+    it('PaymentActivationService.activateFeatured excludes soft-deleted equipment listings', async () => {
+      const { PaymentActivationService } = await import('../payments/payment-activation.service');
+      const paymentActivation = new PaymentActivationService(
+        prismaMock as any,
+        { create: jest.fn() } as any,
+      );
+
+      prismaMock.equipmentListing.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+
+      await paymentActivation.activateFeatured('EQUIPMENT_LISTING', mockListing.id);
+
+      expect(prismaMock.equipmentListing.updateMany).toHaveBeenCalledWith({
+        where: { id: mockListing.id, deletedAt: null },
+        data: expect.objectContaining({ isPremium: true }),
+      });
+    });
+
+    it('FavoritesService skips soft-deleted equipment listings during toggle/resolution', async () => {
+      const { FavoritesService } = await import('../favorites/favorites.service');
+      const favService = new FavoritesService(
+        prismaMock as any,
+        { create: jest.fn() } as any,
+      );
+
+      // resolveEntityTitle checks findFirst({ where: { id, deletedAt: null } })
+      prismaMock.equipmentListing.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        favService.toggle('EQUIPMENT_LISTING', mockListing.id, 'user-fav-1'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prismaMock.equipmentListing.findFirst).toHaveBeenCalledWith({
+        where: { id: mockListing.id, deletedAt: null },
+        select: { title: true },
+      });
+    });
+  });
 });

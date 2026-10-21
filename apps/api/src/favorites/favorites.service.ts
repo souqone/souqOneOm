@@ -210,7 +210,10 @@ export class FavoritesService {
           return r ? { ownerId: r.userId, title: r.title } : null;
         }
         case 'EQUIPMENT_LISTING': {
-          const r = await this.prisma.equipmentListing.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+          const r = await this.prisma.equipmentListing.findFirst({
+            where: { id: entityId, deletedAt: null },
+            select: { userId: true, title: true },
+          });
           return r ? { ownerId: r.userId, title: r.title } : null;
         }
         case 'OPERATOR_LISTING': {
@@ -268,7 +271,10 @@ export class FavoritesService {
           return r?.title || null;
         }
         case 'EQUIPMENT_LISTING': {
-          const r = await this.prisma.equipmentListing.findUnique({ where: { id: entityId }, select: { title: true } });
+          const r = await this.prisma.equipmentListing.findFirst({
+            where: { id: entityId, deletedAt: null },
+            select: { title: true },
+          });
           return r?.title || null;
         }
         case 'OPERATOR_LISTING': {
@@ -319,8 +325,8 @@ export class FavoritesService {
           return r ? { id: r.id, title: r.title, image: (r.images as any)?.[0]?.url || null } : null;
         }
         case 'EQUIPMENT_LISTING': {
-          const r = await this.prisma.equipmentListing.findUnique({
-            where: { id: entityId },
+          const r = await this.prisma.equipmentListing.findFirst({
+            where: { id: entityId, deletedAt: null },
             select: { id: true, title: true, images: { take: 1, orderBy: { order: 'asc' } } },
           });
           return r ? { id: r.id, title: r.title, image: (r.images as any)?.[0]?.url || null } : null;
@@ -365,8 +371,8 @@ export class FavoritesService {
           });
         }
         case 'EQUIPMENT_LISTING': {
-          return this.prisma.equipmentListing.findUnique({
-            where: { id: entityId },
+          return this.prisma.equipmentListing.findFirst({
+            where: { id: entityId, deletedAt: null },
             include: { ...IMAGES_INCLUDE, ...USER_INCLUDE },
           });
         }
