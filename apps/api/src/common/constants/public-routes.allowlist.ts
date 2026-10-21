@@ -38,6 +38,7 @@ export const PUBLIC_ROUTES_ALLOWLIST = [
   'GET /cars/stats',
   'GET /equipment',
   'GET /equipment/slug/:slug',
+  'GET /equipment/:id/similar',
   'GET /equipment/:id',
   'GET /jobs',
   'GET /jobs/drivers',

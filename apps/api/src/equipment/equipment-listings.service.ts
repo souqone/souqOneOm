@@ -22,6 +22,7 @@ import { SellerContactGate } from '../common/services/seller-contact-gate.servic
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
+import { findSimilarListings } from '../common/utils/similar-listings.util';
 
 const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
   DRAFT:     ['ACTIVE'],
@@ -253,6 +254,84 @@ export class EquipmentListingsService {
     assertPublicOrOwner('equipmentListing', item, item.userId, viewer, 'الإعلان غير موجود');
     this.prisma.equipmentListing.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
     return item;
+  }
+
+  async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 8, 1), 20);
+
+    const original = await this.prisma.equipmentListing.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true,
+        status: true,
+        userId: true,
+        hiddenByOwnerStatus: true,
+        deletedAt: true,
+        equipmentType: true,
+        listingType: true,
+        make: true,
+        year: true,
+        price: true,
+        dailyPrice: true,
+      },
+    });
+
+    if (!original) throw new NotFoundException('الإعلان غير موجود');
+    assertPublicOrOwner('equipmentListing', original, original.userId, viewer, 'الإعلان غير موجود');
+
+    const isWanted = original.listingType === 'EQUIPMENT_WANTED';
+    const isRent = original.listingType === 'EQUIPMENT_RENT';
+    const priceField = isRent ? 'dailyPrice' : 'price';
+    const reference = isRent ? original.dailyPrice : original.price;
+    const refNum = reference == null ? 0 : Number(reference);
+
+    const priceWindow =
+      !isWanted && refNum > 0
+        ? { [priceField]: { gte: new Prisma.Decimal(refNum * 0.7), lte: new Prisma.Decimal(refNum * 1.3) } }
+        : {};
+
+    const narrowWhere: Record<string, any> = {};
+    const broaderWhere: Record<string, any> = {};
+
+    if (isWanted) {
+      // WANTED listings: same equipmentType only, NO price ranking, NO make/year ranking
+    } else {
+      if (original.make) {
+        narrowWhere.make = { equals: original.make, mode: 'insensitive' };
+        broaderWhere.make = { equals: original.make, mode: 'insensitive' };
+      }
+      if (original.year != null) {
+        narrowWhere.year = { gte: original.year - 3, lte: original.year + 3 };
+      }
+      Object.assign(narrowWhere, priceWindow);
+    }
+
+    const items = await findSimilarListings({
+      delegate: this.prisma.equipmentListing,
+      excludeId: id,
+      limit: safeLimit,
+      baseWhere: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        hiddenByOwnerStatus: false,
+        equipmentType: original.equipmentType,
+        listingType: original.listingType,
+      },
+      narrowWhere,
+      broaderWhere: Object.keys(broaderWhere).length > 0 ? broaderWhere : undefined,
+      referencePrice: isWanted ? null : reference,
+      priceOf: (row) => (isRent ? row.dailyPrice : row.price),
+      query: {
+        include: {
+          user: { select: USER_SELECT },
+          images: { orderBy: { order: 'asc' }, take: 1 },
+          governorateRef: true,
+          wilayaRef: true,
+        },
+      },
+    });
+
+    return items;
   }
 
   async my(userId: string, page = 1, limit = 20) {
