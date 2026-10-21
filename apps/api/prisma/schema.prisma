@@ -1540,11 +1540,14 @@ model EquipmentListing {
   viewCount     Int           @default(0)
 
   userId String
-  user   User                    @relation("UserEquipmentListings", fields: [userId], references: [id], onDelete: Cascade)
+  user   User                        @relation("UserEquipmentListings", fields: [userId], references: [id], onDelete: Cascade)
   images EquipmentListingImage[]
+  statusLogs EquipmentListingStatusLog[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  version   Int       @default(1)
+  deletedAt DateTime?
 
   // New Location Fields
   governorateId  Int?
@@ -1563,6 +1566,8 @@ model EquipmentListing {
   @@index([status])
   @@index([createdAt])
   @@index([slug])
+  @@index([deletedAt])
+  @@index([equipmentType, listingType, status, createdAt(sort: Desc)])
   @@map("equipment_listings")
 }
 
@@ -1577,6 +1582,19 @@ model EquipmentListingImage {
 
   @@index([equipmentListingId])
   @@map("equipment_listing_images")
+}
+
+model EquipmentListingStatusLog {
+  id                 String           @id @default(cuid())
+  fromStatus         ListingStatus
+  toStatus           ListingStatus
+  changedBy          String
+  equipmentListingId String
+  equipmentListing   EquipmentListing @relation(fields: [equipmentListingId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+
+  @@index([equipmentListingId])
+  @@map("equipment_listing_status_logs")
 }
 
 // ──────────────────────────────────────
