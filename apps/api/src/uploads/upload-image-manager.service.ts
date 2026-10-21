@@ -226,7 +226,9 @@ export class UploadImageManagerService {
   }
 
   async addImageToBus(busId: string, userId: string, url: string, isPrimary: boolean) {
-    const bus = await this.prisma.busListing.findUnique({ where: { id: busId } });
+    const bus = await this.prisma.busListing.findFirst({
+      where: { id: busId, deletedAt: null },
+    });
     if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
     if (bus.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
