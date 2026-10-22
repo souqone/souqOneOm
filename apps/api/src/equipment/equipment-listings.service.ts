@@ -225,7 +225,7 @@ export class EquipmentListingsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string, ip?: string, viewer?: VisibilityViewer | string | null) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const item = await this.prisma.equipmentListing.findUnique({
       where: { id },
       include: {
@@ -252,7 +252,7 @@ export class EquipmentListingsService {
     return item;
   }
 
-  async findBySlug(slug: string, ip?: string, viewer?: VisibilityViewer | string | null) {
+  async findBySlug(slug: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const item = await this.prisma.equipmentListing.findUnique({
       where: { slug },
       include: {

@@ -39,7 +39,7 @@ export class EquipmentController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
-    return this.svc.findBySlug(slug, req.ip, user);
+    return this.svc.findBySlug(slug, user, req.ip);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -67,7 +67,7 @@ export class EquipmentController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
-    return this.svc.findOne(id, req.ip, user);
+    return this.svc.findOne(id, user, req.ip);
   }
 
   @UseGuards(JwtAuthGuard)

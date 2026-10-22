@@ -27,6 +27,7 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
       srem: jest.fn().mockResolvedValue(1),
       get: jest.fn().mockResolvedValue('1'),
       del: jest.fn().mockResolvedValue(1),
+      eval: jest.fn().mockResolvedValue(1),
     };
 
     redisMock = {
@@ -70,8 +71,30 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
         '1',
         EQUIPMENT_VIEW_COOLDOWN_SECONDS,
       );
-      expect(mockClient.incr).toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-1`);
       expect(mockClient.sadd).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-1');
+      expect(mockClient.incr).toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-1`);
+    });
+
+    it('asserts SADD happens before INCR (sequential execution order)', async () => {
+      const callOrder: string[] = [];
+      mockClient.sadd.mockImplementationOnce(async () => {
+        callOrder.push('sadd');
+        return 1;
+      });
+      mockClient.incr.mockImplementationOnce(async () => {
+        callOrder.push('incr');
+        return 1;
+      });
+
+      await service.recordView({
+        listingId: 'eq-order',
+        ownerId: 'owner-99',
+        status: 'ACTIVE',
+        viewerId: 'user-1',
+        viewerIp: '192.168.1.1',
+      });
+
+      expect(callOrder).toEqual(['sadd', 'incr']);
     });
 
     it('same logged-in user from a different IP within TTL does not count (cooldown active)', async () => {
@@ -237,7 +260,7 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
     });
 
     it('swallows errors and returns false if Redis client throws on incr/sadd', async () => {
-      mockClient.incr.mockRejectedValue(new Error('Redis cluster unreachable'));
+      mockClient.sadd.mockRejectedValue(new Error('Redis cluster unreachable'));
 
       const res = await service.recordView({
         listingId: 'eq-1',
@@ -250,11 +273,14 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
     });
   });
 
-  describe('4. Periodic Flush (@Cron) & Concurrency Control', () => {
-    it('acquires distributed lock with 55s TTL and releases it after flush', async () => {
+  describe('4. Periodic Flush (@Cron), Safe Lock Release & Concurrency Control', () => {
+    it('acquires distributed lock with random token and releases safely via Lua script', async () => {
       redisMock.setNX.mockResolvedValueOnce(true); // Lock acquired
       mockClient.smembers.mockResolvedValue(['eq-1']);
-      mockClient.get.mockResolvedValue('5');
+      mockClient.get.mockImplementation(async (key: string) => {
+        if (key.includes('viewcount:equipment:')) return '5';
+        return '0';
+      });
       mockClient.decrby.mockResolvedValue(0);
 
       const result = await service.flushViews();
@@ -262,10 +288,16 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
       expect(result.skippedDueToLock).toBeUndefined();
       expect(redisMock.setNX).toHaveBeenCalledWith(
         EQUIPMENT_VIEW_LOCK_KEY,
-        'locked',
+        expect.any(String), // random token
         EQUIPMENT_VIEW_LOCK_TTL_SECONDS,
       );
-      expect(redisMock.del).toHaveBeenCalledWith(EQUIPMENT_VIEW_LOCK_KEY);
+      // Safe lock release via eval with the token
+      expect(mockClient.eval).toHaveBeenCalledWith(
+        expect.stringContaining("if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end"),
+        1,
+        EQUIPMENT_VIEW_LOCK_KEY,
+        expect.any(String),
+      );
       expect(result.flushedCount).toBe(1);
     });
 
@@ -277,13 +309,14 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
       expect(result.skippedDueToLock).toBe(true);
       expect(result.flushedCount).toBe(0);
       expect(mockClient.smembers).not.toHaveBeenCalled();
-      expect(redisMock.del).not.toHaveBeenCalled();
+      expect(mockClient.eval).not.toHaveBeenCalled();
     });
 
-    it('flushes delta to DB via updateMany and subtracts flushed delta with DECRBY', async () => {
+    it('flushes delta to DB via updateMany, SREMs id on remaining<=0, re-checks count and keeps key', async () => {
       redisMock.setNX.mockResolvedValueOnce(true);
       mockClient.smembers.mockResolvedValue(['eq-10']);
-      mockClient.get.mockResolvedValue('12');
+      // First get for delta = 12, second get for re-check = 0
+      mockClient.get.mockResolvedValueOnce('12').mockResolvedValueOnce('0');
       mockClient.decrby.mockResolvedValue(0);
 
       const result = await service.flushViews();
@@ -294,28 +327,40 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
         data: { viewCount: { increment: 12 } },
       });
       expect(mockClient.decrby).toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-10`, 12);
-      expect(mockClient.del).toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-10`);
       expect(mockClient.srem).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-10');
+      // Count key must NOT be DELeted
+      expect(mockClient.del).not.toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-10`);
     });
 
-    it('keeps remaining delta in dirty set when views arrive during DB write (decrby > 0)', async () => {
+    it('re-adds id to dirty set if new views arrived after decrby when count was 0', async () => {
       redisMock.setNX.mockResolvedValueOnce(true);
-      mockClient.smembers.mockResolvedValue(['eq-20']);
-      mockClient.get.mockResolvedValue('10');
-      // 3 more views arrived during DB write, so decrby(10) leaves 3
-      mockClient.decrby.mockResolvedValue(3);
+      mockClient.smembers.mockResolvedValue(['eq-race']);
+      // Delta was 5, remaining is 0, but a new view arrived right after decrby so re-read returns 1
+      mockClient.get.mockResolvedValueOnce('5').mockResolvedValueOnce('1');
+      mockClient.decrby.mockResolvedValue(0);
+
+      const result = await service.flushViews();
+
+      expect(result.flushedCount).toBe(1);
+      expect(mockClient.srem).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-race');
+      expect(mockClient.sadd).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-race');
+    });
+
+    it('handles DECRBY failure gracefully without failing the cron run (logs error)', async () => {
+      redisMock.setNX.mockResolvedValueOnce(true);
+      mockClient.smembers.mockResolvedValue(['eq-decr-fail']);
+      mockClient.get.mockResolvedValueOnce('8');
+      mockClient.decrby.mockRejectedValue(new Error('Redis connection reset during DECRBY'));
 
       const result = await service.flushViews();
 
       expect(result.flushedCount).toBe(1);
       expect(prismaMock.equipmentListing.updateMany).toHaveBeenCalledWith({
-        where: { id: 'eq-20' },
-        data: { viewCount: { increment: 10 } },
+        where: { id: 'eq-decr-fail' },
+        data: { viewCount: { increment: 8 } },
       });
-      expect(mockClient.decrby).toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-20`, 10);
-      // DEL and SREM must NOT be called for eq-20 because 3 views are still pending
-      expect(mockClient.del).not.toHaveBeenCalledWith(`${EQUIPMENT_VIEW_COUNT_PREFIX}eq-20`);
-      expect(mockClient.srem).not.toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-20');
+      // SREM should not be called if DECRBY threw
+      expect(mockClient.srem).not.toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-decr-fail');
     });
 
     it('keeps delta in Redis and dirty set on DB error to retry next minute', async () => {
@@ -328,7 +373,7 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
 
       expect(result.flushedCount).toBe(0);
       expect(result.failedCount).toBe(1);
-      // decrby, del, and srem must NOT be called on failure
+      // decrby and srem must NOT be called on failure
       expect(mockClient.decrby).not.toHaveBeenCalled();
       expect(mockClient.srem).not.toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-fail');
     });
@@ -336,7 +381,7 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
     it('handles missing listing row safely without throwing (updateMany returns count 0)', async () => {
       redisMock.setNX.mockResolvedValueOnce(true);
       mockClient.smembers.mockResolvedValue(['eq-missing']);
-      mockClient.get.mockResolvedValue('4');
+      mockClient.get.mockResolvedValueOnce('4').mockResolvedValueOnce('0');
       prismaMock.equipmentListing.updateMany.mockResolvedValue({ count: 0 });
       mockClient.decrby.mockResolvedValue(0);
 

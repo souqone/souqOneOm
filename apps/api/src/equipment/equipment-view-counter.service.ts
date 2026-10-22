@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { randomUUID } from 'crypto';
 import { RedisService } from '../redis/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -85,10 +86,9 @@ export class EquipmentViewCounterService {
       const client = this.redis.getClient();
 
       if (client) {
-        await Promise.all([
-          client.incr(countKey),
-          client.sadd(EQUIPMENT_VIEW_DIRTY_SET, listingId),
-        ]);
+        // Fix 3: SADD dirty set BEFORE INCR count so flush never sees a count without a dirty entry
+        await client.sadd(EQUIPMENT_VIEW_DIRTY_SET, listingId);
+        await client.incr(countKey);
       } else {
         await this.redis.incr(countKey);
       }
@@ -129,11 +129,12 @@ export class EquipmentViewCounterService {
     skippedDueToLock?: boolean;
   }> {
     let lockAcquired = false;
+    const lockToken = randomUUID();
 
     if (this.redis.isReady()) {
       lockAcquired = await this.redis.setNX(
         EQUIPMENT_VIEW_LOCK_KEY,
-        'locked',
+        lockToken,
         EQUIPMENT_VIEW_LOCK_TTL_SECONDS,
       );
 
@@ -154,7 +155,6 @@ export class EquipmentViewCounterService {
       if (!client) return { flushedCount: 0, failedCount: 0 };
 
       // Read up to BATCH_CAP dirty listing IDs
-      // Using SMEMBERS or SRANDMEMBER/SPOP. To be safe, read members then cap.
       const dirtyIds = await client.smembers(EQUIPMENT_VIEW_DIRTY_SET);
       if (!dirtyIds || dirtyIds.length === 0) {
         return { flushedCount: 0, failedCount: 0 };
@@ -181,13 +181,23 @@ export class EquipmentViewCounterService {
           });
 
           // Subtract delta using DECRBY so any views that arrived during flush are kept
-          const remaining = await client.decrby(countKey, delta);
-          if (remaining <= 0) {
-            // Clean up key if at zero (or negative due to edge cases)
-            await client.del(countKey);
-            await client.srem(EQUIPMENT_VIEW_DIRTY_SET, id);
-          } else {
-            // More views arrived; keep in dirty set for next run
+          try {
+            const remaining = await client.decrby(countKey, delta);
+            if (remaining <= 0) {
+              // Fix 4: SREM first, then re-read count; if > 0, SADD back (do NOT del countKey)
+              await client.srem(EQUIPMENT_VIEW_DIRTY_SET, id);
+              const postCheckStr = await client.get(countKey);
+              const postCheck = parseInt(postCheckStr || '0', 10);
+              if (postCheck > 0) {
+                await client.sadd(EQUIPMENT_VIEW_DIRTY_SET, id);
+              }
+            }
+          } catch (decrErr: any) {
+            // DB write succeeded but DECRBY failed; log at error with id and delta
+            // Accepted risk: possible double count on retry
+            this.logger.error(
+              `DB updateMany succeeded but DECRBY failed for listing ${id} with delta ${delta}: ${decrErr?.message || decrErr}`,
+            );
           }
 
           flushedCount++;
@@ -202,7 +212,18 @@ export class EquipmentViewCounterService {
     } finally {
       if (lockAcquired) {
         try {
-          await this.redis.del(EQUIPMENT_VIEW_LOCK_KEY);
+          const client = this.redis.getClient();
+          if (client) {
+            // Fix 2: Safe lock release using Lua script to match lockToken
+            await client.eval(
+              `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end`,
+              1,
+              EQUIPMENT_VIEW_LOCK_KEY,
+              lockToken,
+            );
+          } else {
+            await this.redis.del(EQUIPMENT_VIEW_LOCK_KEY);
+          }
         } catch (err: any) {
           this.logger.warn(`Failed releasing equipment view flush lock: ${err?.message || err}`);
         }
