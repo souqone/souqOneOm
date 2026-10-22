@@ -344,7 +344,7 @@ describe('Part 6a: Contact Gate Coverage & Registry Unit Tests', () => {
 
     it('3. EquipmentListing create throws PROFILE_PHONE_REQUIRED when profile lacks phone', async () => {
       const s = new EquipmentListingsService(
-        {} as any, {} as any, {} as any, mockGateThrows, {} as any,
+        {} as any, {} as any, {} as any, mockGateThrows, {} as any, {} as any,
       );
       await expect(s.create({} as any, 'user-1')).rejects.toMatchObject({
         response: { code: 'PROFILE_PHONE_REQUIRED' },

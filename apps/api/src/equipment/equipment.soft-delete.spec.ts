@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeoService } from '../locations/geo.service';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { EquipmentViewCounterService } from './equipment-view-counter.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { LISTING_EVENTS } from '../common/events/listing.events';
 import { isEntityPubliclyVisible } from '../common/public-visibility';
@@ -108,6 +109,7 @@ describe('EquipmentListingsService - Soft Delete (Task EB3)', () => {
         { provide: GeoService, useValue: { validateLocationPair: jest.fn() } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn() } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn() } },
+        { provide: EquipmentViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
       ],
     }).compile();
 

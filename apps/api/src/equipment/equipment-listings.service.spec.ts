@@ -6,6 +6,7 @@ import { GeoService } from '../locations/geo.service';
 import { InternalServerErrorException } from '@nestjs/common';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { EquipmentViewCounterService } from './equipment-view-counter.service';
 
 describe('EquipmentListingsService - Image Handling', () => {
   let service: EquipmentListingsService;
@@ -38,6 +39,7 @@ describe('EquipmentListingsService - Image Handling', () => {
         { provide: GeoService, useValue: {} },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
+        { provide: EquipmentViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
       ],
     }).compile();
 
@@ -197,6 +199,51 @@ describe('EquipmentListingsService - Image Handling', () => {
       expect(result.meta.totalPages).toBe(5);
       expect(prisma.equipmentListing.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 20, take: 10 }),
+      );
+    });
+  });
+
+  describe('findOne and findBySlug viewer and ip argument order', () => {
+    const mockListing = {
+      id: 'eq-detail-1',
+      userId: 'owner-1',
+      title: 'Excavator Cat 320',
+      slug: 'excavator-cat-320',
+      status: 'ACTIVE',
+      hiddenByOwnerStatus: false,
+      deletedAt: null,
+      viewCount: 10,
+    };
+
+    it('findOne passes viewerId to recordView when viewer object is passed as second argument', async () => {
+      prisma.equipmentListing.findUnique.mockResolvedValueOnce(mockListing);
+      const viewCounter: any = (service as any).viewCounterService;
+
+      await service.findOne('eq-detail-1', { sub: 'owner-1', role: 'USER' }, '192.168.1.50');
+
+      expect(viewCounter.recordView).toHaveBeenCalledWith(
+        expect.objectContaining({
+          listingId: 'eq-detail-1',
+          ownerId: 'owner-1',
+          viewerId: 'owner-1',
+          viewerIp: '192.168.1.50',
+        }),
+      );
+    });
+
+    it('findBySlug passes viewerId to recordView when viewer object is passed as second argument', async () => {
+      prisma.equipmentListing.findUnique.mockResolvedValueOnce(mockListing);
+      const viewCounter: any = (service as any).viewCounterService;
+
+      await service.findBySlug('excavator-cat-320', { sub: 'guest-1', role: 'USER' }, '192.168.1.50');
+
+      expect(viewCounter.recordView).toHaveBeenCalledWith(
+        expect.objectContaining({
+          listingId: 'eq-detail-1',
+          ownerId: 'owner-1',
+          viewerId: 'guest-1',
+          viewerIp: '192.168.1.50',
+        }),
       );
     });
   });
