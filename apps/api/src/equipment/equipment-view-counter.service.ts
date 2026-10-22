@@ -169,8 +169,8 @@ export class EquipmentViewCounterService {
           const delta = parseInt(currentDeltaStr || '0', 10);
 
           if (!delta || delta <= 0) {
-            // Nothing to flush for this ID; remove from dirty set
-            await client.srem(EQUIPMENT_VIEW_DIRTY_SET, id);
+            // Nothing to flush for this ID; safely remove from dirty set if empty
+            await this.removeDirtyIfEmpty(client, id, countKey);
             continue;
           }
 
@@ -184,13 +184,7 @@ export class EquipmentViewCounterService {
           try {
             const remaining = await client.decrby(countKey, delta);
             if (remaining <= 0) {
-              // Fix 4: SREM first, then re-read count; if > 0, SADD back (do NOT del countKey)
-              await client.srem(EQUIPMENT_VIEW_DIRTY_SET, id);
-              const postCheckStr = await client.get(countKey);
-              const postCheck = parseInt(postCheckStr || '0', 10);
-              if (postCheck > 0) {
-                await client.sadd(EQUIPMENT_VIEW_DIRTY_SET, id);
-              }
+              await this.removeDirtyIfEmpty(client, id, countKey);
             }
           } catch (decrErr: any) {
             // DB write succeeded but DECRBY failed; log at error with id and delta
@@ -228,6 +222,19 @@ export class EquipmentViewCounterService {
           this.logger.warn(`Failed releasing equipment view flush lock: ${err?.message || err}`);
         }
       }
+    }
+  }
+
+  /**
+   * Helper to safely remove listing ID from dirty set if count is zero,
+   * re-adding to dirty set if new views arrived concurrently.
+   */
+  private async removeDirtyIfEmpty(client: any, id: string, countKey: string): Promise<void> {
+    await client.srem(EQUIPMENT_VIEW_DIRTY_SET, id);
+    const postCheckStr = await client.get(countKey);
+    const postCheck = parseInt(postCheckStr || '0', 10);
+    if (postCheck > 0) {
+      await client.sadd(EQUIPMENT_VIEW_DIRTY_SET, id);
     }
   }
 }

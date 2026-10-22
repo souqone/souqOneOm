@@ -346,6 +346,32 @@ describe('EquipmentViewCounterService (Task EB5)', () => {
       expect(mockClient.sadd).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-race');
     });
 
+    it('zero-delta branch: re-adds id to dirty set when post-SREM re-check returns > 0', async () => {
+      redisMock.setNX.mockResolvedValueOnce(true);
+      mockClient.smembers.mockResolvedValue(['eq-zero-race']);
+      // Delta was 0 (e.g. INCR landed right after GET 0), post-SREM re-read returns 1
+      mockClient.get.mockResolvedValueOnce('0').mockResolvedValueOnce('1');
+
+      const result = await service.flushViews();
+
+      expect(result.flushedCount).toBe(0);
+      expect(mockClient.srem).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-zero-race');
+      expect(mockClient.sadd).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-zero-race');
+    });
+
+    it('zero-delta branch: does NOT re-add id to dirty set when post-SREM re-check returns 0', async () => {
+      redisMock.setNX.mockResolvedValueOnce(true);
+      mockClient.smembers.mockResolvedValue(['eq-zero-empty']);
+      // Delta was 0, post-SREM re-read returns 0
+      mockClient.get.mockResolvedValueOnce('0').mockResolvedValueOnce('0');
+
+      const result = await service.flushViews();
+
+      expect(result.flushedCount).toBe(0);
+      expect(mockClient.srem).toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-zero-empty');
+      expect(mockClient.sadd).not.toHaveBeenCalledWith(EQUIPMENT_VIEW_DIRTY_SET, 'eq-zero-empty');
+    });
+
     it('handles DECRBY failure gracefully without failing the cron run (logs error)', async () => {
       redisMock.setNX.mockResolvedValueOnce(true);
       mockClient.smembers.mockResolvedValue(['eq-decr-fail']);
