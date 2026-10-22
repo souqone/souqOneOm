@@ -13,6 +13,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { OperatorViewCounterService } from './operator-view-counter.service';
 
 describe('OperatorsService', () => {
   let service: OperatorsService;
@@ -69,6 +70,7 @@ describe('OperatorsService', () => {
         { provide: NotificationsService, useValue: notificationsService },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
+        { provide: OperatorViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
       ],
     }).compile();
 

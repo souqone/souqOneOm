@@ -24,6 +24,7 @@ import { SellerContactGate } from '../common/services/seller-contact-gate.servic
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
+import { OperatorViewCounterService } from './operator-view-counter.service';
 
 @Injectable()
 export class OperatorsService {
@@ -33,6 +34,7 @@ export class OperatorsService {
     private readonly notificationsService: NotificationsService,
     private readonly sellerContactGate: SellerContactGate,
     private readonly activeListingsLimitService: ActiveListingsLimitService,
+    private readonly viewCounterService: OperatorViewCounterService,
   ) {}
 
   async create(dto: CreateOperatorListingDto, userId: string) {
@@ -166,7 +168,7 @@ export class OperatorsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const item = await this.prisma.operatorListing.findUnique({
       where: { id },
       include: {
@@ -177,9 +179,18 @@ export class OperatorsService {
     });
     if (!item) throw new NotFoundException('إعلان المشغل غير موجود');
     assertPublicOrOwner('operatorListing', item, item.userId, viewer, 'إعلان المشغل غير موجود');
-    this.prisma.operatorListing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
 
     const viewerId = typeof viewer === 'string' ? viewer : viewer?.sub;
+
+    this.viewCounterService.recordView({
+      listingId: item.id,
+      ownerId: item.userId,
+      status: item.status,
+      hiddenByOwnerStatus: item.hiddenByOwnerStatus,
+      viewerId,
+      viewerIp: ip,
+    }).catch(() => {});
+
     let pendingDeletionRequest = null;
     if (viewerId && item.userId === viewerId) {
       const pendingRequest = await this.prisma.operatorDeletionRequest.findFirst({
