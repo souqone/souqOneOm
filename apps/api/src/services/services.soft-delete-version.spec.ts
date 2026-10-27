@@ -255,12 +255,11 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
         'Record to update not found.',
         { code: 'P2025', clientVersion: '6.0.0' },
       );
+      prismaMock.carService.findUnique
+        .mockResolvedValueOnce({ ...mockService, version: 1 }) // 1st: geo check in ServicesService
+        .mockResolvedValueOnce({ ...mockService, version: 1 }) // 2nd: findOne pre-flight in BaseListingService
+        .mockResolvedValueOnce({ ...mockService, version: 2, deletedAt: null }); // 3rd: P2025 re-read in catch
       prismaMock.carService.update.mockRejectedValueOnce(p2025Error);
-      prismaMock.carService.findUnique.mockResolvedValueOnce({
-        ...mockService,
-        version: 2,
-        deletedAt: null,
-      });
 
       await expect(
         servicesService.update(mockService.id, mockService.userId, {
@@ -268,6 +267,9 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
           version: 1,
         }),
       ).rejects.toThrow(ConflictException);
+
+      expect(prismaMock.carService.update).toHaveBeenCalledTimes(1);
+      expect(prismaMock.carService.findUnique).toHaveBeenCalledTimes(3);
     });
 
     it('allows version-less update for backward compatibility (increments version for future reads)', async () => {
@@ -314,14 +316,11 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
         code: 'P2025',
         clientVersion: '6.0.0',
       });
-      // Concurrently soft-deleted during update transaction:
-      prismaMock.carService.update.mockImplementationOnce(async () => {
-        prismaMock.carService.findUnique.mockResolvedValueOnce({
-          ...mockService,
-          deletedAt: new Date(),
-        });
-        throw p2025;
-      });
+      prismaMock.carService.findUnique
+        .mockResolvedValueOnce({ ...mockService, version: 1 }) // 1st: geo check in ServicesService
+        .mockResolvedValueOnce({ ...mockService, version: 1 }) // 2nd: findOne pre-flight in BaseListingService
+        .mockResolvedValueOnce({ ...mockService, deletedAt: new Date() }); // 3rd: P2025 re-read in catch
+      prismaMock.carService.update.mockRejectedValueOnce(p2025);
 
       await expect(
         servicesService.update(mockService.id, mockService.userId, {
@@ -329,6 +328,9 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
           version: 1,
         }),
       ).rejects.toThrow(NotFoundException);
+
+      expect(prismaMock.carService.update).toHaveBeenCalledTimes(1);
+      expect(prismaMock.carService.findUnique).toHaveBeenCalledTimes(3);
     });
 
     it('remove() where clause contains deletedAt: null and throws NotFoundException on second concurrent delete (P2025)', async () => {
@@ -344,15 +346,21 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
         }),
       );
 
-      // Concurrent remove with P2025
+      // Concurrent remove with P2025: pre-flight live, update rejects P2025 -> NotFoundException
+      prismaMock.outboxEvent.create.mockClear();
+      prismaMock.cleanupPolymorphicOrphans.mockClear();
       const p2025 = new Prisma.PrismaClientKnownRequestError('Record not found', {
         code: 'P2025',
         clientVersion: '6.0.0',
       });
+      prismaMock.carService.findUnique.mockResolvedValueOnce({ ...mockService, deletedAt: null });
       prismaMock.carService.update.mockRejectedValueOnce(p2025);
       await expect(
         servicesService.remove(mockService.id, mockService.userId),
       ).rejects.toThrow(NotFoundException);
+
+      expect(prismaMock.outboxEvent.create).not.toHaveBeenCalled();
+      expect(prismaMock.cleanupPolymorphicOrphans).not.toHaveBeenCalled();
     });
   });
 
