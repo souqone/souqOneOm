@@ -225,7 +225,7 @@ describe('ServicesService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.meta).toEqual({ total: 1, page: 1, limit: 20, totalPages: 1 });
       expect(mockPrisma.carService.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { userId: 'user-1' }, skip: 0, take: 20 }),
+        expect.objectContaining({ where: { userId: 'user-1', deletedAt: null }, skip: 0, take: 20 }),
       );
     });
   });
