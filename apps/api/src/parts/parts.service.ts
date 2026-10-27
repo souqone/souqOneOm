@@ -124,7 +124,7 @@ export class PartsService {
     const limit = Math.min(parseInt(query.limit ?? '20'), 50);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
+    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false, deletedAt: null };
 
     if (query.search) {
       where.OR = [
@@ -186,7 +186,7 @@ export class PartsService {
         wilayaRef: true,
       },
     });
-    if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+    if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
 
     assertPublicOrOwner('sparePart', part, part.sellerId, viewer, 'قطعة الغيار غير موجودة');
 
@@ -196,7 +196,7 @@ export class PartsService {
 
   async myParts(userId: string) {
     return this.prisma.sparePart.findMany({
-      where: { sellerId: userId },
+      where: { sellerId: userId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
         images: { orderBy: { order: 'asc' }, take: 1 },
@@ -208,7 +208,7 @@ export class PartsService {
 
   async update(id: string, userId: string, dto: UpdatePartDto) {
     const part = await this.prisma.sparePart.findUnique({ where: { id } });
-    if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+    if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
     const cleanDto = stripDeprecatedContactFields(dto);
@@ -282,11 +282,17 @@ export class PartsService {
 
   async remove(id: string, userId: string) {
     const part = await this.prisma.sparePart.findUnique({ where: { id } });
-    if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+    if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.sparePart.delete({ where: { id } });
+      await tx.sparePart.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
       await tx.outboxEvent.create({
         data: {
           entityType: ENTITY_TYPES.SPARE_PART,
@@ -298,8 +304,6 @@ export class PartsService {
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
-
-
 
     this.emitListingEvent(LISTING_EVENTS.DELETED, part);
 

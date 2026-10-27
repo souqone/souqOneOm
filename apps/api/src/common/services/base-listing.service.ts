@@ -163,7 +163,7 @@ export abstract class BaseListingService {
     const cached = await this.redis.get<any>(cacheKey);
     if (cached) return cached;
 
-    const where = { status: 'ACTIVE', hiddenByOwnerStatus: false, ...this.buildWhereFilter(query) };
+    const where = { status: 'ACTIVE', hiddenByOwnerStatus: false, deletedAt: null, ...this.buildWhereFilter(query) };
 
     const [items, total] = await Promise.all([
       this.model.findMany({
@@ -196,10 +196,11 @@ export abstract class BaseListingService {
         where: { id },
         include: this.getDetailInclude(),
       });
-      if (!item) throw new NotFoundException(this.config.notFoundMsg);
+      if (!item || item.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
       await this.redis.set(cacheKey, item, DETAIL_CACHE_TTL);
     }
 
+    if (item.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     assertPublicOrOwner(this.config.modelName as any, item, item.userId, viewer, this.config.notFoundMsg);
 
     // Rate-limited view increment
@@ -221,7 +222,7 @@ export abstract class BaseListingService {
       where: { slug },
       include: this.getDetailInclude(),
     });
-    if (!item) throw new NotFoundException(this.config.notFoundMsg);
+    if (!item || item.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
 
     assertPublicOrOwner(this.config.modelName as any, item, item.userId, viewer, this.config.notFoundMsg);
 
@@ -245,13 +246,13 @@ export abstract class BaseListingService {
 
     const [items, total] = await Promise.all([
       this.model.findMany({
-        where: { userId },
+        where: { userId, deletedAt: null },
         orderBy: { createdAt: 'desc' },
         skip,
         take,
         include: this.getListInclude(),
       }),
-      this.model.count({ where: { userId } }),
+      this.model.count({ where: { userId, deletedAt: null } }),
     ]);
 
     return { items, meta: { total, page, limit: take, totalPages: Math.ceil(total / take) } };
@@ -262,7 +263,7 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   async update(id: string, userId: string, dto: Record<string, any>) {
     const existing = await this.model.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(this.config.notFoundMsg);
+    if (!existing || existing.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
@@ -325,12 +326,18 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   async remove(id: string, userId: string) {
     const existing = await this.model.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(this.config.notFoundMsg);
+    if (!existing || existing.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
     await this.prisma.$transaction(async (tx) => {
-      await (tx as any)[this.config.modelName].delete({ where: { id } });
+      await (tx as any)[this.config.modelName].update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
       await tx.outboxEvent.create({
         data: {
           entityType: this.config.entityType,
@@ -356,7 +363,7 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   async toggleStatus(id: string, userId: string) {
     const existing = await this.model.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(this.config.notFoundMsg);
+    if (!existing || existing.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بتعديل حالة هذا الإعلان');
 

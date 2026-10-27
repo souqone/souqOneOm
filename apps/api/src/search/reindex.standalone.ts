@@ -128,7 +128,7 @@ async function main() {
 
   // ── Parts ──
   const parts = await prisma.sparePart.findMany({
-    where: { status: 'ACTIVE' },
+    where: { status: 'ACTIVE', deletedAt: null },
     include: { images: { take: 1, orderBy: { order: 'asc' } } },
   });
   const partDocs = parts.map(p => serialize({
@@ -142,7 +142,7 @@ async function main() {
 
   // ── Services ──
   const services = await prisma.carService.findMany({
-    where: { status: 'ACTIVE' },
+    where: { status: 'ACTIVE', deletedAt: null },
     include: { images: { take: 1, orderBy: { order: 'asc' } } },
   });
   const serviceDocs = services.map(s => serialize({

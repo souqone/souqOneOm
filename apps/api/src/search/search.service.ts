@@ -561,6 +561,7 @@ export class SearchService implements OnModuleInit {
       this.prisma.sparePart.findMany({
         where: {
           status: 'ACTIVE',
+          deletedAt: null,
           hiddenByOwnerStatus: false,
           [partOwnerRel]: { status: 'ACTIVE' },
           AND: searchConditions,
@@ -571,6 +572,7 @@ export class SearchService implements OnModuleInit {
       this.prisma.carService.findMany({
         where: {
           status: 'ACTIVE',
+          deletedAt: null,
           hiddenByOwnerStatus: false,
           [serviceOwnerRel]: { status: 'ACTIVE' },
           AND: searchConditions,
@@ -643,6 +645,7 @@ export class SearchService implements OnModuleInit {
     const parts = await this.prisma.sparePart.findMany({
       where: {
         status: 'ACTIVE',
+        deletedAt: null,
         hiddenByOwnerStatus: false,
         [getOwnerRelationForDelegate('sparePart')]: { status: 'ACTIVE' },
       },
@@ -679,6 +682,7 @@ export class SearchService implements OnModuleInit {
     const services = await this.prisma.carService.findMany({
       where: {
         status: 'ACTIVE',
+        deletedAt: null,
         hiddenByOwnerStatus: false,
         [getOwnerRelationForDelegate('carService')]: { status: 'ACTIVE' },
       },
