@@ -32,6 +32,15 @@ export class UploadImageManagerService {
     }
   }
 
+  private async invalidateCarServiceCaches(serviceId: string): Promise<void> {
+    try {
+      await this.redis.del(`carService:detail:${serviceId}`);
+      await this.redis.delPattern('carService:list:*');
+    } catch (err) {
+      this.logger.warn(`Failed to invalidate carService caches for ${serviceId}`);
+    }
+  }
+
   async addImageToListing(listingId: string, userId: string, url: string, isPrimary: boolean) {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing) throw new NotFoundException('الإعلان غير موجود');
@@ -196,9 +205,13 @@ export class UploadImageManagerService {
     const imageCount = await this.prisma.carServiceImage.count({ where: { carServiceId: serviceId } });
     const shouldBePrimary = isPrimary || imageCount === 0;
 
-    return this.prisma.carServiceImage.create({
+    const created = await this.prisma.carServiceImage.create({
       data: { url, order: nextOrder, isPrimary: shouldBePrimary, carServiceId: serviceId },
     });
+
+    await this.invalidateCarServiceCaches(serviceId);
+
+    return created;
   }
 
   async removeImageFromService(imageId: string, userId: string) {
@@ -221,6 +234,8 @@ export class UploadImageManagerService {
         await this.prisma.carServiceImage.update({ where: { id: first.id }, data: { isPrimary: true } });
       }
     }
+
+    await this.invalidateCarServiceCaches(image.carService.id);
 
     return { message: 'تم حذف الصورة بنجاح' };
   }
