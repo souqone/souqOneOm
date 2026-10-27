@@ -75,7 +75,7 @@ export const CONTACT_REGISTRY: Record<string, ContactRegistryEntry> = {
     loadTarget: async (prisma, entityId) => {
       const item = await prisma.sparePart.findUnique({
         where: { id: entityId },
-        select: { id: true, sellerId: true, status: true, whatsappEnabled: true, hiddenByOwnerStatus: true },
+        select: { id: true, sellerId: true, status: true, whatsappEnabled: true, hiddenByOwnerStatus: true, deletedAt: true },
       });
       if (!item || !isEntityPubliclyVisible('sparePart', item)) {
         throw new NotFoundException('قطعة الغيار غير موجودة');
@@ -89,7 +89,7 @@ export const CONTACT_REGISTRY: Record<string, ContactRegistryEntry> = {
     loadTarget: async (prisma, entityId) => {
       const item = await prisma.carService.findUnique({
         where: { id: entityId },
-        select: { id: true, userId: true, status: true, whatsappEnabled: true, hiddenByOwnerStatus: true },
+        select: { id: true, userId: true, status: true, whatsappEnabled: true, hiddenByOwnerStatus: true, deletedAt: true },
       });
       if (!item || !isEntityPubliclyVisible('carService', item)) {
         throw new NotFoundException('الخدمة غير موجودة');

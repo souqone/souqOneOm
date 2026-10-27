@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -124,7 +125,7 @@ export class PartsService {
     const limit = Math.min(parseInt(query.limit ?? '20'), 50);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false };
+    const where: Prisma.SparePartWhereInput = { status: 'ACTIVE', hiddenByOwnerStatus: false, deletedAt: null };
 
     if (query.search) {
       where.OR = [
@@ -186,7 +187,7 @@ export class PartsService {
         wilayaRef: true,
       },
     });
-    if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+    if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
 
     assertPublicOrOwner('sparePart', part, part.sellerId, viewer, 'قطعة الغيار غير موجودة');
 
@@ -196,7 +197,7 @@ export class PartsService {
 
   async myParts(userId: string) {
     return this.prisma.sparePart.findMany({
-      where: { sellerId: userId },
+      where: { sellerId: userId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
         images: { orderBy: { order: 'asc' }, take: 1 },
@@ -208,7 +209,7 @@ export class PartsService {
 
   async update(id: string, userId: string, dto: UpdatePartDto) {
     const part = await this.prisma.sparePart.findUnique({ where: { id } });
-    if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+    if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
     const cleanDto = stripDeprecatedContactFields(dto);
@@ -243,27 +244,50 @@ export class PartsService {
     if (dto.quantity !== undefined) data.quantity = dto.quantity;
     if (dto.compatibleVehicleTypes !== undefined) data.compatibleVehicleTypes = dto.compatibleVehicleTypes;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.sparePart.update({
-        where: { id },
-        data,
-        include: {
-          images: { take: 1, orderBy: { order: 'asc' } },
-          governorateRef: true,
-          wilayaRef: true,
-        },
-      });
+    if (dto.version != null && part.version !== dto.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+    data.version = { increment: 1 };
 
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.SPARE_PART,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
+    const guardVersion = dto.version != null ? dto.version : undefined;
+    const whereClause: Prisma.SparePartWhereUniqueInput =
+      guardVersion != null
+        ? { id, version: guardVersion, deletedAt: null }
+        : { id, deletedAt: null };
 
-      return res;
-    });
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        const res = await tx.sparePart.update({
+          where: whereClause,
+          data,
+          include: {
+            images: { take: 1, orderBy: { order: 'asc' } },
+            governorateRef: true,
+            wilayaRef: true,
+          },
+        });
+
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.SPARE_PART,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
+
+        return res;
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        const check = await this.prisma.sparePart.findUnique({ where: { id } });
+        if (!check || check.deletedAt != null) {
+          throw new NotFoundException('قطعة الغيار غير موجودة');
+        }
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
@@ -282,24 +306,35 @@ export class PartsService {
 
   async remove(id: string, userId: string) {
     const part = await this.prisma.sparePart.findUnique({ where: { id } });
-    if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
+    if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.sparePart.delete({ where: { id } });
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.SPARE_PART,
-          entityId: id,
-          action: 'DELETE',
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.sparePart.update({
+          where: { id, deletedAt: null },
+          data: {
+            deletedAt: new Date(),
+            version: { increment: 1 },
+          },
+        });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.SPARE_PART,
+            entityId: id,
+            action: 'DELETE',
+          },
+        });
       });
-    });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new NotFoundException('قطعة الغيار غير موجودة');
+      }
+      throw e;
+    }
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
-
-
 
     this.emitListingEvent(LISTING_EVENTS.DELETED, part);
 

@@ -53,7 +53,7 @@ export class ChatService {
       case 'SPARE_PART': {
         const e = await this.prisma.sparePart.findUnique({
           where: { id: entityId },
-          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true },
+          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
         });
         if (!e) throw new NotFoundException('قطعة الغيار غير موجودة');
         return { ownerId: e.sellerId, title: e.title, entity: e, model: 'sparePart' };
@@ -61,7 +61,7 @@ export class ChatService {
       case 'CAR_SERVICE': {
         const e = await this.prisma.carService.findUnique({
           where: { id: entityId },
-          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
         });
         if (!e) throw new NotFoundException('الخدمة غير موجودة');
         return { ownerId: e.userId, title: e.title, entity: e, model: 'carService' };

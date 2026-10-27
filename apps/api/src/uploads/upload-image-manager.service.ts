@@ -32,6 +32,15 @@ export class UploadImageManagerService {
     }
   }
 
+  private async invalidateCarServiceCaches(serviceId: string): Promise<void> {
+    try {
+      await this.redis.del(`carService:detail:${serviceId}`);
+      await this.redis.delPattern('carService:list:*');
+    } catch (err) {
+      this.logger.warn(`Failed to invalidate carService caches for ${serviceId}`);
+    }
+  }
+
   async addImageToListing(listingId: string, userId: string, url: string, isPrimary: boolean) {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing) throw new NotFoundException('الإعلان غير موجود');
@@ -140,7 +149,7 @@ export class UploadImageManagerService {
   }
 
   async addImageToPart(partId: string, userId: string, url: string, isPrimary: boolean) {
-    const part = await this.prisma.sparePart.findUnique({ where: { id: partId } });
+    const part = await this.prisma.sparePart.findFirst({ where: { id: partId, deletedAt: null } });
     if (!part) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
@@ -161,9 +170,9 @@ export class UploadImageManagerService {
   async removeImageFromPart(imageId: string, userId: string) {
     const image = await this.prisma.sparePartImage.findUnique({
       where: { id: imageId },
-      include: { sparePart: { select: { sellerId: true, id: true } } },
+      include: { sparePart: { select: { sellerId: true, id: true, deletedAt: true } } },
     });
-    if (!image) throw new NotFoundException('الصورة غير موجودة');
+    if (!image || image.sparePart.deletedAt != null) throw new NotFoundException('الصورة غير موجودة');
     if (image.sparePart.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
     await this.deleteStoredImageByUrl(image.url);
@@ -183,7 +192,7 @@ export class UploadImageManagerService {
   }
 
   async addImageToService(serviceId: string, userId: string, url: string, isPrimary: boolean) {
-    const service = await this.prisma.carService.findUnique({ where: { id: serviceId } });
+    const service = await this.prisma.carService.findFirst({ where: { id: serviceId, deletedAt: null } });
     if (!service) throw new NotFoundException('الخدمة غير موجودة');
     if (service.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
@@ -196,17 +205,21 @@ export class UploadImageManagerService {
     const imageCount = await this.prisma.carServiceImage.count({ where: { carServiceId: serviceId } });
     const shouldBePrimary = isPrimary || imageCount === 0;
 
-    return this.prisma.carServiceImage.create({
+    const created = await this.prisma.carServiceImage.create({
       data: { url, order: nextOrder, isPrimary: shouldBePrimary, carServiceId: serviceId },
     });
+
+    await this.invalidateCarServiceCaches(serviceId);
+
+    return created;
   }
 
   async removeImageFromService(imageId: string, userId: string) {
     const image = await this.prisma.carServiceImage.findUnique({
       where: { id: imageId },
-      include: { carService: { select: { userId: true, id: true } } },
+      include: { carService: { select: { userId: true, id: true, deletedAt: true } } },
     });
-    if (!image) throw new NotFoundException('الصورة غير موجودة');
+    if (!image || image.carService.deletedAt != null) throw new NotFoundException('الصورة غير موجودة');
     if (image.carService.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
     await this.deleteStoredImageByUrl(image.url);
@@ -221,6 +234,8 @@ export class UploadImageManagerService {
         await this.prisma.carServiceImage.update({ where: { id: first.id }, data: { isPrimary: true } });
       }
     }
+
+    await this.invalidateCarServiceCaches(image.carService.id);
 
     return { message: 'تم حذف الصورة بنجاح' };
   }

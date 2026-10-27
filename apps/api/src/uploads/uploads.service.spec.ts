@@ -20,7 +20,7 @@ const mockPrisma = {
     update: jest.fn(),
     updateMany: jest.fn(),
   },
-  sparePart: { findUnique: jest.fn() },
+  sparePart: { findUnique: jest.fn(), findFirst: jest.fn() },
   sparePartImage: {
     aggregate: jest.fn(),
     count: jest.fn(),
@@ -236,7 +236,7 @@ describe('UploadsService', () => {
     });
 
     it('regression: should NOT call redis.del or redis.delPattern for non-Cars methods (e.g. addImageToPart)', async () => {
-      mockPrisma.sparePart.findUnique.mockResolvedValue({ id: 'part-1', sellerId: 'user-1' });
+      mockPrisma.sparePart.findFirst.mockResolvedValue({ id: 'part-1', sellerId: 'user-1' });
       mockPrisma.sparePartImage.aggregate.mockResolvedValue({ _max: { order: 0 } });
       mockPrisma.sparePartImage.count.mockResolvedValue(0);
       mockPrisma.sparePartImage.create.mockResolvedValue({ id: 'pi-1' });

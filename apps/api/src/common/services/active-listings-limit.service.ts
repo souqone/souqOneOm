@@ -85,10 +85,10 @@ export class ActiveListingsLimitService {
           },
         }),
         tx.sparePart.count({
-          where: { sellerId: userId, status: 'ACTIVE', hiddenByOwnerStatus: false },
+          where: { sellerId: userId, status: 'ACTIVE', hiddenByOwnerStatus: false, deletedAt: null },
         }),
         tx.carService.count({
-          where: { userId, status: 'ACTIVE', hiddenByOwnerStatus: false },
+          where: { userId, status: 'ACTIVE', hiddenByOwnerStatus: false, deletedAt: null },
         }),
         tx.driverJob.count({
           where: { userId, status: 'ACTIVE', hiddenByOwnerStatus: false },

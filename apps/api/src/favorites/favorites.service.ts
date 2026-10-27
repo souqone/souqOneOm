@@ -224,11 +224,17 @@ export class FavoritesService {
           return r ? { ownerId: r.userId, title: r.title } : null;
         }
         case 'SPARE_PART': {
-          const r = await this.prisma.sparePart.findUnique({ where: { id: entityId }, select: { sellerId: true, title: true } });
+          const r = await this.prisma.sparePart.findFirst({
+            where: { id: entityId, deletedAt: null },
+            select: { sellerId: true, title: true },
+          });
           return r ? { ownerId: r.sellerId, title: r.title } : null;
         }
         case 'CAR_SERVICE': {
-          const r = await this.prisma.carService.findUnique({ where: { id: entityId }, select: { userId: true, title: true } });
+          const r = await this.prisma.carService.findFirst({
+            where: { id: entityId, deletedAt: null },
+            select: { userId: true, title: true },
+          });
           return r ? { ownerId: r.userId, title: r.title } : null;
         }
         case 'JOB': {
@@ -262,11 +268,17 @@ export class FavoritesService {
           return r?.title || null;
         }
         case 'SPARE_PART': {
-          const r = await this.prisma.sparePart.findUnique({ where: { id: entityId }, select: { title: true } });
+          const r = await this.prisma.sparePart.findFirst({
+            where: { id: entityId, deletedAt: null },
+            select: { title: true },
+          });
           return r?.title || null;
         }
         case 'CAR_SERVICE': {
-          const r = await this.prisma.carService.findUnique({ where: { id: entityId }, select: { title: true } });
+          const r = await this.prisma.carService.findFirst({
+            where: { id: entityId, deletedAt: null },
+            select: { title: true },
+          });
           return r?.title || null;
         }
         case 'BUS_LISTING': {
@@ -310,15 +322,15 @@ export class FavoritesService {
           return r ? { id: r.id, title: r.title, image: null } : null;
         }
         case 'SPARE_PART': {
-          const r = await this.prisma.sparePart.findUnique({
-            where: { id: entityId },
+          const r = await this.prisma.sparePart.findFirst({
+            where: { id: entityId, deletedAt: null },
             select: { id: true, title: true, images: { take: 1, orderBy: { order: 'asc' } } },
           });
           return r ? { id: r.id, title: r.title, image: (r.images as any)?.[0]?.url || null } : null;
         }
         case 'CAR_SERVICE': {
-          const r = await this.prisma.carService.findUnique({
-            where: { id: entityId },
+          const r = await this.prisma.carService.findFirst({
+            where: { id: entityId, deletedAt: null },
             select: { id: true, title: true, images: { take: 1, orderBy: { order: 'asc' } } },
           });
           return r ? { id: r.id, title: r.title, image: (r.images as any)?.[0]?.url || null } : null;
@@ -389,14 +401,14 @@ export class FavoritesService {
           });
         }
         case 'SPARE_PART': {
-          return this.prisma.sparePart.findUnique({
-            where: { id: entityId },
+          return this.prisma.sparePart.findFirst({
+            where: { id: entityId, deletedAt: null },
             include: { ...IMAGES_INCLUDE, ...SELLER_INCLUDE },
           });
         }
         case 'CAR_SERVICE': {
-          return this.prisma.carService.findUnique({
-            where: { id: entityId },
+          return this.prisma.carService.findFirst({
+            where: { id: entityId, deletedAt: null },
             include: { ...IMAGES_INCLUDE, ...USER_INCLUDE },
           });
         }

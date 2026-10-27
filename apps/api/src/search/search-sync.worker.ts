@@ -254,7 +254,7 @@ export class SearchSyncWorker {
           where: { id: entityId },
           include: { images: { orderBy: { order: 'asc' }, take: 1 } },
         });
-        if (!part) {
+        if (!part || part.deletedAt) {
           await this.searchService.removeDocument(INDEXES.PARTS, entityId).catch(() => {});
           return;
         }
@@ -297,7 +297,7 @@ export class SearchSyncWorker {
           where: { id: entityId },
           include: { images: { orderBy: { order: 'asc' }, take: 1 } },
         });
-        if (!service) {
+        if (!service || service.deletedAt) {
           await this.searchService.removeDocument(INDEXES.SERVICES, entityId).catch(() => {});
           return;
         }

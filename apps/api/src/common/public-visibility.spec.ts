@@ -29,7 +29,12 @@ describe('public-visibility Helper', () => {
       const condition = getPublicListBaseCondition(model);
       expect(condition.hiddenByOwnerStatus).toBe(false);
 
-      if (model === 'busListing' || model === 'equipmentListing') {
+      if (
+        model === 'busListing' ||
+        model === 'equipmentListing' ||
+        model === 'sparePart' ||
+        model === 'carService'
+      ) {
         expect(condition.deletedAt).toBeNull();
       } else {
         expect(condition.deletedAt).toBeUndefined();
@@ -93,6 +98,24 @@ describe('public-visibility Helper', () => {
         deletedAt: new Date(),
       };
       expect(isEntityPubliclyVisible('busListing', entity)).toBe(false);
+    });
+
+    it('returns false for sparePart when deletedAt is set even if active', () => {
+      const entity = {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        deletedAt: new Date(),
+      };
+      expect(isEntityPubliclyVisible('sparePart', entity)).toBe(false);
+    });
+
+    it('returns false for carService when deletedAt is set even if active', () => {
+      const entity = {
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+        deletedAt: new Date(),
+      };
+      expect(isEntityPubliclyVisible('carService', entity)).toBe(false);
     });
 
     describe('ListingStatus models (listing, busListing, equipmentListing, operatorListing, sparePart, carService)', () => {

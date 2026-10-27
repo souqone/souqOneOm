@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Logger,
   NotFoundException,
@@ -163,7 +164,7 @@ export abstract class BaseListingService {
     const cached = await this.redis.get<any>(cacheKey);
     if (cached) return cached;
 
-    const where = { status: 'ACTIVE', hiddenByOwnerStatus: false, ...this.buildWhereFilter(query) };
+    const where = { status: 'ACTIVE', hiddenByOwnerStatus: false, deletedAt: null, ...this.buildWhereFilter(query) };
 
     const [items, total] = await Promise.all([
       this.model.findMany({
@@ -196,10 +197,11 @@ export abstract class BaseListingService {
         where: { id },
         include: this.getDetailInclude(),
       });
-      if (!item) throw new NotFoundException(this.config.notFoundMsg);
+      if (!item || item.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
       await this.redis.set(cacheKey, item, DETAIL_CACHE_TTL);
     }
 
+    if (item.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     assertPublicOrOwner(this.config.modelName as any, item, item.userId, viewer, this.config.notFoundMsg);
 
     // Rate-limited view increment
@@ -221,7 +223,7 @@ export abstract class BaseListingService {
       where: { slug },
       include: this.getDetailInclude(),
     });
-    if (!item) throw new NotFoundException(this.config.notFoundMsg);
+    if (!item || item.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
 
     assertPublicOrOwner(this.config.modelName as any, item, item.userId, viewer, this.config.notFoundMsg);
 
@@ -245,13 +247,13 @@ export abstract class BaseListingService {
 
     const [items, total] = await Promise.all([
       this.model.findMany({
-        where: { userId },
+        where: { userId, deletedAt: null },
         orderBy: { createdAt: 'desc' },
         skip,
         take,
         include: this.getListInclude(),
       }),
-      this.model.count({ where: { userId } }),
+      this.model.count({ where: { userId, deletedAt: null } }),
     ]);
 
     return { items, meta: { total, page, limit: take, totalPages: Math.ceil(total / take) } };
@@ -262,7 +264,7 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   async update(id: string, userId: string, dto: Record<string, any>) {
     const existing = await this.model.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(this.config.notFoundMsg);
+    if (!existing || existing.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بتعديل هذا الإعلان');
 
@@ -279,7 +281,7 @@ export abstract class BaseListingService {
       await this.sellerContactGate.assertCanPublish(userId);
     }
     for (const [key, val] of Object.entries(cleanDto)) {
-      if (val === undefined) continue;
+      if (val === undefined || key === 'version') continue;
       if (decimals.has(key)) {
         data[key] = new Prisma.Decimal(val as number);
       } else if (dates.has(key)) {
@@ -289,26 +291,48 @@ export abstract class BaseListingService {
       }
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (becomesPublicActive && this.activeListingsLimitService) {
-        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+    if (cleanDto.version != null && existing.version !== cleanDto.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+    data.version = { increment: 1 };
+
+    const guardVersion = cleanDto.version != null ? cleanDto.version : undefined;
+    const whereClause = guardVersion != null
+      ? { id, version: guardVersion, deletedAt: null }
+      : { id, deletedAt: null };
+
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        if (becomesPublicActive && this.activeListingsLimitService) {
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        }
+        const res = await (tx as any)[this.config.modelName].update({
+          where: whereClause,
+          data,
+          include: this.getListInclude(),
+        });
+
+        await tx.outboxEvent.create({
+          data: {
+            entityType: this.config.entityType,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
+
+        return res;
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        const check = await this.model.findUnique({ where: { id } });
+        if (!check || check.deletedAt != null) {
+          throw new NotFoundException(this.config.notFoundMsg);
+        }
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
       }
-      const res = await (tx as any)[this.config.modelName].update({
-        where: { id },
-        data,
-        include: this.getListInclude(),
-      });
-
-      await tx.outboxEvent.create({
-        data: {
-          entityType: this.config.entityType,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
-
-      return res;
-    });
+      throw e;
+    }
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
@@ -325,20 +349,33 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   async remove(id: string, userId: string) {
     const existing = await this.model.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(this.config.notFoundMsg);
+    if (!existing || existing.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.$transaction(async (tx) => {
-      await (tx as any)[this.config.modelName].delete({ where: { id } });
-      await tx.outboxEvent.create({
-        data: {
-          entityType: this.config.entityType,
-          entityId: id,
-          action: 'DELETE',
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await (tx as any)[this.config.modelName].update({
+          where: { id, deletedAt: null },
+          data: {
+            deletedAt: new Date(),
+            version: { increment: 1 },
+          },
+        });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: this.config.entityType,
+            entityId: id,
+            action: 'DELETE',
+          },
+        });
       });
-    });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new NotFoundException(this.config.notFoundMsg);
+      }
+      throw e;
+    }
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
 
     // Invalidate caches
@@ -356,7 +393,7 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   async toggleStatus(id: string, userId: string) {
     const existing = await this.model.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(this.config.notFoundMsg);
+    if (!existing || existing.deletedAt) throw new NotFoundException(this.config.notFoundMsg);
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بتعديل حالة هذا الإعلان');
 

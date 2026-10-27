@@ -87,6 +87,7 @@ describe('SearchService - Owner Relation & Visibility Filters', () => {
             status: 'ACTIVE',
             hiddenByOwnerStatus: false,
             seller: { status: 'ACTIVE' },
+            deletedAt: null,
           },
         }),
       );
@@ -97,6 +98,7 @@ describe('SearchService - Owner Relation & Visibility Filters', () => {
             status: 'ACTIVE',
             hiddenByOwnerStatus: false,
             user: { status: 'ACTIVE' },
+            deletedAt: null,
           },
         }),
       );
