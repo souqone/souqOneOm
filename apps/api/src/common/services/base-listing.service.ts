@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Logger,
   NotFoundException,
@@ -280,7 +281,7 @@ export abstract class BaseListingService {
       await this.sellerContactGate.assertCanPublish(userId);
     }
     for (const [key, val] of Object.entries(cleanDto)) {
-      if (val === undefined) continue;
+      if (val === undefined || key === 'version') continue;
       if (decimals.has(key)) {
         data[key] = new Prisma.Decimal(val as number);
       } else if (dates.has(key)) {
@@ -290,26 +291,42 @@ export abstract class BaseListingService {
       }
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (becomesPublicActive && this.activeListingsLimitService) {
-        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+    if (cleanDto.version != null && existing.version !== cleanDto.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+    data.version = { increment: 1 };
+
+    const guardVersion = cleanDto.version != null ? cleanDto.version : undefined;
+    const whereClause = guardVersion != null ? { id, version: guardVersion } : { id };
+
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        if (becomesPublicActive && this.activeListingsLimitService) {
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        }
+        const res = await (tx as any)[this.config.modelName].update({
+          where: whereClause,
+          data,
+          include: this.getListInclude(),
+        });
+
+        await tx.outboxEvent.create({
+          data: {
+            entityType: this.config.entityType,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
+
+        return res;
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
       }
-      const res = await (tx as any)[this.config.modelName].update({
-        where: { id },
-        data,
-        include: this.getListInclude(),
-      });
-
-      await tx.outboxEvent.create({
-        data: {
-          entityType: this.config.entityType,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
-
-      return res;
-    });
+      throw e;
+    }
 
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));

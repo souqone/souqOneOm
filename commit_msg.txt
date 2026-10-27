@@ -1,4 +1,4 @@
-feat(parts,services): filter and enforce soft delete across all reading consumers
+feat(parts,services): optimistic concurrency control with version and 409 conflict handling
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01UWs13iwGDc8WWSCry9ZBMC

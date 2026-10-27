@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -243,27 +244,44 @@ export class PartsService {
     if (dto.quantity !== undefined) data.quantity = dto.quantity;
     if (dto.compatibleVehicleTypes !== undefined) data.compatibleVehicleTypes = dto.compatibleVehicleTypes;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.sparePart.update({
-        where: { id },
-        data,
-        include: {
-          images: { take: 1, orderBy: { order: 'asc' } },
-          governorateRef: true,
-          wilayaRef: true,
-        },
-      });
+    if (dto.version != null && part.version !== dto.version) {
+      throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+    }
+    data.version = { increment: 1 };
 
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.SPARE_PART,
-          entityId: res.id,
-          action: 'UPSERT',
-        },
-      });
+    const guardVersion = dto.version != null ? dto.version : undefined;
+    const whereClause: Prisma.SparePartWhereUniqueInput =
+      guardVersion != null ? { id, version: guardVersion } : { id };
 
-      return res;
-    });
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        const res = await tx.sparePart.update({
+          where: whereClause,
+          data,
+          include: {
+            images: { take: 1, orderBy: { order: 'asc' } },
+            governorateRef: true,
+            wilayaRef: true,
+          },
+        });
+
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.SPARE_PART,
+            entityId: res.id,
+            action: 'UPSERT',
+          },
+        });
+
+        return res;
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
+      }
+      throw e;
+    }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
