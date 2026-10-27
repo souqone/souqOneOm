@@ -126,7 +126,7 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
 
       expect(res).toEqual({ message: 'تم حذف الإعلان بنجاح' });
       expect(prismaMock.carService.update).toHaveBeenCalledWith({
-        where: { id: mockService.id },
+        where: { id: mockService.id, deletedAt: null },
         data: {
           deletedAt: expect.any(Date),
           version: { increment: 1 },
@@ -241,7 +241,7 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
 
       expect(prismaMock.carService.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: mockService.id, version: 1 },
+          where: { id: mockService.id, version: 1, deletedAt: null },
           data: expect.objectContaining({
             title: 'Updated Service Title',
             version: { increment: 1 },
@@ -250,12 +250,17 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
       );
     });
 
-    it('maps Prisma P2025 error on concurrent update to 409 ConflictException', async () => {
+    it('maps Prisma P2025 error on concurrent update to 409 ConflictException when row is live', async () => {
       const p2025Error = new Prisma.PrismaClientKnownRequestError(
         'Record to update not found.',
         { code: 'P2025', clientVersion: '6.0.0' },
       );
       prismaMock.carService.update.mockRejectedValueOnce(p2025Error);
+      prismaMock.carService.findUnique.mockResolvedValueOnce({
+        ...mockService,
+        version: 2,
+        deletedAt: null,
+      });
 
       await expect(
         servicesService.update(mockService.id, mockService.userId, {
@@ -272,13 +277,82 @@ describe('CarServices - Soft Delete, Versioning & Image Cache (Task D-105 / PB-1
 
       expect(prismaMock.carService.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: mockService.id },
+          where: { id: mockService.id, deletedAt: null },
           data: expect.objectContaining({
             title: 'Legacy update without version',
             version: { increment: 1 },
           }),
         }),
       );
+    });
+
+    it('update where-clause contains deletedAt: null both with and without version', async () => {
+      // With version
+      await servicesService.update(mockService.id, mockService.userId, {
+        title: 'Versioned update',
+        version: 1,
+      });
+      expect(prismaMock.carService.update).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: { id: mockService.id, version: 1, deletedAt: null },
+        }),
+      );
+
+      // Without version
+      await servicesService.update(mockService.id, mockService.userId, {
+        title: 'Versionless update',
+      });
+      expect(prismaMock.carService.update).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: { id: mockService.id, deletedAt: null },
+        }),
+      );
+    });
+
+    it('handles P2025 race on update: throws NotFoundException when row was soft-deleted in between', async () => {
+      const p2025 = new Prisma.PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '6.0.0',
+      });
+      // Concurrently soft-deleted during update transaction:
+      prismaMock.carService.update.mockImplementationOnce(async () => {
+        prismaMock.carService.findUnique.mockResolvedValueOnce({
+          ...mockService,
+          deletedAt: new Date(),
+        });
+        throw p2025;
+      });
+
+      await expect(
+        servicesService.update(mockService.id, mockService.userId, {
+          title: 'Update on concurrently deleted service',
+          version: 1,
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('remove() where clause contains deletedAt: null and throws NotFoundException on second concurrent delete (P2025)', async () => {
+      // First remove: verifies where: { id, deletedAt: null }
+      await servicesService.remove(mockService.id, mockService.userId);
+      expect(prismaMock.carService.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockService.id, deletedAt: null },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+            version: { increment: 1 },
+          }),
+        }),
+      );
+
+      // Concurrent remove with P2025
+      const p2025 = new Prisma.PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '6.0.0',
+      });
+      prismaMock.carService.update.mockRejectedValueOnce(p2025);
+      await expect(
+        servicesService.remove(mockService.id, mockService.userId),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

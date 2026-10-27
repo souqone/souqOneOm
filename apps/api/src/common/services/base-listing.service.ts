@@ -297,7 +297,9 @@ export abstract class BaseListingService {
     data.version = { increment: 1 };
 
     const guardVersion = cleanDto.version != null ? cleanDto.version : undefined;
-    const whereClause = guardVersion != null ? { id, version: guardVersion } : { id };
+    const whereClause = guardVersion != null
+      ? { id, version: guardVersion, deletedAt: null }
+      : { id, deletedAt: null };
 
     let updated;
     try {
@@ -323,6 +325,10 @@ export abstract class BaseListingService {
       });
     } catch (e: any) {
       if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        const check = await this.model.findUnique({ where: { id } });
+        if (!check || check.deletedAt != null) {
+          throw new NotFoundException(this.config.notFoundMsg);
+        }
         throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
       }
       throw e;
@@ -347,22 +353,29 @@ export abstract class BaseListingService {
     if (existing.userId !== userId)
       throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.$transaction(async (tx) => {
-      await (tx as any)[this.config.modelName].update({
-        where: { id },
-        data: {
-          deletedAt: new Date(),
-          version: { increment: 1 },
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await (tx as any)[this.config.modelName].update({
+          where: { id, deletedAt: null },
+          data: {
+            deletedAt: new Date(),
+            version: { increment: 1 },
+          },
+        });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: this.config.entityType,
+            entityId: id,
+            action: 'DELETE',
+          },
+        });
       });
-      await tx.outboxEvent.create({
-        data: {
-          entityType: this.config.entityType,
-          entityId: id,
-          action: 'DELETE',
-        },
-      });
-    });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new NotFoundException(this.config.notFoundMsg);
+      }
+      throw e;
+    }
     await this.prisma.cleanupPolymorphicOrphans(this.config.entityType, id);
 
     // Invalidate caches

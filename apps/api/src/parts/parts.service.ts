@@ -251,7 +251,9 @@ export class PartsService {
 
     const guardVersion = dto.version != null ? dto.version : undefined;
     const whereClause: Prisma.SparePartWhereUniqueInput =
-      guardVersion != null ? { id, version: guardVersion } : { id };
+      guardVersion != null
+        ? { id, version: guardVersion, deletedAt: null }
+        : { id, deletedAt: null };
 
     let updated;
     try {
@@ -278,6 +280,10 @@ export class PartsService {
       });
     } catch (e: any) {
       if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        const check = await this.prisma.sparePart.findUnique({ where: { id } });
+        if (!check || check.deletedAt != null) {
+          throw new NotFoundException('قطعة الغيار غير موجودة');
+        }
         throw new ConflictException('تم تعديل الإعلان من قبل مستخدم آخر أو أن النسخة غير متطابقة.');
       }
       throw e;
@@ -303,22 +309,29 @@ export class PartsService {
     if (!part || part.deletedAt) throw new NotFoundException('قطعة الغيار غير موجودة');
     if (part.sellerId !== userId) throw new ForbiddenException('غير مصرح لك بحذف هذا الإعلان');
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.sparePart.update({
-        where: { id },
-        data: {
-          deletedAt: new Date(),
-          version: { increment: 1 },
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.sparePart.update({
+          where: { id, deletedAt: null },
+          data: {
+            deletedAt: new Date(),
+            version: { increment: 1 },
+          },
+        });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.SPARE_PART,
+            entityId: id,
+            action: 'DELETE',
+          },
+        });
       });
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.SPARE_PART,
-          entityId: id,
-          action: 'DELETE',
-        },
-      });
-    });
+    } catch (e: any) {
+      if (e?.code === 'P2025' || (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+        throw new NotFoundException('قطعة الغيار غير موجودة');
+      }
+      throw e;
+    }
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
