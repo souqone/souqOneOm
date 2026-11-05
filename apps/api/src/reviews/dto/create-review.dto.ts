@@ -18,6 +18,7 @@ export class CreateReviewDto {
   @IsString()
   entityId!: string;
 
+  @IsOptional()
   @IsString()
-  revieweeId!: string;
+  revieweeId?: string;
 }
