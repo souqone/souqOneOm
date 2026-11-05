@@ -24,7 +24,24 @@ export class ReviewsService {
   ) {}
 
   async create(dto: CreateReviewDto, reviewerId: string) {
-    if (dto.revieweeId === reviewerId) {
+    let effectiveRevieweeId = dto.revieweeId;
+
+    if (dto.entityType === ENTITY_TYPES.OPERATOR_LISTING) {
+      const listing = await this.prisma.operatorListing.findUnique({
+        where: { id: dto.entityId },
+        select: { userId: true },
+      });
+      if (!listing) {
+        throw new NotFoundException('إعلان المشغل غير موجود');
+      }
+      effectiveRevieweeId = listing.userId;
+    }
+
+    if (!effectiveRevieweeId) {
+      throw new BadRequestException('معرف المستخدم المقيم مطلوب');
+    }
+
+    if (effectiveRevieweeId === reviewerId) {
       throw new BadRequestException('لا يمكنك تقييم نفسك');
     }
 
@@ -54,7 +71,7 @@ export class ReviewsService {
           entityType: dto.entityType as ReviewEntityType,
           entityId: dto.entityId,
           reviewerId,
-          revieweeId: dto.revieweeId,
+          revieweeId: effectiveRevieweeId,
         },
         include: {
           reviewer: { select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true } },
@@ -68,7 +85,7 @@ export class ReviewsService {
     }
 
     // Recalculate average rating
-    await this.recalculateUserRating(dto.revieweeId);
+    await this.recalculateUserRating(effectiveRevieweeId);
 
     // Also recalculate profile-level ratings for job reviews
     if (dto.entityType === ENTITY_TYPES.DRIVER_PROFILE) {
@@ -85,7 +102,7 @@ export class ReviewsService {
         type: 'REVIEW_RECEIVED',
         title: 'تقييم جديد',
         body: `حصلت على تقييم ${dto.rating} نجوم`,
-        userId: dto.revieweeId,
+        userId: effectiveRevieweeId,
         data: { reviewId: review.id, entityType: dto.entityType, entityId: dto.entityId },
       });
     } catch (err) {
