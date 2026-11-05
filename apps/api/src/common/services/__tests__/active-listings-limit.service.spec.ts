@@ -32,24 +32,29 @@ describe('ActiveListingsLimitService (D-223)', () => {
       const windows = getCairoWindows(fixedDate);
 
       // Verify that startOfDay in Cairo time corresponds to 00:00:00
-      const cairoStartStr = new Intl.DateTimeFormat('en-US', {
+      const dayParts = new Intl.DateTimeFormat('en-US', {
         timeZone: TIMEZONE,
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false,
-      }).format(windows.startOfDay);
-      expect(cairoStartStr).toBe('00:00');
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(windows.startOfDay);
+      const dayHour = dayParts.find((p) => p.type === 'hour')?.value;
+      const dayMinute = dayParts.find((p) => p.type === 'minute')?.value;
+      expect(`${dayHour}:${dayMinute}`).toBe('00:00');
 
       // Verify that startOfMonth is on the 1st of the month at 00:00
-      const cairoMonthDayStr = new Intl.DateTimeFormat('en-US', {
+      const monthParts = new Intl.DateTimeFormat('en-US', {
         timeZone: TIMEZONE,
         day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false,
-      }).format(windows.startOfMonth);
-      expect(cairoMonthDayStr).toContain('1');
-      expect(cairoMonthDayStr).toContain('00:00');
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(windows.startOfMonth);
+      const monthDay = monthParts.find((p) => p.type === 'day')?.value;
+      const monthHour = monthParts.find((p) => p.type === 'hour')?.value;
+      const monthMinute = monthParts.find((p) => p.type === 'minute')?.value;
+      expect(monthDay).toBe('1');
+      expect(`${monthHour}:${monthMinute}`).toBe('00:00');
 
       // Verify resetsAt is strictly greater than start
       expect(windows.resetDay.getTime()).toBeGreaterThan(windows.startOfDay.getTime());
