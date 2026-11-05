@@ -105,8 +105,11 @@ export class OperatorsService {
         return createdItem;
       });
     } catch (err) {
-      if (isPrismaUniqueError(err)) {
+      if (isPrismaUniqueError(err, 'userId')) {
         throw new ConflictException('لديك بروفايل مشغّل بالفعل، يمكنك تعديله أو طلب حذفه');
+      }
+      if (isPrismaUniqueError(err, 'slug')) {
+        throw new ConflictException('تعذر إنشاء المعرف التعريفي للبروفايل بسبب تعارض، يرجى إعادة المحاولة');
       }
       throw err;
     }

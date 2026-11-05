@@ -230,4 +230,66 @@ describeOrSkip('Operator Profile Uniqueness Real PostgreSQL Concurrency (D-222)'
     await prisma.operatorListing.deleteMany({ where: { userId: TEST_USER_ID } });
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX "operator_listings_userId_key" ON "operator_listings"("userId");`);
   }, 30000);
+
+  it('Test 3 (F1 Migration Atomicity on Duplicates): migration fails when duplicate userId exists without dropping existing index', async () => {
+    // 1. Ensure clean slate and create legacy non-unique index
+    await prisma.operatorListing.deleteMany({ where: { userId: TEST_USER_ID } });
+    await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "operator_listings_userId_key";`);
+    await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "operator_listings_userId_idx";`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX "operator_listings_userId_idx" ON "operator_listings"("userId");`);
+
+    // 2. Insert 2 duplicate rows for TEST_USER_ID
+    for (let i = 1; i <= 2; i++) {
+      await prisma.operatorListing.create({
+        data: {
+          userId: TEST_USER_ID,
+          title: `Duplicate Operator Row ${i}`,
+          slug: `dup-op-migration-${i}-${Date.now()}-${Math.random()}`,
+          description: `وصف المشغل المكرر رقم ${i} لاختبار فشل الميغريشن`,
+          operatorType: 'OPERATOR',
+          equipmentTypes: ['CRANE'],
+          specializations: ['HEAVY_LIFT'],
+          experienceYears: 5,
+          governorateId: testGovId,
+          wilayaId: testWilayaId,
+          certifications: ['HEAVY_LICENSE_LEVEL_1'],
+          status: 'ACTIVE',
+        },
+      });
+    }
+
+    // 3. Attempt to execute the migration statements (reordered: CREATE UNIQUE first, then DROP non-unique)
+    // We expect CREATE UNIQUE INDEX to fail due to duplicate rows
+    let migrationError: any = null;
+    try {
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX "operator_listings_userId_key" ON "operator_listings"("userId");`);
+      await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "operator_listings_userId_idx";`);
+    } catch (err) {
+      migrationError = err;
+    }
+
+    expect(migrationError).not.toBeNull();
+    expect(migrationError?.message || '').toContain('23505');
+    expect(migrationError?.message || '').toContain('duplicated');
+
+    // 4. Verify existing non-unique index was NOT dropped and still exists in PostgreSQL catalogs
+    const existingIndex = await prisma.$queryRaw<Array<{ indexname: string }>>`
+      SELECT indexname FROM pg_indexes 
+      WHERE tablename = 'operator_listings' AND indexname = 'operator_listings_userId_idx';
+    `;
+    expect(existingIndex).toHaveLength(1);
+    expect(existingIndex[0].indexname).toBe('operator_listings_userId_idx');
+
+    // 5. Verify the unique index was NOT created
+    const uniqueIndex = await prisma.$queryRaw<Array<{ indexname: string }>>`
+      SELECT indexname FROM pg_indexes 
+      WHERE tablename = 'operator_listings' AND indexname = 'operator_listings_userId_key';
+    `;
+    expect(uniqueIndex).toHaveLength(0);
+
+    // Clean up
+    await prisma.operatorListing.deleteMany({ where: { userId: TEST_USER_ID } });
+    await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "operator_listings_userId_idx";`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX "operator_listings_userId_key" ON "operator_listings"("userId");`);
+  }, 30000);
 });
