@@ -20,6 +20,7 @@ import { QueryOperatorListingsDto } from './dto/query-operator-listings.dto';
 import { USER_SELECT, generateSlug } from '../common/utils/entity.utils';
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import { isPrismaUniqueError } from '../common/utils/prisma-error.util';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
@@ -60,47 +61,58 @@ export class OperatorsService {
 
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
-    const item = await this.prisma.$transaction(async (tx) => {
-      await this.activeListingsLimitService.assertWithinLimit(userId, tx);
-      const createdItem = await tx.operatorListing.create({
-        data: {
-          title: cleanDto.title,
-          slug: generateSlug(cleanDto.title),
-          description: cleanDto.description,
-          operatorType: cleanDto.operatorType as OperatorType,
-          specializations: cleanDto.specializations ?? [],
-          experienceYears: cleanDto.experienceYears,
-          equipmentTypes: (cleanDto.equipmentTypes ?? []) as EquipmentType[],
-          certifications: cleanDto.certifications ?? [],
-          dailyRate: cleanDto.dailyRate != null ? new Prisma.Decimal(cleanDto.dailyRate) : null,
-          hourlyRate: cleanDto.hourlyRate != null ? new Prisma.Decimal(cleanDto.hourlyRate) : null,
-          currency: cleanDto.currency ?? 'OMR',
-          isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
-          profileImageUrl: cleanDto.profileImageUrl ?? null,
-          governorateId: cleanDto.governorateId,
-          wilayaId: cleanDto.wilayaId,
-          latitude: cleanDto.latitude,
-          longitude: cleanDto.longitude,
-          whatsappEnabled: cleanDto.whatsappEnabled ?? false,
-          userId,
-        },
-        include: {
-          user: { select: USER_SELECT },
-          governorateRef: true,
-          wilayaRef: true,
-        },
-      });
+    let item;
+    try {
+      item = await this.prisma.$transaction(async (tx) => {
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        const createdItem = await tx.operatorListing.create({
+          data: {
+            title: cleanDto.title,
+            slug: generateSlug(cleanDto.title),
+            description: cleanDto.description,
+            operatorType: cleanDto.operatorType as OperatorType,
+            specializations: cleanDto.specializations ?? [],
+            experienceYears: cleanDto.experienceYears,
+            equipmentTypes: (cleanDto.equipmentTypes ?? []) as EquipmentType[],
+            certifications: cleanDto.certifications ?? [],
+            dailyRate: cleanDto.dailyRate != null ? new Prisma.Decimal(cleanDto.dailyRate) : null,
+            hourlyRate: cleanDto.hourlyRate != null ? new Prisma.Decimal(cleanDto.hourlyRate) : null,
+            currency: cleanDto.currency ?? 'OMR',
+            isPriceNegotiable: cleanDto.isPriceNegotiable ?? false,
+            profileImageUrl: cleanDto.profileImageUrl ?? null,
+            governorateId: cleanDto.governorateId,
+            wilayaId: cleanDto.wilayaId,
+            latitude: cleanDto.latitude,
+            longitude: cleanDto.longitude,
+            whatsappEnabled: cleanDto.whatsappEnabled ?? false,
+            userId,
+          },
+          include: {
+            user: { select: USER_SELECT },
+            governorateRef: true,
+            wilayaRef: true,
+          },
+        });
 
-      await tx.outboxEvent.create({
-        data: {
-          entityType: ENTITY_TYPES.OPERATOR_LISTING,
-          entityId: createdItem.id,
-          action: 'UPSERT',
-        },
-      });
+        await tx.outboxEvent.create({
+          data: {
+            entityType: ENTITY_TYPES.OPERATOR_LISTING,
+            entityId: createdItem.id,
+            action: 'UPSERT',
+          },
+        });
 
-      return createdItem;
-    });
+        return createdItem;
+      });
+    } catch (err) {
+      if (isPrismaUniqueError(err, 'userId')) {
+        throw new ConflictException('لديك بروفايل مشغّل بالفعل، يمكنك تعديله أو طلب حذفه');
+      }
+      if (isPrismaUniqueError(err, 'slug')) {
+        throw new ConflictException('تعذر إنشاء المعرف التعريفي للبروفايل بسبب تعارض، يرجى إعادة المحاولة');
+      }
+      throw err;
+    }
 
     if (dto.latitude && dto.longitude) {
       await this.geoService.syncLocation('operator_listings', item.id, dto.latitude, dto.longitude);
