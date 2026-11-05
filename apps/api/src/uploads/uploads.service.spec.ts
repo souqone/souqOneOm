@@ -246,5 +246,53 @@ describe('UploadsService', () => {
       expect(mockRedis.del).not.toHaveBeenCalled();
       expect(mockRedis.delPattern).not.toHaveBeenCalled();
     });
+
+    describe('addImageToPart (D-224)', () => {
+      it('should throw NotFoundException if spare part does not exist or is soft-deleted', async () => {
+        mockPrisma.sparePart.findFirst.mockResolvedValue(null);
+
+        await expect(
+          imageManager.addImageToPart('non-existent', 'user-1', 'https://res.cloudinary.com/img.jpg', false),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw ForbiddenException if user is not the part seller', async () => {
+        mockPrisma.sparePart.findFirst.mockResolvedValue({ id: 'part-1', sellerId: 'other-user' });
+
+        await expect(
+          imageManager.addImageToPart('part-1', 'attacker-user', 'https://res.cloudinary.com/img.jpg', false),
+        ).rejects.toThrow(ForbiddenException);
+      });
+
+      it('should successfully attach image and set isPrimary true if first image', async () => {
+        mockPrisma.sparePart.findFirst.mockResolvedValue({ id: 'part-1', sellerId: 'user-1' });
+        mockPrisma.sparePartImage.aggregate.mockResolvedValue({ _max: { order: null } });
+        mockPrisma.sparePartImage.count.mockResolvedValue(0);
+        mockPrisma.sparePartImage.create.mockResolvedValue({
+          id: 'img-1',
+          url: 'https://res.cloudinary.com/img.jpg',
+          order: 0,
+          isPrimary: true,
+          sparePartId: 'part-1',
+        });
+
+        const result = await imageManager.addImageToPart(
+          'part-1',
+          'user-1',
+          'https://res.cloudinary.com/img.jpg',
+          false,
+        );
+
+        expect(result).toBeDefined();
+        expect(mockPrisma.sparePartImage.create).toHaveBeenCalledWith({
+          data: {
+            url: 'https://res.cloudinary.com/img.jpg',
+            order: 0,
+            isPrimary: true,
+            sparePartId: 'part-1',
+          },
+        });
+      });
+    });
   });
 });
