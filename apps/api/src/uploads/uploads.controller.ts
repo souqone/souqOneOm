@@ -132,6 +132,24 @@ export class UploadsController {
     return this.uploadsService.addImageToPart(partId, user.sub, url, isPrimary === 'true');
   }
 
+  /** Attach an already-uploaded image URL to a spare part */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Post('parts/:partId/images/url')
+  async addPartImageByUrl(
+    @Param('partId') partId: string,
+    @Body() body: { url: string; isPrimary?: boolean },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    validateTrustedImageUrl(body?.url);
+    return this.uploadsService.addImageToPart(
+      partId,
+      user.sub,
+      body.url,
+      body.isPrimary ?? false,
+    );
+  }
+
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('parts/images/:imageId')
