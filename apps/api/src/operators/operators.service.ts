@@ -61,7 +61,7 @@ export class OperatorsService {
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     const item = await this.prisma.$transaction(async (tx) => {
-      await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'operators');
       const createdItem = await tx.operatorListing.create({
         data: {
           title: cleanDto.title,
