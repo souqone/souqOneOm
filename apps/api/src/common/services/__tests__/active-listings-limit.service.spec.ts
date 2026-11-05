@@ -271,6 +271,25 @@ describe('ActiveListingsLimitService (D-223)', () => {
       expect(res.resetsAt).toBeDefined();
     });
 
+    it('(D-223 F3) cap reached in cars does NOT block services; only vertical cars throws 429 while services succeeds', async () => {
+      const tx: any = {
+        user: { findUnique: jest.fn().mockResolvedValue({ role: 'USER' }) },
+        $executeRaw: jest.fn().mockResolvedValue(1),
+        listing: {
+          count: jest.fn().mockResolvedValue(20), // cars at daily cap
+        },
+        carService: {
+          count: jest.fn().mockResolvedValue(0), // services empty
+        },
+      };
+
+      // Cars vertical throws 429
+      await expect(service.assertWithinLimit('user-1', tx, 'cars')).rejects.toThrow();
+
+      // Services vertical succeeds without throwing
+      await expect(service.assertWithinLimit('user-1', tx, 'services')).resolves.toBeUndefined();
+    });
+
     it('throws 429 TooManyRequests with PUBLISH_RATE_LIMIT_MONTHLY_REACHED when monthly limit (300) reached', async () => {
       const tx: any = {
         user: { findUnique: jest.fn().mockResolvedValue({ role: 'USER' }) },
