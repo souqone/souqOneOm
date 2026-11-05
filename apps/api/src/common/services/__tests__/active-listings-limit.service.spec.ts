@@ -60,6 +60,45 @@ describe('ActiveListingsLimitService (D-223)', () => {
       expect(windows.resetDay.getTime()).toBeGreaterThan(windows.startOfDay.getTime());
       expect(windows.resetMonth.getTime()).toBeGreaterThan(windows.startOfMonth.getTime());
     });
+
+    it('proves day boundary rollover at Cairo midnight (23:59:59.999 vs 00:00:00.000 next day)', () => {
+      // 2026-11-05 23:59:59 Cairo is 2026-11-05 21:59:59 UTC (+02:00)
+      const justBeforeMidnight = new Date('2026-11-05T21:59:59.999Z');
+      const w1 = getCairoWindows(justBeforeMidnight);
+
+      // 2026-11-06 00:00:00.001 Cairo is 2026-11-05 22:00:00.001 UTC (+02:00)
+      const justAfterMidnight = new Date('2026-11-05T22:00:00.001Z');
+      const w2 = getCairoWindows(justAfterMidnight);
+
+      // Start of day for w1 should be 2026-11-04 22:00:00 UTC (i.e. Nov 5 00:00 Cairo)
+      expect(w1.startOfDay.toISOString()).toBe('2026-11-04T22:00:00.000Z');
+      expect(w1.resetDay.toISOString()).toBe('2026-11-05T22:00:00.000Z');
+
+      // Start of day for w2 should roll over to 2026-11-05 22:00:00 UTC (i.e. Nov 6 00:00 Cairo)
+      expect(w2.startOfDay.toISOString()).toBe('2026-11-05T22:00:00.000Z');
+      expect(w2.resetDay.toISOString()).toBe('2026-11-06T22:00:00.000Z');
+
+      // Exactly 24 hours difference in resetDay
+      expect(w2.resetDay.getTime() - w1.resetDay.getTime()).toBe(24 * 60 * 60 * 1000);
+    });
+
+    it('proves month rollover at Cairo month-end boundary (Nov 30 23:59:59 vs Dec 1 00:00:00)', () => {
+      // 2026-11-30 23:59:59 Cairo is 2026-11-30 21:59:59 UTC
+      const lastSecondOfNov = new Date('2026-11-30T21:59:59.999Z');
+      const wNov = getCairoWindows(lastSecondOfNov);
+
+      // 2026-12-01 00:00:01 Cairo is 2026-11-30 22:00:01 UTC
+      const firstSecondOfDec = new Date('2026-11-30T22:00:01.000Z');
+      const wDec = getCairoWindows(firstSecondOfDec);
+
+      // wNov month window starts on Nov 1 00:00 Cairo (2026-10-31T22:00:00.000Z) and resets Dec 1 00:00 Cairo
+      expect(wNov.startOfMonth.toISOString()).toBe('2026-10-31T22:00:00.000Z');
+      expect(wNov.resetMonth.toISOString()).toBe('2026-11-30T22:00:00.000Z');
+
+      // wDec month window rolls over to Dec 1 00:00 Cairo (2026-11-30T22:00:00.000Z) and resets Jan 1 00:00 Cairo
+      expect(wDec.startOfMonth.toISOString()).toBe('2026-11-30T22:00:00.000Z');
+      expect(wDec.resetMonth.toISOString()).toBe('2026-12-31T22:00:00.000Z');
+    });
   });
 
   describe('getMaxDailyPublishes & getMaxMonthlyPublishes', () => {
@@ -68,6 +107,14 @@ describe('ActiveListingsLimitService (D-223)', () => {
       expect(service.getMaxDailyPublishes()).toBe(20);
       expect(service.getMaxMonthlyPublishes()).toBe(DEFAULT_MAX_MONTHLY_PUBLISHES);
       expect(service.getMaxMonthlyPublishes()).toBe(300);
+      expect(service.getMaxActiveListings()).toBe(20);
+    });
+
+    it('parses MAX_DAILY_PUBLISHES_PER_SECTION and MAX_MONTHLY_PUBLISHES_PER_SECTION correctly', () => {
+      process.env.MAX_DAILY_PUBLISHES_PER_SECTION = '25';
+      process.env.MAX_MONTHLY_PUBLISHES_PER_SECTION = '350';
+      expect(service.getMaxDailyPublishes()).toBe(25);
+      expect(service.getMaxMonthlyPublishes()).toBe(350);
     });
 
     it('returns default limits when env vars are whitespace or empty string', () => {
