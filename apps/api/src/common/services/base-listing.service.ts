@@ -15,7 +15,7 @@ import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 import { USER_SELECT_PUBLIC, USER_SELECT_LISTING_PUBLIC } from '../constants/user-select.constant';
 import { stripDeprecatedContactFields } from '../utils/contact.utils';
 import { SellerContactGate } from './seller-contact-gate.service';
-import { ActiveListingsLimitService } from './active-listings-limit.service';
+import { ActiveListingsLimitService, ListingVertical } from './active-listings-limit.service';
 import { assertPublicOrOwner, VisibilityViewer } from '../public-visibility';
 
 export interface ListingConfig {
@@ -31,6 +31,8 @@ export interface ListingConfig {
   decimalFields?: string[];
   /** Fields that need Date conversion on update */
   dateFields?: string[];
+  /** Optional vertical for rate limiting (defaults to 'services') */
+  vertical?: ListingVertical;
 }
 
 const LIST_CACHE_TTL = 300;    // 5 minutes
@@ -122,7 +124,7 @@ export abstract class BaseListingService {
 
     const item = await this.prisma.$transaction(async (tx) => {
       if (this.activeListingsLimitService) {
-        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx, this.config.vertical ?? 'services');
       }
       const createdItem = await (tx as any)[this.config.modelName].create({
         data,
@@ -305,7 +307,7 @@ export abstract class BaseListingService {
     try {
       updated = await this.prisma.$transaction(async (tx) => {
         if (becomesPublicActive && this.activeListingsLimitService) {
-          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx, this.config.vertical ?? 'services');
         }
         const res = await (tx as any)[this.config.modelName].update({
           where: whereClause,
@@ -403,7 +405,7 @@ export abstract class BaseListingService {
     }
     const updated = await this.prisma.$transaction(async (tx) => {
       if (newStatus === 'ACTIVE' && this.activeListingsLimitService) {
-        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx, this.config.vertical ?? 'services');
       }
       const res = await (tx as any)[this.config.modelName].update({
         where: { id },

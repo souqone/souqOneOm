@@ -163,7 +163,7 @@ export class ListingsService {
     const slug = this.generateSlug(`${brand.name}-${carModel.name}-${dto.year}-${dto.title}`);
 
     const listing = await this.prisma.$transaction(async (tx) => {
-      await this.activeListingsLimitService.assertWithinLimit(sellerId, tx);
+      await this.activeListingsLimitService.assertWithinLimit(sellerId, tx, 'cars');
       return this.repo.create(
         {
           title: cleanDto.title,
@@ -670,7 +670,7 @@ export class ListingsService {
       if (targetStatus === 'ACTIVE') {
         updated = await this.prisma.$transaction(
           async (tx) => {
-            await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+            await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'cars');
             return this.repo.update(id, { status: targetStatus }, expectedVersion, tx);
           },
           { maxWait: 15000, timeout: 20000 },

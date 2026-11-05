@@ -53,7 +53,7 @@ export class PartsService {
     const slug = this.generateSlug(cleanDto.title);
 
     const part = await this.prisma.$transaction(async (tx) => {
-      await this.activeListingsLimitService.assertWithinLimit(sellerId, tx);
+      await this.activeListingsLimitService.assertWithinLimit(sellerId, tx, 'parts');
       const createdPart = await tx.sparePart.create({
         data: {
           title: dto.title,

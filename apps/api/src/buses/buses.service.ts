@@ -108,7 +108,7 @@ export class BusesService {
     const slug = generateSlug(cleanDto.title);
 
     const bus = await this.prisma.$transaction(async (tx) => {
-      await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'buses');
       const createdBus = await tx.busListing.create({
         data: {
           title: cleanDto.title,
@@ -504,7 +504,7 @@ export class BusesService {
     try {
       updated = await this.prisma.$transaction(async (tx) => {
         if (dto.status === 'ACTIVE') {
-          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'buses');
         }
         // `version` in the unique filter makes a stale write fail with P2025 (-> 409 below)
         const res = await tx.busListing.update({

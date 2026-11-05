@@ -22,6 +22,7 @@ export class ServicesService extends BaseListingService {
     entityType: ENTITY_TYPES.CAR_SERVICE,
     notFoundMsg: 'الخدمة غير موجودة',
     decimalFields: ['priceFrom', 'priceTo'],
+    vertical: 'services',
   };
 
   constructor(
