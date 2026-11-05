@@ -121,6 +121,7 @@ describe('ServicesService', () => {
 
       expect(result).toEqual(mockItem);
       expect(mockPrisma.carService.create).toHaveBeenCalledTimes(1);
+      expect(mockLimitService.assertWithinLimit).toHaveBeenCalledWith('user-1', expect.anything(), 'services');
       expect(mockRedis.delPattern).toHaveBeenCalled();
     });
 
@@ -277,12 +278,12 @@ describe('ServicesService', () => {
       expect(mockLimitService.assertWithinLimit).not.toHaveBeenCalled();
     });
 
-    it('should invoke assertWithinLimit when updating an INACTIVE listing to ACTIVE', async () => {
+    it('should invoke assertWithinLimit with services vertical when updating an INACTIVE listing to ACTIVE', async () => {
       mockPrisma.carService.findUnique.mockResolvedValue({ ...mockItem, status: 'INACTIVE', hiddenByOwnerStatus: false });
       mockPrisma.carService.update.mockResolvedValueOnce({ ...mockItem, status: 'ACTIVE' });
 
       await service.update('svc-1', 'user-1', { status: 'ACTIVE' });
-      expect(mockLimitService.assertWithinLimit).toHaveBeenCalledWith('user-1', expect.anything());
+      expect(mockLimitService.assertWithinLimit).toHaveBeenCalledWith('user-1', expect.anything(), 'services');
     });
   });
 
@@ -332,6 +333,7 @@ describe('ServicesService', () => {
       const result = await service.toggleStatus('svc-1', 'user-1');
 
       expect(result.status).toBe('ACTIVE');
+      expect(mockLimitService.assertWithinLimit).toHaveBeenCalledWith('user-1', expect.anything(), 'services');
     });
 
     it('should throw ForbiddenException if not owner', async () => {
