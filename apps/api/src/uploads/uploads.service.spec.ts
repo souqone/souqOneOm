@@ -27,6 +27,18 @@ const mockPrisma = {
     create: jest.fn(),
     updateMany: jest.fn(),
   },
+  carService: { findUnique: jest.fn(), findFirst: jest.fn() },
+  carServiceImage: {
+    aggregate: jest.fn(),
+    count: jest.fn(),
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    findMany: jest.fn(),
+    delete: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
+  },
   $executeRaw: jest.fn().mockResolvedValue(1),
   $transaction: jest.fn().mockImplementation(async (args) => {
     if (typeof args === 'function') {
@@ -245,6 +257,127 @@ describe('UploadsService', () => {
 
       expect(mockRedis.del).not.toHaveBeenCalled();
       expect(mockRedis.delPattern).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addImageToService (D-221)', () => {
+    it('(a) owner can attach image by URL; order and primary computed', async () => {
+      mockPrisma.carService.findFirst.mockResolvedValue({ id: 'service-1', userId: 'user-1', deletedAt: null });
+      mockPrisma.carServiceImage.count.mockResolvedValue(2);
+      mockPrisma.carServiceImage.aggregate.mockResolvedValue({ _max: { order: 1 } });
+      mockPrisma.carServiceImage.create.mockResolvedValue({
+        id: 'img-3',
+        url: 'https://res.cloudinary.com/test.jpg',
+        order: 2,
+        isPrimary: false,
+        carServiceId: 'service-1',
+      });
+
+      const result = await service.addImageToService(
+        'service-1',
+        'user-1',
+        'https://res.cloudinary.com/test.jpg',
+        false,
+      );
+
+      expect(result.id).toBe('img-3');
+      expect(mockPrisma.carServiceImage.create).toHaveBeenCalledWith({
+        data: {
+          url: 'https://res.cloudinary.com/test.jpg',
+          order: 2,
+          isPrimary: false,
+          carServiceId: 'service-1',
+        },
+      });
+      expect(mockRedis.del).toHaveBeenCalledWith('carService:detail:service-1');
+      expect(mockRedis.delPattern).toHaveBeenCalledWith('carService:list:*');
+    });
+
+    it('(b) auto-sets primary if imageCount === 0 even when isPrimary is false', async () => {
+      mockPrisma.carService.findFirst.mockResolvedValue({ id: 'service-1', userId: 'user-1', deletedAt: null });
+      mockPrisma.carServiceImage.count.mockResolvedValue(0);
+      mockPrisma.carServiceImage.aggregate.mockResolvedValue({ _max: { order: null } });
+      mockPrisma.carServiceImage.create.mockResolvedValue({
+        id: 'img-1',
+        url: 'https://res.cloudinary.com/first.jpg',
+        order: 0,
+        isPrimary: true,
+        carServiceId: 'service-1',
+      });
+
+      await service.addImageToService(
+        'service-1',
+        'user-1',
+        'https://res.cloudinary.com/first.jpg',
+        false,
+      );
+
+      expect(mockPrisma.carServiceImage.create).toHaveBeenCalledWith({
+        data: {
+          url: 'https://res.cloudinary.com/first.jpg',
+          order: 0,
+          isPrimary: true,
+          carServiceId: 'service-1',
+        },
+      });
+    });
+
+    it('(c) unsets existing primary when isPrimary is true', async () => {
+      mockPrisma.carService.findFirst.mockResolvedValue({ id: 'service-1', userId: 'user-1', deletedAt: null });
+      mockPrisma.carServiceImage.count.mockResolvedValue(3);
+      mockPrisma.carServiceImage.aggregate.mockResolvedValue({ _max: { order: 2 } });
+      mockPrisma.carServiceImage.create.mockResolvedValue({
+        id: 'img-4',
+        url: 'https://res.cloudinary.com/new-primary.jpg',
+        order: 3,
+        isPrimary: true,
+        carServiceId: 'service-1',
+      });
+
+      await service.addImageToService(
+        'service-1',
+        'user-1',
+        'https://res.cloudinary.com/new-primary.jpg',
+        true,
+      );
+
+      expect(mockPrisma.carServiceImage.updateMany).toHaveBeenCalledWith({
+        where: { carServiceId: 'service-1' },
+        data: { isPrimary: false },
+      });
+      expect(mockPrisma.carServiceImage.create).toHaveBeenCalledWith({
+        data: {
+          url: 'https://res.cloudinary.com/new-primary.jpg',
+          order: 3,
+          isPrimary: true,
+          carServiceId: 'service-1',
+        },
+      });
+    });
+
+    it('(d) non-owner throws 403 ForbiddenException', async () => {
+      mockPrisma.carService.findFirst.mockResolvedValue({ id: 'service-1', userId: 'other-user', deletedAt: null });
+
+      await expect(
+        service.addImageToService('service-1', 'user-1', 'https://res.cloudinary.com/test.jpg', false),
+      ).rejects.toThrow(new ForbiddenException('لا يمكنك تعديل إعلان غيرك'));
+    });
+
+    it('(e) non-existent service throws 404 NotFoundException', async () => {
+      mockPrisma.carService.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.addImageToService('missing-service', 'user-1', 'https://res.cloudinary.com/test.jpg', false),
+      ).rejects.toThrow(new NotFoundException('الخدمة غير موجودة'));
+    });
+
+    it('(f) limit enforced: 10 images max throws BadRequestException', async () => {
+      mockPrisma.carService.findFirst.mockResolvedValue({ id: 'service-1', userId: 'user-1', deletedAt: null });
+      mockPrisma.carServiceImage.count.mockResolvedValue(10);
+
+      await expect(
+        service.addImageToService('service-1', 'user-1', 'https://res.cloudinary.com/test.jpg', false),
+      ).rejects.toThrow(new BadRequestException('لا يمكن إضافة أكثر من 10 صور'));
     });
   });
 });
