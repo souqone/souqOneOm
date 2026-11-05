@@ -107,14 +107,15 @@ export class ActiveListingsLimitService {
   private readonly logger = new Logger(ActiveListingsLimitService.name);
 
   getMaxDailyPublishes(): number {
-    const rawVal = process.env.MAX_PUBLISHES_PER_DAY;
+    const rawVal =
+      process.env.MAX_DAILY_PUBLISHES_PER_SECTION || process.env.MAX_PUBLISHES_PER_DAY;
     if (rawVal === undefined || rawVal.trim() === '') {
       return DEFAULT_MAX_DAILY_PUBLISHES;
     }
     const parsed = parseInt(rawVal.trim(), 10);
     if (isNaN(parsed) || parsed <= 0) {
       this.logger.warn(
-        `Invalid MAX_PUBLISHES_PER_DAY value "${rawVal}". Defaulting to ${DEFAULT_MAX_DAILY_PUBLISHES}.`,
+        `Invalid daily publish limit value "${rawVal}". Defaulting to ${DEFAULT_MAX_DAILY_PUBLISHES}.`,
       );
       return DEFAULT_MAX_DAILY_PUBLISHES;
     }
@@ -122,14 +123,15 @@ export class ActiveListingsLimitService {
   }
 
   getMaxMonthlyPublishes(): number {
-    const rawVal = process.env.MAX_PUBLISHES_PER_MONTH;
+    const rawVal =
+      process.env.MAX_MONTHLY_PUBLISHES_PER_SECTION || process.env.MAX_PUBLISHES_PER_MONTH;
     if (rawVal === undefined || rawVal.trim() === '') {
       return DEFAULT_MAX_MONTHLY_PUBLISHES;
     }
     const parsed = parseInt(rawVal.trim(), 10);
     if (isNaN(parsed) || parsed <= 0) {
       this.logger.warn(
-        `Invalid MAX_PUBLISHES_PER_MONTH value "${rawVal}". Defaulting to ${DEFAULT_MAX_MONTHLY_PUBLISHES}.`,
+        `Invalid monthly publish limit value "${rawVal}". Defaulting to ${DEFAULT_MAX_MONTHLY_PUBLISHES}.`,
       );
       return DEFAULT_MAX_MONTHLY_PUBLISHES;
     }
@@ -137,7 +139,9 @@ export class ActiveListingsLimitService {
   }
 
   /**
-   * Deprecated backward-compatible method for tests or callers still referencing it.
+   * @deprecated The legacy 5-active listings cap across verticals was completely removed in D-223.
+   * This stub returns getMaxDailyPublishes() solely for backward compatibility with any legacy test references.
+   * No production callers or services should rely on an active listing count.
    */
   getMaxActiveListings(): number {
     return this.getMaxDailyPublishes();
