@@ -1657,7 +1657,7 @@ model OperatorListing {
   /// @Prisma.ignore
   // location Unsupported("geography(Point, 4326)")?
 
-  @@index([userId])
+  @@unique([userId])
   @@index([operatorType])
   @@index([status])
   @@index([slug])

@@ -50,9 +50,10 @@ prisma/*.db-journal
 # Uploads (user-uploaded files)
 apps/api/uploads/
 
-# SQL backups (but keep Prisma migration files tracked)
+# SQL backups (but keep Prisma migration and preflight files tracked)
 *.sql
 !apps/api/prisma/migrations/**/*.sql
+!apps/api/prisma/preflight/**/*.sql
 
 # Windsurf / AI
 .windsurf/

@@ -145,6 +145,48 @@ describe('OperatorsService', () => {
       });
     });
 
+    it('(D-222) should map Prisma P2002 unique constraint violation to ConflictException with canonical message', async () => {
+      // Simulate concurrent race: precheck findFirst returns null, but DB unique constraint trips on insert
+      prisma.operatorListing.findFirst.mockResolvedValue(null);
+      prisma.operatorDeletionRequest.findFirst.mockResolvedValue(null);
+      const p2002Error = new Error('Unique constraint failed on the fields: (`userId`)');
+      (p2002Error as any).code = 'P2002';
+      prisma.operatorListing.create.mockRejectedValue(p2002Error);
+
+      await expect(
+        service.create(
+          {
+            title: 'Operator Profile',
+            description: 'Heavy equipment driver',
+            operatorType: 'DRIVER',
+            governorateId: 1,
+            wilayaId: 101,
+          } as any,
+          'user-1',
+        ),
+      ).rejects.toThrow(new ConflictException('لديك بروفايل مشغّل بالفعل، يمكنك تعديله أو طلب حذفه'));
+    });
+
+    it('(D-222) should rethrow non-unique database errors unchanged', async () => {
+      prisma.operatorListing.findFirst.mockResolvedValue(null);
+      prisma.operatorDeletionRequest.findFirst.mockResolvedValue(null);
+      const dbError = new Error('Database connection failed');
+      prisma.operatorListing.create.mockRejectedValue(dbError);
+
+      await expect(
+        service.create(
+          {
+            title: 'Operator Profile',
+            description: 'Heavy equipment driver',
+            operatorType: 'DRIVER',
+            governorateId: 1,
+            wilayaId: 101,
+          } as any,
+          'user-1',
+        ),
+      ).rejects.toThrow('Database connection failed');
+    });
+
     it('should succeed creating operator profile if previous deletion was approved more than 72h ago', async () => {
       prisma.operatorListing.findFirst.mockResolvedValue(null);
       prisma.operatorDeletionRequest.findFirst.mockResolvedValue({
