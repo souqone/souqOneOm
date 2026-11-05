@@ -158,6 +158,24 @@ export class UploadsController {
     return this.uploadsService.addImageToService(serviceId, user.sub, url, isPrimary === 'true');
   }
 
+  /** Attach an already-uploaded image URL to a car service */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Post('services/:serviceId/images/url')
+  async addServiceImageByUrl(
+    @Param('serviceId') serviceId: string,
+    @Body() body: { url: string; isPrimary?: boolean },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    validateTrustedImageUrl(body?.url);
+    return this.uploadsService.addImageToService(
+      serviceId,
+      user.sub,
+      body.url,
+      body.isPrimary ?? false,
+    );
+  }
+
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Delete('services/images/:imageId')

@@ -11,6 +11,7 @@ describe('UploadsController — addImageByUrl SSRF Protection', () => {
     process.env = { ...originalEnv };
     mockUploadsService = {
       addImageToListing: jest.fn().mockResolvedValue({ id: 'img-1', url: 'https://res.cloudinary.com/sample.jpg' } as any),
+      addImageToService: jest.fn().mockResolvedValue({ id: 'simg-1', url: 'https://res.cloudinary.com/sample.jpg' } as any),
     };
     controller = new UploadsController(mockUploadsService as UploadsService);
   });
@@ -98,5 +99,52 @@ describe('UploadsController — addImageByUrl SSRF Protection', () => {
       validUrl,
       true,
     );
+  });
+
+  describe('addServiceImageByUrl parity with listings (D-221)', () => {
+    it('should reject invalid or non-string URLs with 400', async () => {
+      await expect(controller.addServiceImageByUrl('service-1', { url: '' }, mockUser as any))
+        .rejects.toThrow(BadRequestException);
+
+      await expect(controller.addServiceImageByUrl('service-1', { url: 'not-a-valid-url' }, mockUser as any))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject SSRF attacks on service image URL with 400', async () => {
+      await expect(controller.addServiceImageByUrl('service-1', { url: 'https://evil.com/?cloudinary.com' }, mockUser as any))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject non-https cloudinary URLs on service image with 400', async () => {
+      await expect(controller.addServiceImageByUrl('service-1', { url: 'http://res.cloudinary.com/image.jpg' }, mockUser as any))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow valid Cloudinary URL and delegate to addImageToService', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
+      const validUrl = 'https://res.cloudinary.com/souqone/image/upload/v12345/service.jpg';
+      const result = await controller.addServiceImageByUrl('service-1', { url: validUrl, isPrimary: true }, mockUser as any);
+      expect(result).toBeDefined();
+      expect(mockUploadsService.addImageToService).toHaveBeenCalledWith(
+        'service-1',
+        'user-1',
+        validUrl,
+        true,
+      );
+    });
+
+    it('should default isPrimary to false when omitted', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
+      const validUrl = 'https://res.cloudinary.com/souqone/image/upload/v12345/service.jpg';
+      await controller.addServiceImageByUrl('service-1', { url: validUrl }, mockUser as any);
+      expect(mockUploadsService.addImageToService).toHaveBeenCalledWith(
+        'service-1',
+        'user-1',
+        validUrl,
+        false,
+      );
+    });
   });
 });

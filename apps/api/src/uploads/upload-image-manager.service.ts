@@ -196,13 +196,17 @@ export class UploadImageManagerService {
     if (!service) throw new NotFoundException('الخدمة غير موجودة');
     if (service.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
+    const imageCount = await this.prisma.carServiceImage.count({ where: { carServiceId: serviceId } });
+    if (imageCount >= 10) {
+      throw new BadRequestException('لا يمكن إضافة أكثر من 10 صور');
+    }
+
     const maxOrder = await this.prisma.carServiceImage.aggregate({ where: { carServiceId: serviceId }, _max: { order: true } });
     const nextOrder = (maxOrder._max.order ?? -1) + 1;
 
     if (isPrimary) {
       await this.prisma.carServiceImage.updateMany({ where: { carServiceId: serviceId }, data: { isPrimary: false } });
     }
-    const imageCount = await this.prisma.carServiceImage.count({ where: { carServiceId: serviceId } });
     const shouldBePrimary = isPrimary || imageCount === 0;
 
     const created = await this.prisma.carServiceImage.create({
