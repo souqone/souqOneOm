@@ -74,7 +74,7 @@ export class EquipmentListingsService {
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
     const item = await this.prisma.$transaction(async (tx) => {
-      await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+      await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'equipment');
       const createdItem = await tx.equipmentListing.create({
         data: {
           title: cleanDto.title,
@@ -492,7 +492,7 @@ export class EquipmentListingsService {
     try {
       updated = await this.prisma.$transaction(async (tx) => {
         if (statusChanged && dto.status === 'ACTIVE') {
-          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'equipment');
         }
 
         const guardVersion =

@@ -329,6 +329,7 @@ describe('EquipmentListingsService - Status Transitions', () => {
       expect(activeListingsLimitServiceMock.assertWithinLimit).toHaveBeenCalledWith(
         'owner-1',
         prismaMock,
+        'equipment',
       );
     });
 
