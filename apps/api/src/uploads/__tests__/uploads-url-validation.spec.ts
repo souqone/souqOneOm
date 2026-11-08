@@ -147,4 +147,73 @@ describe('UploadsController — addImageByUrl SSRF Protection', () => {
       );
     });
   });
+
+  describe('addPartImageByUrl (D-224)', () => {
+    beforeEach(() => {
+      mockUploadsService.addImageToPart = jest.fn().mockResolvedValue({
+        id: 'part-img-1',
+        url: 'https://res.cloudinary.com/souqone/image/upload/v12345/part.jpg',
+        isPrimary: true,
+      } as any);
+    });
+
+    it('should reject invalid or non-string URLs for part images with 400', async () => {
+      await expect(
+        controller.addPartImageByUrl('part-1', { url: '' }, mockUser as any),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        controller.addPartImageByUrl('part-1', { url: 'ftp://bad-url' }, mockUser as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject SSRF attack for part images with 400', async () => {
+      await expect(
+        controller.addPartImageByUrl(
+          'part-1',
+          { url: 'https://evil.com/?cloudinary.com' },
+          mockUser as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow valid HTTPS Cloudinary URLs and pass isPrimary correctly to addImageToPart', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
+      const validUrl = 'https://res.cloudinary.com/souqone/image/upload/v12345/part.jpg';
+
+      const result = await controller.addPartImageByUrl(
+        'part-1',
+        { url: validUrl, isPrimary: true },
+        mockUser as any,
+      );
+
+      expect(result).toBeDefined();
+      expect(mockUploadsService.addImageToPart).toHaveBeenCalledWith(
+        'part-1',
+        'user-1',
+        validUrl,
+        true,
+      );
+    });
+
+    it('should default isPrimary to false when omitted in body', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone';
+      const validUrl = 'https://res.cloudinary.com/souqone/image/upload/v12345/part.jpg';
+
+      await controller.addPartImageByUrl(
+        'part-1',
+        { url: validUrl },
+        mockUser as any,
+      );
+
+      expect(mockUploadsService.addImageToPart).toHaveBeenCalledWith(
+        'part-1',
+        'user-1',
+        validUrl,
+        false,
+      );
+    });
+  });
 });
