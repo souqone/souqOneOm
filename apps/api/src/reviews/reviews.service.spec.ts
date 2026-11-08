@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -16,6 +16,9 @@ describe('ReviewsService', () => {
     },
     jobApplication: {
       findFirst: jest.fn(),
+    },
+    operatorListing: {
+      findUnique: jest.fn(),
     },
     review: {
       create: jest.fn(),
@@ -59,7 +62,8 @@ describe('ReviewsService', () => {
   });
 
   describe('Self Review Validation', () => {
-    it('should throw BadRequestException when user attempts to review themselves', async () => {
+    it('should throw BadRequestException when user attempts to review themselves (OPERATOR_LISTING)', async () => {
+      mockPrisma.operatorListing.findUnique.mockResolvedValue({ userId: 'user-1' });
       await expect(
         service.create(
           {
@@ -67,6 +71,21 @@ describe('ReviewsService', () => {
             comment: 'رائع جداً',
             entityType: ENTITY_TYPES.OPERATOR_LISTING,
             entityId: 'operator-1',
+            revieweeId: 'user-1',
+          },
+          'user-1',
+        ),
+      ).rejects.toThrow(new BadRequestException('لا يمكنك تقييم نفسك'));
+    });
+
+    it('should throw BadRequestException when user attempts to review themselves on other entity types', async () => {
+      await expect(
+        service.create(
+          {
+            rating: 5,
+            comment: 'رائع جداً',
+            entityType: ENTITY_TYPES.LISTING,
+            entityId: 'listing-1',
             revieweeId: 'user-1',
           },
           'user-1',
@@ -84,6 +103,10 @@ describe('ReviewsService', () => {
       revieweeId: 'operator-owner-id',
     };
     const reviewerId = 'reviewer-user-id';
+
+    beforeEach(() => {
+      mockPrisma.operatorListing.findUnique.mockResolvedValue({ userId: 'operator-owner-id' });
+    });
 
     it('should throw BadRequestException when NO conversation exists between reviewer and operator', async () => {
       mockPrisma.conversation.findFirst.mockResolvedValue(null);
@@ -168,6 +191,143 @@ describe('ReviewsService', () => {
         data: { averageRating: 5, reviewCount: 1 },
       });
       expect(mockNotifications.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('Server-Derived Review Target for OPERATOR_LISTING (D-220)', () => {
+    const reviewerId = 'reviewer-user-id';
+    const realOwnerId = 'real-operator-owner';
+
+    beforeEach(() => {
+      mockPrisma.operatorListing.findUnique.mockResolvedValue({ userId: realOwnerId });
+      mockPrisma.conversation.findFirst.mockResolvedValue({ id: 'conv-1' });
+      mockPrisma.review.create.mockResolvedValue({ id: 'rev-1', revieweeId: realOwnerId });
+      mockPrisma.review.aggregate.mockResolvedValue({ _avg: { rating: 5 }, _count: 1 });
+      mockPrisma.user.update.mockResolvedValue({});
+      mockNotifications.create.mockResolvedValue({});
+    });
+
+    it('(a) should derive revieweeId from operator listing and IGNORE tampered client revieweeId', async () => {
+      await service.create(
+        {
+          rating: 5,
+          comment: 'مشغل ممتاز',
+          entityType: ENTITY_TYPES.OPERATOR_LISTING,
+          entityId: 'operator-101',
+          revieweeId: 'attacker-tampered-id',
+        },
+        reviewerId,
+      );
+
+      // (1) Listing was fetched by entityId
+      expect(mockPrisma.operatorListing.findUnique).toHaveBeenCalledWith({
+        where: { id: 'operator-101' },
+        select: { userId: true },
+      });
+
+      // (2) Review was created with the REAL owner
+      expect(mockPrisma.review.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            revieweeId: realOwnerId,
+          }),
+        }),
+      );
+
+      // (3) User aggregate rating was recalculated for the REAL owner
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: realOwnerId },
+        data: { averageRating: 5, reviewCount: 1 },
+      });
+
+      // (4) Notification was sent to the REAL owner
+      expect(mockNotifications.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: realOwnerId,
+        }),
+      );
+    });
+
+    it('(b) old client sending the correct revieweeId still works', async () => {
+      await service.create(
+        {
+          rating: 5,
+          comment: 'مشغل ممتاز',
+          entityType: ENTITY_TYPES.OPERATOR_LISTING,
+          entityId: 'operator-101',
+          revieweeId: realOwnerId,
+        },
+        reviewerId,
+      );
+
+      expect(mockPrisma.review.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ revieweeId: realOwnerId }),
+        }),
+      );
+    });
+
+    it('(c) client omitting revieweeId entirely works for OPERATOR_LISTING', async () => {
+      await service.create(
+        {
+          rating: 5,
+          comment: 'مشغل ممتاز',
+          entityType: ENTITY_TYPES.OPERATOR_LISTING,
+          entityId: 'operator-101',
+        },
+        reviewerId,
+      );
+
+      expect(mockPrisma.review.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ revieweeId: realOwnerId }),
+        }),
+      );
+    });
+
+    it('(d) self-review: reviewer == operatorListing.userId throws 400', async () => {
+      await expect(
+        service.create(
+          {
+            rating: 5,
+            comment: 'مشغل ممتاز',
+            entityType: ENTITY_TYPES.OPERATOR_LISTING,
+            entityId: 'operator-101',
+            revieweeId: 'someone-else', // even if client tries to bypass
+          },
+          realOwnerId, // reviewer is the actual owner
+        ),
+      ).rejects.toThrow(new BadRequestException('لا يمكنك تقييم نفسك'));
+    });
+
+    it('(e) missing listing throws 404 NotFoundException', async () => {
+      mockPrisma.operatorListing.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            rating: 5,
+            comment: 'مشغل ممتاز',
+            entityType: ENTITY_TYPES.OPERATOR_LISTING,
+            entityId: 'non-existent-operator',
+          },
+          reviewerId,
+        ),
+      ).rejects.toThrow(new NotFoundException('إعلان المشغل غير موجود'));
+    });
+
+    it('(f) other entity types: omitting revieweeId throws BadRequestException', async () => {
+      await expect(
+        service.create(
+          {
+            rating: 5,
+            comment: 'إعلان ممتاز',
+            entityType: ENTITY_TYPES.LISTING,
+            entityId: 'listing-101',
+          },
+          reviewerId,
+        ),
+      ).rejects.toThrow(new BadRequestException('معرف المستخدم المقيم مطلوب'));
     });
   });
 
