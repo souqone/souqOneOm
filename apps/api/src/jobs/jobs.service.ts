@@ -123,7 +123,7 @@ export class JobsService {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const job = await this.prisma.$transaction(async (tx) => {
-          await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+          await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'jobs');
           const createdJob = await tx.driverJob.create({
             data: { ...createData, slug },
             include,
@@ -308,7 +308,7 @@ export class JobsService {
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (dto.status === 'ACTIVE') {
-        await this.activeListingsLimitService.assertWithinLimit(userId, tx);
+        await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'jobs');
       }
       const res = await tx.driverJob.update({
         where: { id },
