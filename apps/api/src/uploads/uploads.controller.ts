@@ -220,6 +220,34 @@ export class UploadsController {
     return this.uploadsService.addImageToBus(busId, user.sub, url, isPrimary === 'true');
   }
 
+  /** Attach an already-uploaded image URL to a bus listing */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Post('buses/:busId/images/url')
+  async addBusImageByUrl(
+    @Param('busId') busId: string,
+    @Body() body: { url: string; isPrimary?: boolean },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    validateTrustedImageUrl(body?.url);
+    return this.uploadsService.addImageToBus(
+      busId,
+      user.sub,
+      body.url,
+      body.isPrimary ?? false,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Delete('buses/images/:imageId')
+  async removeBusImage(
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.removeImageFromBus(imageId, user.sub);
+  }
+
   // ─── Equipment Image Management ───
 
   @UseGuards(JwtAuthGuard)
@@ -234,5 +262,33 @@ export class UploadsController {
   ) {
     const { url } = await this.uploadsService.uploadFile(file);
     return this.uploadsService.addImageToEquipment(equipmentId, user.sub, url, isPrimary === 'true');
+  }
+
+  /** Attach an already-uploaded image URL to an equipment listing */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Post('equipment/:equipmentId/images/url')
+  async addEquipmentImageByUrl(
+    @Param('equipmentId') equipmentId: string,
+    @Body() body: { url: string; isPrimary?: boolean },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    validateTrustedImageUrl(body?.url);
+    return this.uploadsService.addImageToEquipment(
+      equipmentId,
+      user.sub,
+      body.url,
+      body.isPrimary ?? false,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Delete('equipment/images/:imageId')
+  async removeEquipmentImage(
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.removeImageFromEquipment(imageId, user.sub);
   }
 }
