@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { FieldError, sanitizePartsFieldErrors } from '../pipes/validation-field-errors';
 
 const containsArabic = (text: string): boolean => /[\u0600-\u06FF]/.test(text);
 
@@ -33,6 +34,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let extractedCode: string | undefined;
     let extractedSuspendedUntil: string | null | undefined;
+    let extractedFieldErrors: FieldError[] | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -69,6 +71,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           if (arabicMsg) {
             extractedMessage = arabicMsg;
           }
+        }
+
+        if (status === HttpStatus.BAD_REQUEST) {
+          extractedFieldErrors = sanitizePartsFieldErrors(res.fieldErrors);
         }
       }
 
@@ -113,6 +119,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ...(extractedCode === 'ACCOUNT_SUSPENDED' && extractedSuspendedUntil !== undefined
         ? { suspendedUntil: extractedSuspendedUntil }
         : {}),
+      ...(extractedFieldErrors ? { fieldErrors: extractedFieldErrors } : {}),
     });
   }
 }

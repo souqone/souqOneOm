@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '..', '.env.test'), override: true });
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TerminusModule } from '@nestjs/terminus';
@@ -51,6 +51,9 @@ import { cleanDatabase } from './cleanup';
 import { SanitizeInterceptor } from '../src/common/interceptors/sanitize.interceptor';
 import { NormalizeImagesInterceptor } from '../src/common/interceptors/normalize-images.interceptor';
 import { GlobalExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { createAppValidationPipe } from '../src/common/pipes/validation-field-errors';
+import { CreatePartDto } from '../src/parts/dto/create-part.dto';
+import { UpdatePartDto } from '../src/parts/dto/update-part.dto';
 import request from 'supertest';
 
 /** Mock RedisService so tests don't need a running Redis instance */
@@ -258,13 +261,7 @@ export async function createTestApp(options?: { useGlobalFilters?: boolean }): P
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
+  app.useGlobalPipes(createAppValidationPipe([CreatePartDto, UpdatePartDto]));
 
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(new SanitizeInterceptor(reflector), new NormalizeImagesInterceptor());
