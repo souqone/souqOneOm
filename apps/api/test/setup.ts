@@ -51,9 +51,10 @@ import { cleanDatabase } from './cleanup';
 import { SanitizeInterceptor } from '../src/common/interceptors/sanitize.interceptor';
 import { NormalizeImagesInterceptor } from '../src/common/interceptors/normalize-images.interceptor';
 import { GlobalExceptionFilter } from '../src/common/filters/http-exception.filter';
-import { createAppValidationPipe } from '../src/common/pipes/validation-field-errors';
-import { CreatePartDto } from '../src/parts/dto/create-part.dto';
-import { UpdatePartDto } from '../src/parts/dto/update-part.dto';
+import {
+  ALL_STRUCTURED_VALIDATION_DTOS,
+  createAppValidationPipe,
+} from '../src/common/pipes/validation-field-errors';
 import request from 'supertest';
 
 /** Mock RedisService so tests don't need a running Redis instance */
@@ -261,7 +262,7 @@ export async function createTestApp(options?: { useGlobalFilters?: boolean }): P
     credentials: true,
   });
 
-  app.useGlobalPipes(createAppValidationPipe([CreatePartDto, UpdatePartDto]));
+  app.useGlobalPipes(createAppValidationPipe(ALL_STRUCTURED_VALIDATION_DTOS));
 
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(new SanitizeInterceptor(reflector), new NormalizeImagesInterceptor());
