@@ -1,11 +1,14 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { applyBodyParsers } from './common/utils/body-parser.util';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
+import { createAppValidationPipe } from './common/pipes/validation-field-errors';
+import { CreatePartDto } from './parts/dto/create-part.dto';
+import { UpdatePartDto } from './parts/dto/update-part.dto';
 import { SanitizeInterceptor } from './common/interceptors/sanitize.interceptor';
 import { NormalizeImagesInterceptor } from './common/interceptors/normalize-images.interceptor';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
@@ -46,13 +49,7 @@ async function bootstrap() {
   });
 
   // أنبوب التحقق الشامل
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
+  app.useGlobalPipes(createAppValidationPipe([CreatePartDto, UpdatePartDto]));
 
   // فلتر الأخطاء الشامل
   app.useGlobalFilters(new GlobalExceptionFilter());
