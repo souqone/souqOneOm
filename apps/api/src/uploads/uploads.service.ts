@@ -66,10 +66,18 @@ export class UploadsService {
     return this.images.addImageToBus(busId, userId, url, isPrimary);
   }
 
+  async removeImageFromBus(imageId: string, userId: string) {
+    return this.images.removeImageFromBus(imageId, userId);
+  }
+
   // ─── Equipment Images ───
 
   async addImageToEquipment(equipmentId: string, userId: string, url: string, isPrimary: boolean) {
     return this.images.addImageToEquipment(equipmentId, userId, url, isPrimary);
+  }
+
+  async removeImageFromEquipment(imageId: string, userId: string) {
+    return this.images.removeImageFromEquipment(imageId, userId);
   }
 
 }

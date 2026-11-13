@@ -41,6 +41,18 @@ export class UploadImageManagerService {
     }
   }
 
+  private async invalidateBusCaches(busId: string): Promise<void> {
+    if (!this.redis) return;
+    try {
+      await this.redis.delPattern('busListing:list:*');
+      await this.redis.delPattern('busListing:similar:*');
+      await this.redis.del(`busListing:detail:${busId}`);
+      await this.redis.delPattern('busListing:slug:*');
+    } catch (err) {
+      this.logger.warn(`Failed to invalidate busListing caches for ${busId}`);
+    }
+  }
+
   async addImageToListing(listingId: string, userId: string, url: string, isPrimary: boolean) {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing) throw new NotFoundException('الإعلان غير موجود');
@@ -244,47 +256,160 @@ export class UploadImageManagerService {
     return { message: 'تم حذف الصورة بنجاح' };
   }
 
-  async addImageToBus(busId: string, userId: string, url: string, isPrimary: boolean) {
-    const bus = await this.prisma.busListing.findFirst({
-      where: { id: busId, deletedAt: null },
-    });
-    if (!bus) throw new NotFoundException('إعلان الحافلة غير موجود');
-    if (bus.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+  private async addImageToUserOwnedListing<T>(params: {
+    userId: string;
+    isPrimary: boolean;
+    notFoundMessage: string;
+    findParent: () => Promise<{ userId: string } | null>;
+    countImages: () => Promise<number>;
+    getMaxOrder: () => Promise<number | null>;
+    clearPrimary: () => Promise<unknown>;
+    createImage: (order: number, shouldBePrimary: boolean) => Promise<T>;
+    onMutated?: () => Promise<void>;
+  }): Promise<T> {
+    const parent = await params.findParent();
+    if (!parent) throw new NotFoundException(params.notFoundMessage);
+    if (parent.userId !== params.userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
 
-    const maxOrder = await this.prisma.busListingImage.aggregate({ where: { busListingId: busId }, _max: { order: true } });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
+    const imageCount = await params.countImages();
+    if (imageCount >= 10) throw new BadRequestException('الحد الأقصى 10 صور لكل إعلان');
 
-    if (isPrimary) {
-      await this.prisma.busListingImage.updateMany({ where: { busListingId: busId }, data: { isPrimary: false } });
+    const maxOrder = await params.getMaxOrder();
+    const nextOrder = (maxOrder ?? -1) + 1;
+
+    if (params.isPrimary) {
+      await params.clearPrimary();
     }
-    const imageCount = await this.prisma.busListingImage.count({ where: { busListingId: busId } });
-    const shouldBePrimary = isPrimary || imageCount === 0;
+    const shouldBePrimary = params.isPrimary || imageCount === 0;
 
-    return this.prisma.busListingImage.create({
-      data: { url, order: nextOrder, isPrimary: shouldBePrimary, busListingId: busId },
+    const created = await params.createImage(nextOrder, shouldBePrimary);
+    if (params.onMutated) await params.onMutated();
+    return created;
+  }
+
+  private async removeImageFromUserOwnedListing(params: {
+    userId: string;
+    findImage: () => Promise<{
+      url: string;
+      isPrimary: boolean;
+      parent: { id: string; userId: string; deletedAt: Date | null };
+    } | null>;
+    deleteImage: () => Promise<unknown>;
+    findFirstRemaining: (parentId: string) => Promise<{ id: string } | null>;
+    promotePrimary: (nextImageId: string) => Promise<unknown>;
+    onMutated?: (parentId: string) => Promise<void>;
+  }) {
+    const image = await params.findImage();
+    if (!image || image.parent.deletedAt != null) {
+      throw new NotFoundException('الصورة غير موجودة');
+    }
+    if (image.parent.userId !== params.userId) {
+      throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+    }
+
+    await this.deleteStoredImageByUrl(image.url);
+    await params.deleteImage();
+
+    if (image.isPrimary) {
+      const first = await params.findFirstRemaining(image.parent.id);
+      if (first) {
+        await params.promotePrimary(first.id);
+      }
+    }
+
+    if (params.onMutated) await params.onMutated(image.parent.id);
+    return { message: 'تم حذف الصورة بنجاح' };
+  }
+
+  async addImageToBus(busId: string, userId: string, url: string, isPrimary: boolean) {
+    return this.addImageToUserOwnedListing({
+      userId,
+      isPrimary,
+      notFoundMessage: 'إعلان الحافلة غير موجود',
+      findParent: () => this.prisma.busListing.findFirst({ where: { id: busId, deletedAt: null } }),
+      countImages: () => this.prisma.busListingImage.count({ where: { busListingId: busId } }),
+      getMaxOrder: async () => {
+        const res = await this.prisma.busListingImage.aggregate({
+          where: { busListingId: busId },
+          _max: { order: true },
+        });
+        return res._max.order;
+      },
+      clearPrimary: () =>
+        this.prisma.busListingImage.updateMany({ where: { busListingId: busId }, data: { isPrimary: false } }),
+      createImage: (order, shouldBePrimary) =>
+        this.prisma.busListingImage.create({
+          data: { url, order, isPrimary: shouldBePrimary, busListingId: busId },
+        }),
+      onMutated: () => this.invalidateBusCaches(busId),
+    });
+  }
+
+  async removeImageFromBus(imageId: string, userId: string) {
+    return this.removeImageFromUserOwnedListing({
+      userId,
+      findImage: async () => {
+        const image = await this.prisma.busListingImage.findUnique({
+          where: { id: imageId },
+          include: { busListing: { select: { userId: true, id: true, deletedAt: true } } },
+        });
+        return image ? { url: image.url, isPrimary: image.isPrimary, parent: image.busListing } : null;
+      },
+      deleteImage: () => this.prisma.busListingImage.delete({ where: { id: imageId } }),
+      findFirstRemaining: (busListingId) =>
+        this.prisma.busListingImage.findFirst({ where: { busListingId }, orderBy: { order: 'asc' } }),
+      promotePrimary: (id) =>
+        this.prisma.busListingImage.update({ where: { id }, data: { isPrimary: true } }),
+      onMutated: (busListingId) => this.invalidateBusCaches(busListingId),
     });
   }
 
   async addImageToEquipment(equipmentId: string, userId: string, url: string, isPrimary: boolean) {
-    const equipment = await this.prisma.equipmentListing.findFirst({
-      where: { id: equipmentId, deletedAt: null },
+    return this.addImageToUserOwnedListing({
+      userId,
+      isPrimary,
+      notFoundMessage: 'إعلان المعدة غير موجود',
+      findParent: () =>
+        this.prisma.equipmentListing.findFirst({ where: { id: equipmentId, deletedAt: null } }),
+      countImages: () =>
+        this.prisma.equipmentListingImage.count({ where: { equipmentListingId: equipmentId } }),
+      getMaxOrder: async () => {
+        const res = await this.prisma.equipmentListingImage.aggregate({
+          where: { equipmentListingId: equipmentId },
+          _max: { order: true },
+        });
+        return res._max.order;
+      },
+      clearPrimary: () =>
+        this.prisma.equipmentListingImage.updateMany({
+          where: { equipmentListingId: equipmentId },
+          data: { isPrimary: false },
+        }),
+      createImage: (order, shouldBePrimary) =>
+        this.prisma.equipmentListingImage.create({
+          data: { url, order, isPrimary: shouldBePrimary, equipmentListingId: equipmentId },
+        }),
     });
-    if (!equipment) throw new NotFoundException('إعلان المعدة غير موجود');
-    if (equipment.userId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+  }
 
-    const imageCount = await this.prisma.equipmentListingImage.count({ where: { equipmentListingId: equipmentId } });
-    if (imageCount >= 10) throw new BadRequestException('الحد الأقصى 10 صور لكل إعلان');
-
-    const maxOrder = await this.prisma.equipmentListingImage.aggregate({ where: { equipmentListingId: equipmentId }, _max: { order: true } });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
-
-    if (isPrimary) {
-      await this.prisma.equipmentListingImage.updateMany({ where: { equipmentListingId: equipmentId }, data: { isPrimary: false } });
-    }
-    const shouldBePrimary = isPrimary || imageCount === 0;
-
-    return this.prisma.equipmentListingImage.create({
-      data: { url, order: nextOrder, isPrimary: shouldBePrimary, equipmentListingId: equipmentId },
+  async removeImageFromEquipment(imageId: string, userId: string) {
+    return this.removeImageFromUserOwnedListing({
+      userId,
+      findImage: async () => {
+        const image = await this.prisma.equipmentListingImage.findUnique({
+          where: { id: imageId },
+          include: { equipmentListing: { select: { userId: true, id: true, deletedAt: true } } },
+        });
+        return image ? { url: image.url, isPrimary: image.isPrimary, parent: image.equipmentListing } : null;
+      },
+      deleteImage: () => this.prisma.equipmentListingImage.delete({ where: { id: imageId } }),
+      findFirstRemaining: (equipmentListingId) =>
+        this.prisma.equipmentListingImage.findFirst({
+          where: { equipmentListingId },
+          orderBy: { order: 'asc' },
+        }),
+      promotePrimary: (id) =>
+        this.prisma.equipmentListingImage.update({ where: { id }, data: { isPrimary: true } }),
     });
   }
 
