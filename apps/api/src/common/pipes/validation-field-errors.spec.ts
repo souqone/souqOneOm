@@ -8,11 +8,17 @@ import {
   ValidationError,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import request from 'supertest';
 import { GlobalExceptionFilter } from '../filters/http-exception.filter';
 import {
+  ALL_ALLOWED_FIELD_ERROR_FIELDS,
+  ALL_STRUCTURED_VALIDATION_DTOS,
   createAppValidationPipe,
+  extractDtoFieldErrors,
   extractPartsFieldErrors,
+  sanitizeAllowedFieldErrors,
   sanitizePartsFieldErrors,
 } from './validation-field-errors';
 import { CreatePartDto } from '../../parts/dto/create-part.dto';
@@ -20,7 +26,28 @@ import { UpdatePartDto } from '../../parts/dto/update-part.dto';
 import { QueryPartsDto } from '../../parts/dto/query-parts.dto';
 import { PartsController } from '../../parts/parts.controller';
 import { PartsService } from '../../parts/parts.service';
+import { CreateServiceDto } from '../../services/dto/create-service.dto';
+import { UpdateServiceDto } from '../../services/dto/update-service.dto';
+import { QueryServicesDto } from '../../services/dto/query-services.dto';
+import { ServicesController } from '../../services/services.controller';
+import { ServicesService } from '../../services/services.service';
+import { CreateEquipmentListingDto } from '../../equipment/dto/create-equipment-listing.dto';
+import { UpdateEquipmentListingDto } from '../../equipment/dto/update-equipment-listing.dto';
+import { CreateBusListingDto } from '../../buses/dto/create-bus-listing.dto';
+import { UpdateBusListingDto } from '../../buses/dto/update-bus-listing.dto';
+import { CreateOperatorListingDto } from '../../operators/dto/create-operator-listing.dto';
+import { UpdateOperatorListingDto } from '../../operators/dto/update-operator-listing.dto';
+import { CreateListingDto } from '../../listings/dto/create-listing.dto';
+import { UpdateListingDto } from '../../listings/dto/update-listing.dto';
+import { ListingsController } from '../../listings/listings.controller';
+import { ListingsService } from '../../listings/listings.service';
+import { ChangePasswordDto } from '../../users/dto/change-password.dto';
+import { UpdateProfileDto } from '../../users/dto/update-profile.dto';
+import { UsersController } from '../../users/users.controller';
+import { UsersService } from '../../users/users.service';
+import { ExpoPushService } from '../../notifications/expo-push.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { LoginDto } from '../../auth/dto/login.dto';
 import { VerifyEmailDto } from '../../auth/dto/verify-email.dto';
 
 function runThroughFilter(exception: unknown): { status: number; body: Record<string, unknown> } {
@@ -428,6 +455,294 @@ describe('Parts Validation fieldErrors (F7)', () => {
       expect(res.body).not.toHaveProperty('fieldErrors');
       expect(JSON.stringify(res.body)).not.toContain('maliciousExtra');
       expect(JSON.stringify(res.body)).not.toContain('SENSITIVE_PAYLOAD');
+    });
+  });
+
+  describe('B10 (D-278): generalized S7 fieldErrors across Phase 4 DTOs', () => {
+    it('extractDtoFieldErrors returns structured errors for all 6 new verticals (create & update DTOs)', async () => {
+      const serviceCreateErrors = await validate(
+        plainToInstance(CreateServiceDto, {
+          title: 'x'.repeat(205),
+          priceFrom: 200,
+          priceTo: 100,
+          latitude: 'not-a-number',
+        }),
+      );
+      const serviceFields = extractDtoFieldErrors(serviceCreateErrors);
+      expect(serviceFields.find((f) => f.field === 'title')?.code).toBe('TOO_LONG');
+      expect(serviceFields.find((f) => f.field === 'priceTo')?.code).toBe('OUT_OF_RANGE');
+      expect(serviceFields.find((f) => f.field === 'latitude')?.code).toBe('INVALID_FORMAT');
+
+      const serviceUpdateErrors = await validate(
+        plainToInstance(UpdateServiceDto, { priceFrom: -5, longitude: 'not-a-number' }),
+      );
+      const serviceUpdateFields = extractDtoFieldErrors(serviceUpdateErrors);
+      expect(serviceUpdateFields.find((f) => f.field === 'priceFrom')?.code).toBe('OUT_OF_RANGE');
+      expect(serviceUpdateFields.find((f) => f.field === 'longitude')?.code).toBe('INVALID_FORMAT');
+
+      const equipmentCreateErrors = await validate(
+        plainToInstance(CreateEquipmentListingDto, {
+          listingType: 'EQUIPMENT_SALE',
+          price: -10,
+          year: 1800,
+        }),
+      );
+      const equipmentFields = extractDtoFieldErrors(equipmentCreateErrors);
+      expect(equipmentFields.find((f) => f.field === 'price')?.code).toBe('OUT_OF_RANGE');
+      expect(equipmentFields.find((f) => f.field === 'year')?.code).toBe('OUT_OF_RANGE');
+
+      const equipmentUpdateErrors = await validate(
+        plainToInstance(UpdateEquipmentListingDto, { price: -1 }),
+      );
+      expect(extractDtoFieldErrors(equipmentUpdateErrors).find((f) => f.field === 'price')?.code).toBe(
+        'OUT_OF_RANGE',
+      );
+
+      const busCreateErrors = await validate(
+        plainToInstance(CreateBusListingDto, { price: -10, year: 1800 }),
+      );
+      const busFields = extractDtoFieldErrors(busCreateErrors);
+      expect(busFields.find((f) => f.field === 'price')?.code).toBe('OUT_OF_RANGE');
+      expect(busFields.find((f) => f.field === 'year')?.code).toBe('OUT_OF_RANGE');
+
+      const busUpdateErrors = await validate(plainToInstance(UpdateBusListingDto, { price: -1 }));
+      expect(extractDtoFieldErrors(busUpdateErrors).find((f) => f.field === 'price')?.code).toBe(
+        'OUT_OF_RANGE',
+      );
+
+      const operatorCreateErrors = await validate(
+        plainToInstance(CreateOperatorListingDto, {}),
+      );
+      const operatorFields = extractDtoFieldErrors(operatorCreateErrors);
+      expect(operatorFields.length).toBeGreaterThan(0);
+
+      const operatorUpdateErrors = await validate(
+        plainToInstance(UpdateOperatorListingDto, { hourlyRate: -10, experienceYears: -5 }),
+      );
+      const operatorUpdateFields = extractDtoFieldErrors(operatorUpdateErrors);
+      expect(operatorUpdateFields.length).toBeGreaterThan(0);
+
+      const listingCreateErrors = await validate(
+        plainToInstance(CreateListingDto, { price: -10, year: 1800 }),
+      );
+      const listingFields = extractDtoFieldErrors(listingCreateErrors);
+      expect(listingFields.find((f) => f.field === 'price')?.code).toBe('OUT_OF_RANGE');
+      expect(listingFields.find((f) => f.field === 'year')?.code).toBe('OUT_OF_RANGE');
+
+      const listingUpdateErrors = await validate(
+        plainToInstance(UpdateListingDto, { price: -1, latitude: 999, longitude: 999 }),
+      );
+      const listingUpdateFields = extractDtoFieldErrors(listingUpdateErrors);
+      expect(listingUpdateFields.find((f) => f.field === 'price')?.code).toBe('OUT_OF_RANGE');
+      expect(listingUpdateFields.find((f) => f.field === 'latitude')?.code).toBe('INVALID_FORMAT');
+      expect(listingUpdateFields.find((f) => f.field === 'longitude')?.code).toBe('INVALID_FORMAT');
+
+      const changePasswordErrors = await validate(
+        plainToInstance(ChangePasswordDto, {
+          currentPassword: '',
+          newPassword: `A1${'x'.repeat(75)}`,
+        }),
+      );
+      const cpFields = extractDtoFieldErrors(changePasswordErrors);
+      expect(cpFields.find((f) => f.field === 'currentPassword')?.code).toBe('TOO_SHORT');
+      expect(cpFields.find((f) => f.field === 'newPassword')?.code).toBe('TOO_LONG');
+
+      const updateProfileErrors = await validate(
+        plainToInstance(UpdateProfileDto, { phone: 'invalid-phone-123' }),
+      );
+      const profileFields = extractDtoFieldErrors(updateProfileErrors);
+      expect(profileFields.find((f) => f.field === 'phone')?.code).toBe('INVALID_FORMAT');
+    });
+
+    it('enforces per-DTO allowlists, strips sensitive/deprecated fields, and prevents cross-vertical bleed', () => {
+      const sensitiveErrors = ['role', 'passwordHash', 'email', 'isVerified', 'isBanned', 'isSuspended', 'suspensionReason', 'contactPhone', 'whatsapp', 'partCategory'].map(
+        (property) =>
+          ({
+            property,
+            value: 'SECRET_OR_CROSS_VALUE',
+            target: Object.assign(new CreateServiceDto(), {}),
+            constraints: { isString: 'must be string' },
+          }) as ValidationError,
+      );
+
+      expect(extractDtoFieldErrors(sensitiveErrors)).toEqual([]);
+
+      const sanitized = sanitizeAllowedFieldErrors(
+        [
+          { field: 'title', code: 'TOO_SHORT', message: 'العنوان قصير' },
+          { field: 'role', code: 'INVALID_VALUE', message: 'ADMIN' },
+          { field: 'passwordHash', code: 'INVALID_VALUE', message: '$2b$secret' },
+          { field: 'isVerified', code: 'INVALID_VALUE', message: 'true' },
+          { field: 'suspensionReason', code: 'INVALID_VALUE', message: 'internal' },
+          { field: 'contactPhone', code: 'INVALID_FORMAT', message: 'deprecated' },
+          { field: 'whatsapp', code: 'INVALID_FORMAT', message: 'deprecated' },
+        ],
+        ALL_ALLOWED_FIELD_ERROR_FIELDS,
+      );
+
+      expect(sanitized).toEqual([{ field: 'title', code: 'TOO_SHORT' }]);
+      expect(ALL_ALLOWED_FIELD_ERROR_FIELDS.has('role')).toBe(false);
+      expect(ALL_ALLOWED_FIELD_ERROR_FIELDS.has('passwordHash')).toBe(false);
+      expect(ALL_ALLOWED_FIELD_ERROR_FIELDS.has('isVerified')).toBe(false);
+      expect(ALL_ALLOWED_FIELD_ERROR_FIELDS.has('suspensionReason')).toBe(false);
+      expect(ALL_ALLOWED_FIELD_ERROR_FIELDS.has('contactPhone')).toBe(false);
+      expect(ALL_ALLOWED_FIELD_ERROR_FIELDS.has('whatsapp')).toBe(false);
+    });
+
+    describe('HTTP integration with global pipe and filter', () => {
+      let app: INestApplication;
+      const mockServicesService = { create: jest.fn(), update: jest.fn() };
+      const mockListingsService = { create: jest.fn(), update: jest.fn() };
+      const mockUsersService = { updateProfile: jest.fn(), changePassword: jest.fn() };
+      const mockExpoPushService = { registerToken: jest.fn() };
+
+      beforeAll(async () => {
+        const moduleRef = await Test.createTestingModule({
+          controllers: [ServicesController, ListingsController, UsersController],
+          providers: [
+            { provide: ServicesService, useValue: mockServicesService },
+            { provide: ListingsService, useValue: mockListingsService },
+            { provide: UsersService, useValue: mockUsersService },
+            { provide: ExpoPushService, useValue: mockExpoPushService },
+          ],
+        })
+          .overrideGuard(JwtAuthGuard)
+          .useValue({
+            canActivate: (context: ExecutionContext) => {
+              const req = context.switchToHttp().getRequest();
+              req.user = { sub: 'user-test-1' };
+              return true;
+            },
+          })
+          .compile();
+
+        app = moduleRef.createNestApplication();
+        app.useGlobalPipes(createAppValidationPipe(ALL_STRUCTURED_VALIDATION_DTOS));
+        app.useGlobalFilters(new GlobalExceptionFilter());
+        await app.init();
+      });
+
+      afterAll(async () => {
+        await app.close();
+      });
+
+      beforeEach(() => {
+        jest.clearAllMocks();
+      });
+
+      it('POST /services returns 400 with fieldErrors, preserves first Arabic message, and rejects deprecated contactPhone/whatsapp', async () => {
+        const res = await request(app.getHttpServer())
+          .post('/services')
+          .send({
+            title: 'x'.repeat(205),
+            priceFrom: 250,
+            priceTo: 100,
+            contactPhone: 'BAD_DEPRECATED',
+            partCategory: 'SHOULD_BE_REJECTED',
+          })
+          .expect(HttpStatus.BAD_REQUEST);
+
+        expect(mockServicesService.create).not.toHaveBeenCalled();
+        expect(res.body.statusCode).toBe(400);
+        expect(typeof res.body.message).toBe('string');
+        expect(Array.isArray(res.body.fieldErrors)).toBe(true);
+        expect(res.body.fieldErrors.find((f: { field: string }) => f.field === 'title')?.code).toBe(
+          'TOO_LONG',
+        );
+        expect(res.body.fieldErrors.some((f: { field: string }) => f.field === 'priceTo')).toBe(true);
+        expect(
+          res.body.fieldErrors.some((f: { field: string }) =>
+            ['contactPhone', 'whatsapp', 'partCategory'].includes(f.field),
+          ),
+        ).toBe(false);
+        expect(JSON.stringify(res.body)).not.toContain('BAD_DEPRECATED');
+        expect(JSON.stringify(res.body)).not.toContain('SHOULD_BE_REJECTED');
+      });
+
+      it('POST /listings returns 400 with fieldErrors for car listing and never echoes rejected values', async () => {
+        const res = await request(app.getHttpServer())
+          .post('/listings')
+          .send({
+            title: 'x',
+            price: -999,
+            listingType: 'INVALID_ENUM_MARKER',
+          })
+          .expect(HttpStatus.BAD_REQUEST);
+
+        expect(mockListingsService.create).not.toHaveBeenCalled();
+        expect(res.body.statusCode).toBe(400);
+        expect(typeof res.body.message).toBe('string');
+        expect(res.body.fieldErrors.some((f: { field: string }) => f.field === 'price')).toBe(true);
+        expect(res.body.fieldErrors.some((f: { field: string }) => f.field === 'listingType')).toBe(
+          true,
+        );
+        expect(JSON.stringify(res.body)).not.toContain('INVALID_ENUM_MARKER');
+      });
+
+      it('PATCH /users/me/password returns 400 with fieldErrors without leaking submitted passwords', async () => {
+        const secretNewPassword = `A1${'SecretPass'.repeat(8)}`;
+        const res = await request(app.getHttpServer())
+          .patch('/users/me/password')
+          .send({
+            currentPassword: 'SENSITIVE_CURRENT_PASSWORD',
+            newPassword: secretNewPassword,
+          })
+          .expect(HttpStatus.BAD_REQUEST);
+
+        expect(mockUsersService.changePassword).not.toHaveBeenCalled();
+        expect(res.body.statusCode).toBe(400);
+        expect(res.body.fieldErrors.find((f: { field: string }) => f.field === 'newPassword')?.code).toBe(
+          'TOO_LONG',
+        );
+        expect(JSON.stringify(res.body)).not.toContain('SENSITIVE_CURRENT_PASSWORD');
+        expect(JSON.stringify(res.body)).not.toContain('SecretPass');
+      });
+
+      it('PATCH /users/me returns 400 with INVALID_FORMAT on bad phone and rejects role/isVerified tampering', async () => {
+        const res = await request(app.getHttpServer())
+          .patch('/users/me')
+          .send({
+            phone: 'not-a-valid-phone',
+            role: 'ADMIN',
+            isVerified: true,
+          })
+          .expect(HttpStatus.BAD_REQUEST);
+
+        expect(mockUsersService.updateProfile).not.toHaveBeenCalled();
+        expect(res.body.statusCode).toBe(400);
+        expect(res.body.fieldErrors).toEqual(
+          expect.arrayContaining([expect.objectContaining({ field: 'phone', code: 'INVALID_FORMAT' })]),
+        );
+        expect(
+          res.body.fieldErrors.some((f: { field: string }) =>
+            ['role', 'isVerified'].includes(f.field),
+          ),
+        ).toBe(false);
+      });
+
+      it('GET /services with invalid query omits fieldErrors on QueryServicesDto (non-targeted DTO)', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/services?page=not-a-number&serviceType=INVALID_TYPE')
+          .expect(HttpStatus.BAD_REQUEST);
+
+        expect(res.body.statusCode).toBe(400);
+        expect(res.body).not.toHaveProperty('fieldErrors');
+      });
+    });
+
+    it('keeps non-targeted DTOs (LoginDto, VerifyEmailDto, QueryServicesDto) without fieldErrors in factory', async () => {
+      const factory = createAppValidationPipe(ALL_STRUCTURED_VALIDATION_DTOS).createExceptionFactory();
+
+      const loginErrors = await validate(plainToInstance(LoginDto, { email: 'bad-email' }));
+      const verifyErrors = await validate(plainToInstance(VerifyEmailDto, {}));
+      const queryErrors = await validate(plainToInstance(QueryServicesDto, { page: -1 }));
+
+      for (const errors of [loginErrors, verifyErrors, queryErrors]) {
+        expect(errors.length).toBeGreaterThan(0);
+        const exception = factory(errors) as BadRequestException;
+        const body = exception.getResponse() as Record<string, unknown>;
+        expect(body).not.toHaveProperty('fieldErrors');
+      }
     });
   });
 });

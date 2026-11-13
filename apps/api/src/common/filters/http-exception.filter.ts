@@ -7,7 +7,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { FieldError, sanitizePartsFieldErrors } from '../pipes/validation-field-errors';
+import {
+  ALL_ALLOWED_FIELD_ERROR_FIELDS,
+  FieldError,
+  sanitizeAllowedFieldErrors,
+} from '../pipes/validation-field-errors';
 
 const containsArabic = (text: string): boolean => /[\u0600-\u06FF]/.test(text);
 
@@ -74,7 +78,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
 
         if (status === HttpStatus.BAD_REQUEST) {
-          extractedFieldErrors = sanitizePartsFieldErrors(res.fieldErrors);
+          extractedFieldErrors = sanitizeAllowedFieldErrors(
+            res.fieldErrors,
+            ALL_ALLOWED_FIELD_ERROR_FIELDS,
+          );
         }
       }
 
