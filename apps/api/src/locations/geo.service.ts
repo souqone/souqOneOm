@@ -65,8 +65,8 @@ export class GeoService {
       }
 
       await this.prisma.$executeRawUnsafe(`
-        UPDATE "${tableName}" 
-        SET "${locationColumnName}" = ST_SetSRID(ST_MakePoint($1, $2), 4326) 
+        UPDATE "${tableName}"
+        SET "${locationColumnName}" = ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)
         WHERE "${idColumnName}" = $3;
       `, lng, lat, recordId);
 

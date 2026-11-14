@@ -283,4 +283,19 @@ describe('GeoService', () => {
       expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(2);
     });
   });
+
+  // ══════════════════════════════════════════════
+  // Spec 2.7 — PostGIS explicit ::float8 cast (P1-02 / D-319)
+  // ══════════════════════════════════════════════
+
+  describe('syncLocation() — PostGIS float8 cast (P1-02)', () => {
+    it('casts ST_MakePoint parameters as $1::float8, $2::float8 to avoid PostGIS integer ambiguity', async () => {
+      await service.syncLocation('operator_listings', 'op-1', 23.588, 58.382);
+
+      expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(1);
+      const calledSql: string = mockPrisma.$executeRawUnsafe.mock.calls[0][0];
+      expect(calledSql).toContain('ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)');
+      expect(mockPrisma.$executeRawUnsafe.mock.calls[0].slice(1)).toEqual([58.382, 23.588, 'op-1']);
+    });
+  });
 });
