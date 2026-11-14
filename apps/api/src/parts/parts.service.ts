@@ -50,6 +50,22 @@ export class PartsService {
     const cleanDto = stripDeprecatedContactFields(dto);
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const duplicate = await this.prisma.sparePart.findFirst({
+      where: {
+        sellerId,
+        title: cleanDto.title,
+        description: cleanDto.description,
+        partCategory: cleanDto.partCategory,
+        price: new Prisma.Decimal(cleanDto.price),
+        deletedAt: null,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+    });
+    if (duplicate) {
+      throw new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.');
+    }
+
     const slug = this.generateSlug(cleanDto.title);
 
     const part = await this.prisma.$transaction(async (tx) => {

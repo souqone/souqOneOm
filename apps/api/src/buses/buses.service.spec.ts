@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BusesService } from './buses.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -568,6 +569,69 @@ describe('BusesService', () => {
       mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
       const dto = { version: 1, governorateId: 1, wilayaId: 10 } as any;
       await expect(service.update('bus-1', 'user-1', dto)).rejects.toThrow('Mismatch');
+    });
+  });
+
+  describe('5-minute duplicate guard', () => {
+    it('throws ConflictException when duplicate bus listing (with price=null) is created within 5 minutes', async () => {
+      mockGeoService.validateLocationPair.mockResolvedValueOnce(undefined);
+      mockPrisma.busListing.findFirst.mockResolvedValueOnce({ id: 'existing-bus' });
+      const dto = {
+        title: 'حافلة للإيجار',
+        description: 'حافلة 30 راكب مع سائق',
+        busListingType: 'BUS_RENT',
+        busType: 'COASTER',
+        make: 'Toyota',
+        model: 'Coaster',
+        year: 2022,
+        capacity: 30,
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'user-1')).rejects.toThrow(
+        new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.'),
+      );
+      expect(mockPrisma.busListing.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: 'user-1',
+          title: 'حافلة للإيجار',
+          description: 'حافلة 30 راكب مع سائق',
+          busListingType: 'BUS_RENT',
+          price: null,
+          deletedAt: null,
+          createdAt: { gte: expect.any(Date) },
+        }),
+      });
+      expect(mockPrisma.busListing.create).not.toHaveBeenCalled();
+    });
+
+    it('allows creation when no duplicate exists and matches Decimal price when provided', async () => {
+      mockGeoService.validateLocationPair.mockResolvedValueOnce(undefined);
+      mockPrisma.busListing.findFirst.mockResolvedValueOnce(null);
+      mockPrisma.busListing.create.mockResolvedValueOnce(mockBus);
+      const dto = {
+        title: 'حافلة للبيع',
+        description: 'حافلة نظيفة جداً',
+        busListingType: 'BUS_SALE',
+        busType: 'COASTER',
+        make: 'Toyota',
+        model: 'Coaster',
+        year: 2022,
+        capacity: 30,
+        price: 8500,
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'user-1')).resolves.toBeDefined();
+      expect(mockPrisma.busListing.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          price: new Prisma.Decimal(8500),
+          deletedAt: null,
+        }),
+      });
+      expect(mockPrisma.busListing.create).toHaveBeenCalledTimes(1);
     });
   });
 });

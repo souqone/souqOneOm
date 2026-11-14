@@ -105,6 +105,22 @@ export class BusesService {
     const cleanDto = stripDeprecatedContactFields(dto);
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const duplicate = await this.prisma.busListing.findFirst({
+      where: {
+        userId,
+        title: cleanDto.title,
+        description: cleanDto.description,
+        busListingType: cleanDto.busListingType,
+        price: cleanDto.price != null ? new Prisma.Decimal(cleanDto.price) : null,
+        deletedAt: null,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+    });
+    if (duplicate) {
+      throw new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.');
+    }
+
     const slug = generateSlug(cleanDto.title);
 
     const bus = await this.prisma.$transaction(async (tx) => {

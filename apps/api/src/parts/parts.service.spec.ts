@@ -1,3 +1,5 @@
+import { ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PartsService } from './parts.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,12 +16,15 @@ describe('PartsService', () => {
     validateLocationPair: jest.fn(),
   };
 
-  const mockPrisma = {
+  const mockPrisma: any = {
     sparePart: {
       create: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue(null),
       findUnique: jest.fn(),
       update: jest.fn(),
-    }
+    },
+    outboxEvent: { create: jest.fn().mockResolvedValue({}) },
+    $transaction: jest.fn(async (cb: any) => cb(mockPrisma)),
   };
 
   beforeEach(async () => {
@@ -54,6 +59,51 @@ describe('PartsService', () => {
       mockGeoService.validateLocationPair.mockRejectedValueOnce(new Error('Mismatch'));
       const dto = { governorateId: 1, wilayaId: 10 } as any;
       await expect(service.update('1', 'seller-1', dto)).rejects.toThrow('Mismatch');
+    });
+  });
+
+  describe('5-minute duplicate guard', () => {
+    it('throws ConflictException when duplicate spare part is created within 5 minutes', async () => {
+      mockPrisma.sparePart.findFirst.mockResolvedValueOnce({ id: 'existing-part' });
+      const dto = {
+        title: 'فلتر هواء أصلي',
+        description: 'فلتر هواء جديد',
+        partCategory: 'ENGINE',
+        price: 25,
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'seller-1')).rejects.toThrow(
+        new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.'),
+      );
+      expect(mockPrisma.sparePart.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          sellerId: 'seller-1',
+          title: 'فلتر هواء أصلي',
+          description: 'فلتر هواء جديد',
+          partCategory: 'ENGINE',
+          price: new Prisma.Decimal(25),
+          deletedAt: null,
+          createdAt: { gte: expect.any(Date) },
+        }),
+      });
+      expect(mockPrisma.sparePart.create).not.toHaveBeenCalled();
+    });
+
+    it('allows creation when no duplicate exists within 5 minutes', async () => {
+      mockPrisma.sparePart.findFirst.mockResolvedValueOnce(null);
+      const dto = {
+        title: 'فلتر هواء أصلي',
+        description: 'فلتر هواء جديد',
+        partCategory: 'ENGINE',
+        price: 30,
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'seller-1')).resolves.toBeDefined();
+      expect(mockPrisma.sparePart.create).toHaveBeenCalledTimes(1);
     });
   });
 });
