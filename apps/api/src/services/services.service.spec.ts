@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ServicesService } from './services.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,6 +15,7 @@ const mockPrisma = {
   carService: {
     create: jest.fn(),
     findMany: jest.fn(),
+    findFirst: jest.fn().mockResolvedValue(null),
     findUnique: jest.fn(),
     count: jest.fn(),
     update: jest.fn(),
@@ -372,6 +374,63 @@ describe('ServicesService', () => {
       mockPrisma.carService.update.mockResolvedValue({ ...mockItem, status: 'INACTIVE' });
       await service.toggleStatus('svc-1', 'user-1');
       expect(mockEventEmitter.emit).toHaveBeenCalledWith('listing.status_changed', expect.objectContaining({ status: 'INACTIVE' }));
+    });
+  });
+
+  describe('5-minute duplicate guard', () => {
+    it('throws ConflictException when duplicate car service is created within 5 minutes', async () => {
+      mockGeoService.validateLocationPair.mockResolvedValueOnce(undefined);
+      mockPrisma.carService.findFirst.mockResolvedValueOnce({ id: 'existing-svc' });
+      const dto = {
+        title: 'خدمة تغيير زيت',
+        description: 'تغيير زيت مع فلتر أصلي',
+        serviceType: 'MAINTENANCE',
+        providerType: 'WORKSHOP',
+        providerName: 'ورشة الأمان',
+        priceFrom: 12,
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'user-1')).rejects.toThrow(
+        new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.'),
+      );
+      expect(mockPrisma.carService.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: 'user-1',
+          title: 'خدمة تغيير زيت',
+          description: 'تغيير زيت مع فلتر أصلي',
+          serviceType: 'MAINTENANCE',
+          priceFrom: new Prisma.Decimal(12),
+          deletedAt: null,
+          createdAt: { gte: expect.any(Date) },
+        }),
+      });
+      expect(mockPrisma.carService.create).not.toHaveBeenCalled();
+    });
+
+    it('allows creation when no duplicate exists and uses priceFrom: null when omitted', async () => {
+      mockGeoService.validateLocationPair.mockResolvedValueOnce(undefined);
+      mockPrisma.carService.findFirst.mockResolvedValueOnce(null);
+      mockPrisma.carService.create.mockResolvedValueOnce(mockItem);
+      const dto = {
+        title: 'خدمة فحص شامل',
+        description: 'فحص كمبيوتر وميكانيك',
+        serviceType: 'INSPECTION',
+        providerType: 'WORKSHOP',
+        providerName: 'ورشة الأمان',
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'user-1')).resolves.toBeDefined();
+      expect(mockPrisma.carService.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          priceFrom: null,
+          deletedAt: null,
+        }),
+      });
+      expect(mockPrisma.carService.create).toHaveBeenCalledTimes(1);
     });
   });
 });

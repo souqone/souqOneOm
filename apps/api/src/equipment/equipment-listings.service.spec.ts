@@ -3,7 +3,8 @@ import { EquipmentListingsService } from './equipment-listings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GeoService } from '../locations/geo.service';
-import { InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { EquipmentViewCounterService } from './equipment-view-counter.service';
@@ -17,6 +18,8 @@ describe('EquipmentListingsService - Image Handling', () => {
       equipmentListing: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
         count: jest.fn(),
       },
       equipmentListingImage: {
@@ -36,7 +39,7 @@ describe('EquipmentListingsService - Image Handling', () => {
         EquipmentListingsService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
-        { provide: GeoService, useValue: {} },
+        { provide: GeoService, useValue: { validateLocationPair: jest.fn().mockResolvedValue(undefined), syncLocation: jest.fn().mockResolvedValue(undefined) } },
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
         { provide: EquipmentViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
@@ -245,6 +248,64 @@ describe('EquipmentListingsService - Image Handling', () => {
           viewerIp: '192.168.1.50',
         }),
       );
+    });
+  });
+
+  describe('5-minute duplicate guard', () => {
+    it('throws ConflictException when duplicate equipment listing is created within 5 minutes', async () => {
+      prisma.equipmentListing.findFirst.mockResolvedValueOnce({ id: 'existing-eq' });
+      const dto = {
+        title: 'حفارة كاتربيلر 320',
+        description: 'حفارة بحالة ممتازة',
+        equipmentType: 'EXCAVATOR',
+        listingType: 'EQUIPMENT_SALE',
+        price: 15000,
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'user-123')).rejects.toThrow(
+        new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.'),
+      );
+      expect(prisma.equipmentListing.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: 'user-123',
+          title: 'حفارة كاتربيلر 320',
+          description: 'حفارة بحالة ممتازة',
+          equipmentType: 'EXCAVATOR',
+          listingType: 'EQUIPMENT_SALE',
+          price: new Prisma.Decimal(15000),
+          deletedAt: null,
+          createdAt: { gte: expect.any(Date) },
+        }),
+      });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('allows creation when no duplicate exists and uses price: null when price is undefined', async () => {
+      prisma.equipmentListing.findFirst.mockResolvedValueOnce(null);
+      prisma.$transaction.mockImplementationOnce(async (cb: any) =>
+        cb({
+          equipmentListing: { create: jest.fn().mockResolvedValue({ id: 'eq-new', price: null, dailyPrice: null, monthlyPrice: null, budgetMin: null, budgetMax: null }) },
+          outboxEvent: { create: jest.fn().mockResolvedValue({}) },
+        }),
+      );
+      const dto = {
+        title: 'مطلوب رافعة شوكية',
+        description: 'مطلوب رافعة شوكية للإيجار',
+        equipmentType: 'FORKLIFT',
+        listingType: 'EQUIPMENT_WANTED',
+        governorateId: 1,
+        wilayaId: 101,
+      } as any;
+
+      await expect(service.create(dto, 'user-123')).resolves.toBeDefined();
+      expect(prisma.equipmentListing.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          price: null,
+          deletedAt: null,
+        }),
+      });
     });
   });
 });

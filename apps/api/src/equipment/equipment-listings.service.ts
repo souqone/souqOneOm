@@ -73,6 +73,23 @@ export class EquipmentListingsService {
     
     await this.geoService.validateLocationPair(cleanDto.governorateId, cleanDto.wilayaId);
 
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const duplicate = await this.prisma.equipmentListing.findFirst({
+      where: {
+        userId,
+        title: cleanDto.title,
+        description: cleanDto.description,
+        equipmentType: cleanDto.equipmentType as EquipmentType,
+        listingType: cleanDto.listingType as EquipmentListingType,
+        price: cleanDto.price != null ? new Prisma.Decimal(cleanDto.price) : null,
+        deletedAt: null,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+    });
+    if (duplicate) {
+      throw new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.');
+    }
+
     const item = await this.prisma.$transaction(async (tx) => {
       await this.activeListingsLimitService.assertWithinLimit(userId, tx, 'equipment');
       const createdItem = await tx.equipmentListing.create({

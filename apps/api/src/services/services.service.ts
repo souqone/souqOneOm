@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -73,7 +73,26 @@ export class ServicesService extends BaseListingService {
   }
 
   async create(dto: CreateServiceDto, userId: string) {
+    if (this.sellerContactGate) {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
+
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const duplicate = await this.prisma.carService.findFirst({
+      where: {
+        userId,
+        title: dto.title,
+        description: dto.description,
+        serviceType: dto.serviceType,
+        priceFrom: dto.priceFrom != null ? new Prisma.Decimal(dto.priceFrom) : null,
+        deletedAt: null,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+    });
+    if (duplicate) {
+      throw new ConflictException('تم نشر إعلان مشابه جداً مؤخراً. يرجى الانتظار قليلاً.');
+    }
 
     const item = await super.create(dto, userId);
     if (dto.latitude && dto.longitude) {
