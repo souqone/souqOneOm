@@ -73,6 +73,9 @@ export class ServicesService extends BaseListingService {
   }
 
   async create(dto: CreateServiceDto, userId: string) {
+    if (this.sellerContactGate) {
+      await this.sellerContactGate.assertCanPublish(userId);
+    }
     await this.geoService.validateLocationPair(dto.governorateId, dto.wilayaId);
 
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
