@@ -2,6 +2,7 @@ import {
   IsString, IsOptional, IsEnum, IsInt, IsBoolean,
   IsNumber, IsArray, Min, MinLength, MaxLength, IsPositive, ArrayMinSize, ValidateIf
 } from 'class-validator';
+import { EquipmentType } from '@prisma/client';
 
 export class CreateOperatorListingDto {
   @IsString() 
@@ -23,10 +24,10 @@ export class CreateOperatorListingDto {
   @IsInt() @Min(0)
   experienceYears!: number;
 
-  @IsArray() 
-  @ArrayMinSize(1) 
-  @IsString({ each: true })
-  equipmentTypes!: string[];
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsEnum(EquipmentType, { each: true, message: 'نوع المعدة غير صالح' })
+  equipmentTypes!: EquipmentType[];
 
   @IsArray() 
   @ArrayMinSize(1) 
