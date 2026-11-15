@@ -188,7 +188,7 @@ export class BusesService {
     await this.invalidateCache();
 
 
-    this.emitListingEvent(LISTING_EVENTS.CREATED, bus);
+    this.emitListingEvent(LISTING_EVENTS.CREATED, bus, undefined, userId);
 
     return bus;
   }
@@ -585,9 +585,9 @@ export class BusesService {
     await this.invalidateCache(id);
 
 
-    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
     if (statusChanged) {
-      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
+      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status, userId);
     }
 
     return updated;
@@ -614,7 +614,7 @@ export class BusesService {
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('BUS_LISTING', id);
 
-    this.emitListingEvent(LISTING_EVENTS.DELETED, bus);
+    this.emitListingEvent(LISTING_EVENTS.DELETED, bus, undefined, userId);
 
     return { message: 'تم حذف الإعلان بنجاح' };
   }
@@ -704,7 +704,7 @@ export class BusesService {
     };
   }
 
-  private emitListingEvent(event: string, item: any, status?: string) {
+  private emitListingEvent(event: string, item: any, status?: string, actorId?: string) {
     try {
       const payload: ListingEventPayload = {
         entityType: ENTITY_TYPES.BUS_LISTING,
@@ -712,6 +712,7 @@ export class BusesService {
         title: item.title,
         userId: item.userId,
         status,
+        actorId,
       };
       this.eventEmitter.emit(event, payload);
     } catch (err) {

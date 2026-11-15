@@ -84,6 +84,7 @@ export class ListingNotificationListener {
         title,
         body,
         userId,
+        actorId: payload.actorId,
         data: {
           entityType: payload.entityType,
           listingId: payload.listingId,

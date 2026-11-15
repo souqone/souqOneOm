@@ -131,7 +131,7 @@ export class PartsService {
 
 
 
-    this.emitListingEvent(LISTING_EVENTS.CREATED, part);
+    this.emitListingEvent(LISTING_EVENTS.CREATED, part, undefined, sellerId);
 
     return part;
   }
@@ -315,7 +315,7 @@ export class PartsService {
 
 
 
-    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
 
     return updated;
   }
@@ -352,11 +352,11 @@ export class PartsService {
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
 
-    this.emitListingEvent(LISTING_EVENTS.DELETED, part);
+    this.emitListingEvent(LISTING_EVENTS.DELETED, part, undefined, userId);
 
     return { message: 'تم حذف الإعلان بنجاح' };
   }
-  private emitListingEvent(event: string, item: any, status?: string) {
+  private emitListingEvent(event: string, item: any, status?: string, actorId?: string) {
     try {
       const payload: ListingEventPayload = {
         entityType: ENTITY_TYPES.SPARE_PART,
@@ -364,6 +364,7 @@ export class PartsService {
         title: item.title,
         userId: item.sellerId,
         status,
+        actorId,
       };
       this.eventEmitter.emit(event, payload);
     } catch (err) {
