@@ -50,6 +50,10 @@ export class UploadsService {
     return this.images.removeImageFromPart(imageId, userId);
   }
 
+  async reorderPartImages(partId: string, userId: string, imageIds: string[]) {
+    return this.images.reorderPartImages(partId, userId, imageIds);
+  }
+
   // ─── Car Service Images ───
 
   async addImageToService(serviceId: string, userId: string, url: string, isPrimary: boolean) {
@@ -58,6 +62,10 @@ export class UploadsService {
 
   async removeImageFromService(imageId: string, userId: string) {
     return this.images.removeImageFromService(imageId, userId);
+  }
+
+  async reorderServiceImages(serviceId: string, userId: string, imageIds: string[]) {
+    return this.images.reorderServiceImages(serviceId, userId, imageIds);
   }
 
   // ─── Bus Listing Images ───
@@ -70,6 +78,10 @@ export class UploadsService {
     return this.images.removeImageFromBus(imageId, userId);
   }
 
+  async reorderBusImages(busId: string, userId: string, imageIds: string[]) {
+    return this.images.reorderBusImages(busId, userId, imageIds);
+  }
+
   // ─── Equipment Images ───
 
   async addImageToEquipment(equipmentId: string, userId: string, url: string, isPrimary: boolean) {
@@ -78,6 +90,10 @@ export class UploadsService {
 
   async removeImageFromEquipment(imageId: string, userId: string) {
     return this.images.removeImageFromEquipment(imageId, userId);
+  }
+
+  async reorderEquipmentImages(equipmentId: string, userId: string, imageIds: string[]) {
+    return this.images.reorderEquipmentImages(equipmentId, userId, imageIds);
   }
 
 }

@@ -160,6 +160,18 @@ export class UploadsController {
     return this.uploadsService.removeImageFromPart(imageId, user.sub);
   }
 
+  /** Reorder images for a spare part */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Patch('parts/:partId/images/reorder')
+  async reorderPartImages(
+    @Param('partId') partId: string,
+    @Body() body: { imageIds: string[] },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.reorderPartImages(partId, user.sub, body?.imageIds);
+  }
+
   // ─── Car Service Image Management ───
 
   @UseGuards(JwtAuthGuard)
@@ -202,6 +214,18 @@ export class UploadsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.uploadsService.removeImageFromService(imageId, user.sub);
+  }
+
+  /** Reorder images for a car service */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Patch('services/:serviceId/images/reorder')
+  async reorderServiceImages(
+    @Param('serviceId') serviceId: string,
+    @Body() body: { imageIds: string[] },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.reorderServiceImages(serviceId, user.sub, body?.imageIds);
   }
 
   // ─── Bus Listing Image Management ───
@@ -248,6 +272,18 @@ export class UploadsController {
     return this.uploadsService.removeImageFromBus(imageId, user.sub);
   }
 
+  /** Reorder images for a bus listing */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Patch('buses/:busId/images/reorder')
+  async reorderBusImages(
+    @Param('busId') busId: string,
+    @Body() body: { imageIds: string[] },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.reorderBusImages(busId, user.sub, body?.imageIds);
+  }
+
   // ─── Equipment Image Management ───
 
   @UseGuards(JwtAuthGuard)
@@ -290,5 +326,17 @@ export class UploadsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.uploadsService.removeImageFromEquipment(imageId, user.sub);
+  }
+
+  /** Reorder images for an equipment listing */
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Patch('equipment/:equipmentId/images/reorder')
+  async reorderEquipmentImages(
+    @Param('equipmentId') equipmentId: string,
+    @Body() body: { imageIds: string[] },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.reorderEquipmentImages(equipmentId, user.sub, body?.imageIds);
   }
 }

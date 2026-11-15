@@ -120,37 +120,188 @@ export class UploadImageManagerService {
     return { message: 'تم حذف الصورة بنجاح' };
   }
 
-  async reorderImages(listingId: string, userId: string, imageIds: string[]) {
-    const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
-    if (!listing) throw new NotFoundException('الإعلان غير موجود');
-    if (listing.sellerId !== userId) throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+  private async reorderSectionImages(params: {
+    entityId: string;
+    userId: string;
+    imageIds: string[];
+    notFoundMessage: string;
+    findParent: () => Promise<{ ownerId: string } | null>;
+    findImages: (ids: string[]) => Promise<Array<{ id: string; parentId: string }>>;
+    resetOtherPrimary: () => Promise<unknown>;
+    updateImageOrder: (id: string, order: number, isPrimary: boolean) => Promise<unknown>;
+    onMutated?: () => Promise<void>;
+  }) {
+    if (!Array.isArray(params.imageIds) || params.imageIds.length === 0) {
+      throw new BadRequestException('قائمة الصور غير صالحة');
+    }
+    if (new Set(params.imageIds).size !== params.imageIds.length) {
+      throw new BadRequestException('قائمة الصور تحتوي على معرّفات مكررة');
+    }
 
-    const images = await this.prisma.listingImage.findMany({
-      where: { id: { in: imageIds } },
-      select: { listingId: true },
-    });
+    const parent = await params.findParent();
+    if (!parent) throw new NotFoundException(params.notFoundMessage);
+    if (parent.ownerId !== params.userId) {
+      throw new ForbiddenException('لا يمكنك تعديل إعلان غيرك');
+    }
 
-    if (images.length !== imageIds.length) {
+    const images = await params.findImages(params.imageIds);
+    if (images.length !== params.imageIds.length) {
       throw new BadRequestException('بعض الصور غير موجودة');
     }
 
-    const invalidImage = images.find(img => img.listingId !== listingId);
+    const invalidImage = images.find((img) => img.parentId !== params.entityId);
     if (invalidImage) {
       throw new ForbiddenException('لا يمكنك ترتيب صور لا تنتمي لهذا الإعلان');
     }
 
-    await this.prisma.$transaction(
-      imageIds.map((id, index) =>
-        this.prisma.listingImage.update({
-          where: { id },
-          data: { order: index, isPrimary: index === 0 },
-        }),
+    await this.prisma.$transaction([
+      params.resetOtherPrimary() as any,
+      ...params.imageIds.map((id, index) =>
+        params.updateImageOrder(id, index, index === 0) as any,
       ),
-    );
+    ]);
 
-    await this.invalidateListingCaches(listingId);
+    if (params.onMutated) await params.onMutated();
 
     return { message: 'تم إعادة ترتيب الصور بنجاح' };
+  }
+
+  async reorderImages(listingId: string, userId: string, imageIds: string[]) {
+    return this.reorderSectionImages({
+      entityId: listingId,
+      userId,
+      imageIds,
+      notFoundMessage: 'الإعلان غير موجود',
+      findParent: async () => {
+        const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
+        return listing ? { ownerId: listing.sellerId } : null;
+      },
+      findImages: async (ids) => {
+        const rows = await this.prisma.listingImage.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, listingId: true },
+        });
+        return rows.map((r) => ({ id: r.id, parentId: r.listingId }));
+      },
+      resetOtherPrimary: () =>
+        this.prisma.listingImage.updateMany({
+          where: { listingId, id: { notIn: imageIds } },
+          data: { isPrimary: false },
+        }),
+      updateImageOrder: (id, order, isPrimary) =>
+        this.prisma.listingImage.update({ where: { id }, data: { order, isPrimary } }),
+      onMutated: () => this.invalidateListingCaches(listingId),
+    });
+  }
+
+  async reorderPartImages(partId: string, userId: string, imageIds: string[]) {
+    return this.reorderSectionImages({
+      entityId: partId,
+      userId,
+      imageIds,
+      notFoundMessage: 'قطعة الغيار غير موجودة',
+      findParent: async () => {
+        const part = await this.prisma.sparePart.findFirst({ where: { id: partId, deletedAt: null } });
+        return part ? { ownerId: part.sellerId } : null;
+      },
+      findImages: async (ids) => {
+        const rows = await this.prisma.sparePartImage.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, sparePartId: true },
+        });
+        return rows.map((r) => ({ id: r.id, parentId: r.sparePartId }));
+      },
+      resetOtherPrimary: () =>
+        this.prisma.sparePartImage.updateMany({
+          where: { sparePartId: partId, id: { notIn: imageIds } },
+          data: { isPrimary: false },
+        }),
+      updateImageOrder: (id, order, isPrimary) =>
+        this.prisma.sparePartImage.update({ where: { id }, data: { order, isPrimary } }),
+    });
+  }
+
+  async reorderServiceImages(serviceId: string, userId: string, imageIds: string[]) {
+    return this.reorderSectionImages({
+      entityId: serviceId,
+      userId,
+      imageIds,
+      notFoundMessage: 'الخدمة غير موجودة',
+      findParent: async () => {
+        const svc = await this.prisma.carService.findFirst({ where: { id: serviceId, deletedAt: null } });
+        return svc ? { ownerId: svc.userId } : null;
+      },
+      findImages: async (ids) => {
+        const rows = await this.prisma.carServiceImage.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, carServiceId: true },
+        });
+        return rows.map((r) => ({ id: r.id, parentId: r.carServiceId }));
+      },
+      resetOtherPrimary: () =>
+        this.prisma.carServiceImage.updateMany({
+          where: { carServiceId: serviceId, id: { notIn: imageIds } },
+          data: { isPrimary: false },
+        }),
+      updateImageOrder: (id, order, isPrimary) =>
+        this.prisma.carServiceImage.update({ where: { id }, data: { order, isPrimary } }),
+      onMutated: () => this.invalidateCarServiceCaches(serviceId),
+    });
+  }
+
+  async reorderBusImages(busId: string, userId: string, imageIds: string[]) {
+    return this.reorderSectionImages({
+      entityId: busId,
+      userId,
+      imageIds,
+      notFoundMessage: 'إعلان الحافلة غير موجود',
+      findParent: async () => {
+        const bus = await this.prisma.busListing.findFirst({ where: { id: busId, deletedAt: null } });
+        return bus ? { ownerId: bus.userId } : null;
+      },
+      findImages: async (ids) => {
+        const rows = await this.prisma.busListingImage.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, busListingId: true },
+        });
+        return rows.map((r) => ({ id: r.id, parentId: r.busListingId }));
+      },
+      resetOtherPrimary: () =>
+        this.prisma.busListingImage.updateMany({
+          where: { busListingId: busId, id: { notIn: imageIds } },
+          data: { isPrimary: false },
+        }),
+      updateImageOrder: (id, order, isPrimary) =>
+        this.prisma.busListingImage.update({ where: { id }, data: { order, isPrimary } }),
+      onMutated: () => this.invalidateBusCaches(busId),
+    });
+  }
+
+  async reorderEquipmentImages(equipmentId: string, userId: string, imageIds: string[]) {
+    return this.reorderSectionImages({
+      entityId: equipmentId,
+      userId,
+      imageIds,
+      notFoundMessage: 'إعلان المعدة غير موجود',
+      findParent: async () => {
+        const eq = await this.prisma.equipmentListing.findFirst({ where: { id: equipmentId, deletedAt: null } });
+        return eq ? { ownerId: eq.userId } : null;
+      },
+      findImages: async (ids) => {
+        const rows = await this.prisma.equipmentListingImage.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, equipmentListingId: true },
+        });
+        return rows.map((r) => ({ id: r.id, parentId: r.equipmentListingId }));
+      },
+      resetOtherPrimary: () =>
+        this.prisma.equipmentListingImage.updateMany({
+          where: { equipmentListingId: equipmentId, id: { notIn: imageIds } },
+          data: { isPrimary: false },
+        }),
+      updateImageOrder: (id, order, isPrimary) =>
+        this.prisma.equipmentListingImage.update({ where: { id }, data: { order, isPrimary } }),
+    });
   }
 
   async getListingImages(listingId: string) {
