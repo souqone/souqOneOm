@@ -91,6 +91,11 @@ describeOrSkip('Operator Profile Uniqueness Real PostgreSQL Concurrency (D-222)'
       recordView: jest.fn(),
     };
 
+    const mockRedisService = {
+      isUserOnline: jest.fn().mockResolvedValue(false),
+      getOnlineUserIds: jest.fn().mockResolvedValue(new Set()),
+    };
+
     service = new OperatorsService(
       mockGeoService as any,
       prisma as any,
@@ -98,6 +103,7 @@ describeOrSkip('Operator Profile Uniqueness Real PostgreSQL Concurrency (D-222)'
       mockSellerGate as any,
       mockLimitService as any,
       mockViewCounter as any,
+      mockRedisService as any,
     );
 
     // 5. Seed test user

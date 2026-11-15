@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
+import { userOnlineKey } from './presence.helper';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -8,6 +9,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private publisher!: Redis;
   private subscriber!: Redis;
   private connected = false;
+  private lastPresenceWarnAt = 0;
+
+  private warnPresenceOnce(message: string): void {
+    const now = Date.now();
+    if (now - this.lastPresenceWarnAt >= 60_000) {
+      this.lastPresenceWarnAt = now;
+      this.logger.warn(message);
+    }
+  }
 
   async onModuleInit() {
     const redisUrl = process.env.REDIS_URL;
@@ -121,6 +131,57 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const result = await this.client.exists(key);
       return result === 1;
     } catch { return false; }
+  }
+
+  /**
+   * Checks whether a single user is currently online in Redis.
+   * Never throws: logs once at warn and returns false when Redis is unavailable.
+   */
+  async isUserOnline(userId: string): Promise<boolean> {
+    if (!userId) return false;
+    if (!this.connected || !this.client) {
+      this.warnPresenceOnce('Redis unavailable for presence check — defaulting isOnline to false');
+      return false;
+    }
+    try {
+      const result = await this.client.exists(userOnlineKey(userId));
+      return result === 1;
+    } catch (err) {
+      this.warnPresenceOnce(`Presence check failed — defaulting isOnline to false: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Checks online presence for many userIds in ONE Redis pipeline round trip.
+   * Never throws: logs once at warn and returns an empty Set when Redis is unavailable.
+   */
+  async getOnlineUserIds(userIds: string[]): Promise<Set<string>> {
+    const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+    if (uniqueIds.length === 0) return new Set();
+    if (!this.connected || !this.client) {
+      this.warnPresenceOnce('Redis unavailable for batch presence check — defaulting isOnline to false');
+      return new Set();
+    }
+    try {
+      const pipeline = this.client.pipeline();
+      for (const id of uniqueIds) {
+        pipeline.exists(userOnlineKey(id));
+      }
+      const results = await pipeline.exec();
+      const online = new Set<string>();
+      if (Array.isArray(results)) {
+        results.forEach(([err, val], idx) => {
+          if (!err && val === 1) {
+            online.add(uniqueIds[idx]);
+          }
+        });
+      }
+      return online;
+    } catch (err) {
+      this.warnPresenceOnce(`Batch presence check failed — defaulting isOnline to false: ${(err as Error).message}`);
+      return new Set();
+    }
   }
 
   async expire(key: string, seconds: number): Promise<void> {
