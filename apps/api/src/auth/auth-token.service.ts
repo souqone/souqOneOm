@@ -201,13 +201,21 @@ export class AuthTokenService {
     const {
       passwordHash,
       googleId,
+      appleSub,
+      phoneE164,
+      phoneVerifiedAt,
       emailVerificationCode,
       emailVerificationExpiry,
       passwordResetCode,
       passwordResetExpiry,
       ...safeUser
     } = user;
-    return safeUser;
+    return {
+      ...safeUser,
+      hasPassword: Boolean(passwordHash),
+      hasGoogle: Boolean(googleId),
+      hasApple: Boolean(appleSub),
+    };
   }
 
   generateVerificationCode(): string {

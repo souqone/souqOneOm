@@ -911,6 +911,63 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       expect(mockMailService.sendPasswordChangedEmail).not.toHaveBeenCalled();
     });
   });
+
+  describe('getProfile — safe auth-method flags (D-B15 / M-054)', () => {
+    it.each([
+      {
+        label: 'password-only',
+        passwordHash: '$2a$10$hash',
+        googleId: null,
+        appleSub: null,
+        expected: { hasPassword: true, hasGoogle: false, hasApple: false },
+      },
+      {
+        label: 'Google-only',
+        passwordHash: null,
+        googleId: 'google-sub-1',
+        appleSub: null,
+        expected: { hasPassword: false, hasGoogle: true, hasApple: false },
+      },
+      {
+        label: 'Apple-only',
+        passwordHash: null,
+        googleId: null,
+        appleSub: 'apple-sub-1',
+        expected: { hasPassword: false, hasGoogle: false, hasApple: true },
+      },
+      {
+        label: 'Google+Apple',
+        passwordHash: null,
+        googleId: 'google-sub-2',
+        appleSub: 'apple-sub-2',
+        expected: { hasPassword: false, hasGoogle: true, hasApple: true },
+      },
+      {
+        label: 'password+Google',
+        passwordHash: '$2a$10$hash2',
+        googleId: 'google-sub-3',
+        appleSub: null,
+        expected: { hasPassword: true, hasGoogle: true, hasApple: false },
+      },
+    ])('returns safe flags for $label without leaking raw secrets', async ({ passwordHash, googleId, appleSub, expected }) => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phoneVerifiedAt: null,
+        phoneE164: null,
+        passwordHash,
+        googleId,
+        appleSub,
+      });
+
+      const res = await service.getProfile(mockUser.id);
+      expect(res.hasPassword).toBe(expected.hasPassword);
+      expect(res.hasGoogle).toBe(expected.hasGoogle);
+      expect(res.hasApple).toBe(expected.hasApple);
+      expect(res).not.toHaveProperty('passwordHash');
+      expect(res).not.toHaveProperty('googleId');
+      expect(res).not.toHaveProperty('appleSub');
+    });
+  });
 });
 
 
