@@ -15,6 +15,7 @@ import { Server, Socket } from 'socket.io';
 import { WsJwtGuard } from './guards/ws-jwt.guard';
 import { ChatService } from './chat.service';
 import { RedisService } from '../redis/redis.service';
+import { userOnlineKey } from '../redis/presence.helper';
 import { SendMessageDto } from './dto/send-message.dto';
 import { CHAT_EVENTS } from './chat.events';
 import { NOTIFICATION_EVENTS } from '../notifications/notification.events';
@@ -98,7 +99,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       const sockets = this.connectedUsers.get(user.sub) ?? new Set<string>();
       sockets.add(client.id);
       this.connectedUsers.set(user.sub, sockets);
-      await this.redis.set(`user:online:${user.sub}`, '1', 600);
+      await this.redis.set(userOnlineKey(user.sub), '1', 600);
 
       this.logger.log(`User ${user.username} connected (${client.id})`);
 
@@ -130,7 +131,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       // Only remove user if no sockets remain
       if (!sockets?.size) {
         this.connectedUsers.delete(user.sub);
-        await this.redis.del(`user:online:${user.sub}`);
+        await this.redis.del(userOnlineKey(user.sub));
       }
 
       this.logger.log(`User ${user.username} disconnected (${client.id})`);
@@ -147,7 +148,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         this.server.in(room).disconnectSockets(true);
       }
       this.connectedUsers.delete(userId);
-      await this.redis.del(`user:online:${userId}`);
+      await this.redis.del(userOnlineKey(userId));
     } catch (err: any) {
       this.logger.error(`Failed to disconnect sockets for user ${userId}: ${err?.message || err}`);
     }
@@ -328,7 +329,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('ping')
   async handlePing(@ConnectedSocket() client: Socket) {
     const user = client.data.user as JwtPayload;
-    await this.redis.expire(`user:online:${user.sub}`, 600);
+    await this.redis.expire(userOnlineKey(user.sub), 600);
     client.emit('pong');
   }
 
@@ -358,7 +359,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   // Helper method to check if user is online
   async isUserOnline(userId: string): Promise<boolean> {
-    return this.redis.exists(`user:online:${userId}`);
+    return this.redis.exists(userOnlineKey(userId));
   }
 
   /* ───── NOTIFICATION BROADCAST ───── */

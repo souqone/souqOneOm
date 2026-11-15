@@ -3,7 +3,9 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   Prisma,
@@ -26,9 +28,13 @@ import { ActiveListingsLimitService } from '../common/services/active-listings-l
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
 import { OperatorViewCounterService } from './operator-view-counter.service';
+import { RedisService } from '../redis/redis.service';
+import type { OperatorPresenceFields } from './dto/operator-presence.dto';
 
 @Injectable()
 export class OperatorsService {
+  private readonly logger = new Logger(OperatorsService.name);
+
   constructor(
     private readonly geoService: GeoService,
     private readonly prisma: PrismaService,
@@ -36,7 +42,28 @@ export class OperatorsService {
     private readonly sellerContactGate: SellerContactGate,
     private readonly activeListingsLimitService: ActiveListingsLimitService,
     private readonly viewCounterService: OperatorViewCounterService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
+
+  private async resolveOnlineUserIds(userIds: string[]): Promise<Set<string>> {
+    if (!this.redis || userIds.length === 0) return new Set();
+    try {
+      return await this.redis.getOnlineUserIds(userIds);
+    } catch (err) {
+      this.logger.warn(`Failed to batch-check operator presence — defaulting isOnline to false: ${(err as Error).message}`);
+      return new Set();
+    }
+  }
+
+  private async resolveIsUserOnline(userId: string): Promise<boolean> {
+    if (!this.redis || !userId) return false;
+    try {
+      return await this.redis.isUserOnline(userId);
+    } catch (err) {
+      this.logger.warn(`Failed to check operator presence — defaulting isOnline to false: ${(err as Error).message}`);
+      return false;
+    }
+  }
 
   async create(dto: CreateOperatorListingDto, userId: string) {
     await this.sellerContactGate.assertCanPublish(userId);
@@ -177,7 +204,13 @@ export class OperatorsService {
       }),
       this.prisma.operatorListing.count({ where }),
     ]);
-    return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    const distinctUserIds = Array.from(new Set(items.map((item) => item.userId).filter(Boolean)));
+    const onlineUserIds = await this.resolveOnlineUserIds(distinctUserIds);
+    const itemsWithPresence = items.map((item): typeof item & OperatorPresenceFields => ({
+      ...item,
+      isOnline: onlineUserIds.has(item.userId),
+    }));
+    return { items: itemsWithPresence, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
   async findOne(id: string, viewer?: VisibilityViewer | string | null, ip?: string) {
@@ -203,6 +236,8 @@ export class OperatorsService {
       viewerIp: ip,
     }).catch(() => {});
 
+    const isOnline = await this.resolveIsUserOnline(item.userId);
+
     let pendingDeletionRequest = null;
     if (viewerId && item.userId === viewerId) {
       const pendingRequest = await this.prisma.operatorDeletionRequest.findFirst({
@@ -212,11 +247,15 @@ export class OperatorsService {
       pendingDeletionRequest = pendingRequest ?? null;
       return {
         ...item,
+        isOnline,
         pendingDeletionRequest,
       };
     }
 
-    return item;
+    return {
+      ...item,
+      isOnline,
+    };
   }
 
   async my(userId: string) {

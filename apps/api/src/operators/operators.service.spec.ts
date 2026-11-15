@@ -14,12 +14,14 @@ import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { OperatorViewCounterService } from './operator-view-counter.service';
+import { RedisService } from '../redis/redis.service';
 
 describe('OperatorsService', () => {
   let service: OperatorsService;
   let prisma: any;
   let geoService: any;
   let notificationsService: any;
+  let redisService: any;
 
   beforeEach(async () => {
     prisma = {
@@ -62,6 +64,11 @@ describe('OperatorsService', () => {
       create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
     };
 
+    redisService = {
+      isUserOnline: jest.fn().mockResolvedValue(false),
+      getOnlineUserIds: jest.fn().mockResolvedValue(new Set<string>()),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OperatorsService,
@@ -71,6 +78,7 @@ describe('OperatorsService', () => {
         { provide: SellerContactGate, useValue: { assertCanPublish: jest.fn().mockResolvedValue(undefined) } },
         { provide: ActiveListingsLimitService, useValue: { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } },
         { provide: OperatorViewCounterService, useValue: { recordView: jest.fn().mockResolvedValue(true) } },
+        { provide: RedisService, useValue: redisService },
       ],
     }).compile();
 
@@ -599,6 +607,59 @@ describe('OperatorsService', () => {
           orderBy: { createdAt: 'desc' },
         }),
       );
+    });
+  });
+
+  describe('Redis presence (isOnline)', () => {
+    it('findAll marks only online owners true and calls getOnlineUserIds once with distinct userIds', async () => {
+      prisma.operatorListing.findMany.mockResolvedValue([
+        { id: 'op-1', userId: 'u-online', title: 'Op 1' },
+        { id: 'op-2', userId: 'u-offline', title: 'Op 2' },
+        { id: 'op-3', userId: 'u-online', title: 'Op 3' },
+      ]);
+      prisma.operatorListing.count.mockResolvedValue(3);
+      redisService.getOnlineUserIds.mockResolvedValue(new Set(['u-online']));
+
+      const res = await service.findAll({});
+
+      expect(redisService.getOnlineUserIds).toHaveBeenCalledTimes(1);
+      expect(redisService.getOnlineUserIds).toHaveBeenCalledWith(['u-online', 'u-offline']);
+      expect(res.items[0].isOnline).toBe(true);
+      expect(res.items[1].isOnline).toBe(false);
+      expect(res.items[2].isOnline).toBe(true);
+    });
+
+    it('findAll defaults isOnline to false when Redis rejects without failing the request', async () => {
+      prisma.operatorListing.findMany.mockResolvedValue([
+        { id: 'op-1', userId: 'u-1', title: 'Op 1' },
+      ]);
+      prisma.operatorListing.count.mockResolvedValue(1);
+      redisService.getOnlineUserIds.mockRejectedValue(new Error('Redis down'));
+
+      const res = await service.findAll({});
+
+      expect(res.items[0].isOnline).toBe(false);
+    });
+
+    it('findOne returns isOnline true when owner is online and false when offline or Redis errors', async () => {
+      prisma.operatorListing.findUnique.mockResolvedValue({
+        id: 'op-1',
+        userId: 'u-1',
+        status: 'ACTIVE',
+        hiddenByOwnerStatus: false,
+      });
+
+      redisService.isUserOnline.mockResolvedValueOnce(true);
+      const onlineRes = await service.findOne('op-1');
+      expect(onlineRes.isOnline).toBe(true);
+
+      redisService.isUserOnline.mockResolvedValueOnce(false);
+      const offlineRes = await service.findOne('op-1');
+      expect(offlineRes.isOnline).toBe(false);
+
+      redisService.isUserOnline.mockRejectedValueOnce(new Error('Redis timeout'));
+      const fallbackRes = await service.findOne('op-1');
+      expect(fallbackRes.isOnline).toBe(false);
     });
   });
 });
