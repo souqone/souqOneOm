@@ -147,7 +147,7 @@ export abstract class BaseListingService {
     await this.redis.delPattern(this.cacheKey('list:*'));
 
     // Emit event
-    this.emitEvent(LISTING_EVENTS.CREATED, item);
+    this.emitEvent(LISTING_EVENTS.CREATED, item, undefined, userId);
 
     return item;
   }
@@ -341,7 +341,7 @@ export abstract class BaseListingService {
     await this.redis.delPattern(this.cacheKey('list:*'));
 
     // Emit event
-    this.emitEvent(LISTING_EVENTS.UPDATED, updated);
+    this.emitEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
 
     return updated;
   }
@@ -385,7 +385,7 @@ export abstract class BaseListingService {
     await this.redis.delPattern(this.cacheKey('list:*'));
 
     // Emit event
-    this.emitEvent(LISTING_EVENTS.DELETED, existing);
+    this.emitEvent(LISTING_EVENTS.DELETED, existing, undefined, userId);
 
     return { message: 'تم حذف الإعلان بنجاح' };
   }
@@ -428,7 +428,7 @@ export abstract class BaseListingService {
     await this.redis.delPattern(this.cacheKey('list:*'));
 
     // Emit event
-    this.emitEvent(LISTING_EVENTS.STATUS_CHANGED, updated, newStatus);
+    this.emitEvent(LISTING_EVENTS.STATUS_CHANGED, updated, newStatus, userId);
 
     return { message: `تم تغيير الحالة إلى ${newStatus}`, status: newStatus };
   }
@@ -436,7 +436,7 @@ export abstract class BaseListingService {
   // ══════════════════════════════════
   // EVENT EMITTER HELPER
   // ══════════════════════════════════
-  private emitEvent(event: string, item: any, status?: string) {
+  private emitEvent(event: string, item: any, status?: string, actorId?: string) {
     try {
       const payload: ListingEventPayload = {
         entityType: this.config.entityType,
@@ -444,6 +444,7 @@ export abstract class BaseListingService {
         title: item.title,
         userId: item.userId,
         status,
+        actorId,
       };
       this.eventEmitter.emit(event, payload);
     } catch (err) {

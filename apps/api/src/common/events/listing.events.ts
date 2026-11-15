@@ -16,4 +16,6 @@ export interface ListingEventPayload {
   userId: string;
   /** New status (for status_changed event) */
   status?: string;
+  /** Requester user ID who triggered the action (runtime-only, used to suppress self-action notifications) */
+  actorId?: string;
 }

@@ -161,7 +161,7 @@ export class EquipmentListingsService {
       await this.geoService.syncLocation('equipment_listings', item.id, dto.latitude, dto.longitude);
     }
 
-    this.emitListingEvent(LISTING_EVENTS.CREATED, item);
+    this.emitListingEvent(LISTING_EVENTS.CREATED, item, undefined, userId);
     return item;
   }
 
@@ -564,9 +564,9 @@ export class EquipmentListingsService {
       }
     }
 
-    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
     if (statusChanged) {
-      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
+      this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status, userId);
     }
     return updated;
   }
@@ -595,7 +595,7 @@ export class EquipmentListingsService {
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('EQUIPMENT_LISTING', id);
 
-    this.emitListingEvent(LISTING_EVENTS.DELETED, item);
+    this.emitListingEvent(LISTING_EVENTS.DELETED, item, undefined, userId);
 
     return { deleted: true };
   }
@@ -701,7 +701,7 @@ export class EquipmentListingsService {
     };
   }
 
-  private emitListingEvent(event: string, item: any, status?: string) {
+  private emitListingEvent(event: string, item: any, status?: string, actorId?: string) {
     try {
       const payload: ListingEventPayload = {
         entityType: ENTITY_TYPES.EQUIPMENT_LISTING,
@@ -709,6 +709,7 @@ export class EquipmentListingsService {
         title: item.title,
         userId: item.userId,
         status,
+        actorId,
       };
       this.eventEmitter.emit(event, payload);
     } catch (err) {

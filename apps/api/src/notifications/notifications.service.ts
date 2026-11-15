@@ -23,6 +23,8 @@ export class NotificationsService {
   ) {}
 
   async create(dto: CreateNotificationDto) {
+    if (dto.actorId && dto.actorId === dto.userId) return null;
+
     // Normalize data for mobile deep-linking — keeps original fields intact
     const normalizedData = this.normalizeNotificationData(dto.type, dto.data);
 

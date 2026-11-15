@@ -230,7 +230,7 @@ export class ListingsService {
     // Invalidate listings cache
     await this.redis.delPattern('listings:*');
 
-    this.emitListingEvent(LISTING_EVENTS.CREATED, listing);
+    this.emitListingEvent(LISTING_EVENTS.CREATED, listing, undefined, sellerId);
 
     return listing;
   }
@@ -629,7 +629,7 @@ export class ListingsService {
     await this.redis.delPattern('listings:*');
     await this.redis.del(`listing:${id}`);
 
-    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated);
+    this.emitListingEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
 
     return updated;
   }
@@ -689,7 +689,7 @@ export class ListingsService {
     await this.redis.delPattern('listings:*');
     await this.redis.del(`listing:${id}`);
     
-    this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status);
+    this.emitListingEvent(LISTING_EVENTS.STATUS_CHANGED, updated, updated.status, userId);
     return updated;
   }
 
@@ -730,12 +730,12 @@ export class ListingsService {
     await this.redis.delPattern('listings:*');
     await this.redis.del(`listing:${id}`);
 
-    this.emitListingEvent(LISTING_EVENTS.DELETED, listing);
+    this.emitListingEvent(LISTING_EVENTS.DELETED, listing, undefined, userId);
 
     return { message: 'تم حذف الإعلان بنجاح' };
   }
 
-  private emitListingEvent(event: string, item: any, status?: string) {
+  private emitListingEvent(event: string, item: any, status?: string, actorId?: string) {
     try {
       const payload: ListingEventPayload = {
         entityType: ENTITY_TYPES.LISTING,
@@ -743,6 +743,7 @@ export class ListingsService {
         title: item.title,
         userId: item.sellerId,
         status,
+        actorId,
       };
       this.eventEmitter.emit(event, payload);
     } catch (err) {
