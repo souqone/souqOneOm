@@ -92,7 +92,15 @@ export class UsersService {
       appleSub,
     });
 
-    return { ...profile, phoneVerified, deletionReauthMethod, availableDeletionReauthMethods };
+    return {
+      ...profile,
+      phoneVerified,
+      deletionReauthMethod,
+      availableDeletionReauthMethods,
+      hasPassword: Boolean(passwordHash),
+      hasGoogle: Boolean(googleId),
+      hasApple: Boolean(appleSub),
+    };
   }
 
   async getPublicProfile(userId: string) {
