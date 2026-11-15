@@ -5,7 +5,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  Optional,
 } from '@nestjs/common';
 import {
   Prisma,
@@ -42,11 +41,11 @@ export class OperatorsService {
     private readonly sellerContactGate: SellerContactGate,
     private readonly activeListingsLimitService: ActiveListingsLimitService,
     private readonly viewCounterService: OperatorViewCounterService,
-    @Optional() private readonly redis?: RedisService,
+    private readonly redis: RedisService,
   ) {}
 
   private async resolveOnlineUserIds(userIds: string[]): Promise<Set<string>> {
-    if (!this.redis || userIds.length === 0) return new Set();
+    if (userIds.length === 0) return new Set();
     try {
       return await this.redis.getOnlineUserIds(userIds);
     } catch (err) {
@@ -56,7 +55,7 @@ export class OperatorsService {
   }
 
   private async resolveIsUserOnline(userId: string): Promise<boolean> {
-    if (!this.redis || !userId) return false;
+    if (!userId) return false;
     try {
       return await this.redis.isUserOnline(userId);
     } catch (err) {

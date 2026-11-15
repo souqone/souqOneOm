@@ -59,4 +59,27 @@ describe('RedisService Presence Helpers', () => {
     (service as any).connected = false;
     await expect(service.isUserOnline('u-1')).resolves.toBe(false);
   });
+
+  it('rate-limits presence warn logs to at most once per 60 seconds across repeated failures', async () => {
+    const warnSpy = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => {});
+    const nowSpy = jest.spyOn(Date, 'now');
+    nowSpy.mockReturnValue(100_000);
+    (service as any).connected = false;
+
+    await service.isUserOnline('u-1');
+    await service.isUserOnline('u-2');
+    await service.getOnlineUserIds(['u-1', 'u-2']);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(159_999);
+    await service.isUserOnline('u-3');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(160_000);
+    await service.isUserOnline('u-3');
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+
+    nowSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
 });

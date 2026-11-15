@@ -9,6 +9,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private publisher!: Redis;
   private subscriber!: Redis;
   private connected = false;
+  private lastPresenceWarnAt = 0;
+
+  private warnPresenceOnce(message: string): void {
+    const now = Date.now();
+    if (now - this.lastPresenceWarnAt >= 60_000) {
+      this.lastPresenceWarnAt = now;
+      this.logger.warn(message);
+    }
+  }
 
   async onModuleInit() {
     const redisUrl = process.env.REDIS_URL;
@@ -131,14 +140,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async isUserOnline(userId: string): Promise<boolean> {
     if (!userId) return false;
     if (!this.connected || !this.client) {
-      this.logger.warn('Redis unavailable for presence check — defaulting isOnline to false');
+      this.warnPresenceOnce('Redis unavailable for presence check — defaulting isOnline to false');
       return false;
     }
     try {
       const result = await this.client.exists(userOnlineKey(userId));
       return result === 1;
     } catch (err) {
-      this.logger.warn(`Presence check failed — defaulting isOnline to false: ${(err as Error).message}`);
+      this.warnPresenceOnce(`Presence check failed — defaulting isOnline to false: ${(err as Error).message}`);
       return false;
     }
   }
@@ -151,7 +160,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
     if (uniqueIds.length === 0) return new Set();
     if (!this.connected || !this.client) {
-      this.logger.warn('Redis unavailable for batch presence check — defaulting isOnline to false');
+      this.warnPresenceOnce('Redis unavailable for batch presence check — defaulting isOnline to false');
       return new Set();
     }
     try {
@@ -170,7 +179,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
       return online;
     } catch (err) {
-      this.logger.warn(`Batch presence check failed — defaulting isOnline to false: ${(err as Error).message}`);
+      this.warnPresenceOnce(`Batch presence check failed — defaulting isOnline to false: ${(err as Error).message}`);
       return new Set();
     }
   }
