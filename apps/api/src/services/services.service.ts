@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,6 +13,7 @@ import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
+import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
 
 @Injectable()
 export class ServicesService extends BaseListingService {
@@ -102,7 +103,21 @@ export class ServicesService extends BaseListingService {
   }
 
   async update(id: string, userId: string, dto: UpdateServiceDto) {
-    if (dto.images) delete dto.images;
+    let nextImages: string[] | undefined;
+    if (dto.images !== undefined) {
+      if (!Array.isArray(dto.images)) {
+        throw new BadRequestException('قائمة الصور غير صالحة');
+      }
+      if (dto.images.length > 10) {
+        throw new BadRequestException('لا يمكن إضافة أكثر من 10 صور');
+      }
+      for (const url of dto.images) {
+        validateTrustedImageUrl(url);
+      }
+      nextImages = [...dto.images];
+      delete dto.images;
+    }
+
     const existing = await this.prisma.carService.findUnique({ where: { id } });
     if (existing) {
       const nextGovId = dto.governorateId !== undefined ? dto.governorateId : existing.governorateId;
@@ -113,6 +128,24 @@ export class ServicesService extends BaseListingService {
     }
 
     const item = await super.update(id, userId, dto);
+    if (nextImages !== undefined) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.carServiceImage.deleteMany({ where: { carServiceId: id } });
+        if (nextImages.length > 0) {
+          await tx.carServiceImage.createMany({
+            data: nextImages.map((url, index) => ({
+              carServiceId: id,
+              url,
+              order: index,
+              isPrimary: index === 0,
+            })),
+          });
+        }
+      });
+      await this.redis.del(`carService:detail:${id}`);
+      await this.redis.delPattern('carService:list:*');
+    }
+
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       if (dto.latitude && dto.longitude) {
         await this.geoService.syncLocation('car_services', item.id, dto.latitude, dto.longitude);
