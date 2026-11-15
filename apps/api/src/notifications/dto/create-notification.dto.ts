@@ -16,4 +16,9 @@ export class CreateNotificationDto {
 
   @IsOptional()
   data?: Record<string, unknown>;
+
+  /** Runtime-only actor ID (never persisted to DB); suppresses self-action notifications when equal to userId. */
+  @IsOptional()
+  @IsString()
+  actorId?: string;
 }
