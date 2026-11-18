@@ -261,6 +261,8 @@ export const USERS_PROFILE_ALLOWED_FIELDS: ReadonlySet<string> = new Set<string>
   'latitude',
   'longitude',
   'avatarUrl',
+  'showPhoneOnProfile',
+  'showWhatsappOnProfile',
 ]);
 
 export const ALL_STRUCTURED_VALIDATION_DTOS: ReadonlyArray<DtoAllowlistEntry> = [

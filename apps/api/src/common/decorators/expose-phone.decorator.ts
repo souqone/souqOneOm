@@ -1,6 +1,7 @@
 import { SetMetadata } from '@nestjs/common';
 
 export const EXPOSE_PHONE_KEY = 'exposePhone';
+export const EXPOSE_PROFILE_CONTACT_KEY = 'exposeProfileContact';
 
 /**
  * Decorator to explicitly allow exposing the user `phone` field in API responses.
@@ -9,3 +10,10 @@ export const EXPOSE_PHONE_KEY = 'exposePhone';
  * regardless of this decorator.
  */
 export const ExposePhone = () => SetMetadata(EXPOSE_PHONE_KEY, true);
+
+/**
+ * Decorator for public profile routes (GET /users/:id) where the service layer
+ * explicitly gates `phone` and `whatsapp` behind the user's opt-in booleans
+ * (`showPhoneOnProfile`, `showWhatsappOnProfile`).
+ */
+export const ExposeProfileContact = () => SetMetadata(EXPOSE_PROFILE_CONTACT_KEY, true);

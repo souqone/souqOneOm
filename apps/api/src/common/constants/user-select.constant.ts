@@ -57,6 +57,8 @@ export const USER_SELECT_PROFILE_PRIVATE = {
   role: true,
   email: true,
   phone: true,
+  showPhoneOnProfile: true,
+  showWhatsappOnProfile: true,
   updatedAt: true,
   deletionScheduledAt: true,
 } as const satisfies Prisma.UserSelect;

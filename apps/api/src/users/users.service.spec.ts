@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UsersService } from './users.service';
@@ -88,7 +88,7 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
     process.env = { ...originalEnv, NODE_ENV: 'test', CLOUDINARY_CLOUD_NAME: 'souqone' };
 
     mockPrisma.user.findUnique.mockResolvedValue({ ...mockUser });
-    mockPrisma.user.update.mockImplementation(({ data, select }) => {
+    mockPrisma.user.update.mockImplementation(({ data }) => {
       return Promise.resolve({
         ...mockUser,
         ...data,
@@ -966,6 +966,229 @@ describe('UsersService — Profile Update (PATCH /users/me)', () => {
       expect(res).not.toHaveProperty('passwordHash');
       expect(res).not.toHaveProperty('googleId');
       expect(res).not.toHaveProperty('appleSub');
+    });
+  });
+
+  describe('8. Profile Contact Visibility Toggles (D-B16)', () => {
+    const basePublicDbUser = {
+      id: 'user-uuid-1',
+      username: 'ahmed99',
+      displayName: 'أحمد العماني',
+      avatarUrl: null,
+      bio: 'نبذة',
+      country: 'OM',
+      governorateId: 1,
+      wilayaId: 101,
+      governorateRef: { id: 1, nameAr: 'مسقط' },
+      wilayaRef: { id: 101, nameAr: 'السيب' },
+      isVerified: true,
+      createdAt: new Date('2026-01-01'),
+      phone: '91234567',
+      phoneE164: '+96891234567',
+      showPhoneOnProfile: false,
+      showWhatsappOnProfile: false,
+      _count: {
+        listings: 2,
+        busListings: 0,
+        equipmentListings: 1,
+        operatorListings: 0,
+        spareParts: 0,
+        carServices: 0,
+        driverJobs: 0,
+      },
+    };
+
+    it('getPublicProfile omits phone and whatsapp when both toggles are false (default)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({ ...basePublicDbUser });
+
+      const profile = await service.getPublicProfile('user-uuid-1');
+
+      expect(profile.totalListings).toBe(3);
+      expect('phone' in profile).toBe(false);
+      expect('whatsapp' in profile).toBe(false);
+      expect('email' in profile).toBe(false);
+      expect('phoneE164' in profile).toBe(false);
+      expect('showPhoneOnProfile' in profile).toBe(false);
+      expect('showWhatsappOnProfile' in profile).toBe(false);
+    });
+
+    it('getPublicProfile includes only phone (preferring phoneE164) when showPhoneOnProfile=true and showWhatsappOnProfile=false', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...basePublicDbUser,
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: false,
+      });
+
+      const profile = await service.getPublicProfile('user-uuid-1');
+
+      expect((profile as any).phone).toBe('+96891234567');
+      expect('whatsapp' in profile).toBe(false);
+      expect('email' in profile).toBe(false);
+      expect('phoneE164' in profile).toBe(false);
+    });
+
+    it('getPublicProfile includes only whatsapp (account phone) when showPhoneOnProfile=false and showWhatsappOnProfile=true', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...basePublicDbUser,
+        showPhoneOnProfile: false,
+        showWhatsappOnProfile: true,
+      });
+
+      const profile = await service.getPublicProfile('user-uuid-1');
+
+      expect('phone' in profile).toBe(false);
+      expect((profile as any).whatsapp).toBe('+96891234567');
+      expect('email' in profile).toBe(false);
+      expect('phoneE164' in profile).toBe(false);
+    });
+
+    it('getPublicProfile includes both phone and whatsapp when both toggles are true, falling back to phone when phoneE164 is null', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...basePublicDbUser,
+        phone: '+96899887766',
+        phoneE164: null,
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: true,
+      });
+
+      const profile = await service.getPublicProfile('user-uuid-1');
+
+      expect((profile as any).phone).toBe('+96899887766');
+      expect((profile as any).whatsapp).toBe('+96899887766');
+      expect('email' in profile).toBe(false);
+    });
+
+    it('getPublicProfile omits phone and whatsapp even if flags are true when user has no phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...basePublicDbUser,
+        phone: null,
+        phoneE164: null,
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: true,
+      });
+
+      const profile = await service.getPublicProfile('user-uuid-1');
+
+      expect('phone' in profile).toBe(false);
+      expect('whatsapp' in profile).toBe(false);
+    });
+
+    it('updateProfile accepts showPhoneOnProfile and showWhatsappOnProfile when user has an unverified phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: '+96891234567',
+        phoneE164: null,
+        phoneVerifiedAt: null,
+      });
+
+      const res = await service.updateProfile('user-uuid-1', {
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: true,
+      } as UpdateProfileDto);
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-uuid-1' },
+          data: expect.objectContaining({
+            showPhoneOnProfile: true,
+            showWhatsappOnProfile: true,
+          }),
+        }),
+      );
+      expect((res as any).showPhoneOnProfile).toBe(true);
+      expect((res as any).showWhatsappOnProfile).toBe(true);
+    });
+
+    it('updateProfile rejects enabling showPhoneOnProfile or showWhatsappOnProfile when user has no phone (400 PROFILE_PHONE_REQUIRED)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        phone: null,
+        phoneE164: null,
+        phoneVerifiedAt: null,
+      });
+
+      await expect(
+        service.updateProfile('user-uuid-1', { showPhoneOnProfile: true } as UpdateProfileDto),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            code: 'PROFILE_PHONE_REQUIRED',
+          }),
+        }),
+      );
+
+      await expect(
+        service.updateProfile('user-uuid-1', { showWhatsappOnProfile: true } as UpdateProfileDto),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            code: 'PROFILE_PHONE_REQUIRED',
+          }),
+        }),
+      );
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('updateProfile allows setting toggles to false even when user has no phone', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        ...mockUser,
+        phone: null,
+        phoneE164: null,
+      });
+
+      await service.updateProfile('user-uuid-1', {
+        showPhoneOnProfile: false,
+        showWhatsappOnProfile: false,
+      } as UpdateProfileDto);
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-uuid-1' },
+          data: expect.objectContaining({
+            showPhoneOnProfile: false,
+            showWhatsappOnProfile: false,
+          }),
+        }),
+      );
+    });
+
+    it('UpdateProfileDto validates showPhoneOnProfile and showWhatsappOnProfile as optional booleans and rejects non-booleans or target userId injection', async () => {
+      const pipe = new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      });
+
+      const valid = await pipe.transform(
+        { showPhoneOnProfile: true, showWhatsappOnProfile: false },
+        { type: 'body', metatype: UpdateProfileDto },
+      );
+      expect(valid).toEqual({
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: false,
+      });
+
+      await expect(
+        pipe.transform(
+          { showPhoneOnProfile: 'yes' },
+          { type: 'body', metatype: UpdateProfileDto },
+        ),
+      ).rejects.toThrow();
+
+      await expect(
+        pipe.transform(
+          { showWhatsappOnProfile: 123 },
+          { type: 'body', metatype: UpdateProfileDto },
+        ),
+      ).rejects.toThrow();
+
+      await expect(
+        pipe.transform(
+          { userId: 'other-user-id', showPhoneOnProfile: true },
+          { type: 'body', metatype: UpdateProfileDto },
+        ),
+      ).rejects.toThrow();
     });
   });
 });
