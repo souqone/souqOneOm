@@ -54,7 +54,7 @@ describe('user-select.constant', () => {
     });
   });
 
-  it('USER_SELECT_PROFILE_PUBLIC should include public fields (bio, locations) and no phone/email/role', () => {
+  it('USER_SELECT_PROFILE_PUBLIC should include public fields (bio, locations) and no phone/email/role/toggle flags', () => {
     expect(USER_SELECT_PROFILE_PUBLIC).toEqual({
       id: true,
       username: true,
@@ -73,9 +73,11 @@ describe('user-select.constant', () => {
     expect('phone' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
     expect('email' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
     expect('passwordHash' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
+    expect('showPhoneOnProfile' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
+    expect('showWhatsappOnProfile' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
   });
 
-  it('USER_SELECT_PROFILE_PRIVATE should include phone, email, role, and updatedAt', () => {
+  it('USER_SELECT_PROFILE_PRIVATE should include phone, email, role, contact visibility toggles, and updatedAt', () => {
     expect(USER_SELECT_PROFILE_PRIVATE).toEqual({
       id: true,
       username: true,
@@ -92,11 +94,15 @@ describe('user-select.constant', () => {
       role: true,
       email: true,
       phone: true,
+      showPhoneOnProfile: true,
+      showWhatsappOnProfile: true,
       updatedAt: true,
       deletionScheduledAt: true,
     });
     expect('role' in USER_SELECT_PROFILE_PRIVATE).toBe(true);
     expect(USER_SELECT_PROFILE_PRIVATE.role).toBe(true);
+    expect('showPhoneOnProfile' in USER_SELECT_PROFILE_PRIVATE).toBe(true);
+    expect('showWhatsappOnProfile' in USER_SELECT_PROFILE_PRIVATE).toBe(true);
     expect('passwordHash' in USER_SELECT_PROFILE_PRIVATE).toBe(false);
     expect('tokenVersion' in USER_SELECT_PROFILE_PRIVATE).toBe(false);
     expect('deletionScheduledAt' in USER_SELECT_PROFILE_PRIVATE).toBe(true);

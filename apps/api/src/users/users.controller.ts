@@ -13,7 +13,7 @@ import { LinkGoogleDto } from './dto/link-google.dto';
 import { LinkAppleDto } from './dto/link-apple.dto';
 import { UnlinkProviderDto } from './dto/unlink-provider.dto';
 import { ExpoPushService } from '../notifications/expo-push.service';
-import { ExposePhone } from '../common/decorators/expose-phone.decorator';
+import { ExposePhone, ExposeProfileContact } from '../common/decorators/expose-phone.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -136,6 +136,7 @@ export class UsersController {
     return { success: true };
   }
 
+  @ExposeProfileContact()
   @Get(':id')
   getPublicProfile(@Param('id') id: string) {
     return this.usersService.getPublicProfile(id);

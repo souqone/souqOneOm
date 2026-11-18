@@ -103,5 +103,30 @@ describe('Public Phone Leak Prevention & Authorized Disclosure (E2E Contract)', 
       expect(res.body.contactPhone).toBeUndefined();
       expect(res.body.whatsapp).toBeUndefined();
     });
+
+    it('GET /api/users/:id returns phone and whatsapp ONLY when seller opts in via PATCH /api/users/me (D-B16)', async () => {
+      const { accessToken, user } = await registerUser();
+
+      await getPrisma().user.update({
+        where: { id: user.id },
+        data: { phone: '+96891234567', phoneE164: '+96891234567' },
+      });
+
+      await request(getApp().getHttpServer())
+        .patch('/api/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ showPhoneOnProfile: true, showWhatsappOnProfile: true })
+        .expect(200);
+
+      const res = await request(getApp().getHttpServer())
+        .get(`/api/users/${user.id}`)
+        .expect(200);
+
+      expect(res.body.phone).toBe('+96891234567');
+      expect(res.body.whatsapp).toBe('+96891234567');
+      expect(res.body.email).toBeUndefined();
+      expect(res.body.phoneE164).toBeUndefined();
+      expect(res.body.passwordHash).toBeUndefined();
+    });
   });
 });

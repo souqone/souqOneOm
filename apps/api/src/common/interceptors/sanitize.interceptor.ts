@@ -7,7 +7,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { EXPOSE_PHONE_KEY } from '../decorators/expose-phone.decorator';
+import {
+  EXPOSE_PHONE_KEY,
+  EXPOSE_PROFILE_CONTACT_KEY,
+} from '../decorators/expose-phone.decorator';
 
 /**
  * Fields that must NEVER be returned in any API response.
@@ -47,24 +50,32 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
   return proto === null || proto === Object.prototype;
 }
 
-export function stripSensitive(data: unknown, exposePhone = false): unknown {
+export function stripSensitive(
+  data: unknown,
+  exposePhone = false,
+  allowWhatsapp = false,
+): unknown {
   if (data === null || data === undefined) return data;
 
   if (Array.isArray(data)) {
-    return data.map((item) => stripSensitive(item, exposePhone));
+    return data.map((item) => stripSensitive(item, exposePhone, allowWhatsapp));
   }
 
   // Only sanitize plain objects — leave Date, Decimal, Buffer, StreamableFile, and class instances untouched
   if (isPlainObject(data)) {
     const cleaned: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
-      if (ALWAYS_STRIP_FIELDS.includes(key)) {
+      if (key === 'whatsapp') {
+        if (!allowWhatsapp) {
+          continue;
+        }
+      } else if (ALWAYS_STRIP_FIELDS.includes(key)) {
         continue;
       }
       if (key === 'phone' && !exposePhone) {
         continue;
       }
-      cleaned[key] = stripSensitive(value, exposePhone);
+      cleaned[key] = stripSensitive(value, exposePhone, allowWhatsapp);
     }
     return cleaned;
   }
@@ -78,23 +89,33 @@ export class SanitizeInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     let exposePhone = false;
+    let allowWhatsapp = false;
     if (this.reflector) {
       try {
         const handler = context.getHandler();
         const targetClass = context.getClass();
         if (handler && targetClass) {
-          exposePhone = Boolean(
-            this.reflector.getAllAndOverride<boolean>(EXPOSE_PHONE_KEY, [
-              handler,
-              targetClass,
-            ]),
-          );
+          const exposeProfileContact =
+            Reflect.getMetadata(EXPOSE_PROFILE_CONTACT_KEY, handler) === true ||
+            Reflect.getMetadata(EXPOSE_PROFILE_CONTACT_KEY, targetClass) === true;
+          exposePhone =
+            exposeProfileContact ||
+            Boolean(
+              this.reflector.getAllAndOverride<boolean>(EXPOSE_PHONE_KEY, [
+                handler,
+                targetClass,
+              ]),
+            );
+          allowWhatsapp = exposeProfileContact;
         }
       } catch {
         exposePhone = false;
+        allowWhatsapp = false;
       }
     }
 
-    return next.handle().pipe(map((data) => stripSensitive(data, exposePhone)));
+    return next
+      .handle()
+      .pipe(map((data) => stripSensitive(data, exposePhone, allowWhatsapp)));
   }
 }

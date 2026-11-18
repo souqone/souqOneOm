@@ -1,5 +1,7 @@
 import {
   ValidateIf,
+  IsOptional,
+  IsBoolean,
   IsString,
   MinLength,
   MaxLength,
@@ -72,4 +74,12 @@ export class UpdateProfileDto {
   @IsString({ message: 'رابط الصورة الشخصية يجب أن يكون نصاً' })
   @MaxLength(500, { message: 'رابط الصورة الشخصية لا يجب أن يتجاوز 500 حرف' })
   avatarUrl?: string | null;
+
+  @IsOptional()
+  @IsBoolean({ message: 'خيار إظهار رقم الهاتف يجب أن يكون قيمة منطقية' })
+  showPhoneOnProfile?: boolean;
+
+  @IsOptional()
+  @IsBoolean({ message: 'خيار إظهار الواتساب يجب أن يكون قيمة منطقية' })
+  showWhatsappOnProfile?: boolean;
 }

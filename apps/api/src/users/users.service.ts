@@ -110,6 +110,10 @@ export class UsersService {
       where: { id: userId },
       select: {
         ...USER_SELECT_PROFILE_PUBLIC,
+        phone: true,
+        phoneE164: true,
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: true,
         _count: {
           select: {
             listings: activeWhere,
@@ -128,7 +132,15 @@ export class UsersService {
       throw new NotFoundException('المستخدم غير موجود');
     }
 
-    const counts = user._count;
+    const {
+      phone,
+      phoneE164,
+      showPhoneOnProfile,
+      showWhatsappOnProfile,
+      ...publicProfile
+    } = user;
+
+    const counts = publicProfile._count;
     const totalListings =
       counts.listings +
       counts.busListings +
@@ -138,7 +150,17 @@ export class UsersService {
       counts.carServices +
       counts.driverJobs;
 
-    return { ...user, totalListings };
+    const accountPhone =
+      (typeof phoneE164 === 'string' && phoneE164.trim()) ||
+      (typeof phone === 'string' && phone.trim()) ||
+      null;
+
+    return {
+      ...publicProfile,
+      totalListings,
+      ...(showPhoneOnProfile && accountPhone ? { phone: accountPhone } : {}),
+      ...(showWhatsappOnProfile && accountPhone ? { whatsapp: accountPhone } : {}),
+    };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -269,6 +291,24 @@ export class UsersService {
       }
     }
 
+    // 6. Contact visibility toggles validation: cannot be null; enabling requires phone present
+    if (dto.showPhoneOnProfile === null || dto.showWhatsappOnProfile === null) {
+      throw new BadRequestException('خيارات إظهار التواصل يجب أن تكون قيمة منطقية');
+    }
+    if (dto.showPhoneOnProfile === true || dto.showWhatsappOnProfile === true) {
+      const storedPhone =
+        (typeof user.phoneE164 === 'string' && user.phoneE164.trim()) ||
+        (typeof user.phone === 'string' && user.phone.trim()) ||
+        null;
+      const effectivePhone = nextPhone ?? storedPhone;
+      if (!effectivePhone) {
+        throw new BadRequestException({
+          code: 'PROFILE_PHONE_REQUIRED',
+          message: 'يرجى إضافة رقم الهاتف في ملفك الشخصي أولاً لتفعيل خيارات التواصل',
+        });
+      }
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -285,6 +325,12 @@ export class UsersService {
         ...(nextAvatarUrl !== undefined && { avatarUrl: nextAvatarUrl }),
         ...(dto.latitude !== undefined && { latitude: dto.latitude }),
         ...(dto.longitude !== undefined && { longitude: dto.longitude }),
+        ...(dto.showPhoneOnProfile !== undefined && {
+          showPhoneOnProfile: dto.showPhoneOnProfile,
+        }),
+        ...(dto.showWhatsappOnProfile !== undefined && {
+          showWhatsappOnProfile: dto.showWhatsappOnProfile,
+        }),
       },
       select: {
         ...USER_SELECT_PROFILE_PRIVATE,

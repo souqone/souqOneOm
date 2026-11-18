@@ -30,6 +30,8 @@ model User {
   phone                   String?
   phoneE164               String?        @unique
   phoneVerifiedAt         DateTime?
+  showPhoneOnProfile      Boolean        @default(false)
+  showWhatsappOnProfile   Boolean        @default(false)
   emailVerifiedAt         DateTime?
   status                  AccountStatus  @default(ACTIVE)
   suspendedUntil          DateTime?

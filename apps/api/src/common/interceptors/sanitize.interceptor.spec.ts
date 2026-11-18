@@ -288,6 +288,41 @@ describe('SanitizeInterceptor', () => {
         done();
       });
     });
+
+    it('should preserve opted-in phone and whatsapp on @ExposeProfileContact() (GET /users/:id) while still stripping passwordHash, phoneE164, and contactPhone', (done) => {
+      const profileInterceptor = new SanitizeInterceptor(new Reflector());
+
+      const fakeHandler = () => {};
+      Reflect.defineMetadata('exposeProfileContact', true, fakeHandler);
+      const fakeClass = class {};
+      const contextWithHandler = {
+        getHandler: () => fakeHandler,
+        getClass: () => fakeClass,
+      } as unknown as ExecutionContext;
+
+      const publicProfileResponse = {
+        id: 'u-public-seller',
+        username: 'seller_om',
+        displayName: 'Seller Oman',
+        phone: '+96891234567',
+        whatsapp: '+96891234567',
+        phoneE164: '+96891234567',
+        contactPhone: '91234567',
+        passwordHash: 'secret-hash',
+      };
+
+      const next: CallHandler = { handle: () => of(publicProfileResponse) };
+
+      profileInterceptor.intercept(contextWithHandler, next).subscribe((result: any) => {
+        expect(result.id).toBe('u-public-seller');
+        expect(result.phone).toBe('+96891234567');
+        expect(result.whatsapp).toBe('+96891234567');
+        expect(result.phoneE164).toBeUndefined();
+        expect(result.contactPhone).toBeUndefined();
+        expect(result.passwordHash).toBeUndefined();
+        done();
+      });
+    });
   });
 
   describe('Redis cached responses (Proof of send-time sanitization without manual cache flush)', () => {

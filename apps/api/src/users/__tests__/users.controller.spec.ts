@@ -24,6 +24,20 @@ describe('UsersController — Account Linking & Unlinking', () => {
 
   beforeEach(async () => {
     mockUsersService = {
+      getProfile: jest.fn().mockResolvedValue({
+        id: 'user-controller-test-id',
+        showPhoneOnProfile: false,
+        showWhatsappOnProfile: false,
+      }),
+      updateProfile: jest.fn().mockResolvedValue({
+        id: 'user-controller-test-id',
+        showPhoneOnProfile: true,
+        showWhatsappOnProfile: true,
+      }),
+      getPublicProfile: jest.fn().mockResolvedValue({
+        id: 'public-user-id',
+        username: 'seller1',
+      }),
       linkGoogle: jest.fn().mockResolvedValue({ message: 'تم ربط حساب Google بنجاح' }),
       linkApple: jest.fn().mockResolvedValue({ message: 'تم ربط حساب Apple بنجاح' }),
       unlinkGoogle: jest.fn().mockResolvedValue({
@@ -111,5 +125,25 @@ describe('UsersController — Account Linking & Unlinking', () => {
       '192.168.1.100',
       'Mozilla/5.0 Jest Test Agent',
     );
+  });
+
+  it('updateProfile passes authenticated user.sub (owner-only) and toggle DTO to usersService.updateProfile', async () => {
+    const dto = { showPhoneOnProfile: true, showWhatsappOnProfile: true };
+    const res = await controller.updateProfile(mockJwtUser, dto as any);
+
+    expect(mockUsersService.updateProfile).toHaveBeenCalledWith('user-controller-test-id', dto);
+    expect(res).toEqual({
+      id: 'user-controller-test-id',
+      showPhoneOnProfile: true,
+      showWhatsappOnProfile: true,
+    });
+  });
+
+  it('getPublicProfile is decorated with @ExposeProfileContact() so opted-in phone and whatsapp are not stripped by SanitizeInterceptor', () => {
+    const metadata = Reflect.getMetadata(
+      'exposeProfileContact',
+      UsersController.prototype.getPublicProfile,
+    );
+    expect(metadata).toBe(true);
   });
 });
