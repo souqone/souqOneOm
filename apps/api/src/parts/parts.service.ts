@@ -9,10 +9,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LISTING_EVENTS, ListingEventPayload } from '../common/events/listing.events';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { UpdatePartDto } from './dto/update-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
-import { USER_SELECT } from '../common/utils/entity.utils';
+import { USER_SELECT, LIST_FIRST_IMAGE_AND_COUNT_INCLUDE } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
@@ -20,6 +21,11 @@ import { SellerContactGate } from '../common/services/seller-contact-gate.servic
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
+import {
+  buildSimilarPriceWindow,
+  executeSimilarListingsQuery,
+} from '../common/utils/similar-listings.util';
+import { incrementViewCount } from '../common/utils/view-count.helper';
 
 @Injectable()
 export class PartsService {
@@ -31,7 +37,13 @@ export class PartsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly sellerContactGate: SellerContactGate,
     private readonly activeListingsLimitService: ActiveListingsLimitService,
+    private readonly redis?: RedisService,
   ) {}
+
+  private async invalidateCache() {
+    if (!this.redis) return;
+    await this.redis.delPattern('sparePart:similar:*');
+  }
 
   private generateSlug(title: string): string {
     const base = title
@@ -129,7 +141,7 @@ export class PartsService {
       await this.geoService.syncLocation('spare_parts', part.id, dto.latitude, dto.longitude);
     }
 
-
+    await this.invalidateCache();
 
     this.emitListingEvent(LISTING_EVENTS.CREATED, part, undefined, sellerId);
 
@@ -182,7 +194,7 @@ export class PartsService {
         orderBy,
         include: {
           seller: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
           governorateRef: true,
           wilayaRef: true,
         },
@@ -193,7 +205,63 @@ export class PartsService {
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
+  async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
+    return executeSimilarListingsQuery({
+      model: 'sparePart',
+      delegate: this.prisma.sparePart,
+      id,
+      limit,
+      viewer,
+      notFoundMessage: 'قطعة الغيار غير موجودة',
+      ownerField: 'sellerId',
+      redis: this.redis,
+      cachePrefix: 'sparePart',
+      originalSelect: {
+        id: true,
+        status: true,
+        sellerId: true,
+        hiddenByOwnerStatus: true,
+        deletedAt: true,
+        partCategory: true,
+        compatibleMakes: true,
+        price: true,
+      },
+      buildSearch: (original) => {
+        const priceWindow = buildSimilarPriceWindow('price', original.price);
+        const makes = Array.isArray(original.compatibleMakes)
+          ? original.compatibleMakes.filter(Boolean)
+          : [];
+        const narrowWhere: Record<string, any> = { ...priceWindow };
+        if (makes.length > 0) {
+          narrowWhere.compatibleMakes = { hasSome: makes };
+        }
+        const hasNarrowConstraints = Object.keys(narrowWhere).length > 0;
+
+        return {
+          baseWhere: {
+            status: 'ACTIVE',
+            deletedAt: null,
+            hiddenByOwnerStatus: false,
+            partCategory: original.partCategory,
+          },
+          narrowWhere,
+          broaderWhere: hasNarrowConstraints ? {} : undefined,
+          referencePrice: original.price,
+          priceOf: (row) => row.price,
+          query: {
+            include: {
+              seller: { select: USER_SELECT },
+              ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
+              governorateRef: true,
+              wilayaRef: true,
+            },
+          },
+        };
+      },
+    });
+  }
+
+  async findOne(id: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const part = await this.prisma.sparePart.findUnique({
       where: { id },
       include: {
@@ -207,7 +275,12 @@ export class PartsService {
 
     assertPublicOrOwner('sparePart', part, part.sellerId, viewer, 'قطعة الغيار غير موجودة');
 
-    await this.prisma.sparePart.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+    const shouldCount = this.redis
+      ? await incrementViewCount(this.redis, ENTITY_TYPES.SPARE_PART, id, ip)
+      : true;
+    if (shouldCount) {
+      await this.prisma.sparePart.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+    }
     return part;
   }
 
@@ -216,7 +289,7 @@ export class PartsService {
       where: { sellerId: userId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
-        images: { orderBy: { order: 'asc' }, take: 1 },
+        ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
         governorateRef: true,
         wilayaRef: true,
       },
@@ -313,7 +386,7 @@ export class PartsService {
       }
     }
 
-
+    await this.invalidateCache();
 
     this.emitListingEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
 
@@ -351,6 +424,8 @@ export class PartsService {
 
     // Clean up orphaned conversations & favorites
     await this.prisma.cleanupPolymorphicOrphans('SPARE_PART', id);
+
+    await this.invalidateCache();
 
     this.emitListingEvent(LISTING_EVENTS.DELETED, part, undefined, userId);
 

@@ -247,7 +247,7 @@ describe('UploadsService', () => {
       ).resolves.toBeDefined();
     });
 
-    it('regression: should NOT call redis.del or redis.delPattern for non-Cars methods (e.g. addImageToPart)', async () => {
+    it('regression: addImageToPart invalidates sparePart:similar:* without touching Cars listing caches', async () => {
       mockPrisma.sparePart.findFirst.mockResolvedValue({ id: 'part-1', sellerId: 'user-1' });
       mockPrisma.sparePartImage.aggregate.mockResolvedValue({ _max: { order: 0 } });
       mockPrisma.sparePartImage.count.mockResolvedValue(0);
@@ -256,7 +256,8 @@ describe('UploadsService', () => {
       await imageManager.addImageToPart('part-1', 'user-1', 'http://test.com/part.jpg', true);
 
       expect(mockRedis.del).not.toHaveBeenCalled();
-      expect(mockRedis.delPattern).not.toHaveBeenCalled();
+      expect(mockRedis.delPattern).toHaveBeenCalledWith('sparePart:similar:*');
+      expect(mockRedis.delPattern).not.toHaveBeenCalledWith('listings:*');
     });
 
     describe('addImageToPart (D-224)', () => {

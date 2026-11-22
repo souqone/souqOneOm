@@ -9,7 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 
-import { generateSlug } from '../utils/entity.utils';
+import { generateSlug, LIST_FIRST_IMAGE_AND_COUNT_INCLUDE } from '../utils/entity.utils';
 import { incrementViewCount } from '../utils/view-count.helper';
 import { LISTING_EVENTS, ListingEventPayload } from '../events/listing.events';
 import { USER_SELECT_PUBLIC, USER_SELECT_LISTING_PUBLIC } from '../constants/user-select.constant';
@@ -87,7 +87,7 @@ export abstract class BaseListingService {
   protected getListInclude(): any {
     return {
       user: { select: USER_SELECT_PUBLIC },
-      images: { orderBy: { order: 'asc' }, take: 1 },
+      ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
       governorateRef: true,
       wilayaRef: true,
     };
@@ -145,6 +145,7 @@ export abstract class BaseListingService {
 
     // Invalidate list cache
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.CREATED, item, undefined, userId);
@@ -339,6 +340,7 @@ export abstract class BaseListingService {
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
@@ -383,6 +385,7 @@ export abstract class BaseListingService {
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.DELETED, existing, undefined, userId);
@@ -426,6 +429,7 @@ export abstract class BaseListingService {
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.STATUS_CHANGED, updated, newStatus, userId);

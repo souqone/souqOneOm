@@ -66,7 +66,6 @@ describe('OwnerVisibilityRegistry', () => {
     const noCacheVerticals = [
       ENTITY_TYPES.EQUIPMENT_LISTING,
       ENTITY_TYPES.OPERATOR_LISTING,
-      ENTITY_TYPES.SPARE_PART,
       ENTITY_TYPES.DRIVER_PROFILE,
       ENTITY_TYPES.EMPLOYER_PROFILE,
       ENTITY_TYPES.CARRIER_PROFILE,
@@ -90,8 +89,15 @@ describe('OwnerVisibilityRegistry', () => {
       'busListing:slug:*',
     ]);
 
+    const part = OWNER_VISIBILITY_REGISTRY.find((c) => c.entityType === ENTITY_TYPES.SPARE_PART);
+    expect(part?.cachePatterns).toEqual(['sparePart:similar:*']);
+
     const service = OWNER_VISIBILITY_REGISTRY.find((c) => c.entityType === ENTITY_TYPES.CAR_SERVICE);
-    expect(service?.cachePatterns).toEqual(['carService:list:*', 'carService:detail:*']);
+    expect(service?.cachePatterns).toEqual([
+      'carService:list:*',
+      'carService:similar:*',
+      'carService:detail:*',
+    ]);
 
     const job = OWNER_VISIBILITY_REGISTRY.find((c) => c.entityType === ENTITY_TYPES.JOB);
     expect(job?.cachePatterns).toEqual(['jobs:list:*', 'jobs:detail:*']);

@@ -160,6 +160,7 @@ describe('EquipmentListingsService - Image Handling', () => {
         orderBy: { createdAt: 'desc' },
         include: {
           images: { orderBy: { order: 'asc' }, take: 1 },
+          _count: { select: { images: true } },
           governorateRef: true,
           wilayaRef: true,
         },

@@ -14,7 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEquipmentListingDto } from './dto/create-equipment-listing.dto';
 import { UpdateEquipmentListingDto } from './dto/update-equipment-listing.dto';
 import { QueryEquipmentListingsDto } from './dto/query-equipment-listings.dto';
-import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.utils';
+import { USER_SELECT, LIST_FIRST_IMAGE_AND_COUNT_INCLUDE, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.utils';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
@@ -22,7 +22,10 @@ import { SellerContactGate } from '../common/services/seller-contact-gate.servic
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
 import { assertPublicOrOwner, VisibilityViewer } from '../common/public-visibility';
-import { findSimilarListings } from '../common/utils/similar-listings.util';
+import {
+  buildSimilarPriceWindow,
+  executeSimilarListingsQuery,
+} from '../common/utils/similar-listings.util';
 import { EquipmentViewCounterService } from './equipment-view-counter.service';
 
 const ALLOWED_TRANSITIONS: Record<string, ListingStatus[]> = {
@@ -232,7 +235,7 @@ export class EquipmentListingsService {
         where, orderBy, skip: (page - 1) * limit, take: limit,
         include: {
           user: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
           governorateRef: true,
           wilayaRef: true,
         },
@@ -297,11 +300,15 @@ export class EquipmentListingsService {
   }
 
   async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
-    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 8, 1), 20);
-
-    const original = await this.prisma.equipmentListing.findFirst({
-      where: { id, deletedAt: null },
-      select: {
+    return executeSimilarListingsQuery({
+      model: 'equipmentListing',
+      delegate: this.prisma.equipmentListing,
+      id,
+      limit,
+      viewer,
+      notFoundMessage: 'الإعلان غير موجود',
+      ownerField: 'userId',
+      originalSelect: {
         id: true,
         status: true,
         userId: true,
@@ -314,64 +321,50 @@ export class EquipmentListingsService {
         price: true,
         dailyPrice: true,
       },
-    });
+      buildSearch: (original) => {
+        const isWanted = original.listingType === 'EQUIPMENT_WANTED';
+        const isRent = original.listingType === 'EQUIPMENT_RENT';
+        const priceField = isRent ? 'dailyPrice' : 'price';
+        const reference = isRent ? original.dailyPrice : original.price;
+        const priceWindow = buildSimilarPriceWindow(priceField, reference, !isWanted);
 
-    if (!original) throw new NotFoundException('الإعلان غير موجود');
-    assertPublicOrOwner('equipmentListing', original, original.userId, viewer, 'الإعلان غير موجود');
+        const narrowWhere: Record<string, any> = {};
+        const broaderWhere: Record<string, any> = {};
 
-    const isWanted = original.listingType === 'EQUIPMENT_WANTED';
-    const isRent = original.listingType === 'EQUIPMENT_RENT';
-    const priceField = isRent ? 'dailyPrice' : 'price';
-    const reference = isRent ? original.dailyPrice : original.price;
-    const refNum = reference == null ? 0 : Number(reference);
+        if (!isWanted) {
+          if (original.make) {
+            narrowWhere.make = { equals: original.make, mode: 'insensitive' };
+            broaderWhere.make = { equals: original.make, mode: 'insensitive' };
+          }
+          if (original.year != null) {
+            narrowWhere.year = { gte: original.year - 3, lte: original.year + 3 };
+          }
+          Object.assign(narrowWhere, priceWindow);
+        }
 
-    const priceWindow =
-      !isWanted && refNum > 0
-        ? { [priceField]: { gte: new Prisma.Decimal(refNum * 0.7), lte: new Prisma.Decimal(refNum * 1.3) } }
-        : {};
-
-    const narrowWhere: Record<string, any> = {};
-    const broaderWhere: Record<string, any> = {};
-
-    if (isWanted) {
-      // WANTED listings: same equipmentType only, NO price ranking, NO make/year ranking
-    } else {
-      if (original.make) {
-        narrowWhere.make = { equals: original.make, mode: 'insensitive' };
-        broaderWhere.make = { equals: original.make, mode: 'insensitive' };
-      }
-      if (original.year != null) {
-        narrowWhere.year = { gte: original.year - 3, lte: original.year + 3 };
-      }
-      Object.assign(narrowWhere, priceWindow);
-    }
-
-    const items = await findSimilarListings({
-      delegate: this.prisma.equipmentListing,
-      excludeId: id,
-      limit: safeLimit,
-      baseWhere: {
-        status: 'ACTIVE',
-        deletedAt: null,
-        hiddenByOwnerStatus: false,
-        equipmentType: original.equipmentType,
-        listingType: original.listingType,
-      },
-      narrowWhere,
-      broaderWhere: Object.keys(broaderWhere).length > 0 ? broaderWhere : undefined,
-      referencePrice: isWanted ? null : reference,
-      priceOf: (row) => (isRent ? row.dailyPrice : row.price),
-      query: {
-        include: {
-          user: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' }, take: 1 },
-          governorateRef: true,
-          wilayaRef: true,
-        },
+        return {
+          baseWhere: {
+            status: 'ACTIVE',
+            deletedAt: null,
+            hiddenByOwnerStatus: false,
+            equipmentType: original.equipmentType,
+            listingType: original.listingType,
+          },
+          narrowWhere,
+          broaderWhere: Object.keys(broaderWhere).length > 0 ? broaderWhere : undefined,
+          referencePrice: isWanted ? null : reference,
+          priceOf: (row) => (isRent ? row.dailyPrice : row.price),
+          query: {
+            include: {
+              user: { select: USER_SELECT },
+              images: { orderBy: { order: 'asc' }, take: 1 },
+              governorateRef: true,
+              wilayaRef: true,
+            },
+          },
+        };
       },
     });
-
-    return items;
   }
 
   async my(userId: string, page = 1, limit = 20) {
@@ -386,7 +379,7 @@ export class EquipmentListingsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
           governorateRef: true,
           wilayaRef: true,
         },

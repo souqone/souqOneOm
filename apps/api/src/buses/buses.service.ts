@@ -19,7 +19,10 @@ import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
 import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 import { assertEntityVisible } from '../listings/listing-visibility';
 import { VisibilityViewer } from '../common/public-visibility';
-import { findSimilarListings } from '../common/utils/similar-listings.util';
+import {
+  buildSimilarPriceWindow,
+  executeSimilarListingsQuery,
+} from '../common/utils/similar-listings.util';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { stripDeprecatedContactFields } from '../common/utils/contact.utils';
@@ -365,66 +368,57 @@ export class BusesService {
   }
 
   async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
-    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 8, 1), 20);
-
-    // Gate first: a hidden listing must not leak through its "similar" list (or its cache).
-    const original = await this.prisma.busListing.findFirst({
-      where: { id, deletedAt: null },
-      select: {
+    return executeSimilarListingsQuery({
+      model: 'busListing',
+      delegate: this.prisma.busListing,
+      id,
+      limit,
+      viewer,
+      notFoundMessage: 'إعلان الحافلة غير موجود',
+      ownerField: 'userId',
+      redis: this.redis,
+      cachePrefix: 'busListing',
+      cacheTtlSeconds: LIST_CACHE_TTL,
+      originalSelect: {
         id: true, status: true, userId: true, hiddenByOwnerStatus: true, deletedAt: true,
         busListingType: true, busType: true, make: true, year: true,
         price: true, dailyPrice: true,
       },
+      buildSearch: (original) => {
+        const isRent = original.busListingType === 'BUS_RENT';
+        const priceField = isRent ? 'dailyPrice' : 'price';
+        const reference = isRent ? original.dailyPrice : original.price;
+        const priceWindow = buildSimilarPriceWindow(priceField, reference);
+
+        return {
+          baseWhere: {
+            status: 'ACTIVE',
+            deletedAt: null,
+            hiddenByOwnerStatus: false,
+            busListingType: original.busListingType,
+            busType: original.busType,
+          },
+          narrowWhere: {
+            make: { equals: original.make, mode: 'insensitive' },
+            year: { gte: original.year - 3, lte: original.year + 3 },
+            ...priceWindow,
+          },
+          broaderWhere: { make: { equals: original.make, mode: 'insensitive' } },
+          referencePrice: reference,
+          priceOf: (row) => (isRent ? row.dailyPrice : row.price),
+          query: {
+            include: {
+              user: { select: USER_SELECT_LISTING_PUBLIC },
+              images: { orderBy: { order: 'asc' }, take: 1 },
+              governorateRef: true,
+              wilayaRef: true,
+            },
+          },
+        };
+      },
+      // Card data only: never expose contact/contract fields in a list
+      transformResults: (items) => items.map((b) => stripMembersOnlyFields(b)),
     });
-    if (!original) throw new NotFoundException('إعلان الحافلة غير موجود');
-    assertEntityVisible('busListing', original, original.userId, viewer, 'إعلان الحافلة غير موجود');
-
-    const cKey = this.cacheKey(`similar:${id}:${safeLimit}`);
-    const cached = await this.redis.get<any[]>(cKey);
-    if (cached) return cached;
-
-    const isRent = original.busListingType === 'BUS_RENT';
-    const priceField = isRent ? 'dailyPrice' : 'price';
-    const reference = isRent ? original.dailyPrice : original.price;
-    const refNum = reference == null ? 0 : Number(reference);
-    const priceWindow =
-      refNum > 0
-        ? { [priceField]: { gte: new Prisma.Decimal(refNum * 0.7), lte: new Prisma.Decimal(refNum * 1.3) } }
-        : {};
-
-    const items = await findSimilarListings({
-      delegate: this.prisma.busListing,
-      excludeId: id,
-      limit: safeLimit,
-      baseWhere: {
-        status: 'ACTIVE',
-        deletedAt: null,
-        hiddenByOwnerStatus: false,
-        busListingType: original.busListingType,
-        busType: original.busType,
-      },
-      narrowWhere: {
-        make: { equals: original.make, mode: 'insensitive' },
-        year: { gte: original.year - 3, lte: original.year + 3 },
-        ...priceWindow,
-      },
-      broaderWhere: { make: { equals: original.make, mode: 'insensitive' } },
-      referencePrice: reference,
-      priceOf: (row) => (isRent ? row.dailyPrice : row.price),
-      query: {
-        include: {
-          user: { select: USER_SELECT_LISTING_PUBLIC },
-          images: { orderBy: { order: 'asc' }, take: 1 },
-          governorateRef: true,
-          wilayaRef: true,
-        },
-      },
-    });
-
-    // Card data only: never expose contact/contract fields in a list
-    const result = items.map((b) => stripMembersOnlyFields(b));
-    await this.redis.set(cKey, result, LIST_CACHE_TTL);
-    return result;
   }
 
   private async incrementViewIfAllowed(listingId: string, ip?: string) {

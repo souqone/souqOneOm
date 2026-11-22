@@ -14,6 +14,15 @@ import { QueryReviewsDto } from './dto/query-reviews.dto';
 import { ReplyReviewDto } from './dto/reply-review.dto';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 
+export const LISTING_REVIEW_ENTITY_TYPES: ReadonlySet<string> = new Set([
+  ENTITY_TYPES.LISTING,
+  ENTITY_TYPES.BUS_LISTING,
+  ENTITY_TYPES.EQUIPMENT_LISTING,
+  ENTITY_TYPES.OPERATOR_LISTING,
+  ENTITY_TYPES.SPARE_PART,
+  ENTITY_TYPES.CAR_SERVICE,
+]);
+
 @Injectable()
 export class ReviewsService {
   private readonly logger = new Logger(ReviewsService.name);
@@ -26,15 +35,8 @@ export class ReviewsService {
   async create(dto: CreateReviewDto, reviewerId: string) {
     let effectiveRevieweeId = dto.revieweeId;
 
-    if (dto.entityType === ENTITY_TYPES.OPERATOR_LISTING) {
-      const listing = await this.prisma.operatorListing.findUnique({
-        where: { id: dto.entityId },
-        select: { userId: true },
-      });
-      if (!listing) {
-        throw new NotFoundException('إعلان المشغل غير موجود');
-      }
-      effectiveRevieweeId = listing.userId;
+    if (LISTING_REVIEW_ENTITY_TYPES.has(dto.entityType)) {
+      effectiveRevieweeId = await this.resolveListingRevieweeId(dto.entityType, dto.entityId);
     }
 
     if (!effectiveRevieweeId) {
@@ -58,8 +60,8 @@ export class ReviewsService {
       await this.validateJobReview(dto, reviewerId);
     }
 
-    if (dto.entityType === ENTITY_TYPES.OPERATOR_LISTING) {
-      await this.validateOperatorReview(dto, reviewerId);
+    if (LISTING_REVIEW_ENTITY_TYPES.has(dto.entityType)) {
+      await this.validateListingContactEligibility(dto.entityType, dto.entityId, reviewerId);
     }
 
     let review;
@@ -206,17 +208,80 @@ export class ReviewsService {
     }
   }
 
-  private async validateOperatorReview(dto: CreateReviewDto, reviewerId: string) {
+  private async resolveListingRevieweeId(entityType: string, entityId: string): Promise<string> {
+    switch (entityType) {
+      case ENTITY_TYPES.LISTING: {
+        const row = await this.prisma.listing.findUnique({
+          where: { id: entityId },
+          select: { sellerId: true },
+        });
+        if (!row) throw new NotFoundException('الإعلان غير موجود');
+        return row.sellerId;
+      }
+      case ENTITY_TYPES.BUS_LISTING: {
+        const row = await this.prisma.busListing.findUnique({
+          where: { id: entityId },
+          select: { userId: true, deletedAt: true },
+        });
+        if (!row || row.deletedAt != null) throw new NotFoundException('إعلان الحافلة غير موجود');
+        return row.userId;
+      }
+      case ENTITY_TYPES.EQUIPMENT_LISTING: {
+        const row = await this.prisma.equipmentListing.findUnique({
+          where: { id: entityId },
+          select: { userId: true, deletedAt: true },
+        });
+        if (!row || row.deletedAt != null) throw new NotFoundException('الإعلان غير موجود');
+        return row.userId;
+      }
+      case ENTITY_TYPES.OPERATOR_LISTING: {
+        const row = await this.prisma.operatorListing.findUnique({
+          where: { id: entityId },
+          select: { userId: true },
+        });
+        if (!row) throw new NotFoundException('إعلان المشغل غير موجود');
+        return row.userId;
+      }
+      case ENTITY_TYPES.SPARE_PART: {
+        const row = await this.prisma.sparePart.findUnique({
+          where: { id: entityId },
+          select: { sellerId: true, deletedAt: true },
+        });
+        if (!row || row.deletedAt != null) throw new NotFoundException('قطعة الغيار غير موجودة');
+        return row.sellerId;
+      }
+      case ENTITY_TYPES.CAR_SERVICE: {
+        const row = await this.prisma.carService.findUnique({
+          where: { id: entityId },
+          select: { userId: true, deletedAt: true },
+        });
+        if (!row || row.deletedAt != null) throw new NotFoundException('الخدمة غير موجودة');
+        return row.userId;
+      }
+      default:
+        throw new BadRequestException('نوع كيان غير معروف');
+    }
+  }
+
+  private async validateListingContactEligibility(
+    entityType: string,
+    entityId: string,
+    reviewerId: string,
+  ) {
     const contactRecord = await this.prisma.conversation.findFirst({
       where: {
-        entityType: ENTITY_TYPES.OPERATOR_LISTING,
-        entityId: dto.entityId,
+        entityType,
+        entityId,
         participants: { some: { userId: reviewerId } },
         messages: { some: { senderId: reviewerId } },
       },
     });
     if (!contactRecord) {
-      throw new BadRequestException('يمكنك فقط تقييم المشغل بعد التواصل معه عبر الرسائل أولاً');
+      const msg =
+        entityType === ENTITY_TYPES.OPERATOR_LISTING
+          ? 'يمكنك فقط تقييم المشغل بعد التواصل معه عبر الرسائل أولاً'
+          : 'يمكنك فقط تقييم صاحب الإعلان بعد التواصل معه عبر الرسائل أولاً';
+      throw new BadRequestException(msg);
     }
   }
 

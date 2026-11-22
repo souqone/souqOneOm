@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PartsService } from './parts.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { GeoService } from '../locations/geo.service';
 import { SearchService } from '../search/search.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -37,6 +38,7 @@ describe('PartsService', () => {
       providers: [
         PartsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: RedisService, useValue: { get: jest.fn(), set: jest.fn(), setNX: jest.fn(), del: jest.fn(), delPattern: jest.fn() } },
         { provide: GeoService, useValue: mockGeoService },
         { provide: SearchService, useValue: { indexDocument: jest.fn(), removeDocument: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },

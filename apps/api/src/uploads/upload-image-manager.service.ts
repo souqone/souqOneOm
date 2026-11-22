@@ -36,8 +36,18 @@ export class UploadImageManagerService {
     try {
       await this.redis.del(`carService:detail:${serviceId}`);
       await this.redis.delPattern('carService:list:*');
+      await this.redis.delPattern('carService:similar:*');
     } catch (err) {
       this.logger.warn(`Failed to invalidate carService caches for ${serviceId}`);
+    }
+  }
+
+  private async invalidateSparePartCaches(): Promise<void> {
+    if (!this.redis) return;
+    try {
+      await this.redis.delPattern('sparePart:similar:*');
+    } catch (err) {
+      this.logger.warn('Failed to invalidate sparePart similar caches');
     }
   }
 
@@ -218,6 +228,7 @@ export class UploadImageManagerService {
         }),
       updateImageOrder: (id, order, isPrimary) =>
         this.prisma.sparePartImage.update({ where: { id }, data: { order, isPrimary } }),
+      onMutated: () => this.invalidateSparePartCaches(),
     });
   }
 
@@ -325,9 +336,11 @@ export class UploadImageManagerService {
     const imageCount = await this.prisma.sparePartImage.count({ where: { sparePartId: partId } });
     const shouldBePrimary = isPrimary || imageCount === 0;
 
-    return this.prisma.sparePartImage.create({
+    const created = await this.prisma.sparePartImage.create({
       data: { url, order: nextOrder, isPrimary: shouldBePrimary, sparePartId: partId },
     });
+    await this.invalidateSparePartCaches();
+    return created;
   }
 
   async removeImageFromPart(imageId: string, userId: string) {
@@ -350,6 +363,8 @@ export class UploadImageManagerService {
         await this.prisma.sparePartImage.update({ where: { id: first.id }, data: { isPrimary: true } });
       }
     }
+
+    await this.invalidateSparePartCaches();
 
     return { message: 'تم حذف الصورة بنجاح' };
   }

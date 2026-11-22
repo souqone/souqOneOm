@@ -74,7 +74,7 @@ export const OWNER_VISIBILITY_REGISTRY: readonly OwnerVisibilityConfig[] = [
     ownerField: 'sellerId',
     ownerRelation: 'seller',
     indexedInMeili: true,
-    cachePatterns: [], // لا يوجد كاش في parts.service.ts
+    cachePatterns: ['sparePart:similar:*'],
   },
   {
     entityType: ENTITY_TYPES.CAR_SERVICE,
@@ -82,7 +82,7 @@ export const OWNER_VISIBILITY_REGISTRY: readonly OwnerVisibilityConfig[] = [
     ownerField: 'userId',
     ownerRelation: 'user',
     indexedInMeili: true,
-    cachePatterns: ['carService:list:*', 'carService:detail:*'],
+    cachePatterns: ['carService:list:*', 'carService:similar:*', 'carService:detail:*'],
   },
   {
     entityType: ENTITY_TYPES.JOB,

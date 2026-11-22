@@ -14,6 +14,13 @@ import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
 import { SellerContactGate } from '../common/services/seller-contact-gate.service';
 import { ActiveListingsLimitService } from '../common/services/active-listings-limit.service';
 import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
+import { VisibilityViewer } from '../common/public-visibility';
+import { USER_SELECT_PUBLIC } from '../common/constants/user-select.constant';
+import { LIST_FIRST_IMAGE_AND_COUNT_INCLUDE } from '../common/utils/entity.utils';
+import {
+  buildSimilarPriceWindow,
+  executeSimilarListingsQuery,
+} from '../common/utils/similar-listings.util';
 
 @Injectable()
 export class ServicesService extends BaseListingService {
@@ -144,6 +151,7 @@ export class ServicesService extends BaseListingService {
       });
       await this.redis.del(`carService:detail:${id}`);
       await this.redis.delPattern('carService:list:*');
+      await this.redis.delPattern('carService:similar:*');
     }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -200,6 +208,59 @@ export class ServicesService extends BaseListingService {
     }
 
     return super.findAll(query);
+  }
+
+  async findSimilar(id: string, limit = 8, viewer?: VisibilityViewer | string | null) {
+    return executeSimilarListingsQuery({
+      model: 'carService',
+      delegate: this.prisma.carService,
+      id,
+      limit,
+      viewer,
+      notFoundMessage: this.config.notFoundMsg,
+      ownerField: 'userId',
+      redis: this.redis,
+      cachePrefix: this.config.modelName,
+      originalSelect: {
+        id: true,
+        status: true,
+        userId: true,
+        hiddenByOwnerStatus: true,
+        deletedAt: true,
+        serviceType: true,
+        governorateId: true,
+        priceFrom: true,
+      },
+      buildSearch: (original) => {
+        const priceWindow = buildSimilarPriceWindow('priceFrom', original.priceFrom);
+        const narrowWhere: Record<string, any> = { ...priceWindow };
+        if (original.governorateId != null) {
+          narrowWhere.governorateId = original.governorateId;
+        }
+        const hasNarrowConstraints = Object.keys(narrowWhere).length > 0;
+
+        return {
+          baseWhere: {
+            status: 'ACTIVE',
+            deletedAt: null,
+            hiddenByOwnerStatus: false,
+            serviceType: original.serviceType,
+          },
+          narrowWhere,
+          broaderWhere: hasNarrowConstraints ? {} : undefined,
+          referencePrice: original.priceFrom,
+          priceOf: (row) => row.priceFrom,
+          query: {
+            include: {
+              user: { select: USER_SELECT_PUBLIC },
+              ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
+              governorateRef: true,
+              wilayaRef: true,
+            },
+          },
+        };
+      },
+    });
   }
 
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

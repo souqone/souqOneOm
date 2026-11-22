@@ -17,7 +17,22 @@ describe('ReviewsService', () => {
     jobApplication: {
       findFirst: jest.fn(),
     },
+    listing: {
+      findUnique: jest.fn(),
+    },
+    busListing: {
+      findUnique: jest.fn(),
+    },
+    equipmentListing: {
+      findUnique: jest.fn(),
+    },
     operatorListing: {
+      findUnique: jest.fn(),
+    },
+    sparePart: {
+      findUnique: jest.fn(),
+    },
+    carService: {
       findUnique: jest.fn(),
     },
     review: {
@@ -79,6 +94,7 @@ describe('ReviewsService', () => {
     });
 
     it('should throw BadRequestException when user attempts to review themselves on other entity types', async () => {
+      mockPrisma.listing.findUnique.mockResolvedValue({ sellerId: 'user-1' });
       await expect(
         service.create(
           {
@@ -316,14 +332,14 @@ describe('ReviewsService', () => {
       ).rejects.toThrow(new NotFoundException('إعلان المشغل غير موجود'));
     });
 
-    it('(f) other entity types: omitting revieweeId throws BadRequestException', async () => {
+    it('(f) non-listing entity types (e.g. DRIVER_PROFILE): omitting revieweeId throws BadRequestException', async () => {
       await expect(
         service.create(
           {
             rating: 5,
-            comment: 'إعلان ممتاز',
-            entityType: ENTITY_TYPES.LISTING,
-            entityId: 'listing-101',
+            comment: 'سائق ممتاز',
+            entityType: ENTITY_TYPES.DRIVER_PROFILE,
+            entityId: 'driver-prof-101',
           },
           reviewerId,
         ),
