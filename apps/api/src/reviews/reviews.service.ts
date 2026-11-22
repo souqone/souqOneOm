@@ -23,6 +23,11 @@ export const LISTING_REVIEW_ENTITY_TYPES: ReadonlySet<string> = new Set([
   ENTITY_TYPES.CAR_SERVICE,
 ]);
 
+export const CONTACT_ELIGIBLE_REVIEW_ENTITY_TYPES: ReadonlySet<string> = new Set([
+  ...LISTING_REVIEW_ENTITY_TYPES,
+  ENTITY_TYPES.USER,
+]);
+
 @Injectable()
 export class ReviewsService {
   private readonly logger = new Logger(ReviewsService.name);
@@ -35,8 +40,8 @@ export class ReviewsService {
   async create(dto: CreateReviewDto, reviewerId: string) {
     let effectiveRevieweeId = dto.revieweeId;
 
-    if (LISTING_REVIEW_ENTITY_TYPES.has(dto.entityType)) {
-      effectiveRevieweeId = await this.resolveListingRevieweeId(dto.entityType, dto.entityId);
+    if (CONTACT_ELIGIBLE_REVIEW_ENTITY_TYPES.has(dto.entityType)) {
+      effectiveRevieweeId = await this.resolveRevieweeId(dto.entityType, dto.entityId);
     }
 
     if (!effectiveRevieweeId) {
@@ -60,8 +65,8 @@ export class ReviewsService {
       await this.validateJobReview(dto, reviewerId);
     }
 
-    if (LISTING_REVIEW_ENTITY_TYPES.has(dto.entityType)) {
-      await this.validateListingContactEligibility(dto.entityType, dto.entityId, reviewerId);
+    if (CONTACT_ELIGIBLE_REVIEW_ENTITY_TYPES.has(dto.entityType)) {
+      await this.validateContactEligibility(dto.entityType, dto.entityId, effectiveRevieweeId, reviewerId);
     }
 
     let review;
@@ -208,8 +213,16 @@ export class ReviewsService {
     }
   }
 
-  private async resolveListingRevieweeId(entityType: string, entityId: string): Promise<string> {
+  private async resolveRevieweeId(entityType: string, entityId: string): Promise<string> {
     switch (entityType) {
+      case ENTITY_TYPES.USER: {
+        const user = await this.prisma.user.findUnique({
+          where: { id: entityId },
+          select: { id: true },
+        });
+        if (!user) throw new NotFoundException('المستخدم غير موجود');
+        return user.id;
+      }
       case ENTITY_TYPES.LISTING: {
         const row = await this.prisma.listing.findUnique({
           where: { id: entityId },
@@ -263,24 +276,36 @@ export class ReviewsService {
     }
   }
 
-  private async validateListingContactEligibility(
+  private async validateContactEligibility(
     entityType: string,
     entityId: string,
+    revieweeId: string,
     reviewerId: string,
   ) {
-    const contactRecord = await this.prisma.conversation.findFirst({
-      where: {
-        entityType,
-        entityId,
-        participants: { some: { userId: reviewerId } },
-        messages: { some: { senderId: reviewerId } },
-      },
-    });
+    const where: Prisma.ConversationWhereInput =
+      entityType === ENTITY_TYPES.USER
+        ? {
+            AND: [
+              { participants: { some: { userId: reviewerId } } },
+              { participants: { some: { userId: revieweeId } } },
+            ],
+            messages: { some: { senderId: reviewerId } },
+          }
+        : {
+            entityType,
+            entityId,
+            participants: { some: { userId: reviewerId } },
+            messages: { some: { senderId: reviewerId } },
+          };
+
+    const contactRecord = await this.prisma.conversation.findFirst({ where });
     if (!contactRecord) {
       const msg =
         entityType === ENTITY_TYPES.OPERATOR_LISTING
           ? 'يمكنك فقط تقييم المشغل بعد التواصل معه عبر الرسائل أولاً'
-          : 'يمكنك فقط تقييم صاحب الإعلان بعد التواصل معه عبر الرسائل أولاً';
+          : entityType === ENTITY_TYPES.USER
+            ? 'يمكنك فقط تقييم البائع بعد التواصل معه عبر الرسائل أولاً'
+            : 'يمكنك فقط تقييم صاحب الإعلان بعد التواصل معه عبر الرسائل أولاً';
       throw new BadRequestException(msg);
     }
   }

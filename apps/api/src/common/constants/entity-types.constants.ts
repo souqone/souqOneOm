@@ -25,6 +25,7 @@ export const ENTITY_TYPES = {
   DRIVER_PROFILE:    'DRIVER_PROFILE',
   EMPLOYER_PROFILE:  'EMPLOYER_PROFILE',
   CARRIER_PROFILE:   'CARRIER_PROFILE',
+  USER:              'USER',
   ROOM:              'ROOM',
 } as const;
 

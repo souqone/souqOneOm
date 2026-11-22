@@ -62,11 +62,17 @@ describe('D-B17 Requirement 4: Server-derived reviewee + contact eligibility acr
       }
     });
 
-    it('does NOT allow USER (seller-level) reviews in CreateReviewDto', async () => {
-      expect(REVIEW_ENTITY_TYPES).not.toContain('USER');
+    it('accepts USER (seller-level) in CreateReviewDto (added in D-B18) and rejects unknown entityType', async () => {
+      expect(REVIEW_ENTITY_TYPES).toContain(ENTITY_TYPES.USER);
+      const dto = await pipe.transform(
+        { rating: 5, entityType: ENTITY_TYPES.USER, entityId: 'user-1' },
+        { type: 'body', metatype: CreateReviewDto },
+      );
+      expect(dto.entityType).toBe(ENTITY_TYPES.USER);
+
       await expect(
         pipe.transform(
-          { rating: 5, entityType: 'USER', entityId: 'user-1' },
+          { rating: 5, entityType: 'INVALID_TYPE', entityId: 'user-1' },
           { type: 'body', metatype: CreateReviewDto },
         ),
       ).rejects.toThrow(BadRequestException);
