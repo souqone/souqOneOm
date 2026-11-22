@@ -14,7 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEquipmentListingDto } from './dto/create-equipment-listing.dto';
 import { UpdateEquipmentListingDto } from './dto/update-equipment-listing.dto';
 import { QueryEquipmentListingsDto } from './dto/query-equipment-listings.dto';
-import { USER_SELECT, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.utils';
+import { USER_SELECT, LIST_FIRST_IMAGE_AND_COUNT_INCLUDE, MAX_IMAGES_PER_LISTING, generateSlug } from './equipment.utils';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
@@ -232,7 +232,7 @@ export class EquipmentListingsService {
         where, orderBy, skip: (page - 1) * limit, take: limit,
         include: {
           user: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
           governorateRef: true,
           wilayaRef: true,
         },
@@ -386,7 +386,7 @@ export class EquipmentListingsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
           governorateRef: true,
           wilayaRef: true,
         },

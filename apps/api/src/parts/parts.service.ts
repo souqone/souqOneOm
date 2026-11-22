@@ -12,7 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { UpdatePartDto } from './dto/update-part.dto';
 import { QueryPartsDto } from './dto/query-parts.dto';
-import { USER_SELECT } from '../common/utils/entity.utils';
+import { USER_SELECT, LIST_FIRST_IMAGE_AND_COUNT_INCLUDE } from '../common/utils/entity.utils';
 
 import { GeoService } from '../locations/geo.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
@@ -182,7 +182,7 @@ export class PartsService {
         orderBy,
         include: {
           seller: { select: USER_SELECT },
-          images: { orderBy: { order: 'asc' }, take: 1 },
+          ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
           governorateRef: true,
           wilayaRef: true,
         },
@@ -216,7 +216,7 @@ export class PartsService {
       where: { sellerId: userId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
-        images: { orderBy: { order: 'asc' }, take: 1 },
+        ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
         governorateRef: true,
         wilayaRef: true,
       },
