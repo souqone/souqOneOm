@@ -35,6 +35,16 @@ export class PartsController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
+  @Get(':id/similar')
+  findSimilar(
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: JwtPayload,
+  ) {
+    return this.partsService.findSimilar(id, limit ? parseInt(limit, 10) : 8, user);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
     return this.partsService.findOne(id, user);

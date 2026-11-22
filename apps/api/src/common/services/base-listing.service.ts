@@ -145,6 +145,7 @@ export abstract class BaseListingService {
 
     // Invalidate list cache
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.CREATED, item, undefined, userId);
@@ -339,6 +340,7 @@ export abstract class BaseListingService {
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.UPDATED, updated, undefined, userId);
@@ -383,6 +385,7 @@ export abstract class BaseListingService {
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.DELETED, existing, undefined, userId);
@@ -426,6 +429,7 @@ export abstract class BaseListingService {
     // Invalidate caches
     await this.redis.del(this.cacheKey(`detail:${id}`));
     await this.redis.delPattern(this.cacheKey('list:*'));
+    await this.redis.delPattern(this.cacheKey('similar:*'));
 
     // Emit event
     this.emitEvent(LISTING_EVENTS.STATUS_CHANGED, updated, newStatus, userId);
