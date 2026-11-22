@@ -12,7 +12,7 @@ describe('PrismaService - cleanupPolymorphicOrphans', () => {
     jest.restoreAllMocks();
   });
 
-  it('does NOT include review.deleteMany when entityType is not in ReviewEntityType (e.g. SPARE_PART)', async () => {
+  it('does NOT include review.deleteMany when entityType is not in ReviewEntityType (e.g. TRANSPORT_REQUEST)', async () => {
     const favoriteOp = { op: 'favorite.deleteMany' };
     const conversationOp = { op: 'conversation.deleteMany' };
 
@@ -30,13 +30,13 @@ describe('PrismaService - cleanupPolymorphicOrphans', () => {
       .spyOn(service, '$transaction')
       .mockResolvedValue([{ count: 1 }, { count: 0 }] as any);
 
-    await service.cleanupPolymorphicOrphans('SPARE_PART', 'part-123');
+    await service.cleanupPolymorphicOrphans('TRANSPORT_REQUEST', 'tr-123');
 
     expect(favoriteSpy).toHaveBeenCalledWith({
-      where: { entityType: 'SPARE_PART', entityId: 'part-123' },
+      where: { entityType: 'TRANSPORT_REQUEST', entityId: 'tr-123' },
     });
     expect(conversationSpy).toHaveBeenCalledWith({
-      where: { entityType: 'SPARE_PART', entityId: 'part-123' },
+      where: { entityType: 'TRANSPORT_REQUEST', entityId: 'tr-123' },
     });
     expect(reviewSpy).not.toHaveBeenCalled();
 
@@ -44,6 +44,25 @@ describe('PrismaService - cleanupPolymorphicOrphans', () => {
     const ops = transactionSpy.mock.calls[0][0] as any[];
     expect(ops).toHaveLength(2);
     expect(ops).toEqual([favoriteOp, conversationOp]);
+  });
+
+  it('DOES include review.deleteMany for SPARE_PART and CAR_SERVICE (D-B17)', async () => {
+    const reviewSpy = jest
+      .spyOn(service.review, 'deleteMany')
+      .mockReturnValue({} as any);
+    jest.spyOn(service.favorite, 'deleteMany').mockReturnValue({} as any);
+    jest.spyOn(service.conversation, 'deleteMany').mockReturnValue({} as any);
+    jest.spyOn(service, '$transaction').mockResolvedValue([{ count: 0 }, { count: 0 }, { count: 0 }] as any);
+
+    await service.cleanupPolymorphicOrphans('SPARE_PART', 'part-123');
+    expect(reviewSpy).toHaveBeenCalledWith({
+      where: { entityType: ReviewEntityType.SPARE_PART, entityId: 'part-123' },
+    });
+
+    await service.cleanupPolymorphicOrphans('CAR_SERVICE', 'svc-123');
+    expect(reviewSpy).toHaveBeenCalledWith({
+      where: { entityType: ReviewEntityType.CAR_SERVICE, entityId: 'svc-123' },
+    });
   });
 
   it('does NOT include review.deleteMany when entityType is JOB', async () => {
