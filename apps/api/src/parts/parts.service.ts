@@ -25,6 +25,7 @@ import {
   buildSimilarPriceWindow,
   executeSimilarListingsQuery,
 } from '../common/utils/similar-listings.util';
+import { incrementViewCount } from '../common/utils/view-count.helper';
 
 @Injectable()
 export class PartsService {
@@ -260,7 +261,7 @@ export class PartsService {
     });
   }
 
-  async findOne(id: string, viewer?: VisibilityViewer | string | null) {
+  async findOne(id: string, viewer?: VisibilityViewer | string | null, ip?: string) {
     const part = await this.prisma.sparePart.findUnique({
       where: { id },
       include: {
@@ -274,7 +275,12 @@ export class PartsService {
 
     assertPublicOrOwner('sparePart', part, part.sellerId, viewer, 'قطعة الغيار غير موجودة');
 
-    await this.prisma.sparePart.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+    const shouldCount = this.redis
+      ? await incrementViewCount(this.redis, ENTITY_TYPES.SPARE_PART, id, ip)
+      : true;
+    if (shouldCount) {
+      await this.prisma.sparePart.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+    }
     return part;
   }
 

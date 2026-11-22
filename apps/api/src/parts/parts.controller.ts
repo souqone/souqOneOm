@@ -1,8 +1,9 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards,
+  UseGuards, Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -46,8 +47,8 @@ export class PartsController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user?: JwtPayload) {
-    return this.partsService.findOne(id, user);
+  findOne(@Param('id') id: string, @Req() req: Request, @CurrentUser() user?: JwtPayload) {
+    return this.partsService.findOne(id, user, req?.ip);
   }
 
   @UseGuards(JwtAuthGuard)
