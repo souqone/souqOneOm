@@ -357,7 +357,7 @@ export class EquipmentListingsService {
           query: {
             include: {
               user: { select: USER_SELECT },
-              images: { orderBy: { order: 'asc' }, take: 1 },
+              ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
               governorateRef: true,
               wilayaRef: true,
             },

@@ -129,4 +129,28 @@ describe('BusesService.findSimilar', () => {
     await service.findSimilar('bus-1', 500, undefined);
     expect(prisma.busListing.findMany.mock.calls[0][0].take).toBe(60); // 20 * 3 candidates
   });
+
+  it('includes first image and _count.images in findMany and preserves _count after stripping members-only fields', async () => {
+    prisma.busListing.findFirst.mockResolvedValue(original());
+    prisma.busListing.findMany.mockResolvedValue([
+      {
+        id: 'b2',
+        createdAt: '2026-01-01',
+        price: '10000',
+        images: [{ id: 'img-1', url: 'https://cdn.example/1.jpg', order: 0 }],
+        _count: { images: 5 },
+        contractClient: 'Secret Corp',
+      },
+    ]);
+
+    const res = await service.findSimilar('bus-1', 4, undefined);
+
+    const callArg = prisma.busListing.findMany.mock.calls[0][0];
+    expect(callArg.include).toMatchObject({
+      images: { orderBy: { order: 'asc' }, take: 1 },
+      _count: { select: { images: true } },
+    });
+    expect(res[0]._count).toEqual({ images: 5 });
+    expect(res[0]).not.toHaveProperty('contractClient');
+  });
 });
