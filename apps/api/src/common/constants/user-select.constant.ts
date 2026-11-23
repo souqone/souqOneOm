@@ -48,6 +48,8 @@ export const USER_SELECT_PROFILE_PUBLIC = {
   governorateRef: true,
   wilayaRef: true,
   isVerified: true,
+  averageRating: true,
+  reviewCount: true,
   createdAt: true,
 } as const satisfies Prisma.UserSelect;
 

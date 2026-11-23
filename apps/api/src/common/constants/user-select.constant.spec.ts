@@ -54,7 +54,7 @@ describe('user-select.constant', () => {
     });
   });
 
-  it('USER_SELECT_PROFILE_PUBLIC should include public fields (bio, locations) and no phone/email/role/toggle flags', () => {
+  it('USER_SELECT_PROFILE_PUBLIC should include public fields (bio, locations, rating) and no phone/email/role/toggle flags', () => {
     expect(USER_SELECT_PROFILE_PUBLIC).toEqual({
       id: true,
       username: true,
@@ -67,6 +67,8 @@ describe('user-select.constant', () => {
       governorateRef: true,
       wilayaRef: true,
       isVerified: true,
+      averageRating: true,
+      reviewCount: true,
       createdAt: true,
     });
     expect('role' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
@@ -77,7 +79,7 @@ describe('user-select.constant', () => {
     expect('showWhatsappOnProfile' in USER_SELECT_PROFILE_PUBLIC).toBe(false);
   });
 
-  it('USER_SELECT_PROFILE_PRIVATE should include phone, email, role, contact visibility toggles, and updatedAt', () => {
+  it('USER_SELECT_PROFILE_PRIVATE should include phone, email, role, contact visibility toggles, rating, and updatedAt', () => {
     expect(USER_SELECT_PROFILE_PRIVATE).toEqual({
       id: true,
       username: true,
@@ -90,6 +92,8 @@ describe('user-select.constant', () => {
       governorateRef: true,
       wilayaRef: true,
       isVerified: true,
+      averageRating: true,
+      reviewCount: true,
       createdAt: true,
       role: true,
       email: true,
