@@ -97,8 +97,8 @@ describe('Auth Part 5 Security Review Specification (Report 063)', () => {
       checkLockout: jest.fn().mockResolvedValue({ locked: false }),
       checkAndRecordForgotPasswordLimit: jest.fn().mockResolvedValue(true),
       assertResendVerificationLimit: jest.fn().mockResolvedValue(undefined),
-      assertSignupIpLimit: jest.fn().mockResolvedValue(undefined),
-      recordSignupSuccess: jest.fn().mockResolvedValue(undefined),
+      assertSignupIpLimit: jest.fn().mockResolvedValue(false),
+      releaseSignupIpSlot: jest.fn().mockResolvedValue(undefined),
     };
 
     mockOtp = {

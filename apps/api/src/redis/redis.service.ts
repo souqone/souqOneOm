@@ -202,6 +202,19 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } catch { return 0; }
   }
 
+  // Atomic decrement — releases a reserved rate-limit slot on rollback or over-cap
+  async decr(key: string): Promise<number> {
+    if (!this.connected) return 0;
+    try {
+      const val = await this.client.decr(key);
+      if (val <= 0) {
+        await this.client.del(key);
+        return 0;
+      }
+      return val;
+    } catch { return 0; }
+  }
+
   // Set a key only if it does not exist (with TTL) — useful for cooldowns
   async setNX(key: string, value: string, ttlSeconds: number): Promise<boolean> {
     if (!this.connected) return false;
