@@ -248,5 +248,27 @@ describe('EquipmentListingsService.findSimilar (Task EB4)', () => {
       expect(results[0].user).not.toHaveProperty('contactPhone');
       expect(results[0].user).not.toHaveProperty('whatsapp');
     });
+
+    it('includes first image and _count.images in findMany query', async () => {
+      prismaMock.equipmentListing.findFirst.mockResolvedValueOnce(mockOriginal());
+      prismaMock.equipmentListing.findMany.mockResolvedValueOnce([
+        {
+          id: 'eq-2',
+          createdAt: new Date(),
+          price: '50000',
+          images: [{ id: 'img-1', url: 'https://cdn.example/1.jpg', order: 0 }],
+          _count: { images: 4 },
+        },
+      ]);
+
+      const results = await service.findSimilar('eq-1', 4);
+
+      const callArg = prismaMock.equipmentListing.findMany.mock.calls[0][0];
+      expect(callArg.include).toMatchObject({
+        images: { orderBy: { order: 'asc' }, take: 1 },
+        _count: { select: { images: true } },
+      });
+      expect(results[0]._count).toEqual({ images: 4 });
+    });
   });
 });

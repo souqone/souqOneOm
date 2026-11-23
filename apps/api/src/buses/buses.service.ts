@@ -15,7 +15,7 @@ import { RedisService } from '../redis/redis.service';
 import { CreateBusListingDto } from './dto/create-bus-listing.dto';
 import { UpdateBusListingDto } from './dto/update-bus-listing.dto';
 import { QueryBusListingsDto } from './dto/query-bus-listings.dto';
-import { generateSlug, USER_SELECT } from '../common/utils/entity.utils';
+import { generateSlug, LIST_FIRST_IMAGE_AND_COUNT_INCLUDE, USER_SELECT } from '../common/utils/entity.utils';
 import { USER_SELECT_LISTING_PUBLIC } from '../common/constants/user-select.constant';
 import { assertEntityVisible } from '../listings/listing-visibility';
 import { VisibilityViewer } from '../common/public-visibility';
@@ -409,7 +409,7 @@ export class BusesService {
           query: {
             include: {
               user: { select: USER_SELECT_LISTING_PUBLIC },
-              images: { orderBy: { order: 'asc' }, take: 1 },
+              ...LIST_FIRST_IMAGE_AND_COUNT_INCLUDE,
               governorateRef: true,
               wilayaRef: true,
             },
