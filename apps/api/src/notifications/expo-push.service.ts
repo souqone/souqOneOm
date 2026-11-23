@@ -14,6 +14,10 @@ export class ExpoPushService {
   /**
    * Register or refresh a device's Expo push token for a user.
    * Called from POST /users/push-token (Spec 4).
+   *
+   * Enforces single-account ownership atomically in ONE transaction:
+   * if another account previously owned this device token, its row is
+   * removed before upserting ownership for `userId`.
    */
   async registerToken(userId: string, token: string, deviceType?: string) {
     if (!Expo.isExpoPushToken(token)) {
@@ -21,10 +25,26 @@ export class ExpoPushService {
       throw new Error('Invalid Expo push token format');
     }
 
-    await this.prisma.pushToken.upsert({
-      where: { token },
-      create: { token, userId, deviceType },
-      update: { userId, deviceType, lastUsedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.pushToken.deleteMany({
+        where: { token, userId: { not: userId } },
+      });
+      await tx.pushToken.upsert({
+        where: { token },
+        create: { token, userId, deviceType },
+        update: { userId, deviceType, lastUsedAt: new Date() },
+      });
+    });
+  }
+
+  /**
+   * Idempotently unregister a user's Expo push token(s).
+   * Called from DELETE /users/push-token on logout.
+   * Scoped strictly to `userId` so a caller cannot remove another user's token.
+   */
+  async unregisterToken(userId: string, token?: string): Promise<void> {
+    await this.prisma.pushToken.deleteMany({
+      where: token ? { userId, token } : { userId },
     });
   }
 

@@ -111,9 +111,12 @@ describe('Part 6a: Contact Gate Coverage & Registry Unit Tests', () => {
       try {
         await gate.assertCanPublish('user-2');
       } catch (err: any) {
-        expect(err.getResponse()).toMatchObject({
+        const response = err.getResponse();
+        expect(response).toMatchObject({
           code: 'PROFILE_PHONE_REQUIRED',
         });
+        expect(typeof response.message).toBe('string');
+        expect(response.message).not.toMatch(/لازم|عشان|بروفايلك|معاك/);
       }
     });
 

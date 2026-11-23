@@ -45,42 +45,45 @@ export class AuthService {
   }
 
   async signup(dto: SignupDto, ip?: string) {
+    let signupSlotReserved = false;
     if (ip) {
-      await this.audit.assertSignupIpLimit(ip);
+      signupSlotReserved = await this.audit.assertSignupIpLimit(ip);
     }
 
-    const email = normalizeEmail(dto.email);
-    if (!isValidNormalizedEmail(email)) {
-      throw new BadRequestException('البريد الإلكتروني غير صالح');
-    }
-    const username = dto.username.trim().toLowerCase();
-
-    let normalizedPhone: string | undefined = undefined;
-    if (dto.phone !== undefined && dto.phone !== null && dto.phone.trim() !== '') {
-      const strict = normalizePhoneStrict(dto.phone);
-      if (!strict) {
-        throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
-      }
-      normalizedPhone = strict.e164;
-    }
-
-    const existingUserByUsername = await this.prisma.user.findFirst({
-      where: {
-        username: {
-          equals: username,
-          mode: 'insensitive',
-        },
-      },
-      select: { id: true },
-    });
-    if (existingUserByUsername) {
-      throw new BadRequestException('اسم المستخدم مستخدم بالفعل');
-    }
-
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-
+    let email: string;
+    let user: { id: string; email: string | null };
     try {
-      const user = await this.prisma.user.create({
+      email = normalizeEmail(dto.email);
+      if (!isValidNormalizedEmail(email)) {
+        throw new BadRequestException('البريد الإلكتروني غير صالح');
+      }
+      const username = dto.username.trim().toLowerCase();
+
+      let normalizedPhone: string | undefined = undefined;
+      if (dto.phone !== undefined && dto.phone !== null && dto.phone.trim() !== '') {
+        const strict = normalizePhoneStrict(dto.phone);
+        if (!strict) {
+          throw new BadRequestException('رقم الهاتف غير صالح أو غير مدعوم في دولتك');
+        }
+        normalizedPhone = strict.e164;
+      }
+
+      const existingUserByUsername = await this.prisma.user.findFirst({
+        where: {
+          username: {
+            equals: username,
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true },
+      });
+      if (existingUserByUsername) {
+        throw new BadRequestException('اسم المستخدم مستخدم بالفعل');
+      }
+
+      const passwordHash = await bcrypt.hash(dto.password, 10);
+
+      user = await this.prisma.user.create({
         data: {
           email, username, displayName: dto.displayName, passwordHash, phone: normalizedPhone,
           country: dto.country,
@@ -88,36 +91,36 @@ export class AuthService {
           city: dto.city,
         },
       });
-
-      if (ip) {
-        await this.audit.recordSignupSuccess(ip);
-      }
-
-      const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
-
-      let emailSent = true;
-      try {
-        await this.mailService.sendVerificationEmail(email, code);
-      } catch {
-        emailSent = false;
-        this.logger.error(`Failed to send verification email for user ${user.id}`);
-      }
-
-      const verificationToken = await this.tokens.signVerificationToken(user.id);
-
-      return {
-        requiresVerification: true,
-        verificationToken,
-        emailSent,
-        user: { email: user.email },
-      };
+      signupSlotReserved = false;
     } catch (err: any) {
+      if (signupSlotReserved) {
+        await this.audit.releaseSignupIpSlot(ip);
+      }
       if (err.code === 'P2002') {
         const field = err.meta?.target?.includes('email') ? 'البريد الإلكتروني' : 'اسم المستخدم';
         throw new BadRequestException(`${field} مستخدم بالفعل`);
       }
       throw err;
     }
+
+    const code = await this.otp.issue(user.id, OtpPurpose.EMAIL_VERIFY, OTP_TTL_SECONDS);
+
+    let emailSent = true;
+    try {
+      await this.mailService.sendVerificationEmail(email, code);
+    } catch {
+      emailSent = false;
+      this.logger.error(`Failed to send verification email for user ${user.id}`);
+    }
+
+    const verificationToken = await this.tokens.signVerificationToken(user.id);
+
+    return {
+      requiresVerification: true,
+      verificationToken,
+      emailSent,
+      user: { email: user.email },
+    };
   }
 
   async login(dto: LoginDto, ip?: string, userAgent?: string) {

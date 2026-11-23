@@ -54,6 +54,7 @@ describe('UsersController — Account Linking & Unlinking', () => {
 
     mockExpoPushService = {
       registerToken: jest.fn().mockResolvedValue(undefined),
+      unregisterToken: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -145,5 +146,20 @@ describe('UsersController — Account Linking & Unlinking', () => {
       UsersController.prototype.getPublicProfile,
     );
     expect(metadata).toBe(true);
+  });
+
+  it('unregisterPushToken delegates to expoPushService.unregisterToken with optional token and returns success', async () => {
+    const resAll = await controller.unregisterPushToken(mockJwtUser, undefined);
+    expect(resAll).toEqual({ success: true });
+    expect(mockExpoPushService.unregisterToken).toHaveBeenCalledWith('user-controller-test-id', undefined);
+
+    const resOne = await controller.unregisterPushToken(mockJwtUser, {
+      token: 'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]',
+    });
+    expect(resOne).toEqual({ success: true });
+    expect(mockExpoPushService.unregisterToken).toHaveBeenCalledWith(
+      'user-controller-test-id',
+      'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]',
+    );
   });
 });

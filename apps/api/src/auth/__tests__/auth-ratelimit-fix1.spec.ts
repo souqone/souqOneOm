@@ -62,6 +62,17 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
       redisStore.set(key, { value: next, ttlSeconds: ttl });
       return next;
     }),
+    decr: jest.fn().mockImplementation(async (key: string) => {
+      const entry = redisStore.get(key);
+      if (!entry) return 0;
+      const next = Number(entry.value) - 1;
+      if (next <= 0) {
+        redisStore.delete(key);
+        return 0;
+      }
+      redisStore.set(key, { value: next, ttlSeconds: entry.ttlSeconds });
+      return next;
+    }),
     expire: jest.fn().mockImplementation(async (key: string, seconds: number) => {
       const entry = redisStore.get(key);
       if (entry) {
@@ -423,7 +434,7 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
     });
 
     it('fails open on Redis error during signup IP check', async () => {
-      fakeRedis.get.mockRejectedValueOnce(new Error('Redis connection down'));
+      fakeRedis.incr.mockRejectedValueOnce(new Error('Redis connection down'));
       mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.user.create.mockResolvedValue({
         id: 'fail-open-user',
@@ -432,6 +443,48 @@ describe('Rate Limit Fix Part 1: AuthAuditService & AuthService', () => {
 
       const res = await authService.signup(validSignupDto, ip);
       expect(res.requiresVerification).toBe(true);
+    });
+
+    it('enforces the 20/24h IP cap atomically under concurrent signup bursts (no check-then-act bypass)', async () => {
+      // 18 accounts already created -> only 2 slots left
+      redisStore.set(`auth:signup:ip:${ip}`, { value: SIGNUP_DAILY_IP_CAP - 2, ttlSeconds: 3600 });
+
+      let createdCounter = 0;
+      mockPrisma.user.findFirst.mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return null;
+      });
+      mockPrisma.user.create.mockImplementation(async ({ data }: any) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        createdCounter += 1;
+        return { id: `concurrent-user-${createdCounter}`, email: data.email };
+      });
+
+      const results = await Promise.allSettled(
+        Array.from({ length: 5 }, (_, idx) =>
+          authService.signup(
+            {
+              ...validSignupDto,
+              email: `burst${idx}@example.com`,
+              username: `burstuser${idx}`,
+            },
+            ip,
+          ),
+        ),
+      );
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+
+      expect(fulfilled).toHaveLength(2);
+      expect(rejected).toHaveLength(3);
+      for (const r of rejected) {
+        expect(r.reason).toBeInstanceOf(HttpException);
+        expect(r.reason.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
+        expect(r.reason.getResponse().code).toBe('SIGNUP_IP_LIMIT_EXCEEDED');
+      }
+      expect(mockPrisma.user.create).toHaveBeenCalledTimes(2);
+      expect(redisStore.get(`auth:signup:ip:${ip}`)?.value).toBe(SIGNUP_DAILY_IP_CAP);
     });
   });
 

@@ -8,6 +8,7 @@ import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
+import { UnregisterPushTokenDto } from './dto/unregister-push-token.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { LinkGoogleDto } from './dto/link-google.dto';
 import { LinkAppleDto } from './dto/link-apple.dto';
@@ -133,6 +134,16 @@ export class UsersController {
     @CurrentUser() user: JwtPayload,
   ) {
     await this.expoPushService.registerToken(user.sub, dto.token, dto.deviceType);
+    return { success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('push-token')
+  async unregisterPushToken(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto?: UnregisterPushTokenDto,
+  ) {
+    await this.expoPushService.unregisterToken(user.sub, dto?.token);
     return { success: true };
   }
 

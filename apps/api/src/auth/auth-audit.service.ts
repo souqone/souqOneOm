@@ -212,17 +212,23 @@ export class AuthAuditService {
   }
 
   /**
-   * Asserts signup IP rate limit:
+   * Atomically reserves a signup IP rate-limit slot:
    * 20 successful new accounts per 24 hours per IP.
-   * Throws 429 SIGNUP_IP_LIMIT_EXCEEDED if count >= 20. Fail-open on Redis errors.
+   * Uses Redis INCR atomically (no check-then-act race).
+   * Throws 429 SIGNUP_IP_LIMIT_EXCEEDED if count > 20 (and releases the over-cap increment).
+   * Returns true if a slot was reserved, false if skipped/fail-open (no IP or Redis unavailable).
    */
-  async assertSignupIpLimit(ip?: string): Promise<void> {
-    if (!ip) return;
+  async assertSignupIpLimit(ip?: string): Promise<boolean> {
+    if (!ip) return false;
     const ipKey = `auth:signup:ip:${ip}`;
 
     try {
-      const current = await this.redis.get<number>(ipKey);
-      if (current !== null && Number(current) >= SIGNUP_DAILY_IP_CAP) {
+      const count = await this.redis.incr(ipKey, DAY_SECONDS);
+      // RedisService.incr returns 0 when disconnected/unavailable -> fail-open
+      if (count === 0) return false;
+
+      if (count > SIGNUP_DAILY_IP_CAP) {
+        await this.redis.decr(ipKey);
         throw new HttpException(
           {
             statusCode: 429,
@@ -232,26 +238,29 @@ export class AuthAuditService {
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
+
+      return true;
     } catch (err) {
       if (err instanceof HttpException) {
         throw err;
       }
       this.logger.warn(`Redis signup IP limit check failed (fail-open): ${(err as Error).message}`);
+      return false;
     }
   }
 
   /**
-   * Records successful account creation for an IP address.
-   * Atomically increments the daily counter with TTL of 86400 seconds.
+   * Releases a previously reserved signup IP slot when signup fails before
+   * creating the user (e.g. validation error, duplicate username/email).
    */
-  async recordSignupSuccess(ip?: string): Promise<void> {
+  async releaseSignupIpSlot(ip?: string): Promise<void> {
     if (!ip) return;
     const ipKey = `auth:signup:ip:${ip}`;
 
     try {
-      await this.redis.incr(ipKey, DAY_SECONDS);
+      await this.redis.decr(ipKey);
     } catch (err) {
-      this.logger.warn(`Redis record signup success failed: ${(err as Error).message}`);
+      this.logger.warn(`Redis release signup IP slot failed: ${(err as Error).message}`);
     }
   }
 }

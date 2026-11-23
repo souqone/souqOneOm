@@ -67,7 +67,7 @@ export class SellerContactGate {
     if (!normalized) {
       throw new BadRequestException({
         code: 'PROFILE_PHONE_REQUIRED',
-        message: 'لازم تضيف رقم هاتفك في بروفايلك الأول عشان المشترين يقدروا يتواصلوا معاك',
+        message: 'يرجى إضافة رقم هاتفك في ملفك الشخصي أولاً ليتمكن المشترون من التواصل معك',
       });
     }
 
