@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessageType } from '@prisma/client';
 import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -183,6 +184,151 @@ describe('ChatService', () => {
         service.sendMessage('conv-1', { content: 'test' }, 'outsider'),
       ).rejects.toThrow(ForbiddenException);
     });
+
+    it.each([
+      [MessageType.IMAGE, 'https://cdn.example.com/photo.jpg', 'صورة'],
+      [MessageType.FILE, 'https://cdn.example.com/spec.pdf', 'ملف'],
+      [MessageType.AUDIO, 'https://cdn.example.com/voice.m4a', 'رسالة صوتية'],
+    ])(
+      'persists content="" and sets fallback notification body for %s without caption',
+      async (type, mediaUrl, expectedBody) => {
+        mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+          id: 'p-1',
+          userId: 'buyer-1',
+        });
+        mockPrisma.message.create.mockResolvedValue({
+          ...mockMessage,
+          content: '',
+          type,
+          mediaUrl,
+        });
+        mockPrisma.conversation.update.mockResolvedValue({});
+        mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'seller-1' }]);
+        mockNotifications.create.mockResolvedValue({});
+
+        const result = await service.sendMessage(
+          'conv-1',
+          { type, mediaUrl },
+          'buyer-1',
+        );
+
+        expect(result.content).toBe('');
+        expect(mockPrisma.message.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              content: '',
+              type,
+              mediaUrl,
+            }),
+          }),
+        );
+        expect(mockNotifications.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'MESSAGE',
+            body: expectedBody,
+            userId: 'seller-1',
+          }),
+        );
+      },
+    );
+
+    it('uses fallback notification body when IMAGE has whitespace-only caption', async () => {
+      mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+        id: 'p-1',
+        userId: 'buyer-1',
+      });
+      mockPrisma.message.create.mockResolvedValue({
+        ...mockMessage,
+        content: '   ',
+        type: MessageType.IMAGE,
+        mediaUrl: 'https://cdn.example.com/photo.jpg',
+      });
+      mockPrisma.conversation.update.mockResolvedValue({});
+      mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'seller-1' }]);
+      mockNotifications.create.mockResolvedValue({});
+
+      await service.sendMessage(
+        'conv-1',
+        { type: MessageType.IMAGE, content: '   ', mediaUrl: 'https://cdn.example.com/photo.jpg' },
+        'buyer-1',
+      );
+
+      expect(mockNotifications.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: 'صورة',
+        }),
+      );
+    });
+
+    it('uses caption for notification body when media message has non-empty content', async () => {
+      mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+        id: 'p-1',
+        userId: 'buyer-1',
+      });
+      mockPrisma.message.create.mockResolvedValue({
+        ...mockMessage,
+        content: 'فاتورة الفحص',
+        type: MessageType.FILE,
+        mediaUrl: 'https://cdn.example.com/invoice.pdf',
+      });
+      mockPrisma.conversation.update.mockResolvedValue({});
+      mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'seller-1' }]);
+      mockNotifications.create.mockResolvedValue({});
+
+      await service.sendMessage(
+        'conv-1',
+        {
+          type: MessageType.FILE,
+          content: 'فاتورة الفحص',
+          mediaUrl: 'https://cdn.example.com/invoice.pdf',
+        },
+        'buyer-1',
+      );
+
+      expect(mockNotifications.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: 'فاتورة الفحص',
+        }),
+      );
+    });
+
+    it.each([
+      { content: '', type: MessageType.TEXT },
+      { content: '   ', type: undefined },
+      { content: '   ', type: MessageType.SYSTEM },
+    ])(
+      'rejects empty/whitespace content via socket-style call without ValidationPipe: %j',
+      async (dtoPayload) => {
+        mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+          id: 'p-1',
+          userId: 'buyer-1',
+        });
+
+        await expect(
+          service.sendMessage('conv-1', dtoPayload as any, 'buyer-1'),
+        ).rejects.toThrow(new BadRequestException('محتوى الرسالة مطلوب'));
+        expect(mockPrisma.message.create).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      { type: MessageType.IMAGE },
+      { type: MessageType.FILE, mediaUrl: '' },
+      { type: MessageType.AUDIO, mediaUrl: '   ' },
+    ])(
+      'rejects media message without mediaUrl via socket-style call: %j',
+      async (dtoPayload) => {
+        mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+          id: 'p-1',
+          userId: 'buyer-1',
+        });
+
+        await expect(
+          service.sendMessage('conv-1', dtoPayload as any, 'buyer-1'),
+        ).rejects.toThrow(BadRequestException);
+        expect(mockPrisma.message.create).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('markAsRead', () => {
