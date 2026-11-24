@@ -188,7 +188,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('send-message')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { conversationId: string; content: string; type?: string; mediaUrl?: string },
+    @MessageBody() data: { conversationId: string; content?: string; type?: string; mediaUrl?: string },
   ) {
     const user = client.data.user as JwtPayload;
 

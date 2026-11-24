@@ -13,6 +13,10 @@ import { GetMessagesDto } from './dto/get-messages.dto';
 import { CHAT_EVENTS } from './chat.events';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ENTITY_TYPES } from '../common/constants/entity-types.constants';
+import {
+  resolveMessageNotificationBody,
+  validateSendMessagePayload,
+} from './chat-message.utils';
 import { isEntityPubliclyVisible } from '../common/public-visibility';
 import { VisibilityPrismaDelegateName } from '../common/constants/owner-visibility.registry';
 
@@ -298,9 +302,11 @@ export class ChatService {
       throw new ForbiddenException('لا يمكنك إرسال رسالة في هذه المحادثة');
     }
 
+    validateSendMessagePayload(dto);
+
     const message = await this.prisma.message.create({
       data: {
-        content: dto.content,
+        content: dto.content ?? '',
         type: dto.type ?? 'TEXT',
         mediaUrl: dto.mediaUrl ?? undefined,
         senderId: userId,
@@ -329,7 +335,7 @@ export class ChatService {
         await this.notifications.create({
           type: 'MESSAGE',
           title: 'رسالة جديدة',
-          body: dto.content.substring(0, 100),
+          body: resolveMessageNotificationBody(dto.type, dto.content),
           userId: p.userId,
           data: {
             conversationId,

@@ -994,6 +994,7 @@ enum MessageType {
   TEXT
   IMAGE
   AUDIO
+  FILE
   SYSTEM
 }
 
