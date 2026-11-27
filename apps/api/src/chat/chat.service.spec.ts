@@ -194,9 +194,9 @@ describe('ChatService', () => {
     });
 
     it.each([
-      [MessageType.IMAGE, 'https://cdn.example.com/photo.jpg', 'صورة'],
-      [MessageType.FILE, 'https://cdn.example.com/spec.pdf', 'ملف'],
-      [MessageType.AUDIO, 'https://cdn.example.com/voice.m4a', 'رسالة صوتية'],
+      [MessageType.IMAGE, '/uploads/chat/photo.jpg', 'صورة'],
+      [MessageType.FILE, '/uploads/chat/spec.pdf', 'ملف'],
+      [MessageType.AUDIO, '/uploads/chat/voice.m4a', 'رسالة صوتية'],
     ])(
       'persists content="" and sets fallback notification body for %s without caption',
       async (type, mediaUrl, expectedBody) => {
@@ -249,7 +249,7 @@ describe('ChatService', () => {
         ...mockMessage,
         content: '   ',
         type: MessageType.IMAGE,
-        mediaUrl: 'https://cdn.example.com/photo.jpg',
+        mediaUrl: '/uploads/chat/photo.jpg',
       });
       mockPrisma.conversation.update.mockResolvedValue({});
       mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'seller-1' }]);
@@ -257,7 +257,7 @@ describe('ChatService', () => {
 
       await service.sendMessage(
         'conv-1',
-        { type: MessageType.IMAGE, content: '   ', mediaUrl: 'https://cdn.example.com/photo.jpg' },
+        { type: MessageType.IMAGE, content: '   ', mediaUrl: '/uploads/chat/photo.jpg' },
         'buyer-1',
       );
 
@@ -277,7 +277,7 @@ describe('ChatService', () => {
         ...mockMessage,
         content: 'فاتورة الفحص',
         type: MessageType.FILE,
-        mediaUrl: 'https://cdn.example.com/invoice.pdf',
+        mediaUrl: '/uploads/chat/invoice.pdf',
       });
       mockPrisma.conversation.update.mockResolvedValue({});
       mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'seller-1' }]);
@@ -288,7 +288,7 @@ describe('ChatService', () => {
         {
           type: MessageType.FILE,
           content: 'فاتورة الفحص',
-          mediaUrl: 'https://cdn.example.com/invoice.pdf',
+          mediaUrl: '/uploads/chat/invoice.pdf',
         },
         'buyer-1',
       );
@@ -303,7 +303,6 @@ describe('ChatService', () => {
     it.each([
       { content: '', type: MessageType.TEXT },
       { content: '   ', type: undefined },
-      { content: '   ', type: MessageType.SYSTEM },
     ])(
       'rejects empty/whitespace content via socket-style call without ValidationPipe: %j',
       async (dtoPayload) => {
@@ -318,6 +317,18 @@ describe('ChatService', () => {
         expect(mockPrisma.message.create).not.toHaveBeenCalled();
       },
     );
+
+    it('rejects SYSTEM messages via client/socket path (D-B23)', async () => {
+      mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+        id: 'p-1',
+        userId: 'buyer-1',
+      });
+
+      await expect(
+        service.sendMessage('conv-1', { content: 'تنبيه', type: MessageType.SYSTEM }, 'buyer-1'),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrisma.message.create).not.toHaveBeenCalled();
+    });
 
     it.each([
       { type: MessageType.IMAGE },

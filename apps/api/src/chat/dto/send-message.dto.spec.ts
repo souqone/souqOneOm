@@ -29,10 +29,10 @@ describe('SendMessageDto', () => {
     expect(result.content).toBe('رسالة افتراضية');
   });
 
-  it('allows SYSTEM message with content', async () => {
-    const result = await validateBody({ content: 'تم الإغلاق', type: MessageType.SYSTEM });
-    expect(result.content).toBe('تم الإغلاق');
-    expect(result.type).toBe(MessageType.SYSTEM);
+  it('rejects SYSTEM message from clients (D-B23)', async () => {
+    await expect(
+      validateBody({ content: 'تم الإغلاق', type: MessageType.SYSTEM }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('rejects TEXT message with empty content using Arabic message', async () => {
@@ -52,16 +52,16 @@ describe('SendMessageDto', () => {
     await expect(validateBody({})).rejects.toThrow(BadRequestException);
   });
 
-  it('rejects SYSTEM message with empty content', async () => {
+  it('rejects SYSTEM message even when content is empty', async () => {
     await expect(
       validateBody({ content: '', type: MessageType.SYSTEM }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it.each([
-    [MessageType.IMAGE, 'https://cdn.example.com/photo.jpg'],
-    [MessageType.FILE, 'https://cdn.example.com/spec.pdf'],
-    [MessageType.AUDIO, 'https://cdn.example.com/voice.m4a'],
+    [MessageType.IMAGE, '/uploads/chat/photo.jpg'],
+    [MessageType.FILE, '/uploads/chat/spec.pdf'],
+    [MessageType.AUDIO, '/uploads/chat/voice.m4a'],
   ])('allows %s message without caption when mediaUrl is provided', async (type, mediaUrl) => {
     const result = await validateBody({ type, mediaUrl });
     expect(result.type).toBe(type);
@@ -70,9 +70,9 @@ describe('SendMessageDto', () => {
   });
 
   it.each([
-    [MessageType.IMAGE, 'https://cdn.example.com/photo.jpg'],
-    [MessageType.FILE, 'https://cdn.example.com/spec.pdf'],
-    [MessageType.AUDIO, 'https://cdn.example.com/voice.m4a'],
+    [MessageType.IMAGE, '/uploads/chat/photo.jpg'],
+    [MessageType.FILE, '/uploads/chat/spec.pdf'],
+    [MessageType.AUDIO, '/uploads/chat/voice.m4a'],
   ])('allows %s message with empty string content when mediaUrl is provided', async (type, mediaUrl) => {
     const result = await validateBody({ type, content: '', mediaUrl });
     expect(result.type).toBe(type);
@@ -84,10 +84,10 @@ describe('SendMessageDto', () => {
     const result = await validateBody({
       type: MessageType.FILE,
       content: 'كتالوج الشاحنة',
-      mediaUrl: 'https://cdn.example.com/catalog.pdf',
+      mediaUrl: '/uploads/chat/catalog.pdf',
     });
     expect(result.content).toBe('كتالوج الشاحنة');
-    expect(result.mediaUrl).toBe('https://cdn.example.com/catalog.pdf');
+    expect(result.mediaUrl).toBe('/uploads/chat/catalog.pdf');
   });
 
   it.each([MessageType.IMAGE, MessageType.FILE, MessageType.AUDIO])(
@@ -122,7 +122,7 @@ describe('SendMessageDto', () => {
     await expect(
       validateBody({
         type: MessageType.IMAGE,
-        mediaUrl: 'https://cdn.example.com/photo.jpg',
+        mediaUrl: '/uploads/chat/photo.jpg',
         unexpectedField: 'hack',
       }),
     ).rejects.toThrow(BadRequestException);

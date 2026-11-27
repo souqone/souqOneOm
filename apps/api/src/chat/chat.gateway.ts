@@ -20,16 +20,29 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { CHAT_EVENTS } from './chat.events';
 import { NOTIFICATION_EVENTS } from '../notifications/notification.events';
 import { verifyAccessToken } from '../config/jwt.config';
+import { createCorsOptions } from '../config/cors.config';
 import type { JwtPayload } from '../auth/auth.types';
 import { assertVerifiedAccessPayload } from '../auth/auth-token.validator';
 import { AccessTokenGate } from '../auth/access-token-gate.service';
+import { parseClientMessageType } from './chat-message.utils';
+import {
+  CHAT_WS_CHECK_ONLINE_KEY_PREFIX,
+  CHAT_WS_CHECK_ONLINE_LIMIT,
+  CHAT_WS_CHECK_ONLINE_WINDOW_SEC,
+  CHAT_WS_ONLINE_RATE_LIMIT_MSG,
+  CHAT_WS_REACT_KEY_PREFIX,
+  CHAT_WS_REACT_LIMIT,
+  CHAT_WS_REACT_RATE_LIMIT_MSG,
+  CHAT_WS_REACT_WINDOW_SEC,
+  CHAT_WS_SEND_KEY_PREFIX,
+  CHAT_WS_SEND_LIMIT,
+  CHAT_WS_SEND_RATE_LIMIT_MSG,
+  CHAT_WS_SEND_WINDOW_SEC,
+} from './chat-security.constants';
 
 @SkipThrottle()
 @WebSocketGateway({
-  cors: {
-    origin: true,
-    credentials: true,
-  },
+  cors: createCorsOptions(),
   namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
@@ -39,10 +52,6 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   private readonly logger = new Logger(ChatGateway.name);
   private readonly connectedUsers = new Map<string, Set<string>>(); // userId → Set<socketId>
   private readonly typingCooldown = new Map<string, ReturnType<typeof setTimeout>>();
-  private readonly messageRateLimits = new Map<string, number[]>(); // userId → timestamps
-  private readonly MESSAGE_RATE_LIMIT_WINDOW_MS = 10_000;
-  private readonly MESSAGE_RATE_LIMIT_MAX = 5;
-  private rateLimitCleanupTimer?: NodeJS.Timeout;
 
   constructor(
     private readonly chatService: ChatService,
@@ -52,34 +61,51 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   async afterInit() {
     this.logger.log('ChatGateway initialized');
-    this.rateLimitCleanupTimer = setInterval(() => {
-      this.cleanupRateLimits();
-    }, 60_000);
-    this.rateLimitCleanupTimer.unref();
   }
 
   onModuleDestroy() {
-    if (this.rateLimitCleanupTimer) {
-      clearInterval(this.rateLimitCleanupTimer);
-      this.rateLimitCleanupTimer = undefined;
-    }
-    this.messageRateLimits.clear();
     for (const timer of this.typingCooldown.values()) {
       clearTimeout(timer);
     }
     this.typingCooldown.clear();
   }
 
-  private cleanupRateLimits(): void {
-    const now = Date.now();
-    for (const [userId, timestamps] of this.messageRateLimits.entries()) {
-      const valid = timestamps.filter((t) => now - t < this.MESSAGE_RATE_LIMIT_WINDOW_MS);
-      if (valid.length === 0) {
-        this.messageRateLimits.delete(userId);
-      } else {
-        this.messageRateLimits.set(userId, valid);
+  /**
+   * Atomic Redis rate limit (INCR + EXPIRE on first increment).
+   * Fails OPEN when Redis is unavailable (returns 0 or throws) while logging a warning.
+   */
+  private async checkWsRateLimit(
+    client: Socket,
+    userId: string,
+    keyPrefix: string,
+    limit: number,
+    windowSec: number,
+    errorMessage: string,
+    actionLabel: string,
+  ): Promise<boolean> {
+    try {
+      const count = await this.redis.incr(`${keyPrefix}${userId}`, windowSec);
+      if (count === 0) {
+        this.logger.warn(`Redis unavailable for WS rate limit (${actionLabel}); failing open`);
+        return true;
       }
+      if (count > limit) {
+        client.emit('error', { message: errorMessage });
+        return false;
+      }
+      return true;
+    } catch (err) {
+      this.logger.warn(
+        `WS rate limit check failed for ${actionLabel} (failing open): ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return true;
     }
+  }
+
+  private getClientJoinedRooms(client: Socket): Set<string> | undefined {
+    return (client as unknown as { rooms?: Set<string> }).rooms;
   }
 
   async handleConnection(client: Socket) {
@@ -192,25 +218,25 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ) {
     const user = client.data.user as JwtPayload;
 
-    const now = Date.now();
-    const timestamps = (this.messageRateLimits.get(user.sub) ?? []).filter(
-      (t) => now - t < this.MESSAGE_RATE_LIMIT_WINDOW_MS,
+    const allowed = await this.checkWsRateLimit(
+      client,
+      user.sub,
+      CHAT_WS_SEND_KEY_PREFIX,
+      CHAT_WS_SEND_LIMIT,
+      CHAT_WS_SEND_WINDOW_SEC,
+      CHAT_WS_SEND_RATE_LIMIT_MSG,
+      'send-message',
     );
-
-    if (timestamps.length >= this.MESSAGE_RATE_LIMIT_MAX) {
-      const errorMessage = 'أنت ترسل الرسائل بسرعة كبيرة. يرجى الانتظار ثوانٍ ثم إعادة المحاولة.';
-      client.emit('error', { message: errorMessage });
-      return { success: false, error: errorMessage };
+    if (!allowed) {
+      return { success: false, error: CHAT_WS_SEND_RATE_LIMIT_MSG };
     }
 
-    timestamps.push(now);
-    this.messageRateLimits.set(user.sub, timestamps);
-
     try {
+      const parsedType = parseClientMessageType(data?.type);
       const dto: SendMessageDto = {
-        content: data.content,
-        type: data.type as any,
-        mediaUrl: data.mediaUrl,
+        content: data?.content,
+        type: parsedType,
+        mediaUrl: data?.mediaUrl,
       };
 
       const message = await this.chatService.sendMessage(data.conversationId, dto, user.sub);
@@ -228,12 +254,19 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const rooms = this.getClientJoinedRooms(client);
+    if (!data?.conversationId || !rooms?.has(`conversation:${data.conversationId}`)) {
+      return;
+    }
+
     const user = client.data.user as JwtPayload;
     const key = `${user.sub}:${data.conversationId}`;
 
     // Server-side throttle: 1 event per 2 seconds per user per conversation
     if (this.typingCooldown.has(key)) return;
-    this.typingCooldown.set(key, setTimeout(() => this.typingCooldown.delete(key), 2000));
+    const timer = setTimeout(() => this.typingCooldown.delete(key), 2000);
+    timer.unref?.();
+    this.typingCooldown.set(key, timer);
 
     client.to(`conversation:${data.conversationId}`).emit('user-typing', {
       conversationId: data.conversationId,
@@ -248,6 +281,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const rooms = this.getClientJoinedRooms(client);
+    if (!data?.conversationId || !rooms?.has(`conversation:${data.conversationId}`)) {
+      return;
+    }
+
     const user = client.data.user as JwtPayload;
 
     client.to(`conversation:${data.conversationId}`).emit('user-stop-typing', {
@@ -306,6 +344,19 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ) {
     const user = client.data.user as JwtPayload;
 
+    const allowed = await this.checkWsRateLimit(
+      client,
+      user.sub,
+      CHAT_WS_REACT_KEY_PREFIX,
+      CHAT_WS_REACT_LIMIT,
+      CHAT_WS_REACT_WINDOW_SEC,
+      CHAT_WS_REACT_RATE_LIMIT_MSG,
+      'react-to-message',
+    );
+    if (!allowed) {
+      return { success: false, error: CHAT_WS_REACT_RATE_LIMIT_MSG };
+    }
+
     try {
       const result = await this.chatService.toggleReaction(data.messageId, user.sub, data.emoji);
 
@@ -339,8 +390,35 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { userId: string },
   ) {
-    const online = await this.isUserOnline(data.userId);
-    client.emit('online-status', { userId: data.userId, online });
+    const user = client.data.user as JwtPayload;
+
+    const allowed = await this.checkWsRateLimit(
+      client,
+      user.sub,
+      CHAT_WS_CHECK_ONLINE_KEY_PREFIX,
+      CHAT_WS_CHECK_ONLINE_LIMIT,
+      CHAT_WS_CHECK_ONLINE_WINDOW_SEC,
+      CHAT_WS_ONLINE_RATE_LIMIT_MSG,
+      'check-online',
+    );
+    if (!allowed) {
+      return;
+    }
+
+    const targetId = data?.userId;
+    if (!targetId || typeof targetId !== 'string') {
+      client.emit('online-status', { userId: targetId, online: false });
+      return;
+    }
+
+    const sharesConversation = await this.chatService.sharesConversationWith(user.sub, targetId);
+    if (!sharesConversation) {
+      client.emit('online-status', { userId: targetId, online: false });
+      return;
+    }
+
+    const online = await this.isUserOnline(targetId);
+    client.emit('online-status', { userId: targetId, online });
   }
 
   /* ───── EVENT-DRIVEN BROADCAST ───── */
