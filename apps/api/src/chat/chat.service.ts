@@ -214,7 +214,7 @@ export class ChatService {
       const unreadMap = await this.fetchUnreadCountsMap(userId, [existing.id]);
       this.events.emit(CHAT_EVENTS.CONVERSATION_JOIN, {
         conversationId: existing.id,
-        participantUserIds: existing.participants.map((p) => p.userId),
+        participantUserIds: [userId],
       });
 
       return buildEnrichedConversationResponse(existing, userId, {
@@ -481,11 +481,25 @@ export class ChatService {
       },
     });
 
-    // تحديث وقت المحادثة + فك الأرشفة لجميع المشاركين المؤرشفين
+    // تحديث وقت المحادثة + قراءة حالة الأرشفة قبل فك الأرشفة لجميع المشاركين المؤرشفين
     await this.prisma.conversation.update({
       where: { id: conversationId },
       data: { updatedAt: new Date() },
     });
+
+    const otherParticipants = await this.prisma.conversationParticipant.findMany({
+      where: { conversationId, userId: { not: userId } },
+    });
+
+    const previouslyArchivedUserIds: string[] = [];
+    if (participant.isArchived) {
+      previouslyArchivedUserIds.push(userId);
+    }
+    for (const p of otherParticipants) {
+      if (p.isArchived) {
+        previouslyArchivedUserIds.push(p.userId);
+      }
+    }
 
     await this.prisma.conversationParticipant.updateMany({
       where: { conversationId, isArchived: true },
@@ -494,9 +508,6 @@ export class ChatService {
 
     // إنشاء إشعار للمستلم — routed through NotificationsService so it 
     // reaches Web Push AND Expo Push (mobile), not just the in-app list
-    const otherParticipants = await this.prisma.conversationParticipant.findMany({
-      where: { conversationId, userId: { not: userId } },
-    });
 
     for (const p of otherParticipants) {
       try {
@@ -520,11 +531,11 @@ export class ChatService {
       }
     }
 
-    // Fire event — Gateway joins active sockets and broadcasts via Redis
+    // Fire event — Gateway joins only previously-archived sockets and broadcasts via Redis
     this.events.emit(CHAT_EVENTS.MESSAGE_SENT, {
       conversationId,
       message,
-      participantUserIds: [userId, ...otherParticipants.map((p) => p.userId)],
+      participantUserIds: previouslyArchivedUserIds,
     });
 
     return message;

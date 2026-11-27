@@ -329,14 +329,16 @@ describe('D-B24 Chat Conversations API P2a', () => {
   });
 
   describe('3. Unarchive on sendMessage & Socket room join (including Redis adapter)', () => {
-    it('unarchives both archived recipient and caller via one updateMany and emits participantUserIds', async () => {
+    it('unarchives both archived recipient and caller via one updateMany and emits only previously-archived participantUserIds', async () => {
       mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
         id: 'cp-sender',
         userId: 'sender-1',
         isArchived: true,
       });
       mockPrisma.message.create.mockResolvedValue({ id: 'msg-1', content: 'hi' });
-      mockPrisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'recipient-1' }]);
+      mockPrisma.conversationParticipant.findMany.mockResolvedValue([
+        { userId: 'recipient-1', isArchived: true },
+      ]);
 
       await service.sendMessage('conv-1', { content: 'hi' }, 'sender-1');
 
@@ -354,7 +356,50 @@ describe('D-B24 Chat Conversations API P2a', () => {
       );
     });
 
-    it('joins participant user rooms to conversation room via server.in().socketsJoin and delivers without duplicates', () => {
+    it('does NOT re-join non-archived participants (preserving leave-conversation) on sendMessage', async () => {
+      mockPrisma.conversationParticipant.findFirst.mockResolvedValue({
+        id: 'cp-sender',
+        userId: 'sender-1',
+        isArchived: false,
+      });
+      mockPrisma.message.create.mockResolvedValue({ id: 'msg-2', content: 'ping' });
+      mockPrisma.conversationParticipant.findMany.mockResolvedValue([
+        { userId: 'left-room-user', isArchived: false },
+      ]);
+
+      await service.sendMessage('conv-1', { content: 'ping' }, 'sender-1');
+
+      const sentPayload = mockEvents.emit.mock.calls.find(
+        ([eventName]) => eventName === CHAT_EVENTS.MESSAGE_SENT,
+      )?.[1];
+      expect(sentPayload.participantUserIds).toEqual([]);
+
+      const convEmit = jest.fn();
+      const userEmit = jest.fn();
+      const mockServer: any = {
+        in: jest.fn().mockReturnValue({ socketsJoin: jest.fn() }),
+        to: jest.fn((room: string) =>
+          room.startsWith('conversation:')
+            ? { emit: convEmit }
+            : { emit: userEmit, except: jest.fn().mockReturnValue({ emit: userEmit }) },
+        ),
+      };
+      const gateway = new ChatGateway(
+        service,
+        { set: jest.fn(), del: jest.fn(), exists: jest.fn(), expire: jest.fn(), incr: jest.fn() } as any,
+        { validate: jest.fn() } as any,
+      );
+      gateway.server = mockServer;
+
+      gateway.onMessageSent(sentPayload);
+
+      // Non-archived user who called leave-conversation is NOT re-joined & zero extra user:<id> emits
+      expect(mockServer.in).not.toHaveBeenCalled();
+      expect(userEmit).not.toHaveBeenCalled();
+      expect(convEmit).toHaveBeenCalledWith('message', { id: 'msg-2', content: 'ping' });
+    });
+
+    it('joins only archived recipient room via server.in().socketsJoin and emits once without duplicates', () => {
       const convEmit = jest.fn();
       const userExceptEmit = jest.fn();
       const socketsJoinFn = jest.fn();
@@ -381,13 +426,15 @@ describe('D-B24 Chat Conversations API P2a', () => {
       gateway.onMessageSent({
         conversationId: 'conv-9',
         message: { id: 'm-99', content: 'hello' },
-        participantUserIds: ['sender-1', 'recipient-1'],
+        participantUserIds: ['recipient-1'],
       });
 
-      expect(mockServer.in).toHaveBeenCalledWith('user:sender-1');
+      expect(mockServer.in).toHaveBeenCalledTimes(1);
       expect(mockServer.in).toHaveBeenCalledWith('user:recipient-1');
       expect(socketsJoinFn).toHaveBeenCalledWith('conversation:conv-9');
+      expect(convEmit).toHaveBeenCalledTimes(1);
       expect(convEmit).toHaveBeenCalledWith('message', { id: 'm-99', content: 'hello' });
+      expect(userExceptEmit).toHaveBeenCalledTimes(1);
       expect(userExceptEmit).toHaveBeenCalledWith('message', { id: 'm-99', content: 'hello' });
     });
   });
@@ -581,6 +628,11 @@ describe('D-B24 Chat Conversations API P2a', () => {
         ownerId: 'seller-1',
       });
       expect(res.participants[1].lastReadAt).toEqual(otherRead);
+      // Existing conversation joins caller ONLY (never re-joins the other participant)
+      expect(mockEvents.emit).toHaveBeenCalledWith(CHAT_EVENTS.CONVERSATION_JOIN, {
+        conversationId: 'conv-existing',
+        participantUserIds: ['buyer-1'],
+      });
     });
 
     it('returns enriched list-item shape on newly created conversation without extra entity query', async () => {
@@ -641,6 +693,11 @@ describe('D-B24 Chat Conversations API P2a', () => {
         imageUrl: '/uploads/lc.jpg',
         isSeller: false,
         ownerId: 'seller-2',
+      });
+      // Brand new room joins BOTH participants
+      expect(mockEvents.emit).toHaveBeenCalledWith(CHAT_EVENTS.CONVERSATION_JOIN, {
+        conversationId: 'conv-new',
+        participantUserIds: ['buyer-1', 'seller-2'],
       });
     });
   });
