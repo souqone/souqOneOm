@@ -255,11 +255,15 @@ export function parseStorageKey(key: string): ParsedStorageKey | null {
 /**
  * Resolves a stored chat Message.mediaUrl to a deletion storage key ONLY if it
  * belongs to our own chat storage (`local /uploads/chat/...` or configured
- * Cloudinary cloud under `carone/chat/`). Returns null for listings, non-chat
- * local paths, or foreign/untrusted URLs so message deletion can never trigger
- * SSRF or destroy listing/another sender's unrelated assets.
+ * Cloudinary cloud under `carone/chat/`). When `allowLegacyListings` is true
+ * (used only when accepting client `IMAGE` messages from older mobile builds),
+ * legacy `/uploads/<file>` and `carone/listings/` paths are also permitted.
  */
-export function extractOwnedChatMediaKey(url: string, cloudName?: string): string | null {
+export function extractOwnedChatMediaKey(
+  url: string,
+  cloudName?: string,
+  options?: { allowLegacyListings?: boolean },
+): string | null {
   if (!url || typeof url !== 'string') {
     return null;
   }
@@ -267,20 +271,22 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
   if (!trimmed || trimmed.includes('\0') || trimmed.includes('\\')) {
     return null;
   }
+  const allowLegacy = options?.allowLegacyListings === true;
 
-  // Relative local chat upload URL: `/uploads/chat/...` only
+  const isAllowedLocalPath = (cleanPath: string): boolean => {
+    if (!cleanPath || cleanPath.includes('..') || !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)) {
+      return false;
+    }
+    if (allowLegacy) {
+      return true;
+    }
+    return cleanPath.startsWith('chat/') && cleanPath.length > 'chat/'.length;
+  };
+
+  // Relative local upload URL
   if (trimmed.startsWith(LOCAL_UPLOAD_PREFIX)) {
     const cleanPath = trimmed.split(/[?#]/)[0].slice(LOCAL_UPLOAD_PREFIX.length);
-    if (
-      !cleanPath ||
-      !cleanPath.startsWith('chat/') ||
-      cleanPath.length <= 'chat/'.length ||
-      cleanPath.includes('..') ||
-      !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)
-    ) {
-      return null;
-    }
-    return cleanPath;
+    return isAllowedLocalPath(cleanPath) ? cleanPath : null;
   }
 
   let parsed: URL;
@@ -290,7 +296,7 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
     return null;
   }
 
-  // Localhost chat upload URL in non-production: `/uploads/chat/...` only
+  // Localhost upload URL in non-production
   const isProduction = process.env.NODE_ENV === 'production';
   if (
     !isProduction &&
@@ -299,19 +305,10 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
     parsed.pathname.startsWith(LOCAL_UPLOAD_PREFIX)
   ) {
     const cleanPath = parsed.pathname.slice(LOCAL_UPLOAD_PREFIX.length);
-    if (
-      !cleanPath ||
-      !cleanPath.startsWith('chat/') ||
-      cleanPath.length <= 'chat/'.length ||
-      cleanPath.includes('..') ||
-      !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)
-    ) {
-      return null;
-    }
-    return cleanPath;
+    return isAllowedLocalPath(cleanPath) ? cleanPath : null;
   }
 
-  // Owned Cloudinary chat URL: https://res.cloudinary.com/<cloudName>/<resourceType>/upload/[v123/]carone/chat/...
+  // Owned Cloudinary URL: https://res.cloudinary.com/<cloudName>/<resourceType>/upload/[v123/]carone/...
   const trimmedCloudName = cloudName?.trim();
   if (
     parsed.protocol !== 'https:' ||
@@ -321,8 +318,9 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
     return null;
   }
 
+  const allowedFolderGroup = allowLegacy ? 'carone/(?:chat|listings)' : 'carone/chat';
   const cloudPathRe = new RegExp(
-    `^/${escapeRegex(trimmedCloudName)}/(image|video|raw)/upload/(?:v\\d+/)?(carone/chat/.+)$`,
+    `^/${escapeRegex(trimmedCloudName)}/(image|video|raw)/upload/(?:v\\d+/)?(${allowedFolderGroup}/.+)$`,
   );
   const match = cloudPathRe.exec(parsed.pathname);
   if (!match) {

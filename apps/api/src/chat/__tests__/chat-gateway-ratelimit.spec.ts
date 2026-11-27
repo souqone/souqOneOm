@@ -1,13 +1,17 @@
 import { ChatGateway } from '../chat.gateway';
+import { CHAT_WS_SEND_KEY_PREFIX, CHAT_WS_SEND_WINDOW_SEC } from '../chat-security.constants';
 
-describe('ChatGateway WebSocket Rate Limiting', () => {
+describe('ChatGateway WebSocket Rate Limiting (Redis-backed)', () => {
   let gateway: ChatGateway;
   let mockChatService: any;
   let mockRedis: any;
   let mockAccessTokenGate: any;
+  let redisStore: Map<string, { count: number; expiresAt: number }>;
 
   beforeEach(() => {
     jest.useFakeTimers();
+    redisStore = new Map();
+
     mockChatService = {
       sendMessage: jest.fn().mockImplementation((conversationId, dto, userId) => {
         return Promise.resolve({
@@ -24,6 +28,20 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
       del: jest.fn().mockResolvedValue(1),
       exists: jest.fn().mockResolvedValue(1),
       expire: jest.fn().mockResolvedValue(1),
+      incr: jest.fn().mockImplementation(async (key: string, ttlSeconds?: number) => {
+        const now = Date.now();
+        const existing = redisStore.get(key);
+        if (!existing || now >= existing.expiresAt) {
+          const entry = {
+            count: 1,
+            expiresAt: now + (ttlSeconds ?? CHAT_WS_SEND_WINDOW_SEC) * 1000,
+          };
+          redisStore.set(key, entry);
+          return 1;
+        }
+        existing.count += 1;
+        return existing.count;
+      }),
     };
     mockAccessTokenGate = {
       validate: jest.fn().mockResolvedValue(undefined),
@@ -51,7 +69,7 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
     } as any;
   }
 
-  it('allows up to 5 messages within 10 seconds for a user', async () => {
+  it('allows up to 5 messages within 10 seconds using Redis INCR', async () => {
     const client = createMockClient('user-1');
 
     for (let i = 1; i <= 5; i++) {
@@ -67,6 +85,10 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
       );
     }
 
+    expect(mockRedis.incr).toHaveBeenCalledWith(
+      `${CHAT_WS_SEND_KEY_PREFIX}user-1`,
+      CHAT_WS_SEND_WINDOW_SEC,
+    );
     expect(mockChatService.sendMessage).toHaveBeenCalledTimes(5);
     expect(client.disconnect).not.toHaveBeenCalled();
     expect(client.emit).not.toHaveBeenCalledWith('error', expect.anything());
@@ -75,7 +97,6 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
   it('rejects the 6th message within 10 seconds without disconnecting socket', async () => {
     const client = createMockClient('user-2');
 
-    // Send 5 messages
     for (let i = 1; i <= 5; i++) {
       await gateway.handleSendMessage(client, {
         conversationId: 'conv-1',
@@ -83,7 +104,6 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
       });
     }
 
-    // 6th message
     const res = await gateway.handleSendMessage(client, {
       conversationId: 'conv-1',
       content: 'Message 6 - should exceed rate limit',
@@ -101,10 +121,9 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
     expect(mockChatService.sendMessage).toHaveBeenCalledTimes(5);
   });
 
-  it('allows messages again after the 10-second window slides forward', async () => {
+  it('allows messages again after the 10-second Redis TTL expires', async () => {
     const client = createMockClient('user-3');
 
-    // Send 5 messages
     for (let i = 1; i <= 5; i++) {
       await gateway.handleSendMessage(client, {
         conversationId: 'conv-1',
@@ -112,10 +131,8 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
       });
     }
 
-    // Fast forward 11 seconds
     jest.advanceTimersByTime(11_000);
 
-    // Now message should be accepted
     const res = await gateway.handleSendMessage(client, {
       conversationId: 'conv-1',
       content: 'Message after cooldown',
@@ -130,11 +147,10 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
     expect(mockChatService.sendMessage).toHaveBeenCalledTimes(6);
   });
 
-  it('keeps separate rate limit buckets per user', async () => {
+  it('keeps separate Redis rate limit buckets per user', async () => {
     const clientA = createMockClient('user-A');
     const clientB = createMockClient('user-B');
 
-    // User A exhausts limit
     for (let i = 1; i <= 5; i++) {
       await gateway.handleSendMessage(clientA, {
         conversationId: 'conv-1',
@@ -142,38 +158,16 @@ describe('ChatGateway WebSocket Rate Limiting', () => {
       });
     }
 
-    // User A is blocked
     const resA = await gateway.handleSendMessage(clientA, {
       conversationId: 'conv-1',
       content: 'Message A6',
     });
     expect(resA.success).toBe(false);
 
-    // User B is NOT blocked
     const resB = await gateway.handleSendMessage(clientB, {
       conversationId: 'conv-1',
       content: 'Message B1',
     });
     expect(resB.success).toBe(true);
-  });
-
-  it('initializes cleanup timer with unref and cleans up on onModuleDestroy', async () => {
-    await gateway.afterInit();
-    const timer = (gateway as any).rateLimitCleanupTimer;
-    expect(timer).toBeDefined();
-
-    // Populate rate limits
-    const client = createMockClient('user-cleanup');
-    await gateway.handleSendMessage(client, { conversationId: 'conv-1', content: 'test' });
-    expect((gateway as any).messageRateLimits.has('user-cleanup')).toBe(true);
-
-    // Advance 65 seconds to trigger cleanup
-    jest.advanceTimersByTime(65_000);
-    expect((gateway as any).messageRateLimits.has('user-cleanup')).toBe(false);
-
-    // Destroy module
-    gateway.onModuleDestroy();
-    expect((gateway as any).rateLimitCleanupTimer).toBeUndefined();
-    expect((gateway as any).messageRateLimits.size).toBe(0);
   });
 });

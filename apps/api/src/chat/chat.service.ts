@@ -18,6 +18,12 @@ import {
   resolveMessageNotificationBody,
   validateSendMessagePayload,
 } from './chat-message.utils';
+import {
+  CHAT_REACTION_ALLOWED_EMOJI_SET,
+  CHAT_REACTION_DELETED_MSG,
+  CHAT_REACTION_EMOJI_MAX_LENGTH,
+  CHAT_REACTION_INVALID_EMOJI_MSG,
+} from './chat-security.constants';
 import { isEntityPubliclyVisible } from '../common/public-visibility';
 import { VisibilityPrismaDelegateName } from '../common/constants/owner-visibility.registry';
 import { UploadsService } from '../uploads/uploads.service';
@@ -442,6 +448,15 @@ export class ChatService {
 
   /* ───── REACTIONS ───── */
   async toggleReaction(messageId: string, userId: string, emoji: string) {
+    if (
+      typeof emoji !== 'string' ||
+      emoji.length === 0 ||
+      emoji.length > CHAT_REACTION_EMOJI_MAX_LENGTH ||
+      !CHAT_REACTION_ALLOWED_EMOJI_SET.has(emoji)
+    ) {
+      throw new BadRequestException(CHAT_REACTION_INVALID_EMOJI_MSG);
+    }
+
     const msg = await this.prisma.message.findUnique({ where: { id: messageId } });
     if (!msg) throw new NotFoundException('الرسالة غير موجودة');
 
@@ -450,6 +465,10 @@ export class ChatService {
       where: { conversationId: msg.conversationId, userId },
     });
     if (!participant) throw new ForbiddenException('غير مصرح');
+
+    if (msg.isDeleted) {
+      throw new BadRequestException(CHAT_REACTION_DELETED_MSG);
+    }
 
     const existing = await this.prisma.messageReaction.findUnique({
       where: { userId_messageId_emoji: { userId, messageId, emoji } },
@@ -502,6 +521,28 @@ export class ChatService {
       select: { id: true },
     });
     return !!p;
+  }
+
+  /**
+   * Single indexed check for whether two users share at least one conversation.
+   */
+  async sharesConversationWith(callerUserId: string, targetUserId: string): Promise<boolean> {
+    if (!callerUserId || !targetUserId) {
+      return false;
+    }
+    if (callerUserId === targetUserId) {
+      return true;
+    }
+    const shared = await this.prisma.conversationParticipant.findFirst({
+      where: {
+        userId: targetUserId,
+        conversation: {
+          participants: { some: { userId: callerUserId } },
+        },
+      },
+      select: { id: true },
+    });
+    return !!shared;
   }
 
   /** Lightweight — returns IDs only, used by Gateway on connection */

@@ -14,6 +14,7 @@ import { SanitizeInterceptor } from './common/interceptors/sanitize.interceptor'
 import { NormalizeImagesInterceptor } from './common/interceptors/normalize-images.interceptor';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import { validateProductionEnv } from './config/env.validator';
+import { createCorsOptions } from './config/cors.config';
 import { setupSwagger } from './config/swagger.config';
 import * as path from 'path';
 
@@ -33,21 +34,8 @@ async function bootstrap() {
   // Set JSON & URL-encoded payload limits (2MB) while preserving rawBody for Webhooks
   applyBodyParsers(app);
 
-  // Strict CORS Allowlist
-  const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
-    .split(',')
-    .map((o) => o.trim());
-
-  app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
-    },
-    credentials: true,
-  });
+  // Strict CORS Allowlist (shared with ChatGateway)
+  app.enableCors(createCorsOptions());
 
   // أنبوب التحقق الشامل
   app.useGlobalPipes(createAppValidationPipe(ALL_STRUCTURED_VALIDATION_DTOS));
