@@ -393,8 +393,8 @@ describe('D-B22 Chat Media Upload, Validation & Cloudinary Resource Types', () =
     });
   });
 
-  describe('Owned Chat Media URL Extraction (SSRF Guard)', () => {
-    it('extracts keys only for owned /uploads/ or configured Cloudinary cloud paths', () => {
+  describe('Owned Chat Media URL Extraction (SSRF & Chat-Only Prefix Guard)', () => {
+    it('extracts keys only for owned /uploads/chat/ or configured Cloudinary carone/chat/ paths', () => {
       expect(extractOwnedChatMediaKey('/uploads/chat/123.m4a', 'my-cloud')).toBe('chat/123.m4a');
       expect(
         extractOwnedChatMediaKey(
@@ -409,7 +409,15 @@ describe('D-B22 Chat Media Upload, Validation & Cloudinary Resource Types', () =
         ),
       ).toBe('video:carone/chat/voice');
 
-      // Foreign / traversal / wrong-cloud URLs must return null
+      // Non-chat listings, local non-chat, foreign, traversal, and wrong-cloud URLs must return null
+      expect(
+        extractOwnedChatMediaKey(
+          'https://res.cloudinary.com/my-cloud/image/upload/v1/carone/listings/car.jpg',
+          'my-cloud',
+        ),
+      ).toBeNull();
+      expect(extractOwnedChatMediaKey('/uploads/listing-avatar.jpg', 'my-cloud')).toBeNull();
+      expect(extractOwnedChatMediaKey('http://localhost:4000/uploads/other.jpg', 'my-cloud')).toBeNull();
       expect(extractOwnedChatMediaKey('https://evil.com/uploads/chat/x.m4a', 'my-cloud')).toBeNull();
       expect(
         extractOwnedChatMediaKey(
@@ -417,7 +425,7 @@ describe('D-B22 Chat Media Upload, Validation & Cloudinary Resource Types', () =
           'my-cloud',
         ),
       ).toBeNull();
-      expect(extractOwnedChatMediaKey('/uploads/../../etc/passwd', 'my-cloud')).toBeNull();
+      expect(extractOwnedChatMediaKey('/uploads/chat/../../etc/passwd', 'my-cloud')).toBeNull();
     });
   });
 });

@@ -397,7 +397,16 @@ export class ChatService {
       );
       if (storageKey) {
         try {
-          await this.uploadsService.deleteFile(storageKey);
+          const otherRefCount = await this.prisma.message.count({
+            where: {
+              id: { not: messageId },
+              isDeleted: false,
+              mediaUrl: msg.mediaUrl,
+            },
+          });
+          if ((otherRefCount ?? 0) === 0) {
+            await this.uploadsService.deleteFile(storageKey);
+          }
         } catch (err) {
           this.logger.warn(
             `Failed to delete stored chat media for message ${messageId}: ${

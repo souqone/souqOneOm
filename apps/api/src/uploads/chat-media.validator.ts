@@ -254,9 +254,10 @@ export function parseStorageKey(key: string): ParsedStorageKey | null {
 
 /**
  * Resolves a stored chat Message.mediaUrl to a deletion storage key ONLY if it
- * belongs to our own local `/uploads/` directory or our configured Cloudinary cloud
- * under `carone/(chat|listings)/`. Returns null for foreign/untrusted URLs so
- * deleting a message can never trigger SSRF or arbitrary external deletion.
+ * belongs to our own chat storage (`local /uploads/chat/...` or configured
+ * Cloudinary cloud under `carone/chat/`). Returns null for listings, non-chat
+ * local paths, or foreign/untrusted URLs so message deletion can never trigger
+ * SSRF or destroy listing/another sender's unrelated assets.
  */
 export function extractOwnedChatMediaKey(url: string, cloudName?: string): string | null {
   if (!url || typeof url !== 'string') {
@@ -267,10 +268,16 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
     return null;
   }
 
-  // Relative local upload URL: `/uploads/...`
+  // Relative local chat upload URL: `/uploads/chat/...` only
   if (trimmed.startsWith(LOCAL_UPLOAD_PREFIX)) {
     const cleanPath = trimmed.split(/[?#]/)[0].slice(LOCAL_UPLOAD_PREFIX.length);
-    if (!cleanPath || cleanPath.includes('..') || !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)) {
+    if (
+      !cleanPath ||
+      !cleanPath.startsWith('chat/') ||
+      cleanPath.length <= 'chat/'.length ||
+      cleanPath.includes('..') ||
+      !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)
+    ) {
       return null;
     }
     return cleanPath;
@@ -283,7 +290,7 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
     return null;
   }
 
-  // Localhost upload URL in non-production
+  // Localhost chat upload URL in non-production: `/uploads/chat/...` only
   const isProduction = process.env.NODE_ENV === 'production';
   if (
     !isProduction &&
@@ -292,13 +299,19 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
     parsed.pathname.startsWith(LOCAL_UPLOAD_PREFIX)
   ) {
     const cleanPath = parsed.pathname.slice(LOCAL_UPLOAD_PREFIX.length);
-    if (!cleanPath || cleanPath.includes('..') || !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)) {
+    if (
+      !cleanPath ||
+      !cleanPath.startsWith('chat/') ||
+      cleanPath.length <= 'chat/'.length ||
+      cleanPath.includes('..') ||
+      !LOCAL_RELATIVE_KEY_SAFE_RE.test(cleanPath)
+    ) {
       return null;
     }
     return cleanPath;
   }
 
-  // Owned Cloudinary URL: https://res.cloudinary.com/<cloudName>/<resourceType>/upload/[v123/]carone/(chat|listings)/...
+  // Owned Cloudinary chat URL: https://res.cloudinary.com/<cloudName>/<resourceType>/upload/[v123/]carone/chat/...
   const trimmedCloudName = cloudName?.trim();
   if (
     parsed.protocol !== 'https:' ||
@@ -309,7 +322,7 @@ export function extractOwnedChatMediaKey(url: string, cloudName?: string): strin
   }
 
   const cloudPathRe = new RegExp(
-    `^/${escapeRegex(trimmedCloudName)}/(image|video|raw)/upload/(?:v\\d+/)?(carone/(?:chat|listings)/.+)$`,
+    `^/${escapeRegex(trimmedCloudName)}/(image|video|raw)/upload/(?:v\\d+/)?(carone/chat/.+)$`,
   );
   const match = cloudPathRe.exec(parsed.pathname);
   if (!match) {
