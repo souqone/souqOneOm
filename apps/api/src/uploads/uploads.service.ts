@@ -13,6 +13,10 @@ export class UploadsService {
     return this.storage.uploadFile(file);
   }
 
+  async uploadChatMedia(file: Express.Multer.File): Promise<{ url: string; key: string }> {
+    return this.storage.uploadChatMedia(file);
+  }
+
   async deleteFile(key: string): Promise<void> {
     return this.storage.deleteFile(key);
   }

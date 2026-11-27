@@ -5,6 +5,7 @@ import { MessageType } from '@prisma/client';
 import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 const mockConversation = {
   id: 'conv-1',
@@ -43,6 +44,8 @@ const mockPrisma = {
     create: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
   },
   notification: { createMany: jest.fn() },
   $transaction: jest.fn(),
@@ -50,6 +53,10 @@ const mockPrisma = {
 
 const mockNotifications = {
   create: jest.fn(),
+};
+
+const mockUploads = {
+  deleteFile: jest.fn().mockResolvedValue(undefined),
 };
 
 describe('ChatService', () => {
@@ -64,6 +71,7 @@ describe('ChatService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: NotificationsService, useValue: mockNotifications },
+        { provide: UploadsService, useValue: mockUploads },
       ],
     }).compile();
 
@@ -338,6 +346,147 @@ describe('ChatService', () => {
 
       const result = await service.markAsRead('conv-1', 'buyer-1');
       expect(result.message).toContain('مقروءة');
+    });
+  });
+
+  describe('deleteMessage (media cleanup & SSRF protection)', () => {
+    const originalCloudName = process.env.CLOUDINARY_CLOUD_NAME;
+
+    afterEach(() => {
+      if (originalCloudName === undefined) {
+        delete process.env.CLOUDINARY_CLOUD_NAME;
+      } else {
+        process.env.CLOUDINARY_CLOUD_NAME = originalCloudName;
+      }
+    });
+
+    it('clears mediaUrl to null and deletes owned local file /uploads/chat/...', async () => {
+      mockPrisma.message.findUnique.mockResolvedValue({
+        id: 'msg-local-1',
+        conversationId: 'conv-1',
+        senderId: 'buyer-1',
+        mediaUrl: '/uploads/chat/1732700-voice.m4a',
+      });
+      mockPrisma.message.update.mockResolvedValue({});
+      mockPrisma.message.count.mockResolvedValue(0);
+
+      const res = await service.deleteMessage('msg-local-1', 'buyer-1');
+
+      expect(res).toEqual({ messageId: 'msg-local-1', conversationId: 'conv-1' });
+      expect(mockPrisma.message.update).toHaveBeenCalledWith({
+        where: { id: 'msg-local-1' },
+        data: { isDeleted: true, deletedAt: expect.any(Date), content: '', mediaUrl: null },
+      });
+      expect(mockUploads.deleteFile).toHaveBeenCalledWith('chat/1732700-voice.m4a');
+    });
+
+    it('deletes owned Cloudinary raw PDF and video audio with resource_type key prefix', async () => {
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone-cloud';
+      mockPrisma.message.findUnique.mockResolvedValueOnce({
+        id: 'msg-pdf-1',
+        conversationId: 'conv-1',
+        senderId: 'buyer-1',
+        mediaUrl: 'https://res.cloudinary.com/souqone-cloud/raw/upload/v123/carone/chat/doc-1.pdf',
+      });
+      mockPrisma.message.update.mockResolvedValue({});
+      mockPrisma.message.count.mockResolvedValue(0);
+
+      await service.deleteMessage('msg-pdf-1', 'buyer-1');
+      expect(mockUploads.deleteFile).toHaveBeenCalledTimes(1);
+      expect(mockUploads.deleteFile).toHaveBeenCalledWith('raw:carone/chat/doc-1.pdf');
+
+      mockUploads.deleteFile.mockClear();
+      mockPrisma.message.findUnique.mockResolvedValueOnce({
+        id: 'msg-audio-1',
+        conversationId: 'conv-1',
+        senderId: 'buyer-1',
+        mediaUrl: 'https://res.cloudinary.com/souqone-cloud/video/upload/v123/carone/chat/rec-1.m4a',
+      });
+
+      await service.deleteMessage('msg-audio-1', 'buyer-1');
+      expect(mockUploads.deleteFile).toHaveBeenCalledTimes(1);
+      expect(mockUploads.deleteFile).toHaveBeenCalledWith('video:carone/chat/rec-1');
+    });
+
+    it('clears mediaUrl to null in DB but NEVER calls storage delete for listings, non-chat local, foreign, or wrong-cloud URLs (M-303 SSRF/tenant guard)', async () => {
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone-cloud';
+      mockPrisma.message.findUnique
+        .mockResolvedValueOnce({
+          id: 'msg-foreign-1',
+          conversationId: 'conv-1',
+          senderId: 'buyer-1',
+          mediaUrl: 'https://evil.example.com/uploads/chat/steal.pdf',
+        })
+        .mockResolvedValueOnce({
+          id: 'msg-other-cloud',
+          conversationId: 'conv-1',
+          senderId: 'buyer-1',
+          mediaUrl: 'https://res.cloudinary.com/attacker-cloud/raw/upload/v1/carone/chat/doc.pdf',
+        })
+        .mockResolvedValueOnce({
+          id: 'msg-listing-url',
+          conversationId: 'conv-1',
+          senderId: 'buyer-1',
+          mediaUrl: 'https://res.cloudinary.com/souqone-cloud/image/upload/v1/carone/listings/other-car.jpg',
+        })
+        .mockResolvedValueOnce({
+          id: 'msg-local-non-chat',
+          conversationId: 'conv-1',
+          senderId: 'buyer-1',
+          mediaUrl: '/uploads/other-listing.jpg',
+        });
+      mockPrisma.message.update.mockResolvedValue({});
+      mockPrisma.message.count.mockResolvedValue(0);
+
+      await service.deleteMessage('msg-foreign-1', 'buyer-1');
+      await service.deleteMessage('msg-other-cloud', 'buyer-1');
+      await service.deleteMessage('msg-listing-url', 'buyer-1');
+      await service.deleteMessage('msg-local-non-chat', 'buyer-1');
+
+      expect(mockPrisma.message.update).toHaveBeenCalledTimes(4);
+      expect(mockUploads.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('skips storage delete when another non-deleted message still references the same mediaUrl (M-303)', async () => {
+      process.env.CLOUDINARY_CLOUD_NAME = 'souqone-cloud';
+      const sharedUrl =
+        'https://res.cloudinary.com/souqone-cloud/image/upload/v1/carone/chat/shared.jpg';
+      mockPrisma.message.findUnique.mockResolvedValue({
+        id: 'msg-copy-1',
+        conversationId: 'conv-2',
+        senderId: 'attacker-1',
+        mediaUrl: sharedUrl,
+      });
+      mockPrisma.message.update.mockResolvedValue({});
+      mockPrisma.message.count.mockResolvedValue(1);
+
+      const res = await service.deleteMessage('msg-copy-1', 'attacker-1');
+
+      expect(res).toEqual({ messageId: 'msg-copy-1', conversationId: 'conv-2' });
+      expect(mockPrisma.message.count).toHaveBeenCalledWith({
+        where: {
+          id: { not: 'msg-copy-1' },
+          isDeleted: false,
+          mediaUrl: sharedUrl,
+        },
+      });
+      expect(mockUploads.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('succeeds cleanly even when storage deleteFile rejects (best-effort cleanup)', async () => {
+      mockPrisma.message.findUnique.mockResolvedValue({
+        id: 'msg-err-1',
+        conversationId: 'conv-1',
+        senderId: 'buyer-1',
+        mediaUrl: '/uploads/chat/voice.m4a',
+      });
+      mockPrisma.message.update.mockResolvedValue({});
+      mockPrisma.message.count.mockResolvedValue(0);
+      mockUploads.deleteFile.mockRejectedValueOnce(new Error('Storage unreachable'));
+
+      const res = await service.deleteMessage('msg-err-1', 'buyer-1');
+      expect(res).toEqual({ messageId: 'msg-err-1', conversationId: 'conv-1' });
+      expect(mockUploads.deleteFile).toHaveBeenCalledTimes(1);
     });
   });
 });

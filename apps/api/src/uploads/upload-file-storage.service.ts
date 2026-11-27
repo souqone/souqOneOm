@@ -1,23 +1,42 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import {
+  CHAT_MEDIA_RULES,
+  CHAT_UPLOAD_FOLDER,
+  LISTINGS_UPLOAD_FOLDER,
+  LOCAL_UPLOAD_PREFIX,
+} from './chat-media.constants';
+import {
+  buildCloudinaryStorageKey,
+  parseStorageKey,
+  validateChatMediaFile,
+} from './chat-media.validator';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif', 'image/jpg'];
+const MAX_FILE_SIZE = CHAT_MEDIA_RULES.IMAGE.maxBytes;
+const ALLOWED_MIME = CHAT_MEDIA_RULES.IMAGE.mimes;
 
 @Injectable()
 export class UploadFileStorageService {
   private readonly logger = new Logger(UploadFileStorageService.name);
   private readonly useCloudinary: boolean;
 
+  private get uploadDir(): string {
+    return path.join(process.cwd(), 'uploads');
+  }
+
+  private get chatUploadDir(): string {
+    return path.join(this.uploadDir, 'chat');
+  }
+
   constructor(private readonly cloudinaryService: CloudinaryService) {
     this.useCloudinary = !!process.env.CLOUDINARY_CLOUD_NAME;
     if (!this.useCloudinary) {
       this.logger.warn('Cloudinary not configured — using local file storage');
-      if (!fs.existsSync(UPLOAD_DIR)) {
-        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      if (!fs.existsSync(this.uploadDir)) {
+        fs.mkdirSync(this.uploadDir, { recursive: true });
       }
     }
   }
@@ -34,23 +53,64 @@ export class UploadFileStorageService {
     }
 
     if (this.useCloudinary) {
-      const result = await this.cloudinaryService.upload(file, 'carone/listings');
+      const result = await this.cloudinaryService.upload(file, LISTINGS_UPLOAD_FOLDER);
       return { url: result.secure_url, key: result.public_id };
     }
 
     const ext = path.extname(file.originalname) || '.jpg';
     const key = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${ext}`;
-    const dest = path.join(UPLOAD_DIR, key);
+    const dest = path.join(this.uploadDir, key);
     fs.writeFileSync(dest, file.buffer);
-    return { url: `/uploads/${key}`, key };
+    return { url: `${LOCAL_UPLOAD_PREFIX}${key}`, key };
+  }
+
+  async uploadChatMedia(file: Express.Multer.File): Promise<{ url: string; key: string }> {
+    const { rule, safeExtension } = validateChatMediaFile(file);
+
+    if (this.useCloudinary) {
+      // Raw Cloudinary uploads require explicit extension in public_id so URL and destroy() match
+      const publicId =
+        rule.cloudinaryResourceType === 'raw' ? `${randomUUID()}${safeExtension}` : undefined;
+      const result = await this.cloudinaryService.upload(
+        file,
+        CHAT_UPLOAD_FOLDER,
+        rule.cloudinaryResourceType,
+        publicId,
+      );
+      return {
+        url: result.secure_url,
+        key: buildCloudinaryStorageKey(rule.cloudinaryResourceType, result.public_id),
+      };
+    }
+
+    if (!fs.existsSync(this.chatUploadDir)) {
+      fs.mkdirSync(this.chatUploadDir, { recursive: true });
+    }
+    const filename = `${Date.now()}-${randomUUID().slice(0, 8)}${safeExtension}`;
+    const dest = path.join(this.chatUploadDir, filename);
+    fs.writeFileSync(dest, file.buffer);
+    const key = `chat/${filename}`;
+    return { url: `${LOCAL_UPLOAD_PREFIX}${key}`, key };
   }
 
   async deleteFile(key: string): Promise<void> {
-    if (this.useCloudinary && key.startsWith('carone/')) {
-      await this.cloudinaryService.delete(key);
+    const parsed = parseStorageKey(key);
+    if (!parsed) {
       return;
     }
-    const filePath = path.join(UPLOAD_DIR, path.basename(key));
+
+    if (parsed.kind === 'cloudinary') {
+      if (this.useCloudinary) {
+        await this.cloudinaryService.delete(parsed.publicId, parsed.resourceType);
+      }
+      return;
+    }
+
+    const resolvedRoot = path.resolve(this.uploadDir);
+    const filePath = path.resolve(resolvedRoot, parsed.relativePath);
+    if (!filePath.startsWith(`${resolvedRoot}${path.sep}`)) {
+      return;
+    }
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

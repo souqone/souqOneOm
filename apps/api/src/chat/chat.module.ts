@@ -7,6 +7,7 @@ import { WsJwtGuard } from './guards/ws-jwt.guard';
 import { getJwtSecret } from '../config/jwt.config';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthModule } from '../auth/auth.module';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from '../auth/auth.module';
     }),
     NotificationsModule,
     AuthModule,
+    UploadsModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, WsJwtGuard],
