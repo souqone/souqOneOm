@@ -423,10 +423,51 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   /* ───── EVENT-DRIVEN BROADCAST ───── */
 
+  private joinParticipantsToConversationRoom(
+    conversationId: string,
+    participantUserIds?: readonly string[],
+  ): void {
+    if (!this.server || !participantUserIds || participantUserIds.length === 0) {
+      return;
+    }
+    const conversationRoom = `conversation:${conversationId}`;
+    const seen = new Set<string>();
+    for (const uid of participantUserIds) {
+      if (!uid || seen.has(uid)) {
+        continue;
+      }
+      seen.add(uid);
+      this.server.in?.(`user:${uid}`)?.socketsJoin?.(conversationRoom);
+    }
+  }
+
+  @OnEvent(CHAT_EVENTS.CONVERSATION_JOIN)
+  onConversationJoin(payload: { conversationId: string; participantUserIds: string[] }) {
+    this.joinParticipantsToConversationRoom(payload.conversationId, payload.participantUserIds);
+  }
+
   @OnEvent(CHAT_EVENTS.MESSAGE_SENT)
-  onMessageSent(payload: { conversationId: string; message: any }) {
-    // The Socket.IO Redis Adapter fans this out to all instances automatically
-    this.server.to(`conversation:${payload.conversationId}`).emit('message', payload.message);
+  onMessageSent(payload: {
+    conversationId: string;
+    message: unknown;
+    participantUserIds?: string[];
+  }) {
+    const conversationRoom = `conversation:${payload.conversationId}`;
+    // Ensure sockets connected before creation or while archived join conversation room across Redis adapter
+    this.joinParticipantsToConversationRoom(payload.conversationId, payload.participantUserIds);
+
+    // Emit to joined conversation room
+    this.server.to(conversationRoom).emit('message', payload.message);
+
+    // Deliver immediately to sockets in user:<id> not yet in conversation:<id> during async Redis REMOTE_JOIN
+    if (payload.participantUserIds) {
+      for (const uid of new Set(payload.participantUserIds)) {
+        this.server
+          .to?.(`user:${uid}`)
+          ?.except?.(conversationRoom)
+          ?.emit?.('message', payload.message);
+      }
+    }
   }
 
   @OnEvent(CHAT_EVENTS.MESSAGE_DELETED)

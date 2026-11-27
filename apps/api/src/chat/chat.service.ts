@@ -7,6 +7,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -24,6 +25,13 @@ import {
   CHAT_REACTION_EMOJI_MAX_LENGTH,
   CHAT_REACTION_INVALID_EMOJI_MSG,
 } from './chat-security.constants';
+import {
+  batchResolveEntityMetadata,
+  buildEnrichedConversationResponse,
+  entitySummaryKey,
+  ResolvedEntityMeta,
+  toValidDateOrNull,
+} from './chat-conversation.utils';
 import { isEntityPubliclyVisible } from '../common/public-visibility';
 import { VisibilityPrismaDelegateName } from '../common/constants/owner-visibility.registry';
 import { UploadsService } from '../uploads/uploads.service';
@@ -44,41 +52,48 @@ export class ChatService {
   private async resolveEntityOwner(entityType: string, entityId: string): Promise<{
     ownerId: string;
     title: string;
+    imageUrl: string | null;
     entity: any;
     model: VisibilityPrismaDelegateName;
   }> {
+    const imgSelect = {
+      select: { url: true },
+      orderBy: [{ isPrimary: 'desc' as const }, { order: 'asc' as const }],
+      take: 1,
+    };
+
     switch (entityType) {
       case 'LISTING': {
         const e = await this.prisma.listing.findUnique({
           where: { id: entityId },
-          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true },
+          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true, images: imgSelect },
         });
         if (!e) throw new NotFoundException('الإعلان غير موجود');
-        return { ownerId: e.sellerId, title: e.title, entity: e, model: 'listing' };
+        return { ownerId: e.sellerId, title: e.title, imageUrl: e.images?.[0]?.url ?? null, entity: e, model: 'listing' };
       }
       case 'BUS_LISTING': {
         const e = await this.prisma.busListing.findUnique({
           where: { id: entityId },
-          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true, images: imgSelect },
         });
         if (!e) throw new NotFoundException('الحافلة غير موجودة');
-        return { ownerId: e.userId, title: e.title, entity: e, model: 'busListing' };
+        return { ownerId: e.userId, title: e.title, imageUrl: e.images?.[0]?.url ?? null, entity: e, model: 'busListing' };
       }
       case 'SPARE_PART': {
         const e = await this.prisma.sparePart.findUnique({
           where: { id: entityId },
-          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
+          select: { sellerId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true, images: imgSelect },
         });
         if (!e) throw new NotFoundException('قطعة الغيار غير موجودة');
-        return { ownerId: e.sellerId, title: e.title, entity: e, model: 'sparePart' };
+        return { ownerId: e.sellerId, title: e.title, imageUrl: e.images?.[0]?.url ?? null, entity: e, model: 'sparePart' };
       }
       case 'CAR_SERVICE': {
         const e = await this.prisma.carService.findUnique({
           where: { id: entityId },
-          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true, images: imgSelect },
         });
         if (!e) throw new NotFoundException('الخدمة غير موجودة');
-        return { ownerId: e.userId, title: e.title, entity: e, model: 'carService' };
+        return { ownerId: e.userId, title: e.title, imageUrl: e.images?.[0]?.url ?? null, entity: e, model: 'carService' };
       }
       case 'JOB':
       case 'DRIVER_JOB': {
@@ -87,23 +102,23 @@ export class ChatService {
           select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
         });
         if (!e) throw new NotFoundException('الوظيفة غير موجودة');
-        return { ownerId: e.userId, title: e.title, entity: e, model: 'driverJob' };
+        return { ownerId: e.userId, title: e.title, imageUrl: null, entity: e, model: 'driverJob' };
       }
       case 'EQUIPMENT_LISTING': {
         const e = await this.prisma.equipmentListing.findUnique({
           where: { id: entityId },
-          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, deletedAt: true, images: imgSelect },
         });
         if (!e) throw new NotFoundException('إعلان المعدة غير موجود');
-        return { ownerId: e.userId, title: e.title, entity: e, model: 'equipmentListing' };
+        return { ownerId: e.userId, title: e.title, imageUrl: e.images?.[0]?.url ?? null, entity: e, model: 'equipmentListing' };
       }
       case 'OPERATOR_LISTING': {
         const e = await this.prisma.operatorListing.findUnique({
           where: { id: entityId },
-          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true },
+          select: { userId: true, title: true, status: true, hiddenByOwnerStatus: true, profileImageUrl: true },
         });
         if (!e) throw new NotFoundException('إعلان المشغل غير موجود');
-        return { ownerId: e.userId, title: e.title, entity: e, model: 'operatorListing' };
+        return { ownerId: e.userId, title: e.title, imageUrl: e.profileImageUrl ?? null, entity: e, model: 'operatorListing' };
       }
       case 'TRANSPORT_REQUEST': {
         const e = await this.prisma.transportRequest.findUnique({
@@ -111,22 +126,37 @@ export class ChatService {
           select: { userId: true, cargoDescription: true, status: true, hiddenByOwnerStatus: true },
         });
         if (!e) throw new NotFoundException('طلب النقل غير موجود');
-        return { ownerId: e.userId, title: e.cargoDescription, entity: e, model: 'transportRequest' };
+        return { ownerId: e.userId, title: e.cargoDescription, imageUrl: null, entity: e, model: 'transportRequest' };
       }
       default:
         throw new BadRequestException('نوع كيان غير معروف');
     }
   }
 
-  /* ───── RESOLVE ENTITY TITLE (for existing conversations) ───── */
-  private async resolveEntityTitle(entityType: string, entityId: string): Promise<string> {
-    try {
-      const { title } = await this.resolveEntityOwner(entityType, entityId);
-      return title;
-    } catch (err) {
-      this.logger.warn(`Failed to resolve entity title: ${entityType}/${entityId} — ${err}`);
-      return '';
+  private async fetchUnreadCountsMap(
+    userId: string,
+    conversationIds: string[],
+  ): Promise<Map<string, number>> {
+    if (conversationIds.length === 0) {
+      return new Map();
     }
+    const rows = await this.prisma.$queryRaw<
+      Array<{ conversationId: string; unreadCount: number }>
+    >(
+      Prisma.sql`
+        SELECT m."conversationId" AS "conversationId", COUNT(*)::int AS "unreadCount"
+        FROM "messages" m
+        INNER JOIN "conversation_participants" cp
+          ON cp."conversationId" = m."conversationId"
+         AND cp."userId" = ${userId}
+        WHERE m."isDeleted" = false
+          AND m."senderId" <> ${userId}
+          AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
+          AND m."conversationId" IN (${Prisma.join(conversationIds)})
+        GROUP BY m."conversationId"
+      `,
+    );
+    return new Map(rows.map((row) => [row.conversationId, Number(row.unreadCount) || 0]));
   }
 
   async createOrGetConversation(dto: CreateConversationDto, userId: string) {
@@ -136,11 +166,20 @@ export class ChatService {
 
     if (!entityId) throw new BadRequestException('معرف الكيان مطلوب');
 
-    const { ownerId, entity, model } = await this.resolveEntityOwner(entityType, entityId);
+    const { ownerId, title, imageUrl, entity, model } = await this.resolveEntityOwner(entityType, entityId);
 
     if (ownerId === userId) {
       throw new BadRequestException('لا يمكنك بدء محادثة مع نفسك');
     }
+
+    const entityMeta: ResolvedEntityMeta = { ownerId, title, imageUrl };
+    const listingIncludeSelect = {
+      id: true,
+      title: true,
+      slug: true,
+      sellerId: true,
+      images: { take: 1, orderBy: [{ isPrimary: 'desc' as const }, { order: 'asc' as const }] },
+    };
 
     // البحث عن محادثة موجودة بين المستخدم وصاحب الخدمة لهذا الكيان
     const existing = await this.prisma.conversation.findFirst({
@@ -154,17 +193,37 @@ export class ChatService {
       },
       include: {
         participants: { include: { user: { select: this.userSelect } } },
-        listing: { select: { id: true, title: true, slug: true } },
+        listing: { select: listingIncludeSelect },
+        messages: {
+          where: { isDeleted: false },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+        },
       },
     });
 
     if (existing) {
-      return {
-        ...existing,
+      const callerParticipant = existing.participants.find((p) => p.userId === userId);
+      if (callerParticipant?.isArchived && callerParticipant.id) {
+        await this.prisma.conversationParticipant.update({
+          where: { id: callerParticipant.id },
+          data: { isArchived: false },
+        });
+      }
+
+      const unreadMap = await this.fetchUnreadCountsMap(userId, [existing.id]);
+      this.events.emit(CHAT_EVENTS.CONVERSATION_JOIN, {
+        conversationId: existing.id,
+        participantUserIds: existing.participants.map((p) => p.userId),
+      });
+
+      return buildEnrichedConversationResponse(existing, userId, {
         entityType,
         entityId,
-        participants: existing.participants.map(p => p.user),
-      };
+        entityMeta,
+        unreadCount: unreadMap.get(existing.id) ?? 0,
+        archivedOverride: false,
+      });
     }
 
     // للمحادثة الجديدة: التحقق من ظهور الكيان ومن حالة نشاط المالك
@@ -196,20 +255,29 @@ export class ChatService {
       },
       include: {
         participants: { include: { user: { select: this.userSelect } } },
-        listing: { select: { id: true, title: true, slug: true } },
+        listing: { select: listingIncludeSelect },
       },
     });
 
-    return {
-      ...created,
-      participants: created.participants.map(p => p.user),
-    };
+    this.events.emit(CHAT_EVENTS.CONVERSATION_JOIN, {
+      conversationId: created.id,
+      participantUserIds: created.participants.map((p) => p.userId),
+    });
+
+    return buildEnrichedConversationResponse(created, userId, {
+      entityType,
+      entityId,
+      entityMeta,
+      unreadCount: 0,
+      archivedOverride: false,
+    });
   }
 
   async getConversations(userId: string, search?: string, includeArchived = false) {
     const conversations = await this.prisma.conversation.findMany({
       where: {
         participants: { some: { userId, isArchived: includeArchived ? undefined : false } },
+        messages: { some: { isDeleted: false } },
         ...(search ? {
           OR: [
             { listing: { title: { contains: search, mode: 'insensitive' } } },
@@ -218,87 +286,172 @@ export class ChatService {
         } : {}),
       },
       include: {
-        listing: { select: { id: true, title: true, slug: true, images: { take: 1, orderBy: { order: 'asc' } } } },
+        listing: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            sellerId: true,
+            images: { take: 1, orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }] },
+          },
+        },
         participants: { include: { user: { select: this.userSelect } } },
         messages: {
-          orderBy: { createdAt: 'desc' },
+          where: { isDeleted: false },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           take: 1,
         },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
-    // حساب عدد الرسائل غير المقروءة + حل عنوان الكيان
-    const result = await Promise.all(
-      conversations.map(async (conv) => {
-        const participant = conv.participants.find((p) => p.userId === userId);
-        const lastReadAt = participant?.lastReadAt ?? new Date(0);
-
-        const unreadCount = await this.prisma.message.count({
-          where: {
-            conversationId: conv.id,
-            senderId: { not: userId },
-            createdAt: { gt: lastReadAt },
-          },
-        });
-
-        // Resolve entity title for non-listing entities
-        const entityTitle = conv.listing?.title
-          || await this.resolveEntityTitle(conv.entityType, conv.entityId);
-
-        return {
-          ...conv,
-          entityType: conv.entityType,
-          entityId: conv.entityId,
-          entityTitle,
-          archived: participant?.isArchived ?? false,
-          participants: conv.participants.map(p => ({
-            ...p.user,
-            lastReadAt: p.lastReadAt,
-          })),
-          createdById: conv.participants[0]?.userId ?? null,
-          unreadCount,
-          lastMessage: conv.messages[0] ?? null,
-        };
-      }),
+    const unreadMap = await this.fetchUnreadCountsMap(
+      userId,
+      conversations.map((c) => c.id),
     );
 
-    return result;
+    const inlineMeta = new Map<string, ResolvedEntityMeta>();
+    const missingRefs: Array<{ entityType: string; entityId: string }> = [];
+
+    for (const conv of conversations) {
+      if (conv.entityType === ENTITY_TYPES.LISTING && conv.listing?.sellerId) {
+        inlineMeta.set(entitySummaryKey(conv.entityType, conv.entityId), {
+          ownerId: conv.listing.sellerId,
+          title: conv.listing.title,
+          imageUrl: conv.listing.images?.[0]?.url ?? null,
+        });
+      } else {
+        missingRefs.push({ entityType: conv.entityType, entityId: conv.entityId });
+      }
+    }
+
+    const fetchedMeta = await batchResolveEntityMetadata(this.prisma, missingRefs);
+
+    return conversations.map((conv) => {
+      const key = entitySummaryKey(conv.entityType, conv.entityId);
+      const entityMeta = inlineMeta.get(key) ?? fetchedMeta.get(key);
+      return buildEnrichedConversationResponse(conv, userId, {
+        entityType: conv.entityType,
+        entityId: conv.entityId,
+        entityMeta,
+        unreadCount: unreadMap.get(conv.id) ?? 0,
+      });
+    });
   }
 
   async getMessages(conversationId: string, query: GetMessagesDto, userId: string) {
-    // التحقق أن المستخدم مشارك في المحادثة
-    const participant = await this.prisma.conversationParticipant.findFirst({
-      where: { conversationId, userId },
+    // التحقق أن المستخدم مشارك في المحادثة + قراءة آخر قراءة للطرف الآخر
+    const participants = await this.prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      select: { userId: true, lastReadAt: true },
     });
 
+    const participant = participants.find((p) => p.userId === userId);
     if (!participant) {
       throw new ForbiddenException('لا يمكنك الوصول لهذه المحادثة');
     }
 
+    const otherParticipant = participants.find((p) => p.userId !== userId);
+    const otherLastReadDate = toValidDateOrNull(otherParticipant?.lastReadAt);
+    const otherLastReadAt = otherLastReadDate ? otherLastReadDate.toISOString() : null;
+
     const page = query.page ?? 1;
     const limit = query.limit ?? 30;
-    const skip = (page - 1) * limit;
+    const messageInclude = {
+      sender: { select: this.userSelect },
+      reactions: { include: { user: { select: { id: true, username: true, displayName: true } } } },
+    };
+    const countWhere = { conversationId, isDeleted: false };
 
-    const msgWhere = { conversationId, isDeleted: false };
+    let rawMessages: Array<{
+      id: string;
+      senderId: string;
+      createdAt: Date;
+      isRead: boolean;
+      [key: string]: unknown;
+    }>;
+    let total: number;
+    let nextCursor: string | null = null;
+    let effectivePage = page;
 
-    const [messages, total] = await this.prisma.$transaction([
-      this.prisma.message.findMany({
-        where: msgWhere,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          sender: { select: this.userSelect },
-          reactions: { include: { user: { select: { id: true, username: true, displayName: true } } } },
-        },
-      }),
-      this.prisma.message.count({ where: msgWhere }),
-    ]);
+    if (query.before) {
+      const cursorMsg = await this.prisma.message.findUnique({
+        where: { id: query.before },
+        select: { id: true, conversationId: true, createdAt: true },
+      });
+      if (!cursorMsg || cursorMsg.conversationId !== conversationId) {
+        throw new BadRequestException('معرف الرسالة المرجعية غير صالح لهذه المحادثة');
+      }
+
+      const cursorWhere = {
+        conversationId,
+        isDeleted: false,
+        OR: [
+          { createdAt: { lt: cursorMsg.createdAt } },
+          { createdAt: cursorMsg.createdAt, id: { lt: cursorMsg.id } },
+        ],
+      };
+
+      const [rows, count] = await this.prisma.$transaction([
+        this.prisma.message.findMany({
+          where: cursorWhere,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: limit + 1,
+          include: messageInclude,
+        }),
+        this.prisma.message.count({ where: countWhere }),
+      ]);
+
+      const hasMore = rows.length > limit;
+      rawMessages = hasMore ? rows.slice(0, limit) : rows;
+      total = count;
+      effectivePage = 1;
+      nextCursor = hasMore ? rawMessages[rawMessages.length - 1]?.id ?? null : null;
+    } else {
+      const skip = (page - 1) * limit;
+      const [rows, count] = await this.prisma.$transaction([
+        this.prisma.message.findMany({
+          where: countWhere,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip,
+          take: limit,
+          include: messageInclude,
+        }),
+        this.prisma.message.count({ where: countWhere }),
+      ]);
+
+      rawMessages = rows;
+      total = count;
+      nextCursor =
+        skip + rawMessages.length < total
+          ? rawMessages[rawMessages.length - 1]?.id ?? null
+          : null;
+    }
+
+    const otherLastReadMs = otherLastReadDate?.getTime() ?? null;
+    const items = rawMessages.map((msg) => {
+      if (msg.senderId !== userId) {
+        return msg;
+      }
+      const msgCreatedAtMs = toValidDateOrNull(msg.createdAt)?.getTime() ?? null;
+      const computedIsRead =
+        otherLastReadMs !== null && msgCreatedAtMs !== null && msgCreatedAtMs <= otherLastReadMs;
+      return {
+        ...msg,
+        isRead: computedIsRead,
+      };
+    });
 
     return {
-      items: messages,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      items,
+      meta: {
+        total,
+        page: effectivePage,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        nextCursor,
+        otherLastReadAt,
+      },
     };
   }
 
@@ -328,10 +481,15 @@ export class ChatService {
       },
     });
 
-    // تحديث وقت المحادثة
+    // تحديث وقت المحادثة + فك الأرشفة لجميع المشاركين المؤرشفين
     await this.prisma.conversation.update({
       where: { id: conversationId },
       data: { updatedAt: new Date() },
+    });
+
+    await this.prisma.conversationParticipant.updateMany({
+      where: { conversationId, isArchived: true },
+      data: { isArchived: false },
     });
 
     // إنشاء إشعار للمستلم — routed through NotificationsService so it 
@@ -362,8 +520,12 @@ export class ChatService {
       }
     }
 
-    // Fire event — Gateway listens and broadcasts via Redis
-    this.events.emit(CHAT_EVENTS.MESSAGE_SENT, { conversationId, message });
+    // Fire event — Gateway joins active sockets and broadcasts via Redis
+    this.events.emit(CHAT_EVENTS.MESSAGE_SENT, {
+      conversationId,
+      message,
+      participantUserIds: [userId, ...otherParticipants.map((p) => p.userId)],
+    });
 
     return message;
   }
@@ -377,12 +539,21 @@ export class ChatService {
       throw new ForbiddenException('لا يمكنك الوصول لهذه المحادثة');
     }
 
-    await this.prisma.conversationParticipant.update({
-      where: { id: participant.id },
-      data: { lastReadAt: new Date() },
-    });
+    const now = new Date();
+    const existingLastRead = toValidDateOrNull(participant.lastReadAt);
+    const effectiveLastReadAt =
+      existingLastRead && existingLastRead.getTime() > now.getTime()
+        ? existingLastRead
+        : now;
 
-    return { message: 'تم تحديد المحادثة كمقروءة', lastReadAt: new Date() };
+    if (!existingLastRead || effectiveLastReadAt.getTime() > existingLastRead.getTime()) {
+      await this.prisma.conversationParticipant.update({
+        where: { id: participant.id },
+        data: { lastReadAt: effectiveLastReadAt },
+      });
+    }
+
+    return { message: 'تم تحديد المحادثة كمقروءة', lastReadAt: effectiveLastReadAt };
   }
 
   /* ───── DELETE MESSAGE (soft) ───── */
