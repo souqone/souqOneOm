@@ -106,6 +106,11 @@ describe('Rate Limit Part 2 — Metadata Verification', () => {
       expect(getThrottleTtl(UploadsController, 'uploadFile')).toBe(60000);
     });
 
+    it('uploadChatMedia has limit: 20, ttl: 60000', () => {
+      expect(getThrottleLimit(UploadsController, 'uploadChatMedia')).toBe(20);
+      expect(getThrottleTtl(UploadsController, 'uploadChatMedia')).toBe(60000);
+    });
+
     it('individual image link, delete, and reorder routes have limit: 30, ttl: 60000', () => {
       const routes30 = [
         'addImage',

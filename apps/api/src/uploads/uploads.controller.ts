@@ -21,6 +21,11 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.types';
 import { UploadsService } from './uploads.service';
 import { validateTrustedImageUrl } from '../common/utils/image-url.validator';
+import {
+  CHAT_UPLOAD_MAX_BODY_BYTES,
+  CHAT_UPLOAD_THROTTLE_LIMIT,
+  CHAT_UPLOAD_THROTTLE_TTL_MS,
+} from './chat-media.constants';
 
 @Controller('uploads')
 export class UploadsController {
@@ -33,6 +38,19 @@ export class UploadsController {
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     return this.uploadsService.uploadFile(file);
+  }
+
+  /** Upload a single chat media file (images, PDF, audio) */
+  @Throttle({
+    default: { limit: CHAT_UPLOAD_THROTTLE_LIMIT, ttl: CHAT_UPLOAD_THROTTLE_TTL_MS },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Post('chat')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: CHAT_UPLOAD_MAX_BODY_BYTES } }),
+  )
+  async uploadChatMedia(@UploadedFile() file: Express.Multer.File) {
+    return this.uploadsService.uploadChatMedia(file);
   }
 
   /** Upload multiple image files (max 10) */

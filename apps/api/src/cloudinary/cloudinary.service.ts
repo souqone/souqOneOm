@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
+import type { CloudinaryResourceType } from '../uploads/chat-media.constants';
 
 @Injectable()
 export class CloudinaryService {
@@ -14,12 +15,18 @@ export class CloudinaryService {
     });
   }
 
-  async upload(file: Express.Multer.File, folder = 'carone'): Promise<UploadApiResponse> {
+  async upload(
+    file: Express.Multer.File,
+    folder = 'carone',
+    resourceType: CloudinaryResourceType = 'image',
+    publicId?: string,
+  ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
-          resource_type: 'image',
+          resource_type: resourceType,
+          ...(publicId ? { public_id: publicId } : {}),
         },
         (error, result) => {
           if (error) {
@@ -38,12 +45,18 @@ export class CloudinaryService {
     });
   }
 
-  async delete(publicId: string): Promise<void> {
+  async delete(
+    publicId: string,
+    resourceType: CloudinaryResourceType = 'image',
+  ): Promise<void> {
     try {
-      await cloudinary.uploader.destroy(publicId);
-      this.logger.log(`Deleted from Cloudinary: ${publicId}`);
+      await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+      this.logger.log(`Deleted from Cloudinary (${resourceType}): ${publicId}`);
     } catch (error) {
-      this.logger.error(`Failed to delete from Cloudinary: ${publicId}`, error);
+      this.logger.error(
+        `Failed to delete from Cloudinary (${resourceType}): ${publicId}`,
+        error,
+      );
     }
   }
 }

@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,6 +20,8 @@ import {
 } from './chat-message.utils';
 import { isEntityPubliclyVisible } from '../common/public-visibility';
 import { VisibilityPrismaDelegateName } from '../common/constants/owner-visibility.registry';
+import { UploadsService } from '../uploads/uploads.service';
+import { extractOwnedChatMediaKey } from '../uploads/chat-media.validator';
 
 @Injectable()
 export class ChatService {
@@ -28,6 +31,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly events: EventEmitter2,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly uploadsService?: UploadsService,
   ) {}
 
   /* ───── RESOLVE ENTITY OWNER ───── */
@@ -383,8 +387,26 @@ export class ChatService {
 
     await this.prisma.message.update({
       where: { id: messageId },
-      data: { isDeleted: true, deletedAt: new Date(), content: '' },
+      data: { isDeleted: true, deletedAt: new Date(), content: '', mediaUrl: null },
     });
+
+    if (msg.mediaUrl && this.uploadsService) {
+      const storageKey = extractOwnedChatMediaKey(
+        msg.mediaUrl,
+        process.env.CLOUDINARY_CLOUD_NAME,
+      );
+      if (storageKey) {
+        try {
+          await this.uploadsService.deleteFile(storageKey);
+        } catch (err) {
+          this.logger.warn(
+            `Failed to delete stored chat media for message ${messageId}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        }
+      }
+    }
 
     const result = { messageId, conversationId: msg.conversationId };
 
