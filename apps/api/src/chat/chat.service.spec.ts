@@ -27,7 +27,8 @@ const mockMessage = {
 };
 
 const mockPrisma = {
-  listing: { findUnique: jest.fn() },
+  $queryRaw: jest.fn().mockResolvedValue([]),
+  listing: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
   user: { findUnique: jest.fn() },
   conversation: {
     findFirst: jest.fn(),
@@ -39,6 +40,7 @@ const mockPrisma = {
     findFirst: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn().mockResolvedValue({ count: 0 }),
   },
   message: {
     create: jest.fn(),

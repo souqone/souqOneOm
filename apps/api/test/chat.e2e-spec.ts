@@ -78,13 +78,28 @@ describe('Chat API (e2e)', () => {
         .expect(401);
     });
 
-    it('should show conversations after creation', async () => {
+    it('hides empty conversations and shows conversations after first message (D-B24)', async () => {
       const { listingId, buyer } = await createListingAndBuyer();
 
-      await request(getApp().getHttpServer())
+      const created = await request(getApp().getHttpServer())
         .post('/api/chat/conversations')
         .set('Authorization', `Bearer ${buyer.accessToken}`)
-        .send({ entityType: 'LISTING', entityId: listingId });
+        .send({ entityType: 'LISTING', entityId: listingId })
+        .expect(201);
+
+      // Empty conversation (0 messages) must NOT appear in conversations list
+      const emptyRes = await request(getApp().getHttpServer())
+        .get('/api/chat/conversations')
+        .set('Authorization', `Bearer ${buyer.accessToken}`)
+        .expect(200);
+      expect(emptyRes.body.some((c: any) => c.id === created.body.id)).toBe(false);
+
+      // Send a message, then verify it appears with enriched P2a fields
+      await request(getApp().getHttpServer())
+        .post(`/api/chat/conversations/${created.body.id}/messages`)
+        .set('Authorization', `Bearer ${buyer.accessToken}`)
+        .send({ content: 'Hello seller' })
+        .expect(201);
 
       const res = await request(getApp().getHttpServer())
         .get('/api/chat/conversations')
@@ -92,6 +107,15 @@ describe('Chat API (e2e)', () => {
         .expect(200);
 
       expect(res.body.length).toBeGreaterThanOrEqual(1);
+      const room = res.body.find((c: any) => c.id === created.body.id);
+      expect(room).toBeDefined();
+      expect(room.entitySummary).toEqual(
+        expect.objectContaining({
+          type: 'LISTING',
+          id: listingId,
+          isSeller: false,
+        }),
+      );
     });
   });
 
