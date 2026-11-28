@@ -48,8 +48,13 @@ export class NotificationsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('unread-count')
-  getUnreadCount(@CurrentUser() user: JwtPayload) {
-    return this.notificationsService.getUnreadCount(user.sub);
+  getUnreadCount(
+    @CurrentUser() user: JwtPayload,
+    @Query('excludeChat') excludeChat?: string,
+  ) {
+    return this.notificationsService.getUnreadCount(user.sub, {
+      excludeChat: excludeChat === 'true',
+    });
   }
 
   @UseGuards(JwtAuthGuard)

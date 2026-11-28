@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PushService } from './push.service';
@@ -101,12 +101,16 @@ export class NotificationsService {
     };
   }
 
-  async getUnreadCount(userId: string) {
+  async getUnreadCount(userId: string, options?: { excludeChat?: boolean }) {
     // Apply the same 90-day retention so badge count matches what's visible in the list
     const retentionDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-    const count = await this.prisma.notification.count({
-      where: { userId, isRead: false, createdAt: { gt: retentionDate } },
-    });
+    const where: Prisma.NotificationWhereInput = {
+      userId,
+      isRead: false,
+      createdAt: { gt: retentionDate },
+      ...(options?.excludeChat ? { type: { not: NotificationType.MESSAGE } } : {}),
+    };
+    const count = await this.prisma.notification.count({ where });
     return { count };
   }
 
