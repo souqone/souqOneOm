@@ -61,6 +61,40 @@ describe('Notifications API (e2e)', () => {
 
       expect(res.body.count).toBe(0);
     });
+
+    it('supports excludeChat=true to exclude MESSAGE notifications while keeping default for omitted/false/other (D-B25)', async () => {
+      const { accessToken, user } = await registerUser();
+      const prisma = getPrisma();
+      const expired = new Date(Date.now() - 91 * 24 * 60 * 60 * 1000);
+
+      await prisma.notification.createMany({
+        data: [
+          { userId: user.id, type: 'MESSAGE', title: 'Chat 1', body: 'B1', isRead: false },
+          { userId: user.id, type: 'SYSTEM', title: 'Sys 1', body: 'B2', isRead: false },
+          { userId: user.id, type: 'SYSTEM', title: 'Old Sys', body: 'B3', isRead: false, createdAt: expired },
+        ],
+      });
+
+      const defaultRes = await request(getApp().getHttpServer())
+        .get('/api/notifications/unread-count')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(defaultRes.body).toEqual({ count: 2 });
+
+      const excludeRes = await request(getApp().getHttpServer())
+        .get('/api/notifications/unread-count?excludeChat=true')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(excludeRes.body).toEqual({ count: 1 });
+
+      for (const nonTrue of ['false', '1', 'garbage']) {
+        const res = await request(getApp().getHttpServer())
+          .get(`/api/notifications/unread-count?excludeChat=${encodeURIComponent(nonTrue)}`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .expect(200);
+        expect(res.body).toEqual({ count: 2 });
+      }
+    });
   });
 
   describe('PATCH /api/notifications/:id/read', () => {
